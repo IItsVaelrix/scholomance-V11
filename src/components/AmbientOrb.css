@@ -1,0 +1,260 @@
+.ambient-orb {
+  --orb-size: 48px;
+  --orb-color: #4d8bff;
+  --orb-color-dim: #4d8bff66;
+  --orb-signal: 0;
+  --orb-glow-near: 8px;
+  --orb-glow-far: 16px;
+  --orb-glow-inset: 8px;
+
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 900;
+
+  width: var(--orb-size);
+  height: var(--orb-size);
+  border-radius: 50%;
+  border: 2px solid var(--orb-color);
+  background:
+    radial-gradient(circle at 35% 30%, var(--orb-color-dim), rgba(0, 0, 0, 0.72) 70%),
+    conic-gradient(from 90deg, rgba(255, 255, 255, 0.08), transparent 40%);
+  color: var(--orb-color);
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font: inherit;
+  outline: none;
+
+  box-shadow:
+    0 0 var(--orb-glow-near) var(--orb-color-dim),
+    0 0 var(--orb-glow-far) color-mix(in srgb, var(--orb-color) 44%, transparent),
+    inset 0 0 var(--orb-glow-inset) var(--orb-color-dim);
+  transition:
+    transform 200ms ease,
+    border-color 260ms ease,
+    box-shadow 90ms linear,
+    background 320ms ease;
+}
+
+/* === TOOLBAR EMBEDDED VARIANT === */
+.ambient-orb--toolbar {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  --orb-size: 32px;
+  z-index: 1;
+  border-width: 1.5px;
+}
+
+.ambient-orb--toolbar .ambient-orb__glyph {
+  font-size: 0.85rem;
+}
+
+.ambient-orb--toolbar .ambient-orb__flags {
+  bottom: -8px;
+  gap: 2px;
+}
+
+.ambient-orb--toolbar .ambient-orb__flag {
+  min-width: 10px;
+  height: 10px;
+  font-size: 6px;
+  line-height: 8px;
+}
+
+.ambient-orb--toolbar .ambient-orb__sweep {
+  inset: -3px;
+  border-width: 1.5px;
+}
+
+.ambient-orb--toolbar .ambient-orb__loader {
+  inset: -3px;
+  border-width: 1.5px;
+}
+
+/* === PANEL VARIANT (LISTEN PAGE HERO) === */
+.ambient-orb--panel {
+  position: relative;
+  bottom: auto;
+  right: auto;
+  --orb-size: 88px;
+  z-index: 1;
+}
+
+.ambient-orb--panel .ambient-orb__glyph {
+  font-size: 1.65rem;
+}
+
+.ambient-orb--panel .ambient-orb__flags {
+  bottom: -14px;
+}
+
+.ambient-orb--panel .ambient-orb__flag {
+  min-width: 16px;
+  height: 16px;
+  font-size: 9px;
+  line-height: 14px;
+}
+
+.ambient-orb--panel .ambient-orb__sweep {
+  inset: -6px;
+}
+
+.ambient-orb--panel .ambient-orb__loader {
+  inset: -5px;
+}
+
+.ambient-orb:hover {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 calc(var(--orb-glow-near) + 6px) var(--orb-color),
+    0 0 calc(var(--orb-glow-far) + 8px) var(--orb-color-dim),
+    inset 0 0 calc(var(--orb-glow-inset) + 4px) var(--orb-color-dim);
+}
+
+.ambient-orb:focus-visible {
+  outline: 2px solid var(--orb-color);
+  outline-offset: 3px;
+}
+
+.ambient-orb:active {
+  transform: scale(0.96);
+}
+
+.ambient-orb--playing {
+  box-shadow:
+    0 0 calc(var(--orb-glow-near) + 2px) var(--orb-color),
+    0 0 calc(var(--orb-glow-far) + 6px) var(--orb-color-dim),
+    inset 0 0 calc(var(--orb-glow-inset) + 2px) var(--orb-color-dim);
+}
+
+.ambient-orb--tuning {
+  animation: orb-tuning-pulse 900ms ease-in-out infinite;
+}
+
+.ambient-orb--queued {
+  border-style: dashed;
+}
+
+.ambient-orb--cycling-off {
+  filter: saturate(0.65);
+}
+
+.ambient-orb--autoplay::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--orb-color) 75%, #fff 25%);
+  opacity: 0.75;
+}
+
+.ambient-orb__glyph {
+  font-size: 1.05rem;
+  line-height: 1;
+  user-select: none;
+  filter: brightness(1.35);
+}
+
+.ambient-orb__sweep {
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  opacity: 0;
+}
+
+.ambient-orb--tuning .ambient-orb__sweep {
+  opacity: 1;
+  border-top-color: var(--orb-color);
+  border-right-color: color-mix(in srgb, var(--orb-color) 65%, transparent 35%);
+  animation: orb-sweep 900ms linear infinite;
+}
+
+.ambient-orb__loader {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--orb-color);
+  animation: orb-spin 800ms linear infinite;
+}
+
+.ambient-orb__flags {
+  position: absolute;
+  bottom: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  gap: 4px;
+  pointer-events: none;
+}
+
+.ambient-orb__flag {
+  min-width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.5);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 10px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.ambient-orb__flag.is-on {
+  border-color: var(--orb-color);
+  color: var(--orb-color);
+}
+
+@keyframes orb-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-sweep {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orb-tuning-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px var(--orb-color-dim),
+      0 0 16px var(--orb-color-dim),
+      inset 0 0 8px var(--orb-color-dim);
+  }
+  50% {
+    box-shadow:
+      0 0 20px var(--orb-color),
+      0 0 44px var(--orb-color-dim),
+      inset 0 0 18px var(--orb-color-dim);
+  }
+}
+
+@media (max-width: 640px) {
+  .ambient-orb {
+    --orb-size: 40px;
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .ambient-orb__glyph {
+    font-size: 0.95rem;
+  }
+
+  .ambient-orb--panel {
+    --orb-size: 74px;
+    bottom: auto;
+    right: auto;
+  }
+}

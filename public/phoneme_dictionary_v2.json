@@ -1,0 +1,306 @@
+{
+  "meta": {
+    "id": "ST-XPD",
+    "version": "2.0",
+    "name": "Sonic Thaumaturgy Extended Phoneme Dictionary",
+    "created": "2026-01-09T18:00:00",
+    "purpose": "Rap-focused rhyme family dictionary for high-recall matching (perfect + slant + mutated rhymes).",
+    "notes": [
+      "This is family-based (approximate) phonology, not strict IPA.",
+      "Designed to match vowel nucleus dominance with permissive onset/coda mutation."
+    ]
+  },
+  "vowel_families": [
+    {
+      "id": "A",
+      "aliases": [
+        "AH",
+        "AA"
+      ],
+      "examples": [
+        "god",
+        "rot",
+        "clock",
+        "pop"
+      ],
+      "color": "#FF3B30"
+    },
+    {
+      "id": "AE",
+      "aliases": [
+        "AE"
+      ],
+      "examples": [
+        "cat",
+        "bat",
+        "mad",
+        "ash"
+      ],
+      "color": "#FF6B6B"
+    },
+    {
+      "id": "AY",
+      "aliases": [
+        "AY",
+        "AI"
+      ],
+      "examples": [
+        "i",
+        "time",
+        "light",
+        "divine"
+      ],
+      "color": "#FF2D55"
+    },
+    {
+      "id": "AW",
+      "aliases": [
+        "AW",
+        "AU"
+      ],
+      "examples": [
+        "now",
+        "crown",
+        "mouth",
+        "down"
+      ],
+      "color": "#FF9500"
+    },
+    {
+      "id": "EH",
+      "aliases": [
+        "EH"
+      ],
+      "examples": [
+        "bed",
+        "said",
+        "dead"
+      ],
+      "color": "#34C759"
+    },
+    {
+      "id": "EE",
+      "aliases": [
+        "IY",
+        "EE"
+      ],
+      "examples": [
+        "see",
+        "me",
+        "bleed"
+      ],
+      "color": "#00C7BE"
+    },
+    {
+      "id": "ER",
+      "aliases": [
+        "ER"
+      ],
+      "examples": [
+        "burn",
+        "curse",
+        "learn"
+      ],
+      "color": "#0A84FF"
+    },
+    {
+      "id": "EY",
+      "aliases": [
+        "EY"
+      ],
+      "examples": [
+        "day",
+        "say",
+        "fade"
+      ],
+      "color": "#5E5CE6"
+    },
+    {
+      "id": "IH",
+      "aliases": [
+        "IH"
+      ],
+      "examples": [
+        "hit",
+        "sick",
+        "sin"
+      ],
+      "color": "#30B0C7"
+    },
+    {
+      "id": "IY",
+      "aliases": [
+        "IY"
+      ],
+      "examples": [
+        "elite",
+        "theme",
+        "beam"
+      ],
+      "color": "#64D2FF"
+    },
+    {
+      "id": "OH",
+      "aliases": [
+        "OW",
+        "OH"
+      ],
+      "examples": [
+        "go",
+        "soul",
+        "code"
+      ],
+      "color": "#BF5AF2"
+    },
+    {
+      "id": "AO",
+      "aliases": [
+        "AO"
+      ],
+      "examples": [
+        "off",
+        "dawn",
+        "lost"
+      ],
+      "color": "#AF52DE"
+    },
+    {
+      "id": "OY",
+      "aliases": [
+        "OY"
+      ],
+      "examples": [
+        "void",
+        "noise",
+        "coil"
+      ],
+      "color": "#FFD60A"
+    },
+    {
+      "id": "UH",
+      "aliases": [
+        "UH"
+      ],
+      "examples": [
+        "book",
+        "hood"
+      ],
+      "color": "#A1A1AA"
+    },
+    {
+      "id": "OO",
+      "aliases": [
+        "UW",
+        "OO"
+      ],
+      "examples": [
+        "moon",
+        "doom",
+        "truth"
+      ],
+      "color": "#8E8E93"
+    },
+    {
+      "id": "YOO",
+      "aliases": [
+        "YUW",
+        "YOO"
+      ],
+      "examples": [
+        "use",
+        "fuse",
+        "human"
+      ],
+      "color": "#7D7AFF"
+    }
+  ],
+  "consonant_groups": {
+    "coda_groups": {
+      "K": [
+        "K",
+        "G"
+      ],
+      "T": [
+        "T",
+        "D"
+      ],
+      "P": [
+        "P",
+        "B"
+      ],
+      "S": [
+        "S",
+        "Z"
+      ],
+      "SH": [
+        "SH",
+        "CH",
+        "JH"
+      ],
+      "F": [
+        "F",
+        "V"
+      ],
+      "R": [
+        "R"
+      ],
+      "L": [
+        "L"
+      ],
+      "N": [
+        "N",
+        "NG",
+        "M"
+      ]
+    },
+    "onset_groups": {
+      "P": [
+        "P",
+        "B"
+      ],
+      "T": [
+        "T",
+        "D"
+      ],
+      "K": [
+        "K",
+        "G"
+      ],
+      "S": [
+        "S",
+        "Z"
+      ],
+      "SH": [
+        "SH",
+        "CH",
+        "JH"
+      ],
+      "F": [
+        "F",
+        "V"
+      ],
+      "L": [
+        "L",
+        "R"
+      ],
+      "M": [
+        "M",
+        "N"
+      ]
+    }
+  },
+  "fusion_rules": {
+    "window_syllables": 3,
+    "min_vowel_hits": 2,
+    "carry_over_bonus": 1.25,
+    "max_magnitude": 2.0
+  },
+  "stress": {
+    "types": {
+      "H": "hard_attack",
+      "M": "medium",
+      "L": "ghost"
+    },
+    "stressed_alignment_bonus": 1.15
+  }
+}

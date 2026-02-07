@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx vite-bundle-visualizer:*)",
+      "Bash(grep:*)",
+      "Bash(ls -lah \"c:\\\\Users\\\\Vaelrix\\\\Desktop\\\\scholomance-v10-main-main\\\\scripts\\\\security\"\" 2>&1 || echo \"Directory may not exist \")",
+      "Bash(npm run security:qa:*)",
+      "Bash(npm run security:audit:*)",
+      "Bash(curl:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npx eslint:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(npm install:*)",
+      "Bash(npx vite build)",
+      "Bash(node -e:*)",
+      "Bash(timeout:*)"
+    ]
+  }
+}

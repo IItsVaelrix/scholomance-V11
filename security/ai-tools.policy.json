@@ -1,0 +1,11 @@
+{
+  "mode": "deny-by-default",
+  "allowedProviders": [],
+  "allowedUseCases": [],
+  "dataClassifications": [
+    "public",
+    "internal",
+    "restricted"
+  ],
+  "notes": "Add providers and redaction rules before enabling AI tool access."
+}

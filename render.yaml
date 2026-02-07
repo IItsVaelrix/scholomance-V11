@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: scholomance-app
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    disk:
+      name: scholomance-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: USER_DB_PATH
+        value: /var/data/scholomance_user.sqlite
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: scholomance-redis
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+
+  - type: redis
+    name: scholomance-redis
+    ipAllowList: []

@@ -1,0 +1,43 @@
+/**
+ * Abstract base class for all dictionary adapters.
+ * Defines the interface that all dictionary sources must implement.
+ *
+ * @see AI_Architecture_V2.md section 3.2
+ */
+export class DictionaryAdapter {
+  /**
+   * Looks up a word and returns a normalized lexical entry.
+   * @param {string} word The word to look up.
+   * @returns {Promise<import('../../core/schemas').LexicalEntry|null>} A promise that resolves to a LexicalEntry or null if not found.
+   */
+  async lookup(word) {
+    throw new Error("DictionaryAdapter.lookup() must be implemented by subclasses.");
+  }
+
+  /**
+   * Finds synonyms for a given word.
+   * @param {string} word The word to find synonyms for.
+   * @returns {Promise<string[]>} A promise that resolves to an array of synonyms.
+   */
+  async synonyms(word) {
+    throw new Error("DictionaryAdapter.synonyms() must be implemented by subclasses.");
+  }
+
+  /**
+   * Finds rhymes for a given word.
+   * @param {string} word The word to find rhymes for.
+   * @returns {Promise<string[]>} A promise that resolves to an array of rhyming words.
+   */
+  async rhymes(word) {
+    throw new Error("DictionaryAdapter.rhymes() must be implemented by subclasses.");
+  }
+
+  /**
+   * Finds related words (e.g., hypernyms, hyponyms).
+   * @param {string} word The word to find related words for.
+   * @returns {Promise<{ relation: string, words: string[] }[]>} A promise that resolves to an array of related word groups.
+   */
+  async related(word) {
+    throw new Error("DictionaryAdapter.related() must be implemented by subclasses.");
+  }
+}

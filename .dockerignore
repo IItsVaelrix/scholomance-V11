@@ -1,0 +1,14 @@
+node_modules
+dist
+playwright-report
+test-results
+.git
+.gitignore
+.env
+.env.*
+*.log
+npm-debug.log*
+coverage
+dict_data
+*.sqlite
+nul

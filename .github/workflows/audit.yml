@@ -1,0 +1,27 @@
+name: Audit Dependencies
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Run weekly on Sunday midnight
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18' # Assuming Node.js 18, adjust if necessary
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run npm audit
+      run: npm audit --audit-level=moderate # Adjust audit level as needed
+      continue-on-error: false # Fail the job if vulnerabilities are found
+

@@ -1,0 +1,180 @@
+:root {
+  --school-sonic: #651fff;
+  --school-sonic-hsl: 251, 100%, 50%;
+  --school-sonic-glow: hsla(251, 100%, 50%, 0.4);
+  --school-sonic-lock-bleed: hsla(251, 100%, 50%, 0.4);
+  --school-psychic: #00E5FF;
+  --school-psychic-hsl: 185, 100%, 50%;
+  --school-psychic-glow: hsla(185, 100%, 50%, 0.4);
+  --school-psychic-lock-bleed: hsla(185, 100%, 50%, 0.4);
+  --school-void: #a1a1aa;
+  --school-void-hsl: 240, 5%, 63%;
+  --school-void-glow: hsla(240, 5%, 63%, 0.4);
+  --school-void-lock-bleed: hsla(240, 5%, 63%, 0.4);
+  --school-alchemy: #D500F9;
+  --school-alchemy-hsl: 286, 100%, 52%;
+  --school-alchemy-glow: hsla(286, 100%, 52%, 0.4);
+  --school-alchemy-lock-bleed: hsla(286, 100%, 52%, 0.4);
+  --school-will: #FF8A00;
+  --school-will-hsl: 33, 100%, 50%;
+  --school-will-glow: hsla(33, 100%, 50%, 0.4);
+  --school-will-lock-bleed: hsla(33, 100%, 50%, 0.4);
+  --school-necromancy: #1f7a1f;
+  --school-necromancy-hsl: 120, 60%, 30%;
+  --school-necromancy-glow: hsla(120, 60%, 30%, 0.4);
+  --school-necromancy-lock-bleed: hsla(120, 60%, 30%, 0.4);
+  --school-abjuration: #e6e6e6;
+  --school-abjuration-hsl: 0, 0%, 90%;
+  --school-abjuration-glow: hsla(0, 0%, 90%, 0.4);
+  --school-abjuration-lock-bleed: hsla(0, 0%, 90%, 0.4);
+  --school-divination: #f5d63d;
+  --school-divination-hsl: 50, 90%, 60%;
+  --school-divination-glow: hsla(50, 90%, 60%, 0.4);
+  --school-divination-lock-bleed: hsla(50, 90%, 60%, 0.4);
+  --school-sonic-angle: 288deg;
+  --school-psychic-angle: 72deg;
+  --school-void-angle: 0deg;
+  --school-alchemy-angle: 144deg;
+  --school-will-angle: 216deg;
+  --school-necromancy-angle: 36deg;
+  --school-abjuration-angle: 108deg;
+  --school-divination-angle: 180deg;
+  --vowel-IY: oklch(80.7% 0.160 210.0);
+  --vowel-IH: oklch(76.8% 0.147 195.6);
+  --vowel-EY: oklch(72.9% 0.141 188.4);
+  --vowel-EH: oklch(67.7% 0.131 177.6);
+  --vowel-AE: oklch(61.2% 0.128 174.0);
+  --vowel-ER: oklch(70.3% 0.080 120.0);
+  --vowel-AY: oklch(69.0% 0.104 147.0);
+  --vowel-AW: oklch(69.0% 0.152 39.0);
+  --vowel-OY: oklch(73.6% 0.088 129.0);
+  --vowel-A: oklch(57.3% 0.160 30.0);
+  --vowel-AO: oklch(66.4% 0.136 57.0);
+  --vowel-OH: oklch(72.9% 0.144 48.0);
+  --vowel-OW: oklch(76.8% 0.152 39.0);
+  --vowel-UH: oklch(75.5% 0.128 66.0);
+  --vowel-UW: oklch(80.7% 0.152 39.0);
+  --active-school-color: #651fff;
+  --active-school-h: 251;
+  --active-school-s: 100%;
+  --active-school-l: 50%;
+  --active-school-glow: hsla(251, 100%, 50%, 0.4);
+  --active-aurora-intensity: 1;
+  --active-saturation: 100%;
+  --active-vignette-strength: 0.7;
+  --active-scanline-opacity: 0;
+}
+.school--locked-distant {
+  opacity: 0.2;
+  filter: grayscale(1);
+  cursor: not-allowed;
+  position: relative;
+}
+
+.school--locked-distant::after {
+  content: attr(data-glyph);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  opacity: 0.3;
+  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.3));
+}
+
+.school--locked-approaching {
+  opacity: 0.4;
+  filter: grayscale(0.7);
+  cursor: not-allowed;
+  position: relative;
+}
+
+.school--locked-approaching::after {
+  content: attr(data-glyph);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  opacity: 0.6;
+  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.5));
+  opacity: 0.7;
+  transition: opacity var(--transition-fast, 150ms ease);
+}
+
+.school--locked-approaching:hover::after {
+  opacity: 1;
+}
+
+.school--locked-near {
+  opacity: 0.65;
+  filter: grayscale(0.3);
+  cursor: pointer;
+  position: relative;
+}
+
+.school--locked-near::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: var(--lock-bleed-color, rgba(255, 255, 255, 0.2));
+  opacity: 0.15;
+  opacity: 0.15;
+  transition: opacity var(--transition-fast, 150ms ease);
+}
+
+.school--locked-near:hover::before {
+  opacity: 0.3;
+}
+
+.school--locked-near::after {
+  content: attr(data-glyph);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  opacity: 0.9;
+  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.9));
+  text-shadow: 0 0 12px var(--lock-bleed-color, rgba(255, 255, 255, 0.6));
+}
+
+/* lock-pulse and lock-glow animations removed — replaced with hover glow */
+
+.school-progress-ring {
+  transition: stroke-dashoffset 0.3s ease;
+}
+
+/* Unlock animation */
+@keyframes unlock-flash {
+  0% { background-color: rgba(255, 255, 255, 0); }
+  50% { background-color: rgba(255, 255, 255, 0.3); }
+  100% { background-color: rgba(255, 255, 255, 0); }
+}
+
+.school-unlocked {
+  animation: unlock-flash 0.8s ease-out;
+}
+
+/* Light mode — swap lock indicators to dark colors */
+[data-theme="light"] .school--locked::after,
+[data-theme="light"] .school--locked-approaching::after,
+[data-theme="light"] .school--locked-near::after {
+  color: var(--lock-bleed-color, rgba(0, 0, 0, 0.5));
+  text-shadow: none;
+}
+
+[data-theme="light"] .school--locked-near::before {
+  background: var(--lock-bleed-color, rgba(0, 0, 0, 0.1));
+}
+
+@keyframes unlock-flash-light {
+  0% { background-color: rgba(0, 0, 0, 0); }
+  50% { background-color: rgba(0, 0, 0, 0.08); }
+  100% { background-color: rgba(0, 0, 0, 0); }
+}
+
+[data-theme="light"] .school-unlocked {
+  animation: unlock-flash-light 0.8s ease-out;
+}

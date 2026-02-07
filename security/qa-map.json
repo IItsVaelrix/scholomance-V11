@@ -1,0 +1,21 @@
+{
+  "generated": "2026-02-05",
+  "issues": [
+    { "id": "sqli", "name": "SQL Injection", "checks": ["sql-parameterization"] },
+    { "id": "xss", "name": "Cross-Site Scripting", "checks": ["xss-surface", "csp-headers"] },
+    { "id": "idor", "name": "IDOR", "checks": ["ownership-authorization"] },
+    { "id": "hardcoded-secrets", "name": "Hardcoded Secrets and API Keys", "checks": ["secret-scanner", "client-key-storage"] },
+    { "id": "package-hallucination", "name": "Package Hallucination", "checks": ["dependency-allowlist"] },
+    { "id": "auth-bypass", "name": "Authentication Bypass", "checks": ["auth-middleware"] },
+    { "id": "insecure-deserialization", "name": "Insecure Deserialization", "checks": ["response-schema-validation"] },
+    { "id": "dos", "name": "Denial of Service", "checks": ["rate-limit", "request-size"] },
+    { "id": "eval", "name": "Excessive eval usage", "checks": ["eval-scan"] },
+    { "id": "input-validation", "name": "Lack of Input Validation", "checks": ["schema-validation"] },
+    { "id": "rate-limiting", "name": "Missing Rate Limiting", "checks": ["rate-limit"] },
+    { "id": "outdated-deps", "name": "Outdated Dependencies", "checks": ["npm-audit"] },
+    { "id": "information-exposure", "name": "Information Exposure", "checks": ["error-redaction"] },
+    { "id": "tight-coupling", "name": "Tight Coupling", "checks": ["localstorage-usage"] },
+    { "id": "ai-tools", "name": "Over-permissioned AI Tools", "checks": ["ai-policy"] },
+    { "id": "contextual-understanding", "name": "Lack of Contextual Understanding", "checks": ["qa-map", "script-wiring"] }
+  ]
+}
