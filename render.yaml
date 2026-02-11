@@ -17,6 +17,6 @@ services:
       - key: USER_DB_PATH
         value: /var/data/scholomance_user.sqlite
       - key: REDIS_URL
-        placeholder: "redis://default:YOUR_PASSWORD@YOUR_UPSTASH_ENDPOINT:PORT"
+        sync: false # This tells Render to ask for the value during deploy
       - key: SESSION_SECRET
         generateValue: true

@@ -157,7 +157,7 @@ if (useRedisStore) {
     }
   });
   
-  redisClient.on('error', (err) => fastify.log.error('[REDIS] Client Error', err));
+  redisClient.on('error', (err) => fastify.log.error(`[REDIS] Client Error: ${err.message}`, err));
   redisClient.on('connect', () => fastify.log.info('[REDIS] Client Connected'));
   redisClient.on('ready', () => fastify.log.info('[REDIS] Client Ready'));
   
