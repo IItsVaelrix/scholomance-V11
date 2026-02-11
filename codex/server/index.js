@@ -54,7 +54,9 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const FRONTEND_DIST_PATH = path.join(PROJECT_ROOT, 'dist');
 const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_PATH, 'index.html');
 const PUBLIC_PATH = path.join(PROJECT_ROOT, 'public');
-const AUDIO_UPLOAD_PATH = path.join(PUBLIC_PATH, 'audio');
+const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
+    ? path.resolve(process.env.AUDIO_STORAGE_PATH) 
+    : path.join(PUBLIC_PATH, 'audio');
 
 // Ensure audio directory exists
 if (!existsSync(AUDIO_UPLOAD_PATH)) {
@@ -142,12 +144,14 @@ let sessionStore = null;
 if (useRedisStore) {
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   const isUpstash = redisUrl.includes('upstash.io');
+  const isTls = redisUrl.startsWith('rediss://');
   
-  fastify.log.info(`[REDIS] Initializing ${isUpstash ? 'Upstash ' : ''}Redis connection...`);
+  fastify.log.info(`[REDIS] Initializing ${isUpstash ? 'Upstash ' : ''}Redis connection (TLS: ${isTls})...`);
   
   redisClient = createClient({ 
     url: redisUrl,
     socket: {
+      tls: isTls ? true : undefined, // Explicitly enable TLS for rediss://
       reconnectStrategy: (retries) => {
         const delay = Math.min(retries * 50, 2000);
         return delay;

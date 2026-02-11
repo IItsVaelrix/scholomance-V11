@@ -16,6 +16,10 @@ services:
         value: 0.0.0.0
       - key: USER_DB_PATH
         value: /var/data/scholomance_user.sqlite
+      - key: COLLAB_DB_PATH
+        value: /var/data/scholomance_collab.sqlite
+      - key: AUDIO_STORAGE_PATH
+        value: /var/data/audio
       - key: REDIS_URL
         sync: false # This tells Render to ask for the value during deploy
       - key: SESSION_SECRET
