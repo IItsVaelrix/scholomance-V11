@@ -13,7 +13,7 @@
 // This mapping is based on the thematic associations of vowel sounds.
 // It should be considered part of the core game logic.
 const VOWEL_FAMILY_TO_SCHOOL = {
-    'AA': 'SONIC', 'AE': 'SONIC', 'AH': 'SONIC', // Open, frontal sounds
+    'A': 'SONIC', 'AA': 'SONIC', 'AE': 'SONIC', 'AH': 'SONIC', // Open, frontal sounds
     'AO': 'VOID',  'AW': 'VOID',  'OW': 'VOID',  'UW': 'VOID', // Deep, back sounds
     'AY': 'ALCHEMY','EY': 'ALCHEMY','OY': 'ALCHEMY', // Diphthongs, transformative sounds
     'EH': 'WILL',  'ER': 'WILL',  'UH': 'WILL', // Guttural, forceful sounds

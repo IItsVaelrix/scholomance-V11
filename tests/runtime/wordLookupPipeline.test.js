@@ -217,7 +217,7 @@ describe('[Runtime] WordLookupPipeline', () => {
         responseEvent: EVENTS.RESPONSE,
       });
 
-      const result = await resultPromise;
+      await resultPromise;
       expect(unavailableAdapter.lookup).not.toHaveBeenCalled();
       expect(availableAdapter.lookup).toHaveBeenCalled();
 

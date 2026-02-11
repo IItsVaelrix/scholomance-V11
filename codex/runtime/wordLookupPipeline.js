@@ -15,7 +15,7 @@
 import { on, emit } from './eventBus.js';
 import { getFromCache, setInCache } from './cache.js';
 import { isActionAllowed } from './rateLimit.js';
-import { mergeLexicalEntries, createEmptyLexicalEntry } from '../core/schemas.js';
+import { mergeLexicalEntries } from '../core/schemas.js';
 
 // Constants
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (persisted to IndexedDB)

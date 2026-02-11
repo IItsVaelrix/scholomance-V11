@@ -148,6 +148,7 @@
 }
 
 .listen-now-card {
+  --listen-pulse: 0;
   position: relative;
   display: grid;
   justify-items: center;
@@ -167,14 +168,15 @@
   inset: -24% -18%;
   background:
     radial-gradient(circle, color-mix(in srgb, var(--listen-accent) 28%, transparent), transparent 60%);
-  opacity: 0.35;
+  opacity: calc(0.22 + var(--listen-pulse) * 0.58);
+  transform: scale(calc(0.95 + var(--listen-pulse) * 0.16));
+  filter: saturate(calc(0.86 + var(--listen-pulse) * 0.7));
   pointer-events: none;
-  transition: opacity 220ms ease;
+  transition: opacity 80ms linear, transform 80ms linear, filter 80ms linear;
 }
 
 .listen-now-aura.is-live {
-  opacity: 0.78;
-  animation: listen-aura-pulse 2.4s ease-in-out infinite;
+  opacity: calc(0.3 + var(--listen-pulse) * 0.62);
 }
 
 .listen-now-meta {
@@ -452,13 +454,13 @@
 }
 
 [data-theme="light"] .listen-now-aura {
-  opacity: 0.58;
+  opacity: calc(0.4 + var(--listen-pulse) * 0.44);
   background:
     radial-gradient(circle, color-mix(in srgb, var(--listen-accent) 34%, #ffffff), transparent 62%);
 }
 
 [data-theme="light"] .listen-now-aura.is-live {
-  opacity: 0.84;
+  opacity: calc(0.46 + var(--listen-pulse) * 0.5);
 }
 
 [data-theme="light"] .listen-status {

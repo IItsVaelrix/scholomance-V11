@@ -28,6 +28,14 @@ export const LITERARY_DEVICES = {
     name: "Epistrophe",
     definition: "Repetition of a word or phrase at the end of successive lines.",
   },
+  SIMILE: {
+    name: "Simile",
+    definition: "A comparison using 'like' or 'as'.",
+  },
+  METAPHOR: {
+    name: "Metaphor",
+    definition: "A direct comparison between two unrelated things without using 'like' or 'as'.",
+  },
 };
 
 // Common stop words to ignore in repetition analysis
@@ -175,6 +183,36 @@ function detectRepetition(text) {
 }
 
 /**
+ * Detects similes: comparisons using "like" or "as".
+ */
+function detectSimile(text) {
+  // Pattern 1: "as [adj] as [noun]"
+  // Pattern 2: "[noun/verb] like [a/the] [noun]"
+  const simileRegex = /\b(as\s+\w+\s+as\s+[\w\s]+|[\w']+\s+like\s+(a\s+|the\s+)?[\w\s]+)\b/gi;
+  const matches = text.match(simileRegex) || [];
+  
+  return {
+    count: matches.length,
+    examples: matches.slice(0, 2).map(m => `"${m.trim()}"`)
+  };
+}
+
+/**
+ * Detects basic metaphors: "[noun] is/are/was/were [noun/adj]".
+ * This is a heuristic approximation.
+ */
+function detectMetaphor(text) {
+  // Avoid common non-metaphorical "is" uses
+  const metaphorRegex = /\b(I\s+am|life\s+is|love\s+is|hope\s+is|death\s+is|truth\s+is|[\w']+\s+(is|are|was|were)\s+(a\s+|the\s+)?(dream|fire|ocean|storm|mountain|shadow|mirror|thief|ghost|prison|garden|beast|star|labyrinth))\b/gi;
+  const matches = text.match(metaphorRegex) || [];
+  
+  return {
+    count: matches.length,
+    examples: matches.slice(0, 2).map(m => `"${m.trim()}"`)
+  };
+}
+
+/**
  * Master analysis: detect all literary devices and return top 3 by prevalence.
  * @param {string} text - Full document text.
  * @returns {Array<{ id: string, name: string, definition: string, count: number, examples: string[] }>}
@@ -191,6 +229,8 @@ export function analyzeLiteraryDevices(text) {
     { id: 'EPISTROPHE', ...detectEpistrophe(lines) },
     { id: 'ENJAMBMENT', ...detectEnjambment(lines) },
     { id: 'REPETITION', ...detectRepetition(text) },
+    { id: 'SIMILE', ...detectSimile(text) },
+    { id: 'METAPHOR', ...detectMetaphor(text) },
   ].filter((r) => r.count > 0);
 
   // Sort by count descending, take top 3

@@ -1,44 +1,92 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import PropTypes from 'prop-types';
+import PropTypes from "prop-types";
 import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
 import { useTheme } from "../hooks/useTheme.jsx";
 
+const MAX_REPEATS_PER_RHYME_PAIR = 2;
+
+function normalizeWord(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getRhymeRepeatKey(connection) {
+  const type = String(connection?.type || "").toLowerCase();
+  const subtype = String(connection?.subtype || "").toLowerCase();
+  const wordA = normalizeWord(connection?.wordA?.word);
+  const wordB = normalizeWord(connection?.wordB?.word);
+  const [left, right] = wordA <= wordB ? [wordA, wordB] : [wordB, wordA];
+  return `${type}:${subtype}:${left}:${right}`;
+}
+
+function capRhymeRepeats(connections, maxRepeats = MAX_REPEATS_PER_RHYME_PAIR) {
+  if (!Array.isArray(connections) || connections.length === 0) return [];
+
+  const seenCounts = new Map();
+  const filtered = [];
+
+  for (const conn of connections) {
+    const key = getRhymeRepeatKey(conn);
+    const count = seenCounts.get(key) || 0;
+    if (count >= maxRepeats) continue;
+
+    seenCounts.set(key, count + 1);
+    filtered.push(conn);
+  }
+
+  return filtered;
+}
+
 /**
  * Scrollable rhyme connection list panel.
- * Groups rhyme connections by type (Perfect, Near, Slant, etc.)
- * and displays them as interactive buttons — mirrors the Scheme panel's group list.
+ * Groups rhyme connections by type (Perfect, Near, Slant, etc.).
+ * Repeated pair entries are capped to 2 occurrences per type/subtype.
  */
 export default function RhymeDiagramPanel({
   connections,
-  lineCount,
+  lineCount: _lineCount,
   visible,
   onConnectionHover,
   onConnectionLeave,
   highlightedLines,
 }) {
   const { theme } = useTheme();
-  const isLight = theme === 'light';
+  const isLight = theme === "light";
+  const [expandedGroups, setExpandedGroups] = useState({});
 
-  // Group connections by rhyme type
+  const toggleGroup = (id) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const filteredConnections = useMemo(() => {
+    return capRhymeRepeats(connections, MAX_REPEATS_PER_RHYME_PAIR);
+  }, [connections]);
+
   const groupedConnections = useMemo(() => {
     const groups = {};
 
-    // Initialize groups in order
     Object.entries(RHYME_TYPES).forEach(([key, { id, name, color, lightColor }]) => {
-      groups[id] = { key, name, color: isLight ? (lightColor || color) : color, connections: [] };
+      groups[id] = {
+        id,
+        key,
+        name,
+        color: isLight ? (lightColor || color) : color,
+        connections: [],
+      };
     });
 
-    connections.forEach((conn) => {
-      const type = conn.type.toLowerCase();
+    filteredConnections.forEach((conn) => {
+      const type = String(conn?.type || "").toLowerCase();
       if (groups[type]) {
         groups[type].connections.push(conn);
       }
     });
 
-    // Return only groups with connections
-    return Object.values(groups).filter((g) => g.connections.length > 0);
-  }, [connections, isLight]);
+    return Object.values(groups).filter((group) => group.connections.length > 0);
+  }, [filteredConnections, isLight]);
 
   if (!visible) return null;
 
@@ -52,53 +100,75 @@ export default function RhymeDiagramPanel({
     >
       <div className="diagram-header">
         <h4 className="diagram-title">Rhyme Power</h4>
-        <span className="diagram-count">{connections.length}</span>
+        <span className="diagram-count">{filteredConnections.length}</span>
       </div>
 
       <div className="rhyme-connections-list">
-        {groupedConnections.map((group) => (
-          <div key={group.key} className="rhyme-type-group">
-            <div className="rhyme-type-header">
-              <span
-                className="rhyme-type-dot"
-                style={{ background: group.color, boxShadow: `0 0 6px ${group.color}` }}
-              />
-              <span className="rhyme-type-name">{group.name}</span>
-              <span className="rhyme-type-count">{group.connections.length}</span>
-            </div>
+        {groupedConnections.map((group) => {
+          const isExpanded = Boolean(expandedGroups[group.id]);
 
-            <div className="rhyme-type-items">
-              {group.connections.map((conn, i) => {
-                const lineA = conn.wordA.lineIndex;
-                const lineB = conn.wordB.lineIndex;
-                const lines = [lineA, lineB];
-                const isHighlighted =
-                  highlightedLines?.includes(lineA) || highlightedLines?.includes(lineB);
+          return (
+            <div key={group.key} className="rhyme-type-group">
+              <button
+                type="button"
+                className="rhyme-type-header-btn"
+                onClick={() => toggleGroup(group.id)}
+              >
+                <div className="rhyme-type-header">
+                  <span
+                    className="rhyme-type-dot"
+                    style={{ background: group.color, boxShadow: `0 0 6px ${group.color}` }}
+                  />
+                  <span className="rhyme-type-name">{group.name}</span>
+                  <span className="rhyme-type-count">{group.connections.length}</span>
+                  <span className="group-toggle-icon">{isExpanded ? "\u2212" : "+"}</span>
+                </div>
+              </button>
 
-                return (
-                  <button
-                    key={`${conn.wordA.word}-${conn.wordB.word}-${i}`}
-                    type="button"
-                    className={`rhyme-conn-btn ${isHighlighted ? 'rhyme-conn-btn--highlighted' : ''}`}
-                    onMouseEnter={() => onConnectionHover?.(lines)}
-                    onMouseLeave={onConnectionLeave}
-                    onFocus={() => onConnectionHover?.(lines)}
-                    onBlur={onConnectionLeave}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    className="rhyme-type-items"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    style={{ overflow: "hidden" }}
                   >
-                    <span className="rhyme-conn-words">
-                      <span className="rhyme-conn-word">{conn.wordA.word}</span>
-                      <span className="rhyme-conn-arrow">&harr;</span>
-                      <span className="rhyme-conn-word">{conn.wordB.word}</span>
-                    </span>
-                    <span className="rhyme-conn-lines">
-                      L{lineA + 1}&ndash;{lineB + 1}
-                    </span>
-                  </button>
-                );
-              })}
+                    {group.connections.map((conn, index) => {
+                      const lineA = conn.wordA.lineIndex;
+                      const lineB = conn.wordB.lineIndex;
+                      const lines = [lineA, lineB];
+                      const isHighlighted =
+                        highlightedLines?.includes(lineA) || highlightedLines?.includes(lineB);
+
+                      return (
+                        <button
+                          key={`${conn.wordA.word}-${conn.wordB.word}-${lineA}-${lineB}-${index}`}
+                          type="button"
+                          className={`rhyme-conn-btn ${isHighlighted ? "rhyme-conn-btn--highlighted" : ""}`}
+                          onMouseEnter={() => onConnectionHover?.(lines)}
+                          onMouseLeave={onConnectionLeave}
+                          onFocus={() => onConnectionHover?.(lines)}
+                          onBlur={onConnectionLeave}
+                        >
+                          <span className="rhyme-conn-words">
+                            <span className="rhyme-conn-word">{conn.wordA.word}</span>
+                            <span className="rhyme-conn-arrow">&harr;</span>
+                            <span className="rhyme-conn-word">{conn.wordB.word}</span>
+                          </span>
+                          <span className="rhyme-conn-lines">
+                            L{lineA + 1}&ndash;{lineB + 1}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          </div>
-        ))}
+          );
+        })}
 
         {groupedConnections.length === 0 && (
           <div className="rhyme-empty">

@@ -6,10 +6,12 @@
  * @see AI_Architecture_V2.md section 3.3 and 5.2
  */
 
+import { analyzeText } from './analysis.pipeline.js';
+
 /**
  * Creates a new scoring engine instance with encapsulated state.
- * @param {Array<{name: string, scorer: function(string): import('./schemas').ScoreTrace, weight: number}>} [initialHeuristics=[]]
- * @returns {{ calculateScore: function(string): {totalScore: number, traces: import('./schemas').ScoreTrace[]}, registerHeuristic: function, reset: function, getHeuristics: function }}
+ * @param {Array<{name: string, scorer: function(import('./schemas').AnalyzedDocument): import('./schemas').ScoreTrace, weight: number}>} [initialHeuristics=[]]
+ * @returns {{ calculateScore: function(string|import('./schemas').AnalyzedDocument): {totalScore: number, traces: import('./schemas').ScoreTrace[]}, registerHeuristic: function, reset: function, getHeuristics: function }}
  */
 export function createScoringEngine(initialHeuristics = []) {
   const heuristics = [...initialHeuristics];
@@ -18,13 +20,26 @@ export function createScoringEngine(initialHeuristics = []) {
     heuristics.push(heuristic);
   }
 
-  function calculateScore(line) {
-    if (!line) {
+  function calculateScore(input) {
+    if (!input) {
       return { totalScore: 0, traces: [] };
     }
 
+    /** @type {import('./schemas').AnalyzedDocument} */
+    let doc;
+    if (typeof input === 'string') {
+      doc = analyzeText(input);
+    } else {
+      doc = input;
+    }
+
+    if (!doc.stats || doc.stats.wordCount === 0) {
+       // Return early if empty doc, but run heuristics if they handle empty docs?
+       // Most will fail or return 0. Let's let them run but they expect a doc.
+    }
+
     const traces = heuristics.map((h) => {
-      const raw = h.scorer(line);
+      const raw = h.scorer(doc);
       return {
         ...raw,
         weight: h.weight,

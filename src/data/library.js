@@ -46,6 +46,7 @@ export const LINKS = [
   { id: "watch", path: "/watch", label: "Watch" },
   { id: "listen", path: "/listen", label: "Listen" },
   { id: "read", path: "/read", label: "Scribe" },
+  { id: "collab", path: "/collab", label: "Collab" },
 ];
 
 // Dynamically generate COLORS from SCHOOLS source of truth

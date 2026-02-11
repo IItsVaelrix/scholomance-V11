@@ -4,6 +4,7 @@ import PropTypes from 'prop-types';
  * Analysis mode options for Truesight.
  */
 export const ANALYSIS_MODES = {
+  NONE: 'none',
   VOWEL: 'vowel',
   RHYME: 'rhyme',
   SCHEME: 'scheme',
@@ -36,12 +37,13 @@ export default function TruesightControls({
       </button>
 
       {isTruesight && (
-        <div className="truesight-mode-selector" role="group" aria-label="Analysis mode">
+        <div className="truesight-mode-selector animate-fadeIn" role="group" aria-label="Analysis mode">
           <button
             type="button"
             className={`mode-btn ${analysisMode === ANALYSIS_MODES.VOWEL ? 'mode-btn--active' : ''}`}
             onClick={() => onModeChange(ANALYSIS_MODES.VOWEL)}
-            title="Show vowel family colors"
+            aria-pressed={analysisMode === ANALYSIS_MODES.VOWEL}
+            title="Focus on vowel-family breakdown"
           >
             Vowels
           </button>
@@ -49,17 +51,22 @@ export default function TruesightControls({
             type="button"
             className={`mode-btn ${analysisMode === ANALYSIS_MODES.RHYME ? 'mode-btn--active' : ''}`}
             onClick={() => onModeChange(ANALYSIS_MODES.RHYME)}
-            title="Show rhyme connections between words"
+            aria-pressed={analysisMode === ANALYSIS_MODES.RHYME}
+            title="Focus on rhyme connections"
           >
             Rhymes
           </button>
           <button
             type="button"
-            className={`mode-btn ${analysisMode === ANALYSIS_MODES.SCHEME ? 'mode-btn--active' : ''}`}
+            className={`mode-btn mode-btn--scheme ${analysisMode === ANALYSIS_MODES.SCHEME ? 'mode-btn--active' : ''}`}
             onClick={() => onModeChange(ANALYSIS_MODES.SCHEME)}
-            title="Detect rhyme scheme, meter, and structure"
+            aria-pressed={analysisMode === ANALYSIS_MODES.SCHEME}
+            title="Focus on rhyme scheme analysis"
           >
-            Scheme
+            <span className="mode-btn-scheme-glyph" aria-hidden="true">
+              ABAB
+            </span>
+            <span>Scheme</span>
           </button>
           {isAnalyzing && (
             <span className="analyzing-indicator" aria-live="polite">

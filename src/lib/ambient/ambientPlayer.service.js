@@ -21,6 +21,21 @@ const DEFAULT_OPTIONS = Object.freeze({
   signalPollMs: 90,
 });
 
+const DEFAULT_PROVIDER_CAPABILITIES = Object.freeze({
+  canAnalyze: false,
+  canSetVolumeSmooth: false,
+  supportsSeek: false,
+});
+
+const CONTEXT_RECOVERY_EVENTS = Object.freeze(["pointerdown", "keydown", "touchstart"]);
+
+function createProviderCapabilities(overrides = {}) {
+  return {
+    ...DEFAULT_PROVIDER_CAPABILITIES,
+    ...overrides,
+  };
+}
+
 export const AMBIENT_PLAYER_STATES = Object.freeze({
   IDLE: "IDLE",
   PLAYING: "PLAYING",
@@ -42,8 +57,140 @@ function canUseBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
 }
 
+function parseUrl(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== "string") return null;
+  try {
+    return new URL(rawUrl);
+  } catch {
+    return null;
+  }
+}
+
+function extractYouTubeVideoId(rawUrl) {
+  const parsed = parseUrl(rawUrl);
+  if (!parsed) return null;
+  const host = parsed.hostname.toLowerCase();
+
+  if (host.includes("youtu.be")) {
+    const fromPath = parsed.pathname.split("/").filter(Boolean)[0];
+    return fromPath || null;
+  }
+
+  if (host.includes("youtube.com")) {
+    if (parsed.pathname.startsWith("/embed/")) {
+      const fromEmbed = parsed.pathname.split("/").filter(Boolean)[1];
+      return fromEmbed || null;
+    }
+    return parsed.searchParams.get("v") || null;
+  }
+
+  return null;
+}
+
 function clamp01(value) {
   return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
+
+function getNowMs() {
+  if (typeof performance !== "undefined" && typeof performance.now === "function") {
+    return performance.now();
+  }
+  return Date.now();
+}
+
+const PERCUSSIVE_PULSE_CONFIG = Object.freeze({
+  energyEmaAlpha: 0.26,
+  floorRiseAlpha: 0.02,
+  floorFallAlpha: 0.2,
+  cooldownMs: 110, // ~9 Hz max pulse frequency from detected transients.
+  holdMs: 42,
+  decayMs: 220,
+  hitScoreThreshold: 0.08,
+  peakWeight: 1.85,
+  transientWeight: 2.45,
+  crestWeight: 1.15,
+});
+
+export function createPercussivePulseState(overrides = {}) {
+  return {
+    energyEma: 0,
+    floorEma: 0.01,
+    pulse: 0,
+    lastHitMs: -Infinity,
+    lastSampleMs: null,
+    ...overrides,
+  };
+}
+
+export function getPercussivePulseLevelFromWaveform(
+  byteTimeData,
+  pulseState,
+  nowMs = getNowMs()
+) {
+  if (!pulseState || typeof pulseState !== "object") {
+    return 0;
+  }
+  if (!(byteTimeData instanceof Uint8Array) || byteTimeData.length === 0) {
+    return clamp01(pulseState.pulse || 0);
+  }
+
+  let absMean = 0;
+  let absPeak = 0;
+  for (let index = 0; index < byteTimeData.length; index += 1) {
+    const normalized = Math.abs((byteTimeData[index] - 128) / 128);
+    absMean += normalized;
+    if (normalized > absPeak) absPeak = normalized;
+  }
+  absMean /= byteTimeData.length;
+
+  const previousEnergy = pulseState.energyEma || 0;
+  const previousFloor = pulseState.floorEma || 0.01;
+  const previousPulse = pulseState.pulse || 0;
+  const previousSampleMs = pulseState.lastSampleMs;
+  const deltaMs = Number.isFinite(previousSampleMs) ? Math.max(0, nowMs - previousSampleMs) : 0;
+
+  pulseState.energyEma =
+    previousEnergy + (absMean - previousEnergy) * PERCUSSIVE_PULSE_CONFIG.energyEmaAlpha;
+
+  const floorAlpha =
+    absMean < previousFloor
+      ? PERCUSSIVE_PULSE_CONFIG.floorFallAlpha
+      : PERCUSSIVE_PULSE_CONFIG.floorRiseAlpha;
+  pulseState.floorEma = previousFloor + (absMean - previousFloor) * floorAlpha;
+
+  const transientEnergy = Math.max(0, absMean - previousEnergy);
+  const crest = Math.max(0, absPeak - absMean);
+  const adaptivePeakBase = pulseState.floorEma + 0.045;
+  const peakExcursion = Math.max(0, absPeak - adaptivePeakBase);
+
+  const hitScore =
+    transientEnergy * PERCUSSIVE_PULSE_CONFIG.transientWeight +
+    crest * PERCUSSIVE_PULSE_CONFIG.crestWeight +
+    peakExcursion * PERCUSSIVE_PULSE_CONFIG.peakWeight;
+  const isOffCooldown = nowMs - pulseState.lastHitMs >= PERCUSSIVE_PULSE_CONFIG.cooldownMs;
+  const isPercussiveHit =
+    isOffCooldown && hitScore >= PERCUSSIVE_PULSE_CONFIG.hitScoreThreshold;
+
+  let nextPulse = previousPulse;
+  if (isPercussiveHit) {
+    pulseState.lastHitMs = nowMs;
+    nextPulse = 1;
+  } else if (deltaMs > 0) {
+    const decay = Math.exp(-deltaMs / PERCUSSIVE_PULSE_CONFIG.decayMs);
+    nextPulse = previousPulse * decay;
+  }
+
+  if (nowMs - pulseState.lastHitMs <= PERCUSSIVE_PULSE_CONFIG.holdMs) {
+    nextPulse = Math.max(nextPulse, 0.92);
+  }
+
+  pulseState.pulse = clamp01(nextPulse);
+  pulseState.lastSampleMs = nowMs;
+
+  const normalizedEnergy = clamp01(
+    (absMean - pulseState.floorEma * 0.82) / (0.27 + pulseState.floorEma)
+  );
+  return clamp01(normalizedEnergy * 0.42 + pulseState.pulse * 0.94);
 }
 
 function toPositiveMs(value, fallbackMs) {
@@ -92,6 +239,78 @@ function createAudioContext() {
   } catch {
     return null;
   }
+}
+
+let youtubeIframeApiPromise = null;
+
+function loadYoutubeIframeApi() {
+  if (!canUseBrowser()) {
+    return Promise.reject(new Error("YouTube iframe API requires a browser environment"));
+  }
+
+  if (window.YT && typeof window.YT.Player === "function") {
+    return Promise.resolve(window.YT);
+  }
+
+  if (youtubeIframeApiPromise) {
+    return youtubeIframeApiPromise;
+  }
+
+  youtubeIframeApiPromise = new Promise((resolve, reject) => {
+    let settled = false;
+    let timeoutId = null;
+    const settle = (handler, value) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+      handler(value);
+    };
+
+    const previousReadyHandler = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof previousReadyHandler === "function") {
+        try {
+          previousReadyHandler();
+        } catch {
+          // Ignore other ready callback failures.
+        }
+      }
+      if (window.YT && typeof window.YT.Player === "function") {
+        settle(resolve, window.YT);
+        return;
+      }
+      settle(reject, new Error("YouTube iframe API loaded without Player constructor"));
+    };
+
+    const scriptSrc = "https://www.youtube.com/iframe_api";
+    const existingScript = document.querySelector(`script[src="${scriptSrc}"]`);
+    if (!existingScript) {
+      const script = document.createElement("script");
+      script.src = scriptSrc;
+      script.async = true;
+      script.onerror = () => {
+        settle(reject, new Error("Failed to load YouTube iframe API script"));
+      };
+      const host = document.head || document.body || document.documentElement;
+      host.appendChild(script);
+    }
+
+    if (window.YT && typeof window.YT.Player === "function") {
+      settle(resolve, window.YT);
+      return;
+    }
+
+    timeoutId = window.setTimeout(() => {
+      settle(reject, new Error("Timed out loading YouTube iframe API"));
+    }, 12000);
+  }).catch((error) => {
+    youtubeIframeApiPromise = null;
+    throw error;
+  });
+
+  return youtubeIframeApiPromise;
 }
 
 function createWhiteNoiseBuffer(audioContext, durationSec) {
@@ -191,8 +410,140 @@ async function createTrackController({
   audioContext = null,
 }) {
   const embed = getTrackEmbedConfig(trackUrl, { autoPlay });
-  if (!embed?.src) {
+  if (!embed?.src && !embed?.audioUrl) {
     throw new Error("Unsupported track URL");
+  }
+  const youtubeVideoId = embed.provider === "youtube" ? extractYouTubeVideoId(trackUrl) : null;
+
+  if (embed.provider === "youtube" && youtubeVideoId) {
+    let player = null;
+    let mountNode = null;
+    let currentVolume = clamp01(volume);
+    let destroyed = false;
+    const capabilities = createProviderCapabilities({
+      canAnalyze: false,
+      canSetVolumeSmooth: true,
+      supportsSeek: true,
+    });
+
+    const teardownPlayer = () => {
+      if (player) {
+        try {
+          player.destroy();
+        } catch {
+          // Ignore YouTube teardown failures.
+        }
+      }
+      player = null;
+      if (mountNode) {
+        mountNode.remove();
+        mountNode = null;
+      }
+    };
+
+    const loadPromise = loadYoutubeIframeApi()
+      .then((api) => {
+        if (destroyed) return;
+        return new Promise((resolve, reject) => {
+          let settled = false;
+          const settle = (handler, value) => {
+            if (settled) return;
+            settled = true;
+            handler(value);
+          };
+
+          mountNode = document.createElement("div");
+          mountNode.style.cssText =
+            "width:0;height:0;overflow:hidden;pointer-events:none;position:absolute;";
+          container.appendChild(mountNode);
+
+          player = new api.Player(mountNode, {
+          videoId: youtubeVideoId,
+          playerVars: {
+            autoplay: autoPlay ? 1 : 0,
+            controls: 0,
+            disablekb: 1,
+            enablejsapi: 1,
+            fs: 0,
+            iv_load_policy: 3,
+            loop: 1, // Loop works with playlist, otherwise requires manual restart
+            modestbranding: 1,
+            rel: 0,
+            showinfo: 0,
+            start: 0,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (e) => {
+              if (destroyed) {
+                teardownPlayer();
+                settle(resolve);
+                return;
+              }
+              try {
+                e.target.setVolume(currentVolume * 100); // YT API uses 0-100
+              } catch {
+                // Ignore transient volume errors before player settles.
+              }
+              settle(resolve);
+            },
+            onStateChange: (e) => {
+              if (destroyed) return;
+              if (e.data === api.PlayerState.ENDED) {
+                // Manually loop if single video
+                try {
+                  e.target.seekTo(0);
+                  e.target.playVideo();
+                } catch {
+                  // Ignore loop restart failures.
+                }
+                onTrackEnded?.();
+              }
+            },
+            onError: () => {
+              settle(reject, new Error("YouTube player failed to initialize"));
+            },
+          }
+        });
+      });
+      })
+      .catch((error) => {
+        teardownPlayer();
+        throw error;
+      });
+
+    return {
+      provider: embed.provider,
+      capabilities,
+      schoolId: null,
+      loadPromise,
+      getVolume: () => currentVolume,
+      setVolume: (value) => {
+        currentVolume = clamp01(value);
+        if (!destroyed && player) {
+          try {
+            player.setVolume(currentVolume * 100);
+          } catch {
+            // Ignore early setVolume calls before player ready.
+          }
+        }
+      },
+      getSignalLevel: () => null,
+      play: async () => {
+        await loadPromise; // Ensure player is ready
+        if (destroyed) return;
+        player?.playVideo();
+      },
+      pause: async () => {
+        if (destroyed) return;
+        player?.pauseVideo();
+      },
+      destroy: () => {
+        if (destroyed) return;
+        destroyed = true;
+        teardownPlayer();
+      },
+    };
   }
 
   if ((embed.provider === "suno" || embed.provider === "direct") && embed.audioUrl) {
@@ -205,14 +556,16 @@ async function createTrackController({
     audio.setAttribute("aria-hidden", "true");
     container.appendChild(audio);
 
-    audio.addEventListener("error", (e) => {
+    const handleAudioError = (e) => {
       console.error("Suno audio playback error:", e.target.error);
-    });
+    };
+    audio.addEventListener("error", handleAudioError);
 
     let analyser = null;
     let analyserData = null;
     let mediaSource = null;
     let outputGain = null;
+    const pulseState = createPercussivePulseState();
 
     if (audioContext && typeof audioContext.createMediaElementSource === "function") {
       try {
@@ -238,20 +591,61 @@ async function createTrackController({
       }
     }
 
+    const handleEnded = () => onTrackEnded?.();
     if (typeof onTrackEnded === "function") {
-      audio.addEventListener("ended", onTrackEnded);
+      audio.addEventListener("ended", handleEnded);
     }
 
+    let resolvedLoad = false;
+    let loadTimeoutId = null;
+    const handleCanPlay = () => {
+      if (resolvedLoad) return;
+      resolvedLoad = true;
+      audio.removeEventListener("canplaythrough", handleCanPlay);
+      if (loadTimeoutId !== null) {
+        clearTimeout(loadTimeoutId);
+      }
+      loadTimeoutId = null;
+    };
+
     const loadPromise = new Promise((resolve) => {
-      const handleCanPlay = () => {
-        audio.removeEventListener("canplaythrough", handleCanPlay);
+      const resolveWhenReady = () => {
+        if (resolvedLoad) {
+          resolve();
+          return;
+        }
+        handleCanPlay();
         resolve();
       };
       audio.addEventListener("canplaythrough", handleCanPlay);
-      setTimeout(resolve, 5000);
+      loadTimeoutId = setTimeout(resolveWhenReady, 5000);
+      if (audio.readyState >= 3) {
+        resolveWhenReady();
+      }
     });
 
     let sunoVolume = clamp01(volume);
+    const capabilities = createProviderCapabilities({
+      canAnalyze: Boolean(analyser),
+      canSetVolumeSmooth: true,
+      supportsSeek: true,
+    });
+    let destroyed = false;
+
+    const disconnectGraph = () => {
+      try {
+        mediaSource?.disconnect();
+        analyser?.disconnect();
+        outputGain?.disconnect();
+      } catch {
+        // Ignore analyser graph teardown failures.
+      }
+      mediaSource = null;
+      analyser = null;
+      outputGain = null;
+      analyserData = null;
+    };
+
     if (!outputGain) {
       audio.volume = sunoVolume;
     } else {
@@ -260,11 +654,13 @@ async function createTrackController({
 
     return {
       provider: embed.provider,
+      capabilities,
       schoolId: null,
       loadPromise,
       getVolume: () => sunoVolume,
       setVolume: (value) => {
         sunoVolume = clamp01(value);
+        if (destroyed) return;
         if (outputGain) {
           outputGain.gain.value = sunoVolume;
         } else {
@@ -272,24 +668,16 @@ async function createTrackController({
         }
       },
       getSignalLevel: () => {
-        if (analyser && analyserData) {
+        if (analyser && analyserData && typeof analyser.getByteTimeDomainData === "function") {
           analyser.getByteTimeDomainData(analyserData);
-          let squareSum = 0;
-          for (let index = 0; index < analyserData.length; index += 1) {
-            const normalized = (analyserData[index] - 128) / 128;
-            squareSum += normalized * normalized;
-          }
-          const rms = Math.sqrt(squareSum / analyserData.length);
-          return clamp01((rms - 0.012) / 0.12);
+          return getPercussivePulseLevelFromWaveform(analyserData, pulseState, getNowMs());
         }
-        const t = audio.currentTime || 0;
-        const pseudoBeat = Math.abs(Math.sin(t * 2.5)) * 0.5;
-        const sparkle = Math.random() * 0.2;
-        return clamp01(0.2 + pseudoBeat + sparkle);
+        return null;
       },
       play: async () => {
         await loadPromise;
-        if (audioContext && audioContext.state === "suspended") {
+        if (destroyed) return;
+        if (audioContext && (audioContext.state === "suspended" || audioContext.state === "interrupted")) {
           try {
             await audioContext.resume();
           } catch {
@@ -298,46 +686,118 @@ async function createTrackController({
         }
         try {
           await audio.play();
-        } catch {
-          // Ignore autoplay/user gesture restrictions.
+        } catch (err) {
+          console.warn("Audio playback failed (user gesture?):", err);
+          throw new Error("Audio playback blocked. Please interact with the page.");
         }
       },
       pause: async () => {
+        if (destroyed) return;
         audio.pause();
       },
       destroy: () => {
+        if (destroyed) return;
+        destroyed = true;
         audio.pause();
-        try {
-          mediaSource?.disconnect();
-          analyser?.disconnect();
-          outputGain?.disconnect();
-        } catch {
-          // Ignore analyser graph teardown failures.
+        audio.removeEventListener("error", handleAudioError);
+        audio.removeEventListener("canplaythrough", handleCanPlay);
+        if (typeof onTrackEnded === "function") {
+          audio.removeEventListener("ended", handleEnded);
         }
+        if (loadTimeoutId !== null) {
+          clearTimeout(loadTimeoutId);
+          loadTimeoutId = null;
+        }
+        disconnectGraph();
         audio.removeAttribute("src");
-        audio.load();
+        try {
+          audio.load();
+        } catch {
+          // Ignore late teardown load errors.
+        }
         audio.remove();
       },
     };
   }
 
+  // Suno embed fallback: avoid brittle direct-MP3 URLs while preserving play/pause controls.
+  if (embed.provider === "suno" && embed.src) {
+    const iframe = document.createElement("iframe");
+    iframe.allow = "autoplay";
+    iframe.style.cssText = "width:0;height:0;border:0;position:absolute;pointer-events:none;";
+    iframe.title = "Suno player";
+    container.appendChild(iframe);
+
+    let sunoVolume = clamp01(volume);
+
+    const setAutoplaySrc = (enabled) => {
+      try {
+        const url = new URL(embed.src);
+        if (enabled) {
+          url.searchParams.set("autoplay", "1");
+        } else {
+          url.searchParams.delete("autoplay");
+        }
+        iframe.src = url.toString();
+      } catch {
+        iframe.src = embed.src;
+      }
+    };
+
+    if (autoPlay) {
+      setAutoplaySrc(true);
+    } else {
+      iframe.src = embed.src;
+    }
+
+    return {
+      provider: embed.provider,
+      capabilities: createProviderCapabilities({
+        canAnalyze: false,
+        canSetVolumeSmooth: false,
+        supportsSeek: false,
+      }),
+      schoolId: null,
+      loadPromise: Promise.resolve(),
+      getVolume: () => sunoVolume,
+      setVolume: (value) => {
+        sunoVolume = clamp01(value);
+      },
+      getSignalLevel: () => null,
+      play: async () => {
+        setAutoplaySrc(true);
+      },
+      pause: async () => {
+        iframe.src = "about:blank";
+      },
+      destroy: () => {
+        iframe.remove();
+      },
+    };
+  }
+
+  // Fallback for unsupported embeds or other iframe providers
+  // This iframe cannot be controlled by JS, so it's a passive display
   const iframe = document.createElement("iframe");
   iframe.src = embed.src;
   iframe.allow = "autoplay";
-  iframe.style.cssText = "width:0;height:0;border:0;";
+  iframe.style.cssText = "width:0;height:0;border:0;position:absolute;pointer-events:none;";
   iframe.title = "Ambient player";
   container.appendChild(iframe);
-  let iframeVolume = volume;
+  
   return {
     provider: embed.provider,
-    schoolId: null,
-    getVolume: () => iframeVolume,
-    setVolume: (value) => {
-      iframeVolume = clamp01(value);
-    },
-    getSignalLevel: () => null,
-    play: async () => {},
-    pause: async () => {},
+    capabilities: createProviderCapabilities({
+      canAnalyze: false,
+      canSetVolumeSmooth: false,
+      supportsSeek: false,
+    }),
+    schoolId: null, // Not directly associated with a school for control purposes
+    getVolume: () => 0, // Cannot control iframe volume directly
+    setVolume: () => {}, // No-op
+    getSignalLevel: () => null, // Cannot get signal from iframe
+    play: async () => {}, // Cannot control iframe directly
+    pause: async () => {}, // Cannot control iframe directly
     destroy: () => iframe.remove(),
   };
 }
@@ -371,6 +831,7 @@ export class AmbientPlayerService {
     this.playableSchoolIds = [];
     this.pendingTuneTimer = null;
     this.pendingTuneSchoolId = null;
+    this.pendingTuneOperationId = null;
     this.fadeOutPromise = Promise.resolve();
     this.currentController = null;
     this.currentTrackSchoolId = null;
@@ -384,6 +845,14 @@ export class AmbientPlayerService {
     this.nowFn = options.nowFn || Date.now;
     this.randomFn = typeof options.randomFn === "function" ? options.randomFn : Math.random;
     this.dynamicSchools = [];
+    this.hasPlayedDialSfx = false;
+    this.tuneOperationId = 0;
+    this.activeTuneOperationId = 0;
+    this.contextRecoveryListenersAttached = false;
+    this._onVisibilityChange = this._handleVisibilityChange.bind(this);
+    this._onUserInteraction = this._handleUserInteraction.bind(this);
+
+    this._attachContextRecoveryListeners();
   }
 
   _getSchoolConfig(schoolId) {
@@ -395,6 +864,110 @@ export class AmbientPlayerService {
   setDynamicSchools(schools = []) {
     this.dynamicSchools = Array.isArray(schools) ? schools : [];
     this._emitState();
+  }
+
+  _ensureAudioContext() {
+    const current = this.audioContextRef.current;
+    if (current && current.state !== "closed") {
+      return current;
+    }
+    this.audioContextRef.current = createAudioContext();
+    return this.audioContextRef.current;
+  }
+
+  async ensureContextRunning() {
+    const context = this._ensureAudioContext();
+    if (!context) {
+      return false;
+    }
+    if (context.state === "running") {
+      return true;
+    }
+    if (typeof context.resume !== "function") {
+      return false;
+    }
+    try {
+      await context.resume();
+    } catch (err) {
+      console.warn("Failed to resume AudioContext:", err);
+      return false;
+    }
+    return context.state === "running";
+  }
+
+  _handleVisibilityChange() {
+    if (!canUseBrowser()) return;
+    if (document.visibilityState === "visible") {
+      void this.ensureContextRunning();
+    }
+  }
+
+  _handleUserInteraction() {
+    void this.ensureContextRunning();
+  }
+
+  _attachContextRecoveryListeners() {
+    if (!canUseBrowser() || this.contextRecoveryListenersAttached) {
+      return;
+    }
+    document.addEventListener("visibilitychange", this._onVisibilityChange);
+    CONTEXT_RECOVERY_EVENTS.forEach((eventName) => {
+      window.addEventListener(eventName, this._onUserInteraction, { passive: true });
+    });
+    this.contextRecoveryListenersAttached = true;
+  }
+
+  _detachContextRecoveryListeners() {
+    if (!canUseBrowser() || !this.contextRecoveryListenersAttached) {
+      return;
+    }
+    document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    CONTEXT_RECOVERY_EVENTS.forEach((eventName) => {
+      window.removeEventListener(eventName, this._onUserInteraction);
+    });
+    this.contextRecoveryListenersAttached = false;
+  }
+
+  _nextTuneOperationId() {
+    this.tuneOperationId += 1;
+    this.activeTuneOperationId = this.tuneOperationId;
+    return this.activeTuneOperationId;
+  }
+
+  _isTuneOperationCurrent(tuneOperationId) {
+    return Number.isFinite(tuneOperationId) && tuneOperationId === this.activeTuneOperationId;
+  }
+
+  _isTuneOperationActive(tuneOperationId) {
+    return (
+      this.state.status === AMBIENT_PLAYER_STATES.TUNING &&
+      this._isTuneOperationCurrent(tuneOperationId)
+    );
+  }
+
+  _destroyController(controller) {
+    if (!controller || typeof controller.destroy !== "function") {
+      return;
+    }
+    try {
+      controller.destroy();
+    } catch (err) {
+      console.warn("Failed to destroy track controller:", err);
+    }
+  }
+
+  _getControllerCapabilities(controller = this.currentController) {
+    if (!controller || typeof controller !== "object") {
+      return DEFAULT_PROVIDER_CAPABILITIES;
+    }
+    return createProviderCapabilities(controller.capabilities || {});
+  }
+
+  _computeSyntheticSignalLevel() {
+    const clock = this.nowFn() * 0.001;
+    const lfo = 0.24 + Math.abs(Math.sin(clock * 2.7)) * 0.44;
+    const shimmer = this.randomFn() * 0.22;
+    return clamp01(lfo + shimmer);
   }
 
   subscribe(listener) {
@@ -422,12 +995,14 @@ export class AmbientPlayerService {
     this.playableSchoolIds = Array.isArray(playableSchoolIds) ? [...playableSchoolIds] : [];
 
     if (this.playableSchoolIds.length === 0) {
+      this._clearTuneTimer();
+      this._nextTuneOperationId();
       if (this.state.schoolId !== null) {
         this._setState({ schoolId: null, paletteKey: null, orbSkinKey: null, trackUrl: null });
         this._persistSettings();
       }
       if (this.currentController) {
-        this.currentController.destroy();
+        this._destroyController(this.currentController);
         this.currentController = null;
         this.currentTrackSchoolId = null;
       }
@@ -443,15 +1018,8 @@ export class AmbientPlayerService {
   }
 
   async unlockAudio() {
+    await this.ensureContextRunning();
     if (this.state.audioUnlocked) return true;
-    const context = this.audioContextRef.current;
-    if (context?.state === "suspended") {
-      try {
-        await context.resume();
-      } catch (err) {
-        console.warn("Failed to resume AudioContext:", err);
-      }
-    }
 
     const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
     try {
@@ -482,19 +1050,43 @@ export class AmbientPlayerService {
 
     await this.unlockAudio();
 
+    const tuneOperationId = this._nextTuneOperationId();
+
     if (this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
-      this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, { schoolId, queued: true });
+      this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
+        schoolId,
+        queued: true,
+        tuneOperationId,
+      });
+      const queuedTuneDurationMs = this.pendingTuneDurationMs || this._resolveTuneDurationMs();
+      this.pendingTuneDurationMs = queuedTuneDurationMs;
+      this._startTuneTimer(queuedTuneDurationMs, tuneOperationId);
       return true;
     }
 
     const isSameTrackActive = this.currentController && this.currentTrackSchoolId === schoolId;
     const forceRetune = Boolean(options.forceRetune);
+    const skipTuning = Boolean(options.skipTuning);
+    const shouldPlayDialSfx = options.playDialSfx !== false;
 
-    this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, { schoolId, queued: false });
-    const tuneDurationMs = this._resolveTuneDurationMs();
-    this.pendingTuneDurationMs = tuneDurationMs;
-    this._startTuneTimer(tuneDurationMs);
-    this._playDialSfx(tuneDurationMs);
+    this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
+      schoolId,
+      queued: false,
+      tuneOperationId,
+    });
+    if (skipTuning) {
+      this.pendingTuneDurationMs = null;
+      if (shouldPlayDialSfx) {
+        this._playDialSfx(420);
+      }
+    } else {
+      const tuneDurationMs = this._resolveTuneDurationMs();
+      this.pendingTuneDurationMs = tuneDurationMs;
+      this._startTuneTimer(tuneDurationMs, tuneOperationId);
+      if (shouldPlayDialSfx) {
+        this._playDialSfx(tuneDurationMs);
+      }
+    }
     this._startSignalMonitor();
 
     if (!isSameTrackActive || forceRetune) {
@@ -504,6 +1096,14 @@ export class AmbientPlayerService {
     }
 
     this._persistSettings();
+    if (skipTuning) {
+      try {
+        await this._completeTuning(tuneOperationId);
+      } catch {
+        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Failed to complete tuning" });
+        return false;
+      }
+    }
     return true;
   }
 
@@ -528,32 +1128,40 @@ export class AmbientPlayerService {
     }
 
     if (this.currentController) {
-      await this.currentController.play();
-      this._transition(AMBIENT_PLAYER_EVENTS.PLAY);
-      this._startSignalMonitor();
+      try {
+        await this.currentController.play();
+        this._transition(AMBIENT_PLAYER_EVENTS.PLAY);
+        this._startSignalMonitor();
+      } catch (err) {
+        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: err.message });
+      }
       return;
     }
 
     const schoolId = this.state.schoolId || getDefaultSchoolId(this.playableSchoolIds);
     if (!schoolId) return;
-    await this.setSchool(schoolId, { forceRetune: true });
+    await this.setSchool(schoolId, { forceRetune: true, skipTuning: true, playDialSfx: true });
   }
 
   async pause() {
     this._clearTuneTimer();
     this._stopSignalMonitor({ resetSignal: true });
     if (this.currentController) {
-      await this.currentController.pause();
+      try {
+        await this.currentController.pause();
+      } catch (err) {
+        console.warn("Error pausing controller:", err);
+      }
     }
     this._transition(AMBIENT_PLAYER_EVENTS.PAUSE);
   }
 
-  togglePlayPause() {
-    if (this.state.status === AMBIENT_PLAYER_STATES.PLAYING) {
-      this.pause();
+  async togglePlayPause() {
+    if (this.state.status === AMBIENT_PLAYER_STATES.PLAYING || this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
+      await this.pause();
       return;
     }
-    this.play();
+    await this.play();
   }
 
   setVolume(volume) {
@@ -605,7 +1213,7 @@ export class AmbientPlayerService {
     this._clearTuneTimer();
     this._stopSignalMonitor({ resetSignal: true });
     if (this.currentController) {
-      this.currentController.destroy();
+      this._destroyController(this.currentController);
       this.currentController = null;
       this.currentTrackSchoolId = null;
     }
@@ -613,6 +1221,14 @@ export class AmbientPlayerService {
       this.container.remove();
       this.container = null;
     }
+    this._detachContextRecoveryListeners();
+    this.pendingTuneOperationId = null;
+    this._nextTuneOperationId();
+    const context = this.audioContextRef.current;
+    if (context && typeof context.close === "function" && context.state !== "closed") {
+      context.close().catch(() => {});
+    }
+    this.audioContextRef.current = null;
     this.listeners.clear();
   }
 
@@ -655,11 +1271,15 @@ export class AmbientPlayerService {
   _transition(event, payload = {}) {
     switch (event) {
       case AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL: {
-        const { schoolId, queued = false } = payload;
+        const { schoolId, queued = false, tuneOperationId = this.activeTuneOperationId } = payload;
+        if (Number.isFinite(tuneOperationId)) {
+          this.activeTuneOperationId = tuneOperationId;
+        }
         this._applySchoolSelection(schoolId);
         if (queued) {
           this._setState({
             queuedSchoolId: schoolId,
+            isLoading: true,
             error: null,
           });
           return;
@@ -737,29 +1357,43 @@ export class AmbientPlayerService {
     return Math.round(nextDuration);
   }
 
-  _startTuneTimer(durationMs) {
-    this._clearTuneTimer();
+  _startTuneTimer(durationMs, tuneOperationId = this.activeTuneOperationId) {
+    if (this.pendingTuneTimer) {
+      clearTimeout(this.pendingTuneTimer);
+      this.pendingTuneTimer = null;
+    }
     const tuneMs = toPositiveMs(durationMs, DEFAULT_OPTIONS.tuningDurationMinMs);
     this.pendingTuneDurationMs = tuneMs;
+    this.pendingTuneOperationId = tuneOperationId;
     this.pendingTuneTimer = setTimeout(async () => {
       try {
-        await this._completeTuning();
+        await this._completeTuning(tuneOperationId);
       } catch {
-        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Failed to complete tuning" });
+        if (this._isTuneOperationCurrent(tuneOperationId)) {
+          this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Failed to complete tuning" });
+        }
       }
     }, tuneMs);
   }
 
   _clearTuneTimer() {
-    if (!this.pendingTuneTimer) return;
-    clearTimeout(this.pendingTuneTimer);
-    this.pendingTuneTimer = null;
+    if (this.pendingTuneTimer) {
+      clearTimeout(this.pendingTuneTimer);
+      this.pendingTuneTimer = null;
+    }
     this.pendingTuneSchoolId = null;
+    this.pendingTuneOperationId = null;
     this.pendingTuneDurationMs = null;
-    this._setState({ queuedSchoolId: null, isLoading: false });
+    if (this.state.queuedSchoolId || this.state.isLoading) {
+      this._setState({ queuedSchoolId: null, isLoading: false });
+    }
   }
 
   _playDialSfx(durationMs) {
+    if (this.hasPlayedDialSfx) {
+      return;
+    }
+    this.hasPlayedDialSfx = true;
     this.dialSfxPlayer({
       lockUntilRef: this.dialLockUntilRef,
       lockMs: this.options.dialLockMs,
@@ -780,15 +1414,13 @@ export class AmbientPlayerService {
       return 0;
     }
 
+    const capabilities = this._getControllerCapabilities();
     const sampledLevel = this.currentController?.getSignalLevel?.();
-    if (Number.isFinite(sampledLevel)) {
+    if (capabilities.canAnalyze && Number.isFinite(sampledLevel)) {
       return clamp01(sampledLevel);
     }
 
-    const clock = this.nowFn() * 0.001;
-    const base = 0.28 + Math.abs(Math.sin(clock * 2.7)) * 0.45;
-    const accent = this.randomFn() * 0.2;
-    return clamp01(base + accent);
+    return this._computeSyntheticSignalLevel();
   }
 
   _startSignalMonitor() {
@@ -811,53 +1443,99 @@ export class AmbientPlayerService {
     }
   }
 
-  async _completeTuning() {
-    this.pendingTuneTimer = null;
-    this.pendingTuneDurationMs = null;
-    const queuedSchoolId = this.state.queuedSchoolId;
-    const targetSchoolId = queuedSchoolId || this.pendingTuneSchoolId || this.state.schoolId;
-    this.pendingTuneSchoolId = null;
-    this._setState({ queuedSchoolId: null });
+  async _completeTuning(tuneOperationId = this.activeTuneOperationId) {
+    if (!this._isTuneOperationCurrent(tuneOperationId)) {
+      return;
+    }
 
+    if (this.pendingTuneOperationId === tuneOperationId) {
+      this.pendingTuneTimer = null;
+      this.pendingTuneDurationMs = null;
+      this.pendingTuneOperationId = null;
+    }
+
+    const targetSchoolId = this.state.queuedSchoolId || this.pendingTuneSchoolId || this.state.schoolId;
     if (!targetSchoolId) {
-      this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "No school selected for tuning" });
+      if (this._isTuneOperationCurrent(tuneOperationId)) {
+        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "No school selected for tuning" });
+      }
+      return;
+    }
+
+    if (!this._isTuneOperationActive(tuneOperationId)) {
       return;
     }
 
     const targetConfig = this._getSchoolConfig(targetSchoolId);
     if (!targetConfig?.trackUrl) {
-      this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Selected school has no track" });
+      if (this._isTuneOperationCurrent(tuneOperationId)) {
+        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Selected school has no track" });
+      }
       return;
     }
 
     await this.fadeOutPromise;
 
+    if (!this._isTuneOperationActive(tuneOperationId)) {
+      return;
+    }
+
     const isAlreadyLoaded = this.currentController && this.currentTrackSchoolId === targetSchoolId;
     if (!isAlreadyLoaded) {
       await this._fadeOutCurrentTrackIfNeeded();
-      await this._loadSchoolTrack(targetSchoolId, targetConfig.trackUrl);
+
+      if (!this._isTuneOperationActive(tuneOperationId)) {
+        return;
+      }
+
+      const didLoadTrack = await this._loadSchoolTrack(
+        targetSchoolId,
+        targetConfig.trackUrl,
+        tuneOperationId
+      );
+      if (!didLoadTrack || !this._isTuneOperationActive(tuneOperationId)) {
+        return;
+      }
+    } else {
+      try {
+        await this.currentController.play();
+      } catch (err) {
+        console.warn("Failed to play existing controller:", err);
+      }
+      if (!this._isTuneOperationActive(tuneOperationId)) {
+        return;
+      }
     }
 
-    this._transition(AMBIENT_PLAYER_EVENTS.TUNE_COMPLETE);
+    if (this._isTuneOperationActive(tuneOperationId)) {
+      this.pendingTuneSchoolId = null;
+      this._transition(AMBIENT_PLAYER_EVENTS.TUNE_COMPLETE);
+    }
   }
 
   async _fadeOutCurrentTrackIfNeeded() {
     if (!this.currentController) return;
     const controller = this.currentController;
     await this._fadeControllerVolume(controller, 0, this.options.fadeOutMs);
-    await controller.pause();
-    controller.destroy();
+    try {
+      await controller.pause();
+    } catch (err) {
+      console.warn("Error pausing controller during fade out:", err);
+    }
+    this._destroyController(controller);
     if (this.currentController === controller) {
       this.currentController = null;
       this.currentTrackSchoolId = null;
     }
   }
 
-  async _loadSchoolTrack(schoolId, trackUrl) {
+  async _loadSchoolTrack(schoolId, trackUrl, tuneOperationId = this.activeTuneOperationId) {
     const container = this._ensureContainer();
     if (!container) {
       throw new Error("Unable to initialize ambient container");
     }
+
+    const audioContext = this._ensureAudioContext();
 
     const controller = this.controllerFactory
       ? await this.controllerFactory({
@@ -866,7 +1544,7 @@ export class AmbientPlayerService {
           volume: 0,
           autoPlay: true,
           onTrackEnded: () => this._transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED),
-          audioContext: this.audioContextRef.current,
+          audioContext,
         })
       : await createTrackController({
           container,
@@ -874,8 +1552,13 @@ export class AmbientPlayerService {
           volume: 0,
           autoPlay: true,
           onTrackEnded: () => this._transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED),
-          audioContext: this.audioContextRef.current,
+          audioContext,
         });
+
+    if (!this._isTuneOperationActive(tuneOperationId)) {
+      this._destroyController(controller);
+      return false;
+    }
 
     controller.schoolId = schoolId;
     controller.setVolume(0);
@@ -886,9 +1569,45 @@ export class AmbientPlayerService {
       await controller.loadPromise;
     }
 
-    await controller.play();
-    await this._fadeControllerVolume(controller, this.state.volume, this.options.fadeInMs);
-    this._startSignalMonitor();
+    if (!this._isTuneOperationActive(tuneOperationId)) {
+      if (this.currentController === controller) {
+        this.currentController = null;
+        this.currentTrackSchoolId = null;
+      }
+      this._destroyController(controller);
+      return false;
+    }
+
+    try {
+      await controller.play();
+      if (!this._isTuneOperationActive(tuneOperationId)) {
+        if (this.currentController === controller) {
+          this.currentController = null;
+          this.currentTrackSchoolId = null;
+        }
+        this._destroyController(controller);
+        return false;
+      }
+      await this._fadeControllerVolume(controller, this.state.volume, this.options.fadeInMs);
+      if (!this._isTuneOperationActive(tuneOperationId)) {
+        if (this.currentController === controller) {
+          this.currentController = null;
+          this.currentTrackSchoolId = null;
+        }
+        this._destroyController(controller);
+        return false;
+      }
+      this._startSignalMonitor();
+      return true;
+    } catch (err) {
+      if (this.currentController === controller) {
+        this.currentController = null;
+        this.currentTrackSchoolId = null;
+      }
+      this._destroyController(controller);
+      console.error("Failed to play track after loading:", err);
+      throw err;
+    }
   }
 
   _ensureContainer() {
@@ -906,6 +1625,12 @@ export class AmbientPlayerService {
     const target = clamp01(targetVolume);
     if (!controller || durationMs <= 0) {
       controller?.setVolume(target);
+      return Promise.resolve();
+    }
+
+    const capabilities = this._getControllerCapabilities(controller);
+    if (!capabilities.canSetVolumeSmooth) {
+      controller.setVolume(target);
       return Promise.resolve();
     }
 

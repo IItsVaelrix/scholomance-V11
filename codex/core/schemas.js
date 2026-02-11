@@ -31,6 +31,7 @@
  * @property {number} weight - The weight of this heuristic in the total score.
  * @property {number} contribution - The final contribution to the total score (rawScore * weight * scale).
  * @property {string} explanation - A human-readable explanation of the score.
+ * @property {Diagnostic[]} [diagnostics] - Optional range-based diagnostics from the heuristic.
  */
 
 /**
@@ -48,6 +49,57 @@
  * @property {number} timestamp - Timestamp of the event.
  * @property {string} playerId - The ID of the player receiving the XP.
  * @property {Object} [context] - Additional context for the event.
+ */
+
+/**
+ * @typedef {Object} Diagnostic
+ * @property {number} start - The start character index of the diagnostic range (0-based, relative to the document).
+ * @property {number} end - The end character index of the diagnostic range.
+ * @property {string} severity - "info" | "warning" | "error" | "success".
+ * @property {string} message - A short message describing the issue or feature.
+ * @property {string} [source] - The heuristic that generated this diagnostic.
+ * @property {Object} [metadata] - Additional data (e.g., phoneme info).
+ */
+
+/**
+ * @typedef {Object} AnalyzedWord
+ * @property {string} text - The word text.
+ * @property {string} [normalized] - Lowercase normalized token form.
+ * @property {number} start - Start index in the original string.
+ * @property {number} end - End index in the original string.
+ * @property {number} [lineNumber] - Source line number (0-based).
+ * @property {import('./heuristics/phoneme_density').PhonemeAnalysis|null} phonetics - The phoneme analysis from the engine.
+ * @property {Object|null} [deepPhonetics] - Deep phoneme/syllable analysis from the engine.
+ * @property {number} [syllableCount] - Word-level syllable count.
+ * @property {string} [stressPattern] - Stress pattern extracted from deep analysis.
+ * @property {string} [leadingSound] - First phonetic onset token.
+ * @property {boolean} [isStopWord] - Whether the token is a stop word.
+ * @property {boolean} [isContentWord] - Whether the token is considered a content word.
+ */
+
+/**
+ * @typedef {Object} AnalyzedLine
+ * @property {string} text - The line text.
+ * @property {number} number - The line number (0-based).
+ * @property {number} start - Start index of the line in the document.
+ * @property {number} end - End index of the line in the document.
+ * @property {AnalyzedWord[]} words - The words in this line.
+ * @property {number} syllableCount - Sum of syllables in the line.
+ * @property {string} [stressPattern] - Aggregated line stress pattern.
+ * @property {number} [wordCount] - Number of words in the line.
+ * @property {number} [contentWordCount] - Number of non-stop content words in the line.
+ * @property {number} [avgWordLength] - Average normalized word length in this line.
+ * @property {boolean} [hasTerminalPunctuation] - Whether the line ends in terminal punctuation.
+ * @property {string|null} [terminalPunctuation] - Terminal punctuation symbol, if present.
+ */
+
+/**
+ * @typedef {Object} AnalyzedDocument
+ * @property {string} raw - The original raw text.
+ * @property {AnalyzedLine[]} lines - Structured lines.
+ * @property {AnalyzedWord[]} allWords - Flat list of all words.
+ * @property {Object} stats - Aggregate lexical and structural stats.
+ * @property {Object} [parsed] - Derived parsing surfaces for heuristic consumption.
  */
 
 /**

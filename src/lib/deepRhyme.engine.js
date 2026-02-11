@@ -5,7 +5,7 @@
  */
 
 import { PhonemeEngine } from "./phoneme.engine.js";
-import { RHYME_TYPES, RHYME_SUBTYPES } from "../data/rhymeScheme.patterns.js";
+import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
 
 /**
  * @typedef {object} WordPosition
@@ -57,6 +57,9 @@ const WORD_REGEX = /[A-Za-z']+/g;
 const RHYME_THRESHOLD = 0.65;
 /** When the same rhyme key appears more than this count, avoid quadratic scans */
 const MAX_FULL_PAIR_SCAN_OCCURRENCES = 2;
+
+/** Identical lexical repetitions are usually refrain, not rhyme. */
+const IGNORE_IDENTICAL_WORD_RHYMES = true;
 
 /**
  * Deep Rhyme Analysis Engine
@@ -266,6 +269,7 @@ export class DeepRhymeEngine {
    */
   pushConnectionIfValid(wordA, wordB, out, seenPairs = new Set()) {
     if (!wordA?.analysis || !wordB?.analysis) return;
+    if (this.shouldSkipLexicalRepetition(wordA, wordB)) return;
 
     const pairKey = this.getPairKey(wordA, wordB);
     if (seenPairs.has(pairKey)) return;
@@ -275,6 +279,32 @@ export class DeepRhymeEngine {
     if (connection && connection.score >= RHYME_THRESHOLD) {
       out.push(connection);
     }
+  }
+
+  /**
+   * Returns true when two tokens are lexical repeats that should not be
+   * counted as rhyme connections.
+   * @param {object} wordA
+   * @param {object} wordB
+   * @returns {boolean}
+   */
+  shouldSkipLexicalRepetition(wordA, wordB) {
+    if (!IGNORE_IDENTICAL_WORD_RHYMES) return false;
+    const normalizedA = this.normalizeWord(wordA?.word);
+    const normalizedB = this.normalizeWord(wordB?.word);
+    return Boolean(normalizedA && normalizedB && normalizedA === normalizedB);
+  }
+
+  /**
+   * Normalizes display tokens for lexical comparisons.
+   * @param {string} value
+   * @returns {string}
+   */
+  normalizeWord(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/^[^a-z']+|[^a-z']+$/g, '');
   }
 
   /**

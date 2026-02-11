@@ -51,6 +51,7 @@ describe('PhonemeEngine', () => {
     it('should guess vowel family correctly from full words', () => {
       // Basic vowel patterns
       expect(PhonemeEngine.guessVowelFamily('SEE')).toBe('IY');    // EE digraph
+      expect(PhonemeEngine.guessVowelFamily('DAMOCLES')).toBe('IY'); // final "-cles" as /kliːz/
       expect(PhonemeEngine.guessVowelFamily('RAIN')).toBe('EY');   // AI digraph
       expect(PhonemeEngine.guessVowelFamily('CAT')).toBe('AE');    // short A
 
@@ -64,6 +65,10 @@ describe('PhonemeEngine', () => {
       expect(PhonemeEngine.guessVowelFamily('CORE')).toBe('AO');   // -ore pattern
       expect(PhonemeEngine.guessVowelFamily('MORE')).toBe('AO');   // -ore pattern
       expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('AY');   // -ire pattern
+    });
+
+    it('should map fallback vowel family A to SONIC school', () => {
+      expect(PhonemeEngine.getSchoolFromVowelFamily('A')).toBe('SONIC');
     });
 
     it('should extract coda correctly', () => {

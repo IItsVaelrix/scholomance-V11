@@ -1,27 +1,20 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Storage } from '../lib/storage';
 
 const ThemeContext = createContext(null);
 
 /**
  * ThemeProvider — manages dark/light theme state.
- * Persists preference to localStorage and sets data-theme attribute on <html>.
+ * Persists preference to storage and sets data-theme attribute on <html>.
  */
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
-    try {
-      return localStorage.getItem('scholomance-theme') || 'dark';
-    } catch {
-      return 'dark';
-    }
+    return Storage.getItem('scholomance-theme') || 'dark';
   });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
-    try {
-      localStorage.setItem('scholomance-theme', theme);
-    } catch {
-      // localStorage unavailable
-    }
+    Storage.setItem('scholomance-theme', theme);
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

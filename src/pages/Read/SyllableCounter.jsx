@@ -1,8 +1,20 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
-export default function SyllableCounter({ content, engine }) {
+const WORD_REGEX = /[A-Za-z']+/g;
+
+export default function SyllableCounter({
+  content,
+  engine,
+  scrollTop = 0,
+  viewportHeight,
+  lineHeightPx,
+}) {
   // Cache: lineIndex -> { text, count } (Fix 3: only recompute changed lines)
   const cacheRef = useRef(new Map());
+
+  useEffect(() => {
+    cacheRef.current.clear();
+  }, [engine]);
 
   const lineCounts = useMemo(() => {
     if (!content || !engine) return [];
@@ -21,15 +33,21 @@ export default function SyllableCounter({ content, engine }) {
         continue;
       }
 
-      // Compute syllable count for this line
-      const words = lineText.match(/[A-Za-z']+/g);
+      // Keep counting behavior aligned with DeepRhymeEngine.analyzeLine.
+      const words = [...lineText.matchAll(WORD_REGEX)];
       let count = 0;
-      if (words) {
-        for (const word of words) {
-          const analysis = engine.analyzeWord(word);
-          if (analysis?.phonemes) {
-            count += analysis.phonemes.filter(p => /[0-9]/.test(p)).length;
-          }
+      for (const match of words) {
+        const word = match[0];
+        const deepAnalysis = engine.analyzeDeep?.(word);
+        if (deepAnalysis?.syllableCount) {
+          count += deepAnalysis.syllableCount;
+          continue;
+        }
+
+        // Defensive fallback for engines without analyzeDeep.
+        const basic = engine.analyzeWord?.(word);
+        if (typeof basic?.syllableCount === "number") {
+          count += basic.syllableCount;
         }
       }
 
@@ -45,13 +63,29 @@ export default function SyllableCounter({ content, engine }) {
     return counts;
   }, [content, engine]);
 
+  const counterStyle = Number.isFinite(viewportHeight) && viewportHeight > 0
+    ? { height: `${viewportHeight}px` }
+    : undefined;
+
+  const normalizedScrollTop = Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0;
+  const alignedScrollTop = Math.round(normalizedScrollTop);
+  const trackStyle = alignedScrollTop > 0
+    ? { transform: `translateY(-${alignedScrollTop}px)` }
+    : undefined;
+
+  const rowStyle = Number.isFinite(lineHeightPx) && lineHeightPx > 0
+    ? { minHeight: `${lineHeightPx}px`, height: `${lineHeightPx}px` }
+    : undefined;
+
   return (
-    <div className="syllable-counter" aria-hidden="true">
-      {lineCounts.map((count, i) => (
-        <div key={i} className="syllable-count">
-          {count > 0 ? count : ""}
-        </div>
-      ))}
+    <div className="syllable-counter" style={counterStyle} aria-hidden="true">
+      <div className="syllable-counter-track" style={trackStyle}>
+        {lineCounts.map((count, i) => (
+          <div key={i} className="syllable-count" style={rowStyle}>
+            {count > 0 ? count : ""}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

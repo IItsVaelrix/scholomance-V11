@@ -10,7 +10,10 @@ export default function PipelineView({ pipelines }) {
         return (
             <div className="collab-card">
                 <h2 className="collab-card__title">Pipelines</h2>
-                <p className="collab-card__empty">No pipelines running. Start one via the API.</p>
+                <p className="collab-card__empty">No pipelines running.</p>
+                <p className="collab-card__hint">
+                    Start one with <code>POST /collab/pipelines</code> using <code>pipeline_type</code> such as <code>code_review_test</code> or <code>bug_fix</code>.
+                </p>
             </div>
         );
     }

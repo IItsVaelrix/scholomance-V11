@@ -25,6 +25,7 @@ import path from 'path';
 import { requireAuth } from './auth-pre-handler.js';
 import { persistence } from './persistence.adapter.js';
 import { collabRoutes } from './collab/collab.routes.js';
+import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 
 import 'dotenv/config';
 
@@ -76,6 +77,7 @@ const SESSION_COOKIE_NAME = 'scholomance.sid';
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS ?? 5000);
+const AUDIO_ADMIN_TOKEN = String(process.env.AUDIO_ADMIN_TOKEN ?? 'echo');
 const SHOULD_SERVE_FRONTEND =
     process.env.NODE_ENV === 'production' &&
     process.env.SERVE_FRONTEND !== 'false' &&
@@ -90,19 +92,6 @@ const registerBodySchema = z.object({
     username: z.string().min(3).max(20),
     email: z.string().email(),
     password: z.string().min(8),
-});
-
-const recoveryRequestSchema = z.object({
-    email: z.string().email(),
-});
-
-const recoveryResetSchema = z.object({
-    token: z.string().min(32).max(128),
-    newPassword: z.string().min(8),
-});
-
-const scrollIdParamSchema = z.object({
-    id: z.string().uuid(),
 });
 
 function toFastifySchema(zodSchema) {
@@ -151,9 +140,31 @@ let redisClient = null;
 let sessionStore = null;
 
 if (useRedisStore) {
-  redisClient = createClient({ url: process.env.REDIS_URL || 'redis://localhost:6379' });
-  redisClient.on('error', (err) => fastify.log.error('Redis Client Error', err));
-  sessionStore = new RedisStore({ client: redisClient });
+  const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+  const isUpstash = redisUrl.includes('upstash.io');
+  
+  fastify.log.info(`[REDIS] Initializing ${isUpstash ? 'Upstash ' : ''}Redis connection...`);
+  
+  redisClient = createClient({ 
+    url: redisUrl,
+    socket: {
+      reconnectStrategy: (retries) => {
+        const delay = Math.min(retries * 50, 2000);
+        return delay;
+      },
+      // Upstash sometimes closes idle connections, so we set a heartbeat
+      keepAlive: 5000 
+    }
+  });
+  
+  redisClient.on('error', (err) => fastify.log.error('[REDIS] Client Error', err));
+  redisClient.on('connect', () => fastify.log.info('[REDIS] Client Connected'));
+  redisClient.on('ready', () => fastify.log.info('[REDIS] Client Ready'));
+  
+  sessionStore = new RedisStore({ 
+    client: redisClient,
+    prefix: "scholo:sess:",
+  });
 }
 
 // 2. Register cookie and session plugins
@@ -188,6 +199,27 @@ const csrfPreValidation = async (request, reply) => {
   return fastify.csrfProtection(request, reply);
 };
 
+function readQueryParamAsString(queryValue) {
+  if (typeof queryValue === 'string') return queryValue;
+  if (Array.isArray(queryValue) && typeof queryValue[0] === 'string') return queryValue[0];
+  return null;
+}
+
+function isAudioAdminRequest(request) {
+  const queryAdmin = readQueryParamAsString(request.query?.admin);
+  return Boolean(AUDIO_ADMIN_TOKEN) && queryAdmin === AUDIO_ADMIN_TOKEN;
+}
+
+function isAudioRequestAuthorized(request) {
+  if (process.env.NODE_ENV !== 'production') {
+    return true;
+  }
+  if (request.session?.user) {
+    return true;
+  }
+  return isAudioAdminRequest(request);
+}
+
 // Register Helmet for security headers
 fastify.register(helmet, {
   contentSecurityPolicy: {
@@ -198,20 +230,24 @@ fastify.register(helmet, {
       imgSrc: ["'self'", "data:"],
       frameSrc: ["'self'", "https://www.youtube.com", "https://suno.com", "https://www.suno.com"],
       connectSrc: ["'self'", "https://api.datamuse.com", "https://api.dictionaryapi.dev"],
-      mediaSrc: ["'self'", "https://audiocdn001.suno.ai", "blob:"],
+      mediaSrc: ["'self'", "https://audiocdn001.suno.ai", "https://cdn1.suno.ai", "blob:"],
     },
   },
 });
 
 fastify.addContentTypeParser("application/json", { bodyLimit: 1_000_000 }, fastify.getDefaultJsonParser("error"));
 
-// 3. Register global rate limiting
+// 3. Register global rate limiting (per-user when authenticated, per-IP otherwise)
 fastify.register(rateLimit, {
   global: true,
   max: 100,
   timeWindow: '1 minute',
-  keyGenerator: (request) => request.ip,
-  errorResponseBuilder: (request, reply) => {
+  keyGenerator: (request) => {
+    // Use session user ID for authenticated users so each user gets their own budget.
+    // Falls back to IP for unauthenticated requests.
+    return request.session?.user?.id || request.ip;
+  },
+  errorResponseBuilder: (_request, _reply) => {
     return {
       statusCode: 429,
       error: 'Too Many Requests',
@@ -220,13 +256,20 @@ fastify.register(rateLimit, {
   },
 });
 
+// Serve uploaded archive tracks directly from /audio/*
+fastify.register(fastifyStatic, {
+  root: AUDIO_UPLOAD_PATH,
+  prefix: '/audio/',
+  decorateReply: false,
+});
+
 // Health route
-fastify.get('/health', async (request, reply) => {
+fastify.get('/health', async () => {
   return { message: 'Scholomance CODEx Server is running.' };
 });
 
 // Route to provide CSRF token to the client
-fastify.get('/auth/csrf-token', async (request, reply) => {
+fastify.get('/auth/csrf-token', async (request) => {
     const token = request.csrfToken();
     return { token };
 });
@@ -293,21 +336,21 @@ fastify.get('/api/rhymes/:word', async (request, reply) => {
 });
 
 // Progression
-fastify.get('/api/progression', { preHandler: [requireAuth] }, async (request, reply) => {
+fastify.get('/api/progression', { preHandler: [requireAuth] }, async (request) => {
     return persistence.progression.get(request.session.user.id);
 });
 
 fastify.post('/api/progression', {
     preValidation: [csrfPreValidation],
     preHandler: [requireAuth],
-    handler: async (request, reply) => {
+    handler: async (request) => {
         return persistence.progression.save(request.session.user.id, request.body);
     }
 });
 
 // Upload and Audio List Routes
 fastify.get('/api/audio-files', async (request, reply) => {
-    if (process.env.NODE_ENV === 'production' && !request.session.user) {
+    if (!isAudioRequestAuthorized(request)) {
         return reply.status(401).send({ message: 'Unauthorized' });
     }
     try {
@@ -322,7 +365,7 @@ fastify.get('/api/audio-files', async (request, reply) => {
 });
 
 fastify.post('/api/upload', async (request, reply) => {
-    if (process.env.NODE_ENV === 'production' && !request.session.user) {
+    if (!isAudioRequestAuthorized(request)) {
         return reply.status(401).send({ message: 'Unauthorized' });
     }
     const data = await request.file();
@@ -334,6 +377,10 @@ fastify.post('/api/upload', async (request, reply) => {
     return { message: 'Uploaded', filename: safeFilename, url: `/audio/${safeFilename}` };
 });
 
+// Expose Redis client to route plugins for shared caching
+fastify.decorate('redis', redisClient);
+
+fastify.register(wordLookupRoutes);
 fastify.register(collabRoutes, { prefix: '/collab' });
 
 if (SHOULD_SERVE_FRONTEND) {

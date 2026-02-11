@@ -5,11 +5,20 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  css: {
+    transformer: 'lightningcss',
+    lightningcss: {
+      drafts: {
+        customMedia: true,
+      },
+    },
+  },
   // Exclude Node.js-only packages from browser bundle
   optimizeDeps: {
     exclude: ['cmudict', 'better-sqlite3', 'bcrypt'],
   },
   build: {
+    cssMinify: 'lightningcss',
     rollupOptions: {
       external: ['cmudict', 'better-sqlite3', 'bcrypt'],
     },
@@ -18,6 +27,8 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:3000',
       '/auth': 'http://localhost:3000',
+      '/collab': 'http://localhost:3000',
+      '/audio': 'http://localhost:3000',
     },
   },
   test: {

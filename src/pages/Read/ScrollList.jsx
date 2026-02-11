@@ -1,5 +1,8 @@
-import { memo, useMemo, forwardRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { memo, useMemo, useRef, useState, useEffect, useCallback } from "react";
+
+const VIRTUALIZE_AFTER_COUNT = 12;
+const LIST_ROW_HEIGHT = 120;
+const LIST_OVERSCAN = 6;
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -21,29 +24,17 @@ function truncate(text, maxLen = 80) {
   return text.slice(0, maxLen).trim() + "...";
 }
 
-// Memoized scroll item to avoid recomputing word count and date on every render
-const ScrollItem = memo(forwardRef(function ScrollItem(
-  { scroll, isActive, onSelect, onDelete },
-  ref
-) {
-  // Memoize derived values
-  const wordCount = useMemo(() => {
-    return scroll.content.trim().split(/\s+/).length;
-  }, [scroll.content]);
+const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDelete }) {
+  const wordCount = Number.isFinite(scroll.wordCount) ? scroll.wordCount : 0;
+  const preview = scroll.preview || truncate(scroll.content || "");
 
   const formattedDate = useMemo(() => {
     return formatDate(scroll.updatedAt);
   }, [scroll.updatedAt]);
 
   return (
-    <motion.div
-      ref={ref}
+    <div
       className={`scroll-item ${isActive ? "scroll-item--active" : ""}`}
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 10 }}
-      transition={{ duration: 0.15 }}
-      layout
       role="listitem"
     >
       <button
@@ -56,7 +47,7 @@ const ScrollItem = memo(forwardRef(function ScrollItem(
           {scroll.title || "Untitled Scroll"}
         </div>
         <div className="scroll-item-preview">
-          {truncate(scroll.content)}
+          {preview}
         </div>
         <div className="scroll-item-meta">
           <span className="scroll-word-count">
@@ -81,10 +72,9 @@ const ScrollItem = memo(forwardRef(function ScrollItem(
       >
         &#x2715;
       </button>
-    </motion.div>
+    </div>
   );
-}));
-ScrollItem.displayName = "ScrollItem";
+});
 
 const ScrollList = memo(function ScrollList({
   scrolls,
@@ -93,6 +83,76 @@ const ScrollList = memo(function ScrollList({
   onDelete,
   onNewScroll,
 }) {
+  const listBodyRef = useRef(null);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  const useVirtualization = scrolls.length >= VIRTUALIZE_AFTER_COUNT;
+
+  const syncViewport = useCallback(() => {
+    const node = listBodyRef.current;
+    if (!node) return;
+    setViewportHeight(node.clientHeight);
+  }, []);
+
+  useEffect(() => {
+    const node = listBodyRef.current;
+    if (!node) return undefined;
+
+    syncViewport();
+    const onScroll = () => setScrollTop(node.scrollTop);
+    node.addEventListener("scroll", onScroll, { passive: true });
+
+    let resizeObserver = null;
+    const onWindowResize = () => syncViewport();
+
+    if (typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => syncViewport());
+      resizeObserver.observe(node);
+    } else {
+      window.addEventListener("resize", onWindowResize);
+    }
+
+    return () => {
+      node.removeEventListener("scroll", onScroll);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      } else {
+        window.removeEventListener("resize", onWindowResize);
+      }
+    };
+  }, [syncViewport]);
+
+  const windowRange = useMemo(() => {
+    if (!useVirtualization) {
+      return {
+        startIndex: 0,
+        endIndex: scrolls.length,
+        topPadding: 0,
+        bottomPadding: 0,
+      };
+    }
+
+    const effectiveViewportHeight = Math.max(viewportHeight, LIST_ROW_HEIGHT);
+    const visibleCount = Math.ceil(effectiveViewportHeight / LIST_ROW_HEIGHT);
+    const startIndex = Math.max(0, Math.floor(scrollTop / LIST_ROW_HEIGHT) - LIST_OVERSCAN);
+    const endIndex = Math.min(
+      scrolls.length,
+      startIndex + visibleCount + LIST_OVERSCAN * 2
+    );
+
+    return {
+      startIndex,
+      endIndex,
+      topPadding: startIndex * LIST_ROW_HEIGHT,
+      bottomPadding: Math.max(0, (scrolls.length - endIndex) * LIST_ROW_HEIGHT),
+    };
+  }, [scrollTop, scrolls.length, useVirtualization, viewportHeight]);
+
+  const visibleScrolls = useMemo(() => {
+    return scrolls.slice(windowRange.startIndex, windowRange.endIndex);
+  }, [scrolls, windowRange.startIndex, windowRange.endIndex]);
+
   return (
     <div className="scroll-list">
       <div className="scroll-list-header">
@@ -112,21 +172,23 @@ const ScrollList = memo(function ScrollList({
         <span aria-hidden="true">&#x271A;</span> New Scroll
       </button>
 
-      <div className="scroll-list-body" role="list">
-        <AnimatePresence mode="popLayout">
-          {scrolls.length === 0 ? (
-            <motion.div
-              className="scroll-empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <div className="empty-sigil">&#x2728;</div>
-              <p>No scrolls yet</p>
-              <span>Begin thy first inscription above</span>
-            </motion.div>
-          ) : (
-            scrolls.map((scroll) => (
+      <div className="scroll-list-body" role="list" ref={listBodyRef}>
+        {scrolls.length === 0 ? (
+          <div className="scroll-empty">
+            <div className="empty-sigil">&#x2728;</div>
+            <p>No scrolls yet</p>
+            <span>Begin thy first inscription above</span>
+          </div>
+        ) : (
+          <div
+            style={useVirtualization
+              ? {
+                  paddingTop: `${windowRange.topPadding}px`,
+                  paddingBottom: `${windowRange.bottomPadding}px`,
+                }
+              : undefined}
+          >
+            {visibleScrolls.map((scroll) => (
               <ScrollItem
                 key={scroll.id}
                 scroll={scroll}
@@ -134,9 +196,9 @@ const ScrollList = memo(function ScrollList({
                 onSelect={onSelect}
                 onDelete={onDelete}
               />
-            ))
-          )}
-        </AnimatePresence>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

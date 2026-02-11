@@ -58,6 +58,10 @@ export default function TaskBoard({ tasks, agents, onRefresh }) {
                 </button>
             </div>
 
+            <p className="collab-card__hint">
+                Workflow: create tasks here, then agents run <code>node scripts/collab-client.js claim &lt;task-id&gt;</code> and mark done with <code>complete</code>.
+            </p>
+
             {showCreateForm && (
                 <form className="task-create-form" onSubmit={handleCreateTask}>
                     <input
@@ -66,7 +70,6 @@ export default function TaskBoard({ tasks, agents, onRefresh }) {
                         placeholder="Task title..."
                         value={newTitle}
                         onChange={e => setNewTitle(e.target.value)}
-                        autoFocus
                     />
                     <select
                         className="task-create-form__select"

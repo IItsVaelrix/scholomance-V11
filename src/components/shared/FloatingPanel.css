@@ -1,0 +1,193 @@
+.floating-panel {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, rgba(10, 11, 30, 0.95), rgba(8, 9, 24, 0.98));
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-xl, 1rem);
+  box-shadow: var(--shadow-depth-3, 0 12px 24px rgba(0, 0, 0, 0.5));
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  transition: none !important;
+}
+
+.floating-panel.is-dragging {
+  box-shadow: var(--shadow-depth-4, 0 20px 40px rgba(0, 0, 0, 0.6));
+  cursor: grabbing !important;
+  z-index: 2000 !important;
+  user-select: none;
+  /* Optimization: Disable blur during movement to eliminate compositor lag */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  /* Force isolation to prevent layout recalculation overhead */
+  contain: layout paint;
+}
+
+/* Global state when any panel is being dragged - Optimized */
+body.is-dragging-panel {
+  cursor: grabbing !important;
+}
+
+/* Kill pointer events on specific high-cost containers during drag */
+body.is-dragging-panel .ide-main-content,
+body.is-dragging-panel .primary-nav,
+body.is-dragging-panel .aurora-background {
+  pointer-events: none !important;
+}
+
+.floating-panel.is-dragging * {
+  transition: none !important;
+  pointer-events: none !important; /* Ensure children don't capture events during fast drag */
+}
+
+.panel-content.pointer-events-none {
+  pointer-events: none;
+}
+
+.panel-container {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: grab;
+  user-select: none;
+}
+
+.panel-header:active {
+  cursor: grabbing;
+}
+
+.panel-drag-handle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+}
+
+.drag-dots {
+  color: var(--read-text-faint, #6b7699);
+  font-family: var(--font-mono, monospace);
+  font-size: 14px;
+  letter-spacing: -1px;
+}
+
+.panel-title {
+  margin: 0;
+  font-size: var(--text-xs, 0.75rem);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--read-text-strong, #f8f9ff);
+}
+
+.panel-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--read-text-faint, #6b7699);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.panel-close-btn:hover {
+  background: rgba(255, 50, 50, 0.2);
+  color: #ff5555;
+}
+
+.panel-content {
+  flex: 1;
+  overflow: auto;
+  padding: var(--space-3, 0.75rem);
+  position: relative;
+}
+
+/* React Resizable Styles */
+.react-resizable {
+  position: relative;
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  z-index: 10;
+}
+
+.react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.2) 50%);
+}
+
+.react-resizable-handle-sw {
+  bottom: 0;
+  left: 0;
+  cursor: sw-resize;
+}
+
+.react-resizable-handle-nw {
+  top: 0;
+  left: 0;
+  cursor: nw-resize;
+}
+
+.react-resizable-handle-ne {
+  top: 0;
+  right: 0;
+  cursor: ne-resize;
+}
+
+.react-resizable-handle-w {
+  left: 0;
+  top: 0;
+  height: 100%;
+  cursor: w-resize;
+}
+
+.react-resizable-handle-e {
+  right: 0;
+  top: 0;
+  height: 100%;
+  cursor: e-resize;
+}
+
+.react-resizable-handle-n {
+  top: 0;
+  left: 0;
+  width: 100%;
+  cursor: n-resize;
+}
+
+.react-resizable-handle-s {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  cursor: s-resize;
+}
+
+[data-theme="light"] .floating-panel {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .panel-header {
+  background: rgba(0, 0, 0, 0.03);
+  border-bottom-color: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .panel-title {
+  color: #1a1a2e;
+}

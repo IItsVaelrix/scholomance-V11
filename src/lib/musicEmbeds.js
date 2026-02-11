@@ -1,5 +1,4 @@
 const SUNO_HOSTS = new Set(["suno.com", "www.suno.com"]);
-const SUNO_CDN_BASE = "https://audiocdn001.suno.ai";
 
 function parseUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") return null;
@@ -90,7 +89,7 @@ export function getSunoSongId(trackUrl) {
 export function getSunoAudioUrl(trackUrl) {
   const songId = getSunoSongId(trackUrl);
   if (!songId) return null;
-  return `${SUNO_CDN_BASE}/${songId}.mp3`;
+  return `https://cdn1.suno.ai/${songId}.mp3`;
 }
 
 export function getTrackEmbedConfig(trackUrl, options = {}) {

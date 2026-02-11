@@ -1,33 +1,13 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { usePhonemeEngine } from "./usePhonemeEngine.jsx";
-import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
-import { detectScheme, analyzeMeter, isComplexScheme } from "../lib/rhymeScheme.detector.js";
-import { analyzeLiteraryDevices, detectEmotion } from "../lib/literaryDevices.detector.js";
+import { isComplexScheme } from "../lib/rhymeScheme.detector.js";
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 
 /**
  * Hook for deep rhyme analysis of document content.
- * Provides document-level rhyme detection, scheme identification,
- * and visual connection data.
- *
- * @returns {{
- *   analysis: object | null,
- *   schemeDetection: object | null,
- *   meterDetection: object | null,
- *   isAnalyzing: boolean,
- *   isReady: boolean,
- *   analyzeDocument: (text: string) => void,
- *   activeConnections: Array,
- *   highlightedGroup: string | null,
- *   highlightRhymeGroup: (label: string) => void,
- *   clearHighlight: () => void,
- *   getConnectionsForLine: (lineIndex: number) => Array,
- * }}
+ * Offloads analysis to a Web Worker for seamless performance.
  */
 export function useDeepRhymeAnalysis() {
-  const { engine, isReady: engineReady } = usePhonemeEngine();
-
   const [analysis, setAnalysis] = useState(null);
   const [schemeDetection, setSchemeDetection] = useState(null);
   const [meterDetection, setMeterDetection] = useState(null);
@@ -36,24 +16,64 @@ export function useDeepRhymeAnalysis() {
   const [highlightedGroup, setHighlightedGroup] = useState(null);
   const [literaryDevices, setLiteraryDevices] = useState([]);
   const [emotion, setEmotion] = useState('Neutral');
+  const [isReady, setIsReady] = useState(false);
 
-  const deepEngineRef = useRef(null);
+  const workerRef = useRef(null);
   const debounceTimerRef = useRef(null);
   const lastTextRef = useRef(null);
+  const analysisIdRef = useRef(0);
 
-  // Initialize deep engine when phoneme engine is ready
+  // Initialize Worker
   useEffect(() => {
-    if (engineReady && engine) {
-      deepEngineRef.current = new DeepRhymeEngine(engine);
-    }
-  }, [engineReady, engine]);
+    // Vite worker syntax
+    const worker = new Worker(new URL('../lib/analysis.worker.js', import.meta.url), {
+      type: 'module'
+    });
+
+    worker.onmessage = (e) => {
+      const { type, payload } = e.data;
+
+      if (type === 'READY') {
+        setIsReady(true);
+      }
+
+      if (type === 'ANALYSIS_COMPLETE') {
+        // Only update if this is the most recent analysis request
+        if (payload.analysisId === analysisIdRef.current) {
+          setAnalysis(payload.result);
+          setSchemeDetection(payload.scheme);
+          setMeterDetection(payload.meter);
+          setActiveConnections(payload.result.allConnections);
+          setLiteraryDevices(payload.literary);
+          setEmotion(payload.emotion);
+          setIsAnalyzing(false);
+          
+          if (payload.duration > 100) {
+             console.log(`[PERF] Offloaded Analysis: ${payload.duration.toFixed(2)}ms (Background thread)`);
+          }
+        }
+      }
+
+      if (type === 'ERROR') {
+        console.error('[AnalysisWorker] Error:', payload.error);
+        setIsAnalyzing(false);
+      }
+    };
+
+    worker.postMessage({ type: 'INIT' });
+    workerRef.current = worker;
+
+    return () => {
+      worker.terminate();
+    };
+  }, []);
 
   /**
    * Analyzes a document for rhyme patterns.
-   * Debounced to prevent excessive re-analysis.
+   * Offloaded to worker thread.
    */
   const analyzeDocument = useCallback((text) => {
-    if (!deepEngineRef.current || !text) {
+    if (!workerRef.current || !isReady || !text) {
       setAnalysis(null);
       setSchemeDetection(null);
       setMeterDetection(null);
@@ -62,50 +82,28 @@ export function useDeepRhymeAnalysis() {
       return;
     }
 
-    // Skip if text hasn't changed
     if (text === lastTextRef.current) {
       return;
     }
     lastTextRef.current = text;
 
-    // Clear previous timer
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
 
     setIsAnalyzing(true);
 
-    // Debounce the analysis
     debounceTimerRef.current = setTimeout(() => {
-      try {
-        // Perform analysis
-        const result = deepEngineRef.current.analyzeDocument(text);
-        setAnalysis(result);
-
-        // Detect rhyme scheme
-        const scheme = detectScheme(result.schemePattern, result.rhymeGroups);
-        setSchemeDetection(scheme);
-
-        // Analyze meter
-        const meter = analyzeMeter(result.lines);
-        setMeterDetection(meter);
-
-        // Set all connections as active by default
-        setActiveConnections(result.allConnections);
-
-        // Literary device and emotion analysis
-        setLiteraryDevices(analyzeLiteraryDevices(text));
-        setEmotion(detectEmotion(text));
-      } catch (err) {
-        console.error('Deep rhyme analysis error:', err);
-        setAnalysis(null);
-        setSchemeDetection(null);
-        setMeterDetection(null);
-      } finally {
-        setIsAnalyzing(false);
-      }
+      analysisIdRef.current += 1;
+      workerRef.current.postMessage({
+        type: 'ANALYZE',
+        payload: {
+          text,
+          analysisId: analysisIdRef.current
+        }
+      });
     }, ANALYSIS_DEBOUNCE_MS);
-  }, []);
+  }, [isReady]);
 
   /**
    * Highlights connections for a specific rhyme group.
@@ -170,7 +168,7 @@ export function useDeepRhymeAnalysis() {
 
     // State
     isAnalyzing,
-    isReady: Boolean(deepEngineRef.current),
+    isReady,
 
     // Actions
     analyzeDocument,

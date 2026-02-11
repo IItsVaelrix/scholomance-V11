@@ -13,7 +13,7 @@ import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion.js";
 
 function AmbientWatchSync({ isWatchRoute }) {
   const { progression } = useProgression();
-  const { isPlaying, isTuning, isPaused, pause, play, playableSchools } = useAmbientPlayer(progression.unlockedSchools);
+  const { isPlaying, isTuning, isPaused, pause, play } = useAmbientPlayer(progression.unlockedSchools);
   const shouldResumeAfterWatchRef = useRef(false);
 
   useEffect(() => {

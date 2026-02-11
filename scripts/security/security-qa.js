@@ -112,7 +112,7 @@ function reportMatchList(label, entries, max = 6) {
   return details;
 }
 
-function getServerFiles(allFiles) {
+function getServerFiles() {
   const serverFiles = [];
   const rootIndex = path.join(ROOT, 'index.js');
   if (fs.existsSync(rootIndex)) {
@@ -637,7 +637,7 @@ function collectFiles() {
 
 function run() {
   const { allFiles, clientFiles } = collectFiles();
-  const serverFiles = getServerFiles(allFiles);
+  const serverFiles = getServerFiles();
 
   const checks = [
     checkSqlInjection(allFiles),

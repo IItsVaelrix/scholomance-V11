@@ -37,9 +37,6 @@ export function detectScheme(pattern, groups = new Map()) {
     return createSchemeResult('FREE_VERSE', '', groups, 1.0);
   }
 
-  // Normalize pattern (remove X for unrhymed lines)
-  const normalized = pattern.replace(/X/g, '');
-
   // Try to match known schemes (in order of specificity)
   const schemeOrder = [
     'SHAKESPEAREAN_SONNET',

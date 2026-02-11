@@ -32,12 +32,33 @@
   box-shadow:
     0 0 var(--orb-glow-near) var(--orb-color-dim),
     0 0 var(--orb-glow-far) color-mix(in srgb, var(--orb-color) 44%, transparent),
-    inset 0 0 var(--orb-glow-inset) var(--orb-color-dim);
+    inset 0 0 var(--orb-glow-inset) var(--orb-color-dim),
+    inset 0 -6px 12px rgba(0, 0, 0, 0.4),
+    inset 0 3px 6px rgba(255, 255, 255, 0.08);
   transition:
     transform 200ms ease,
     border-color 260ms ease,
     box-shadow 90ms linear,
     background 320ms ease;
+  transform-style: preserve-3d;
+}
+
+/* Desk reflection — blurred duplicate below the orb */
+.ambient-orb::before {
+  content: '';
+  position: absolute;
+  bottom: -60%;
+  left: 10%;
+  right: 10%;
+  height: 50%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center,
+    color-mix(in srgb, var(--orb-color) 20%, transparent) 0%,
+    transparent 70%);
+  filter: blur(8px);
+  opacity: 0.5;
+  pointer-events: none;
+  transform: scaleY(0.4);
 }
 
 /* === TOOLBAR EMBEDDED VARIANT === */

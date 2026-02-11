@@ -124,7 +124,6 @@ describe("Audio Management QA Suite", () => {
       </ProgressionProvider>
     );
 
-    const uploadBtn = screen.getByText(/Upload Audio/i);
     const fileInput = document.querySelector('input[type="file"]');
     
     // Create a mock file
@@ -142,7 +141,7 @@ describe("Audio Management QA Suite", () => {
   });
 
   it("should handle upload failure gracefully", async () => {
-    fetch.mockImplementation((url, options) => {
+    fetch.mockImplementation((url, _options) => {
       if (url === "/api/upload") {
         return Promise.resolve({ ok: false });
       }

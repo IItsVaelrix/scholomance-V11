@@ -86,6 +86,11 @@ dict_data/*
 !dict_data/README.md
 scholomance_user.sqlite
 scholomance_dict.sqlite
+scholomance_collab.sqlite
+scholomance_collab_test_*.sqlite
+scholomance_collab_test_*.sqlite-shm
+scholomance_collab_test_*.sqlite-wal
+tmp-*.png
 
 # Windows odd file occasionally created in this workspace
 nul

@@ -1,9 +1,14 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { z } from "zod";
+import { Storage } from "../lib/storage";
 
-const LOCAL_STORAGE_KEY = "scholomance.scrolls.v1";
+const LEGACY_LOCAL_STORAGE_KEY = "scholomance.scrolls.v1";
+const LOCAL_SCROLL_INDEX_KEY = "scholomance.scrolls.v2.index";
+const LOCAL_SCROLL_ITEM_PREFIX = "scholomance.scrolls.v2.item.";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CSRF_HEADER = "x-csrf-token";
+const INDEX_VERSION = 2;
+const PREVIEW_MAX_LENGTH = 120;
 
 const generateUuid = () => {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -27,28 +32,6 @@ const generateUuid = () => {
 };
 
 const generateId = () => generateUuid();
-
-const readLocalScrolls = () => {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(LOCAL_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error("Failed to read local scrolls:", error);
-    return [];
-  }
-};
-
-const writeLocalScrolls = (scrolls) => {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(scrolls));
-  } catch (error) {
-    console.error("Failed to persist local scrolls:", error);
-  }
-};
 
 let cachedCsrfToken = null;
 let csrfPromise = null;
@@ -86,6 +69,251 @@ const ScrollSchema = z.object({
   updatedAt: TimestampSchema.optional()
 }).passthrough();
 const ScrollListSchema = z.array(ScrollSchema);
+const ScrollIndexSchema = z.object({
+  version: z.number().optional(),
+  ids: z.array(z.string()),
+}).passthrough();
+
+const getStorage = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    return Storage;
+  } catch {
+    return null;
+  }
+};
+
+const getScrollStorageKey = (id) => `${LOCAL_SCROLL_ITEM_PREFIX}${id}`;
+
+const isWordCharCode = (charCode) => {
+  return (
+    (charCode >= 48 && charCode <= 57) ||
+    (charCode >= 65 && charCode <= 90) ||
+    (charCode >= 97 && charCode <= 122) ||
+    charCode === 39
+  );
+};
+
+const countWords = (value) => {
+  if (!value) return 0;
+  let count = 0;
+  let inWord = false;
+  for (let i = 0; i < value.length; i += 1) {
+    const isWordChar = isWordCharCode(value.charCodeAt(i));
+    if (isWordChar && !inWord) {
+      count += 1;
+      inWord = true;
+    } else if (!isWordChar) {
+      inWord = false;
+    }
+  }
+  return count;
+};
+
+const toPreview = (content) => {
+  const collapsed = String(content || "").replace(/\s+/g, " ").trim();
+  if (!collapsed) return "";
+  if (collapsed.length <= PREVIEW_MAX_LENGTH) return collapsed;
+  return `${collapsed.slice(0, PREVIEW_MAX_LENGTH).trim()}...`;
+};
+
+const toMillis = (value) => {
+  const parsed = new Date(value ?? 0).getTime();
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const sortByUpdatedAtDesc = (a, b) => {
+  return toMillis(b.updatedAt) - toMillis(a.updatedAt);
+};
+
+const withDerivedFields = (rawScroll, fallbackTimestamp = new Date().toISOString()) => {
+  const id = String(rawScroll?.id || "");
+  if (!id) return null;
+
+  const title = String(rawScroll?.title || "").trim() || "Untitled Scroll";
+  const content = String(rawScroll?.content || "");
+  const createdAt = rawScroll?.createdAt || fallbackTimestamp;
+  const updatedAt = rawScroll?.updatedAt || createdAt || fallbackTimestamp;
+
+  return {
+    ...rawScroll,
+    id,
+    title,
+    content,
+    createdAt,
+    updatedAt,
+    preview: toPreview(content),
+    wordCount: countWords(content),
+    charCount: content.length,
+  };
+};
+
+const parseIndexIds = (rawValue) => {
+  if (!rawValue) return [];
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((id) => typeof id === "string" && id.length > 0);
+    }
+    const schemaResult = ScrollIndexSchema.safeParse(parsed);
+    if (schemaResult.success) {
+      return schemaResult.data.ids.filter((id) => typeof id === "string" && id.length > 0);
+    }
+    return [];
+  } catch {
+    return [];
+  }
+};
+
+const readIndexIds = (storage) => {
+  const raw = storage.getItem(LOCAL_SCROLL_INDEX_KEY);
+  if (raw == null) return null;
+  return parseIndexIds(raw);
+};
+
+const writeIndexIds = (storage, ids) => {
+  const payload = {
+    version: INDEX_VERSION,
+    ids,
+  };
+  storage.setItem(LOCAL_SCROLL_INDEX_KEY, JSON.stringify(payload));
+};
+
+const readLegacyScrolls = (storage) => {
+  const raw = storage.getItem(LEGACY_LOCAL_STORAGE_KEY);
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    const schemaResult = ScrollListSchema.safeParse(parsed);
+    if (!schemaResult.success) return [];
+
+    const normalized = [];
+    for (const scroll of schemaResult.data) {
+      const enriched = withDerivedFields(scroll);
+      if (enriched) normalized.push(enriched);
+    }
+    normalized.sort(sortByUpdatedAtDesc);
+    return normalized;
+  } catch (error) {
+    console.error("Failed to read legacy local scrolls:", error);
+    return [];
+  }
+};
+
+const readV2Scrolls = (storage) => {
+  const ids = readIndexIds(storage);
+  if (ids === null) return null;
+
+  const scrolls = [];
+  for (const id of ids) {
+    const raw = storage.getItem(getScrollStorageKey(id));
+    if (!raw) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      const schemaResult = ScrollSchema.safeParse(parsed);
+      if (!schemaResult.success) continue;
+      const enriched = withDerivedFields(schemaResult.data);
+      if (enriched) scrolls.push(enriched);
+    } catch {
+      // Ignore malformed individual entries and continue loading the rest.
+    }
+  }
+  return scrolls;
+};
+
+const writeLocalScrollSnapshot = (scrolls) => {
+  const storage = getStorage();
+  if (!storage) return;
+
+  try {
+    const normalized = [];
+    for (const scroll of scrolls) {
+      const enriched = withDerivedFields(scroll);
+      if (enriched) normalized.push(enriched);
+    }
+    normalized.sort(sortByUpdatedAtDesc);
+
+    const previousIds = readIndexIds(storage) || [];
+    const nextIds = normalized.map((scroll) => scroll.id);
+    const nextIdSet = new Set(nextIds);
+
+    for (const scroll of normalized) {
+      storage.setItem(getScrollStorageKey(scroll.id), JSON.stringify(scroll));
+    }
+    for (const staleId of previousIds) {
+      if (!nextIdSet.has(staleId)) {
+        storage.removeItem(getScrollStorageKey(staleId));
+      }
+    }
+
+    writeIndexIds(storage, nextIds);
+  } catch (error) {
+    console.error("Failed to write local scroll snapshot:", error);
+  }
+};
+
+const upsertLocalScroll = (scroll) => {
+  const storage = getStorage();
+  if (!storage || !scroll?.id) return;
+
+  try {
+    storage.setItem(getScrollStorageKey(scroll.id), JSON.stringify(scroll));
+    const existingIds = readIndexIds(storage) || [];
+    const nextIds = [scroll.id, ...existingIds.filter((id) => id !== scroll.id)];
+    writeIndexIds(storage, nextIds);
+  } catch (error) {
+    console.error("Failed to upsert local scroll:", error);
+  }
+};
+
+const removeLocalScroll = (id) => {
+  if (!id) return;
+  const storage = getStorage();
+  if (!storage) return;
+
+  try {
+    storage.removeItem(getScrollStorageKey(id));
+    const existingIds = readIndexIds(storage);
+    if (existingIds) {
+      writeIndexIds(storage, existingIds.filter((value) => value !== id));
+    }
+  } catch (error) {
+    console.error("Failed to remove local scroll:", error);
+  }
+};
+
+const readLocalScrolls = () => {
+  const storage = getStorage();
+  if (!storage) return [];
+
+  try {
+    const v2 = readV2Scrolls(storage);
+    if (v2) {
+      return v2;
+    }
+
+    const legacy = readLegacyScrolls(storage);
+    if (!legacy.length) return [];
+
+    writeLocalScrollSnapshot(legacy);
+    storage.removeItem(LEGACY_LOCAL_STORAGE_KEY);
+    return legacy;
+  } catch (error) {
+    console.error("Failed to read local scrolls:", error);
+    return [];
+  }
+};
+
+const upsertByRecency = (list, scroll, legacyId = null) => {
+  const next = [];
+  for (const item of list) {
+    if (item.id === scroll.id) continue;
+    if (legacyId && item.id === legacyId) continue;
+    next.push(item);
+  }
+  return [scroll, ...next];
+};
 
 export function useScrolls() {
   const [scrolls, setScrolls] = useState([]);
@@ -108,8 +336,12 @@ export function useScrolls() {
           if (!parsed.success) {
             throw new Error("Invalid scroll list payload");
           }
-          setScrolls(parsed.data);
-          writeLocalScrolls(parsed.data);
+          const normalized = parsed.data
+            .map((scroll) => withDerivedFields(scroll))
+            .filter(Boolean)
+            .sort(sortByUpdatedAtDesc);
+          setScrolls(normalized);
+          writeLocalScrollSnapshot(normalized);
         } else if (response.status === 401) {
           console.log("Not logged in, no scrolls to load.");
         } else {
@@ -135,32 +367,18 @@ export function useScrolls() {
       content: scrollData.content?.trim() || "",
     };
 
-    const localScroll = {
+    const localScroll = withDerivedFields({
       id,
       title: scroll.title,
       content: scroll.content,
       createdAt: scrollData.createdAt || now,
       updatedAt: now,
-    };
+    }, now);
+    if (!localScroll) return null;
 
-    setScrolls((prev) => {
-      const baseList = legacyId ? prev.filter((s) => s.id !== legacyId) : prev;
-      const index = baseList.findIndex((s) => s.id === id);
-      if (index > -1) {
-        const existing = baseList[index];
-        const newScrolls = [...baseList];
-        newScrolls[index] = {
-          ...existing,
-          ...localScroll,
-          createdAt: existing.createdAt || localScroll.createdAt,
-        };
-        writeLocalScrolls(newScrolls);
-        return newScrolls;
-      }
-      const newScrolls = [localScroll, ...baseList];
-      writeLocalScrolls(newScrolls);
-      return newScrolls;
-    });
+    setScrolls((prev) => upsertByRecency(prev, localScroll, legacyId));
+    upsertLocalScroll(localScroll);
+    if (legacyId) removeLocalScroll(legacyId);
 
     try {
       const csrfToken = await getCsrfToken();
@@ -184,21 +402,12 @@ export function useScrolls() {
         throw new Error("Invalid scroll payload");
       }
 
-      setScrolls((prev) => {
-        const baseList = legacyId ? prev.filter((s) => s.id !== legacyId) : prev;
-        const index = baseList.findIndex((s) => s.id === id);
-        if (index > -1) {
-          const newScrolls = [...baseList];
-          newScrolls[index] = parsed.data;
-          writeLocalScrolls(newScrolls);
-          return newScrolls;
-        }
-        const newScrolls = [parsed.data, ...baseList];
-        writeLocalScrolls(newScrolls);
-        return newScrolls;
-      });
+      const normalizedServerScroll = withDerivedFields(parsed.data) || localScroll;
+      setScrolls((prev) => upsertByRecency(prev, normalizedServerScroll, legacyId));
+      upsertLocalScroll(normalizedServerScroll);
+      if (legacyId) removeLocalScroll(legacyId);
 
-      return parsed.data;
+      return normalizedServerScroll;
     } catch (e) {
       console.error("Failed to save scroll to server, using local copy.", e);
       return localScroll;
@@ -206,11 +415,8 @@ export function useScrolls() {
   }, []);
 
   const deleteScroll = useCallback(async (id) => {
-    setScrolls((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      writeLocalScrolls(next);
-      return next;
-    });
+    setScrolls((prev) => prev.filter((s) => s.id !== id));
+    removeLocalScroll(id);
     try {
       const csrfToken = await getCsrfToken();
       const response = await fetch(`/api/scrolls/${id}`, {
@@ -229,18 +435,21 @@ export function useScrolls() {
     }
   }, []);
 
-  const getScrollById = useCallback(
-    (id) => scrolls.find((s) => s.id === id) || null,
-    [scrolls]
-  );
+  const scrollLookup = useMemo(() => {
+    const lookup = new Map();
+    for (const scroll of scrolls) {
+      lookup.set(scroll.id, scroll);
+    }
+    return lookup;
+  }, [scrolls]);
 
-  const sortedScrolls = useMemo(
-    () => [...scrolls].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)),
-    [scrolls]
+  const getScrollById = useCallback(
+    (id) => scrollLookup.get(id) || null,
+    [scrollLookup]
   );
 
   return {
-    scrolls: sortedScrolls,
+    scrolls,
     isLoading,
     saveScroll, // Replaces createScroll and updateScroll
     deleteScroll,

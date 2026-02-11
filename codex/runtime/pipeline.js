@@ -58,7 +58,7 @@ function setupWordAnalysisPipeline() {
  */
 function setupCombatSubmitPipeline() {
     on('ui:combat_action_submitted', async (payload) => {
-        const { action, responseEventName } = payload;
+        const { responseEventName } = payload;
 
         // 1. Rate limit
         if (!isActionAllowed('combat_submit', 3000)) {

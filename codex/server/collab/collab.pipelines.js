@@ -91,7 +91,7 @@ export function isPathAllowedForRole(filePath, role) {
  * Returns the role string or null if no match.
  */
 export function getRoleForPath(filePath) {
-    for (const [role, prefixes] of Object.entries(OWNERSHIP_MAP)) {
+    for (const [role] of Object.entries(OWNERSHIP_MAP)) {
         if (isPathAllowedForRole(filePath, role)) return role;
     }
     return null;

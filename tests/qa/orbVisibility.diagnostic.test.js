@@ -5,17 +5,15 @@
  * Run with: npx vitest run tests/qa/orbVisibility.diagnostic.test.js
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { SCHOOLS } from "../../src/data/schools";
 import { LIBRARY } from "../../src/data/library";
 import {
   getPlayableSchoolIds,
   getSchoolAudioConfig,
-  SCHOOL_AUDIO_CONFIG,
 } from "../../src/lib/ambient/schoolAudio.config";
 import {
   AmbientPlayerService,
-  AMBIENT_PLAYER_STATES,
 } from "../../src/lib/ambient/ambientPlayer.service";
 
 // ─── Helpers ───────────────────────────────────────────────

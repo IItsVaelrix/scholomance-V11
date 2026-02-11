@@ -7,48 +7,47 @@ test.describe("Session Persistence", () => {
   test("should save a new scroll and persist it between sessions", async ({ page, browserName }) => {
     // Helper for stable clicking (webkit has animation stability issues)
     const stableClick = async (locator) => {
-      await locator.waitFor({ state: "visible" });
-      await page.waitForTimeout(200);
-      if (browserName === "webkit") {
-        await locator.dispatchEvent("click");
-      } else {
+        await locator.waitFor({ state: "visible" });
+        await page.waitForTimeout(200);
+        if (browserName === "webkit") {
+            await locator.dispatchEvent("click");
+        } else {
         await locator.click();
       }
     };
 
-    // === SESSION 1: Create a new scroll ===
-    await page.goto("http://localhost:5173/");
-    await page.getByRole("link", { name: "Read" }).click();
-    await page.waitForLoadState("networkidle");
+        // === SESSION 1: Create a new scroll ===
+        await page.goto("/read", { waitUntil: "domcontentloaded" });
+        await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
-    // Wait for animations to settle before clicking
-    const beginNewScrollButton = page.getByRole("button", { name: "Begin New Scroll" });
-    await page.waitForTimeout(300);
-    await stableClick(beginNewScrollButton);
+        // Wait for animations to settle before clicking
+        const beginNewScrollButton = page.getByRole("button", { name: "Begin New Scroll" });
+        await page.waitForTimeout(300);
+        await stableClick(beginNewScrollButton);
 
     // Wait for editor to appear after clicking
     const scrollTitle = page.locator("#scroll-title");
     await scrollTitle.waitFor({ state: "visible", timeout: 10000 });
 
     // Fill in title and content
-    await scrollTitle.fill(UNIQUE_TITLE);
-    await page.locator("#scroll-content").fill(UNIQUE_CONTENT);
+        await scrollTitle.fill(UNIQUE_TITLE);
+        await page.locator("#scroll-content").fill(UNIQUE_CONTENT);
 
-    // Save the scroll
-    const saveButton = page.getByRole("button", { name: "Save Scroll" });
-    await stableClick(saveButton);
+        // Save the scroll
+        const saveButton = page.getByRole("button", { name: /(Save|Submit|Update) Scroll/i });
+        await stableClick(saveButton);
 
     // Verify that the scroll is in the list
     const scrollList = page.locator(".scroll-list");
     await expect(scrollList).toContainText(UNIQUE_TITLE, { timeout: 10000 });
 
-    // === SESSION 2: Verify the scroll is still there ===
-    // Reload the page to simulate a new session
-    await page.reload({ waitUntil: "networkidle" });
-    await page.waitForTimeout(500);
+        // === SESSION 2: Verify the scroll is still there ===
+        // Reload the page to simulate a new session
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
-    // Verify that the scroll is still in the list
-    await expect(scrollList).toContainText(UNIQUE_TITLE);
+        // Verify that the scroll is still in the list
+        await expect(scrollList).toContainText(UNIQUE_TITLE);
 
     // Click on the scroll and verify its content
     const scrollButton = page.getByRole("button", { name: UNIQUE_TITLE });

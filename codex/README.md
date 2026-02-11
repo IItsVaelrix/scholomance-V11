@@ -106,7 +106,11 @@ interface Definition {
 
 ### Configuration
 
-Set `VITE_USE_CODEX_PIPELINE=false` to disable the CODEx pipeline and use the legacy `ReferenceEngine` instead.
+Set `VITE_USE_CODEX_PIPELINE` to control pipeline enablement.  
+Truthy: `true`, `1`, `on`, `yes`  
+Falsy: `false`, `0`, `off`, `no`
+
+Set a falsy value (for example `VITE_USE_CODEX_PIPELINE=false`) to disable CODEx pipeline initialization.
 
 ### Testing
 

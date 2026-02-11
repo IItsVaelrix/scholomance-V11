@@ -11,6 +11,8 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false); // For mobile
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const nextThemeLabel = theme === "dark" ? "light" : "dark";
+  const themeGlyph = theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19";
 
   return (
     <nav className="primary-nav w-full z-100" aria-label="Primary navigation">
@@ -19,33 +21,17 @@ export default function Navigation() {
           SCHOLOMANCE
         </NavLink>
 
-        {/* Mobile menu button */}
-        <button
-          className="nav-toggle md:hidden p-2"
-          aria-expanded={isMenuOpen}
-          aria-controls="nav-links"
-          aria-label={isMenuOpen ? "Close menu" : "Open menu"}
-          onClick={() => setIsMenuOpen(!isMenuOpen)}
-        >
-          <span aria-hidden="true">
-            <div className="hamburger-bar" />
-            <div className="hamburger-bar" />
-            <div className="hamburger-bar" />
-          </span>
-        </button>
-
         <div
           id="nav-links"
-          className={`nav-links flex gap-8 items-center ${isMenuOpen ? 'flex-col absolute top-20 left-0 w-full p-8 glass-strong' : 'hidden md:flex'}`}
+          className={`nav-links flex gap-8 items-center ${isMenuOpen ? "flex-col absolute top-20 left-0 w-full p-8 glass-strong" : "hidden md:flex"}`}
         >
-          {[...LINKS, { id: 'auth', path: '/auth', label: user ? user.username : 'Portal' }].map((l) => (
+          {[...LINKS, { id: "auth", path: "/auth", label: user ? user.username : "Portal" }].map((l) => (
             <div key={l.id} className="relative">
               <NavLink
                 to={l.path}
                 className={({ isActive }) =>
                   `nav-link font-mono text-xs uppercase tracking-wide transition-colors ${isActive ? "text-primary" : "text-muted hover:text-secondary"}`
                 }
-
               >
                 {l.label}
               </NavLink>
@@ -53,21 +39,38 @@ export default function Navigation() {
                 <motion.div
                   layoutId="nav-highlight"
                   className="absolute -bottom-2 left-0 w-full h-0.5 bg-white"
-                  style={{ backgroundColor: 'var(--active-school-color)' }}
+                  style={{ backgroundColor: "var(--active-school-color)" }}
                   transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
                 />
               )}
             </div>
           ))}
+        </div>
 
+        <div className="nav-controls">
           <button
             type="button"
             className="theme-toggle"
             onClick={toggleTheme}
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
-            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={`Switch to ${nextThemeLabel} mode`}
+            title={`Switch to ${nextThemeLabel} mode`}
           >
-            <span aria-hidden="true">{theme === 'dark' ? '☀️' : '🌙'}</span>
+            <span aria-hidden="true">{themeGlyph}</span>
+          </button>
+
+          {/* Mobile menu button */}
+          <button
+            className="nav-toggle md:hidden p-2"
+            aria-expanded={isMenuOpen}
+            aria-controls="nav-links"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            onClick={() => setIsMenuOpen(!isMenuOpen)}
+          >
+            <span aria-hidden="true">
+              <div className="hamburger-bar" />
+              <div className="hamburger-bar" />
+              <div className="hamburger-bar" />
+            </span>
           </button>
         </div>
       </div>

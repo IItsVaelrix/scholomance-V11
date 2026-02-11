@@ -10,7 +10,7 @@ export class PersistenceAdapter {
    * @param {string} id The ID of the item to retrieve.
    * @returns {Promise<Object|null>} The retrieved item or null.
    */
-  async get(id) {
+  async get(_id) {
     throw new Error("PersistenceAdapter.get() must be implemented by subclasses.");
   }
 
@@ -27,7 +27,7 @@ export class PersistenceAdapter {
    * @param {Object} item The item to save. It should have an `id` property.
    * @returns {Promise<Object>} The saved item.
    */
-  async save(item) {
+  async save(_item) {
     throw new Error("PersistenceAdapter.save() must be implemented by subclasses.");
   }
 
@@ -36,7 +36,7 @@ export class PersistenceAdapter {
    * @param {string} id The ID of the item to delete.
    * @returns {Promise<void>}
    */
-  async delete(id) {
+  async delete(_id) {
     throw new Error("PersistenceAdapter.delete() must be implemented by subclasses.");
   }
 }

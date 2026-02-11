@@ -1,18 +1,23 @@
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { z } from "zod";
+
+const UserSchema = z.object({
+  id: z.number(),
+  username: z.string(),
+  email: z.string(),
+}).passthrough();
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [csrfToken, setCsrfToken] = useState(null);
 
   const fetchCsrfToken = useCallback(async () => {
     try {
       const res = await fetch('/auth/csrf-token');
       if (res.ok) {
         const { token } = await res.json();
-        setCsrfToken(token);
         return token;
       }
     } catch (e) {
@@ -27,7 +32,13 @@ export function AuthProvider({ children }) {
       const res = await fetch('/auth/me');
       if (res.ok) {
         const data = await res.json();
-        setUser(data.user);
+        const parsed = UserSchema.safeParse(data.user);
+        if (parsed.success) {
+          setUser(parsed.data);
+        } else {
+          console.error("Invalid user data from /auth/me", parsed.error);
+          setUser(null);
+        }
       } else {
         setUser(null);
       }

@@ -2,7 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AMBIENT_PLAYER_STATES,
   AmbientPlayerService,
+  createPercussivePulseState,
+  getPercussivePulseLevelFromWaveform,
 } from "../../src/lib/ambient/ambientPlayer.service";
+
+const createdServices = [];
+
+function createService(options) {
+  const service = new AmbientPlayerService(options);
+  createdServices.push(service);
+  return service;
+}
 
 function createMemoryStorage(seed = {}) {
   const store = new Map(Object.entries(seed));
@@ -36,12 +46,36 @@ function createMockController(initialVolume = 0) {
   };
 }
 
+function createWaveformFrame({ size = 256, amplitude = 0, spike = 0 } = {}) {
+  const data = new Uint8Array(size);
+  const clampedAmp = Math.max(0, Math.min(1, amplitude));
+  const center = 128;
+  const waveAmp = Math.round(clampedAmp * 127);
+
+  for (let index = 0; index < size; index += 1) {
+    const phase = (index / size) * Math.PI * 2;
+    const sample = center + Math.round(Math.sin(phase) * waveAmp);
+    data[index] = Math.max(0, Math.min(255, sample));
+  }
+
+  if (spike > 0) {
+    const spikeAmp = Math.max(0, Math.min(1, spike));
+    data[Math.floor(size / 2)] = Math.max(0, Math.min(255, center + Math.round(spikeAmp * 127)));
+  }
+
+  return data;
+}
+
 describe("AmbientPlayerService", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
   afterEach(() => {
+    while (createdServices.length > 0) {
+      const service = createdServices.pop();
+      service.destroy();
+    }
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -53,7 +87,7 @@ describe("AmbientPlayerService", () => {
       return controller;
     });
 
-    const service = new AmbientPlayerService({
+    const service = createService({
       controllerFactory,
       storage: createMemoryStorage(),
       tuningDurationMs: 50,
@@ -83,7 +117,7 @@ describe("AmbientPlayerService", () => {
       return controller;
     });
 
-    const service = new AmbientPlayerService({
+    const service = createService({
       controllerFactory,
       storage: createMemoryStorage(),
       tuningDurationMs: 50,
@@ -103,6 +137,55 @@ describe("AmbientPlayerService", () => {
     expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
   });
 
+  it("plays immediately on first play without waiting for tune timers", async () => {
+    const controllerFactory = vi.fn(async ({ schoolId }) => {
+      const controller = createMockController(0);
+      controller.schoolId = schoolId;
+      return controller;
+    });
+
+    const service = createService({
+      controllerFactory,
+      storage: createMemoryStorage(),
+      tuningDurationMs: 5000,
+      fadeOutMs: 0,
+      fadeInMs: 0,
+      dialSfxPlayer: vi.fn(),
+    });
+
+    service.setPlayableSchools(["SONIC"]);
+    await service.play();
+
+    expect(controllerFactory).toHaveBeenCalledTimes(1);
+    expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
+  });
+
+  it("plays dial static only once per service lifecycle", async () => {
+    const controllerFactory = vi.fn(async ({ schoolId }) => {
+      const controller = createMockController(0);
+      controller.schoolId = schoolId;
+      return controller;
+    });
+    const dialSfxPlayer = vi.fn();
+
+    const service = createService({
+      controllerFactory,
+      storage: createMemoryStorage(),
+      tuningDurationMs: 10,
+      fadeOutMs: 0,
+      fadeInMs: 0,
+      dialSfxPlayer,
+    });
+
+    service.setPlayableSchools(["SONIC", "PSYCHIC"]);
+    await service.setSchool("SONIC");
+    await vi.runAllTimersAsync();
+    await service.setSchool("PSYCHIC");
+    await vi.runAllTimersAsync();
+
+    expect(dialSfxPlayer).toHaveBeenCalledTimes(1);
+  });
+
   it("loads and persists ambient settings", () => {
     const storage = createMemoryStorage({
       "scholomance.ambient.settings.v1": JSON.stringify({
@@ -113,7 +196,7 @@ describe("AmbientPlayerService", () => {
       }),
     });
 
-    const service = new AmbientPlayerService({
+    const service = createService({
       storage,
       controllerFactory: vi.fn(async () => createMockController(0)),
       dialSfxPlayer: vi.fn(),
@@ -135,5 +218,151 @@ describe("AmbientPlayerService", () => {
     expect(persisted.volume).toBe(0.77);
     expect(persisted.autoplayAmbient).toBe(false);
     expect(persisted.cyclingEnabled).toBe(true);
+  });
+
+  it("ignores stale async tuning completions when a newer school selection arrives", async () => {
+    const loadResolves = new Map();
+    const controllerFactory = vi.fn(async ({ schoolId }) => {
+      const controller = createMockController(0);
+      controller.schoolId = schoolId;
+      controller.capabilities = {
+        canAnalyze: false,
+        canSetVolumeSmooth: true,
+        supportsSeek: true,
+      };
+      controller.loadPromise = new Promise((resolve) => {
+        loadResolves.set(schoolId, { controller, resolve });
+      });
+      return controller;
+    });
+
+    const service = createService({
+      controllerFactory,
+      storage: createMemoryStorage(),
+      tuningDurationMs: 20,
+      fadeOutMs: 0,
+      fadeInMs: 0,
+      dialSfxPlayer: vi.fn(),
+    });
+
+    service.setPlayableSchools(["SONIC", "PSYCHIC"]);
+    await service.setSchool("SONIC");
+    await vi.advanceTimersByTimeAsync(25);
+
+    await service.setSchool("PSYCHIC");
+    await vi.advanceTimersByTimeAsync(25);
+
+    const sonicLoad = loadResolves.get("SONIC");
+    const psychicLoad = loadResolves.get("PSYCHIC");
+    expect(sonicLoad).toBeDefined();
+    expect(psychicLoad).toBeDefined();
+
+    sonicLoad.resolve();
+    await vi.runAllTimersAsync();
+    await Promise.resolve();
+
+    psychicLoad.resolve();
+    await vi.runAllTimersAsync();
+    await Promise.resolve();
+
+    expect(controllerFactory).toHaveBeenCalledTimes(2);
+    expect(sonicLoad.controller.destroy).toHaveBeenCalled();
+    expect(psychicLoad.controller.play).toHaveBeenCalled();
+    expect(service.getState().schoolId).toBe("PSYCHIC");
+    expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
+  });
+
+  it("resumes AudioContext on visibility and user interaction events", async () => {
+    const mockContext = {
+      state: "suspended",
+      resume: vi.fn(async () => {
+        mockContext.state = "running";
+      }),
+      close: vi.fn(async () => {
+        mockContext.state = "closed";
+      }),
+    };
+
+    const originalAudioContext = window.AudioContext;
+    const originalWebkitAudioContext = window.webkitAudioContext;
+    class MockAudioContext {
+      constructor() {
+        return mockContext;
+      }
+    }
+    window.AudioContext = MockAudioContext;
+    window.webkitAudioContext = undefined;
+    try {
+      const service = createService({
+        controllerFactory: vi.fn(async () => createMockController(0)),
+        storage: createMemoryStorage(),
+        dialSfxPlayer: vi.fn(),
+      });
+
+      document.dispatchEvent(new Event("visibilitychange"));
+      await Promise.resolve();
+      expect(mockContext.resume).toHaveBeenCalledTimes(1);
+
+      mockContext.state = "suspended";
+      window.dispatchEvent(new Event("pointerdown"));
+      await Promise.resolve();
+      expect(mockContext.resume).toHaveBeenCalledTimes(2);
+
+      service.destroy();
+      mockContext.state = "suspended";
+      window.dispatchEvent(new Event("pointerdown"));
+      await Promise.resolve();
+      expect(mockContext.resume).toHaveBeenCalledTimes(2);
+    } finally {
+      window.AudioContext = originalAudioContext;
+      window.webkitAudioContext = originalWebkitAudioContext;
+    }
+  });
+});
+
+describe("Percussive Pulse Detection", () => {
+  it("boosts level on percussive waveform peaks", () => {
+    const state = createPercussivePulseState();
+    const quietFrame = createWaveformFrame({ amplitude: 0.03 });
+    const hitFrame = createWaveformFrame({ amplitude: 0.08, spike: 1 });
+
+    const baselineA = getPercussivePulseLevelFromWaveform(quietFrame, state, 0);
+    const baselineB = getPercussivePulseLevelFromWaveform(quietFrame, state, 120);
+    const hitLevel = getPercussivePulseLevelFromWaveform(hitFrame, state, 240);
+
+    expect(hitLevel).toBeGreaterThan(baselineB);
+    expect(hitLevel).toBeGreaterThan(baselineA);
+  });
+
+  it("limits pulse frequency with cooldown between detected hits", () => {
+    const state = createPercussivePulseState();
+    const hitFrame = createWaveformFrame({ amplitude: 0.12, spike: 1 });
+
+    getPercussivePulseLevelFromWaveform(hitFrame, state, 0);
+    const firstHitMs = state.lastHitMs;
+
+    getPercussivePulseLevelFromWaveform(hitFrame, state, 40);
+    expect(state.lastHitMs).toBe(firstHitMs);
+
+    getPercussivePulseLevelFromWaveform(hitFrame, state, 180);
+    expect(state.lastHitMs).toBe(180);
+  });
+
+  it("decays pulse energy after the peak window", () => {
+    const state = createPercussivePulseState();
+    const hitFrame = createWaveformFrame({ amplitude: 0.1, spike: 1 });
+    const quietFrame = createWaveformFrame({ amplitude: 0.02 });
+
+    const peakLevel = getPercussivePulseLevelFromWaveform(hitFrame, state, 0);
+    const lateLevel = getPercussivePulseLevelFromWaveform(quietFrame, state, 500);
+
+    expect(peakLevel).toBeGreaterThan(lateLevel);
+    expect(lateLevel).toBeLessThan(0.45);
+  });
+
+  it("handles missing waveform frames without crashing", () => {
+    const state = createPercussivePulseState({ pulse: 0.37 });
+    const level = getPercussivePulseLevelFromWaveform(null, state, 0);
+    expect(level).toBeCloseTo(0.37, 4);
   });
 });

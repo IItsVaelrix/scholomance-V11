@@ -27,6 +27,30 @@
       "version": "18.2"
     }
   },
+  "overrides": [
+    {
+      "files": [
+        "codex/**/*.js",
+        "scripts/**/*.js",
+        "playwright.config.js",
+        "vite.config.js",
+        "mailer.adapter.js"
+      ],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": [
+        "tests/**/*.js",
+        "tests/**/*.jsx"
+      ],
+      "env": {
+        "node": true,
+        "jest": true
+      }
+    }
+  ],
   "rules": {
     "react/prop-types": "off",
     "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],

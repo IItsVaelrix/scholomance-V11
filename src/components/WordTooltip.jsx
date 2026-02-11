@@ -3,11 +3,8 @@ import PropTypes from "prop-types";
 import { motion, useMotionValue } from "framer-motion";
 import { usePhonemeEngine } from "../hooks/usePhonemeEngine.jsx";
 import { useTheme } from "../hooks/useTheme.jsx";
-import { DEFAULT_VOWEL_COLORS, getVowelColorsForSchool } from "../data/schoolPalettes.js";
+import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import "./WordTooltip.css";
-
-// Dark fallback (kept for safety if palette lookup fails)
-const VOWEL_COLORS_DARK = DEFAULT_VOWEL_COLORS;
 
 // Magic school icons (unicode symbols for visual flair)
 const SCHOOL_ICONS = {

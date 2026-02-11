@@ -19,8 +19,8 @@ describe("musicEmbeds", () => {
     const config = getTrackEmbedConfig(songUrl);
 
     expect(embedUrl).toBe("https://suno.com/embed/12345678-1234-1234-1234-123456789abc?autoplay=1");
-    expect(audioUrl).toBe("https://audiocdn001.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
-    expect(config.audioUrl).toBe("https://audiocdn001.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
+    expect(audioUrl).toBe("https://cdn1.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
+    expect(config.audioUrl).toBe("https://cdn1.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
   });
 
   it("returns null source for unsupported providers", () => {

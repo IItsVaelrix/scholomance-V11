@@ -14,7 +14,7 @@ export class MailerAdapter {
    * @param {string} options.html - The HTML body of the email.
    * @returns {Promise<void>}
    */
-  async send({ to, subject, text, html }) {
+  async send(_options) {
     throw new Error("MailerAdapter.send() must be implemented by subclasses.");
   }
 }

@@ -45,7 +45,7 @@ import { z } from "zod";
 import { CmuPhonemeEngine } from "./cmu.phoneme.engine";
 
 const VOWEL_FAMILY_TO_SCHOOL = {
-  AA: "SONIC", AE: "SONIC", AH: "SONIC",
+  A: "SONIC", AA: "SONIC", AE: "SONIC", AH: "SONIC",
   AO: "VOID", AW: "VOID", OW: "VOID", UW: "VOID",
   AY: "ALCHEMY", EY: "ALCHEMY", OY: "ALCHEMY",
   EH: "WILL", ER: "WILL", UH: "WILL",
@@ -196,7 +196,7 @@ export const PhonemeEngine = {
       'HAVE': 'AE', 'GIVE': 'IH', 'LIVE': 'IH',  // short vowels despite -ve ending
 
       // -ite words with long E sound (IY), not AY diphthong
-      'ELITE': 'IY', 'PETITE': 'IY', 'SUITE': 'IY', 'ANTIQUE': 'IY',
+      'ELITE': 'IY', 'PETITE': 'IY', 'SUITE': 'IY', 'ANTIQUE': 'IY', 'DAMOCLES': 'IY',
       // /uːt/ words that often rhyme with BOOT
       'SUIT': 'UW', 'FRUIT': 'UW', 'RECRUIT': 'UW',
 

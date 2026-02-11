@@ -47,12 +47,12 @@ export class FreeDictionaryAdapter extends DictionaryAdapter {
     }
   }
 
-  async rhymes(word) {
+  async rhymes(_word) {
     // Free Dictionary API doesn't provide rhymes
     return [];
   }
 
-  async related(word) {
+  async related(_word) {
     // Free Dictionary API doesn't provide related word groupings
     return [];
   }

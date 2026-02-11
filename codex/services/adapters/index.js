@@ -26,8 +26,8 @@ export { TransportAdapter } from './transport.adapter.js';
  * @returns {import('./dictionary.adapter.js').DictionaryAdapter[]} Array of adapters in priority order.
  */
 export function createAdapterChain(options = {}) {
-  const { LocalDictionaryAdapter, createLocalAdapter } = require('./local.adapter.js');
-  const { DatamuseAdapter, createDatamuseAdapter } = require('./datamuse.adapter.js');
+  const { createLocalAdapter } = require('./local.adapter.js');
+  const { createDatamuseAdapter } = require('./datamuse.adapter.js');
 
   const adapters = [];
 

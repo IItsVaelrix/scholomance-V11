@@ -9,16 +9,6 @@
 const isBrowser = typeof window !== 'undefined';
 
 /**
- * Mapping from ARPAbet phonemes to the project's vowel families.
- * @type {Object<string, string>}
- */
-const arpabetToVowelFamily = {
-  'AO': 'AO', 'AA': 'A', 'IY': 'IY', 'UW': 'UW', 'EH': 'EH', 'IH': 'IH',
-  'UH': 'UH', 'AH': 'A', 'AX': 'A', 'AE': 'AE', 'EY': 'EY', 'AY': 'AY',
-  'OW': 'OW', 'AW': 'AW', 'OY': 'OY', 'ER': 'ER',
-};
-
-/**
  * A phoneme engine that uses the CMU Pronouncing Dictionary.
  * In browser environments, this gracefully returns null to use the fallback engine.
  * @namespace CmuPhonemeEngine
@@ -38,7 +28,7 @@ export const CmuPhonemeEngine = {
    * @param {string} word - The word to analyze.
    * @returns {PhonemeAnalysis | null} The analysis result, or null if not available.
    */
-  analyzeWord(word) {
+  analyzeWord(_word) {
     // In browser environments, return null to use fallback
     // The cmudict package requires Node.js filesystem access
     if (isBrowser) {

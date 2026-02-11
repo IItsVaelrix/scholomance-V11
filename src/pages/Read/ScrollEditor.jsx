@@ -1,16 +1,47 @@
 import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { motion } from "framer-motion";
 import SyllableCounter from "./SyllableCounter.jsx";
-import RhymeConnectionOverlay from "../../components/RhymeConnectionOverlay.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
 import { usePhonemeEngine } from "../../hooks/usePhonemeEngine.jsx";
-import { ANALYSIS_MODES } from "./TruesightControls.jsx";
 
 const MAX_CONTENT_LENGTH = 50000;
 const CONTENT_DEBOUNCE_MS = 300;
-const SAVE_STATUS_TIMEOUT_MS = 2000;
-const TOKEN_REGEX = /[A-Za-z']+|\s+|[^A-Za-z'\s]+/g;
+const MIN_EDITOR_HEIGHT = 0;
+const LINE_TOKEN_REGEX = /[A-Za-z']+|\s+|[^A-Za-z'\s]+/g;
 const WORD_TOKEN_REGEX = /^[A-Za-z']+$/;
+const DEFAULT_LINE_HEIGHT = 28;
+const MARKDOWN_FORMATS = {
+  heading: { prefix: "## ", suffix: "", lineStart: true },
+  bullet: { prefix: "- ", suffix: "", lineStart: true },
+  number: { prefix: "1. ", suffix: "", lineStart: true },
+  quote: { prefix: "> ", suffix: "", lineStart: true },
+};
+
+function buildOverlayLines(content) {
+  const rawLines = String(content || "").split("\n");
+  const lines = [];
+  let documentOffset = 0;
+
+  for (let lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
+    const lineText = rawLines[lineIndex];
+    const tokens = [];
+
+    for (const match of lineText.matchAll(LINE_TOKEN_REGEX)) {
+      const token = match[0];
+      const localStart = match.index ?? 0;
+      tokens.push({
+        token,
+        start: documentOffset + localStart,
+        lineIndex,
+      });
+    }
+
+    lines.push({ lineIndex, tokens });
+    documentOffset += lineText.length + 1;
+  }
+
+  return lines;
+}
 
 // Common function words that don't carry meaningful phonemic weight for analysis.
 // These stay default/white in Truesight to reduce visual noise and let content words pop.
@@ -59,15 +90,11 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   initialContent = "",
   onSave,
   onCancel,
-  isEditing = false,
   isEditable = true,
   disabled = false,
   isTruesight = false,
-  analysisMode = ANALYSIS_MODES.VOWEL,
   onContentChange,
   analyzedWords = new Map(),
-  onWordClick,
-  deepAnalysis = null,
   activeConnections = [],
   highlightedLines = [],
   vowelColors = null,
@@ -76,47 +103,45 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
-  const [saveStatus, setSaveStatus] = useState("");
-  const [wordPositions, setWordPositions] = useState(new Map());
+  const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_HEIGHT);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
   const textareaRef = useRef(null);
   const truesightOverlayRef = useRef(null);
-  const wordRefs = useRef(new Map());
-  const saveStatusTimeoutRef = useRef(null);
   const { engine } = usePhonemeEngine();
+  const showSyllableCounter = isEditable || isTruesight;
 
-  const overlayTokens = useMemo(() => {
-    const tokens = content.match(TOKEN_REGEX) || [];
-    let offset = 0;
-    let lineIndex = 0;
-    return tokens.map((token) => {
-      const start = offset;
-      const currentLine = lineIndex;
-      offset += token.length;
-      // Track line breaks
-      const newlines = (token.match(/\n/g) || []).length;
-      lineIndex += newlines;
-      return { token, start, lineIndex: currentLine };
-    });
-  }, [content]);
+  const BUFFER = 10;
 
-  // Group tokens by line for line-level animation (dissolve + collapse)
   const overlayLines = useMemo(() => {
-    const lines = [];
-    let currentTokens = [];
-    let currentIdx = 0;
-    for (const token of overlayTokens) {
-      if (token.lineIndex !== currentIdx && currentTokens.length > 0) {
-        lines.push({ lineIndex: currentIdx, tokens: currentTokens });
-        currentTokens = [];
-        currentIdx = token.lineIndex;
-      }
-      currentTokens.push(token);
-    }
-    if (currentTokens.length > 0) {
-      lines.push({ lineIndex: currentIdx, tokens: currentTokens });
+    const perfStart = performance.now();
+    const lines = buildOverlayLines(content);
+    const perfEnd = performance.now();
+    if (perfEnd - perfStart > 4) {
+      console.warn(`[PERF] overlayLines memo: ${(perfEnd - perfStart).toFixed(2)}ms`);
     }
     return lines;
-  }, [overlayTokens]);
+  }, [content]);
+
+  // Virtualization windowing
+  const visibleRange = useMemo(() => {
+    if (!isTruesight) return { start: 0, end: 0 };
+    
+    const startIdx = Math.max(0, Math.floor(scrollTop / lineHeightPx) - BUFFER);
+    const endIdx = Math.min(
+      overlayLines.length, 
+      Math.ceil((scrollTop + editorHeight) / lineHeightPx) + BUFFER
+    );
+    
+    return { start: startIdx, end: endIdx };
+  }, [scrollTop, editorHeight, overlayLines.length, isTruesight, lineHeightPx]);
+
+  const windowedLines = useMemo(() => {
+    return overlayLines.slice(visibleRange.start, visibleRange.end);
+  }, [overlayLines, visibleRange]);
+
+  const paddingTop = visibleRange.start * lineHeightPx;
+  const paddingBottom = Math.max(0, (overlayLines.length - visibleRange.end) * lineHeightPx);
 
   // Pre-compute Set for O(1) multi-syllable word lookups (Fix 1)
   const multiSyllableCharStarts = useMemo(() => {
@@ -134,67 +159,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   // Pre-compute Set for O(1) highlighted line lookups (Fix 1)
   const highlightedLinesSet = useMemo(() => new Set(highlightedLines || []), [highlightedLines]);
 
-  // Pre-compute Set of words involved in connections for selective measurement (Fix 4)
-  const connectedCharStarts = useMemo(() => {
-    if (!activeConnections) return new Set();
-    const set = new Set();
-    for (const conn of activeConnections) {
-      set.add(conn.wordA.charStart);
-      set.add(conn.wordB.charStart);
-    }
-    return set;
-  }, [activeConnections]);
-
-  // Track word positions for connection lines - debounced and selective (Fix 4)
-  useEffect(() => {
-    if (analysisMode !== ANALYSIS_MODES.RHYME || !truesightOverlayRef.current || !deepAnalysis) {
-      return;
-    }
-
-    let timeoutId = null;
-
-    const scheduleUpdate = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(() => {
-        requestAnimationFrame(() => {
-          const containerRect = truesightOverlayRef.current?.getBoundingClientRect();
-          if (!containerRect) return;
-
-          const positions = new Map();
-          const scrollLeft = truesightOverlayRef.current.scrollLeft;
-          const scrollTop = truesightOverlayRef.current.scrollTop;
-
-          // Only measure words involved in connections
-          wordRefs.current.forEach((el, charStart) => {
-            if (!connectedCharStarts.has(charStart) || !el) return;
-
-            const rect = el.getBoundingClientRect();
-            positions.set(charStart, {
-              left: rect.left - containerRect.left + scrollLeft,
-              right: rect.right - containerRect.left + scrollLeft,
-              top: rect.top - containerRect.top + scrollTop,
-              centerX: (rect.left + rect.right) / 2 - containerRect.left + scrollLeft,
-              centerY: rect.top - containerRect.top + rect.height / 2 + scrollTop,
-            });
-          });
-
-          setWordPositions(positions);
-        });
-      }, 500);
-    };
-
-    scheduleUpdate();
-    return () => { if (timeoutId) clearTimeout(timeoutId); };
-  }, [analysisMode, deepAnalysis, connectedCharStarts]);
-
-  // Format definitions for markdown syntax and school color tags
-  const formats = {
-    heading: { prefix: '## ', suffix: '', lineStart: true },
-    bullet:  { prefix: '- ', suffix: '', lineStart: true },
-    number:  { prefix: '1. ', suffix: '', lineStart: true },
-    quote:   { prefix: '> ', suffix: '', lineStart: true },
-  };
-
   // Apply formatting to selected text
   const applyFormat = useCallback((type) => {
     const textarea = textareaRef.current;
@@ -206,7 +170,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const value = textarea.value;
     const selected = value.substring(start, end);
 
-    const fmt = formats[type];
+    const fmt = MARKDOWN_FORMATS[type];
     if (!fmt) return;
 
     let newContent;
@@ -230,12 +194,53 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       textarea.focus();
       textarea.setSelectionRange(newCursorPos, newCursorPos);
     });
-  }, [formats]);
+  }, []);
 
   useEffect(() => {
     setTitle(initialTitle);
     setContent(initialContent);
   }, [initialTitle, initialContent]);
+
+  const syncEditorHeight = useCallback(() => {
+    if (!isEditable && !isTruesight) {
+      return;
+    }
+
+    const textarea = textareaRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const previousHeight = textarea.style.height;
+    // Reset before measuring so height can shrink when content is deleted.
+    textarea.style.height = "0px";
+    const measuredHeight = Math.max(MIN_EDITOR_HEIGHT, textarea.scrollHeight + 8);
+    textarea.style.height = previousHeight;
+
+    setEditorHeight((prev) =>
+      Math.abs(prev - measuredHeight) > 1 ? measuredHeight : prev
+    );
+  }, [isEditable, isTruesight]);
+
+  useEffect(() => {
+    syncEditorHeight();
+  }, [content, title, isEditable, isTruesight, syncEditorHeight]);
+
+  useEffect(() => {
+    if (!isEditable && !isTruesight) {
+      setEditorHeight(MIN_EDITOR_HEIGHT);
+      return undefined;
+    }
+
+    const handleResize = () => {
+      syncEditorHeight();
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [isEditable, isTruesight, syncEditorHeight]);
 
   useEffect(() => {
     if (!onContentChange) return undefined;
@@ -253,58 +258,72 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   }, [isEditable, initialContent]);
 
   useEffect(() => {
-    return () => {
-      if (saveStatusTimeoutRef.current) {
-        window.clearTimeout(saveStatusTimeoutRef.current);
-      }
-    };
-  }, []);
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const measured = parseFloat(window.getComputedStyle(textarea).lineHeight);
+    if (Number.isFinite(measured) && measured > 0) {
+      setLineHeightPx(measured);
+    }
+  }, [editorHeight, isTruesight]);
 
   // Sync scroll positions between textarea and overlay
+  useEffect(() => {
+    if (isTruesight && textareaRef.current) {
+      setScrollTop(textareaRef.current.scrollTop);
+    }
+  }, [isTruesight]);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const maxScrollTop = Math.max(0, textarea.scrollHeight - textarea.clientHeight);
+    if (textarea.scrollTop > maxScrollTop) {
+      textarea.scrollTop = maxScrollTop;
+    }
+
+    const top = textarea.scrollTop;
+    setScrollTop((prev) => (Math.abs(prev - top) > 1 ? top : prev));
+
+    if (truesightOverlayRef.current) {
+      truesightOverlayRef.current.scrollTop = top;
+      truesightOverlayRef.current.scrollLeft = textarea.scrollLeft;
+    }
+  }, [content, editorHeight, isTruesight]);
+
   const handleScroll = useCallback(() => {
-    if (truesightOverlayRef.current && textareaRef.current) {
-      truesightOverlayRef.current.scrollTop = textareaRef.current.scrollTop;
-      truesightOverlayRef.current.scrollLeft = textareaRef.current.scrollLeft;
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const top = textarea.scrollTop;
+    setScrollTop(top);
+
+    if (truesightOverlayRef.current) {
+      truesightOverlayRef.current.scrollTop = top;
+      truesightOverlayRef.current.scrollLeft = textarea.scrollLeft;
     }
   }, []);
 
   const handleOverlayScroll = useCallback(() => {
     if (truesightOverlayRef.current && textareaRef.current) {
-      textareaRef.current.scrollTop = truesightOverlayRef.current.scrollTop;
+      const top = truesightOverlayRef.current.scrollTop;
+      textareaRef.current.scrollTop = top;
       textareaRef.current.scrollLeft = truesightOverlayRef.current.scrollLeft;
-    }
-  }, []);
-
-  const clearSaveStatusTimeout = useCallback(() => {
-    if (saveStatusTimeoutRef.current) {
-      window.clearTimeout(saveStatusTimeoutRef.current);
-      saveStatusTimeoutRef.current = null;
+      setScrollTop(top);
     }
   }, []);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
     setIsSaving(true);
-    clearSaveStatusTimeout();
 
     try {
       await onSave?.(title, content);
-
-      if (onSave) {
-        setSaveStatus("Scroll saved.");
-        saveStatusTimeoutRef.current = window.setTimeout(() => {
-          setSaveStatus("");
-        }, SAVE_STATUS_TIMEOUT_MS);
-      }
-    } catch (error) {
-      setSaveStatus("Failed to inscribe.");
-      saveStatusTimeoutRef.current = window.setTimeout(() => {
-        setSaveStatus("");
-      }, SAVE_STATUS_TIMEOUT_MS);
     } finally {
       setIsSaving(false);
     }
-  }, [content, title, onSave, clearSaveStatusTimeout]);
+  }, [content, title, onSave]);
 
   // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
@@ -322,7 +341,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         e.preventDefault();
         onCancel();
       }
-    }, [handleSave, onCancel, applyFormat]);
+    }, [handleSave, onCancel]);
 
   const handleContentChange = useCallback((event) => {
     const nextValue = event.target.value;
@@ -332,12 +351,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
     setContent(nextValue);
   }, []);
-
-  const handleWordClick = useCallback((event, word) => {
-    const cleaned = String(word || "").replace(/[^A-Za-z']/g, "");
-    if (!cleaned) return;
-    onWordClick?.(cleaned, event);
-  }, [onWordClick]);
 
   return (
     <motion.div
@@ -369,8 +382,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       </div>
 
       <div className={`editor-body ${!isEditable ? "read-only" : ""}`}>
-        <SyllableCounter content={content} engine={engine} />
-        <div className="editor-textarea-wrapper">
+        {showSyllableCounter && (
+          <SyllableCounter
+            content={content}
+            engine={engine}
+            scrollTop={scrollTop}
+            viewportHeight={editorHeight}
+            lineHeightPx={lineHeightPx}
+          />
+        )}
+        <div
+          className="editor-textarea-wrapper"
+          style={isEditable || isTruesight ? { height: `${editorHeight}px` } : undefined}
+        >
           {/* Read-only rendered markdown (hidden during editing or Truesight) */}
           {!isEditable && !isTruesight && (
             <MarkdownRenderer content={content} />
@@ -397,92 +421,62 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           {isTruesight && (
             <div
               ref={truesightOverlayRef}
-              className="truesight-overlay"
+              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}`}
               aria-hidden="true"
               onScroll={handleOverlayScroll}
             >
-              {/* Rhyme connection lines overlay - hidden in RHYME mode, diagram panel used instead */}
-              <RhymeConnectionOverlay
-                connections={activeConnections}
-                wordPositions={wordPositions}
-                containerRef={truesightOverlayRef}
-                visible={false}
-              />
+              <div style={{ paddingTop, paddingBottom }}>
+                {windowedLines.map(({ lineIndex: li, tokens }) => {
+                  const isGroupActive = highlightedLinesSet.size > 0;
+                  const isHighlighted = highlightedLinesSet.has(li);
+                  const isLineDimmed = isGroupActive && !isHighlighted;
 
-              {overlayLines.map(({ lineIndex: li, tokens }) => {
-                const isGroupActive = highlightedLinesSet.size > 0;
-                const isHighlighted = highlightedLinesSet.has(li);
-                const isLineDimmed = isGroupActive && !isHighlighted;
+                  return (
+                    <div
+                      key={li}
+                      className={`truesight-line${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
+                    >
+                      {tokens.map(({ token, start, lineIndex }) => {
+                        const isWord = WORD_TOKEN_REGEX.test(token);
+                        const clean = isWord ? token.toUpperCase() : "";
+                        const analysis = isWord ? analyzedWords.get(clean) : null;
+                        const charStart = start;
 
-                return (
-                  <div
-                    key={li}
-                    className={`truesight-line${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
-                  >
-                    {tokens.map(({ token, start, lineIndex }) => {
-                      const isWord = WORD_TOKEN_REGEX.test(token);
-                      const clean = isWord ? token.toUpperCase() : "";
-                      const analysis = isWord ? analyzedWords.get(clean) : null;
-                      const charStart = start;
+                        if (!isWord || !analysis || STOP_WORDS.has(clean)) {
+                          return <span key={start}>{token}</span>;
+                        }
 
-                      if (!isWord || !analysis || STOP_WORDS.has(clean)) {
-                        return <span key={start}>{token}</span>;
-                      }
+                        const activeColors = vowelColors || VOWEL_COLORS;
+                        const fallbackColor = theme === 'light' ? "#1a1a2e" : "#f8f9ff";
+                        const color = activeColors[analysis.vowelFamily] || fallbackColor;
 
-                      const activeColors = vowelColors || VOWEL_COLORS;
-                      const fallbackColor = theme === 'light' ? "#1a1a2e" : "#f8f9ff";
-                      const color = activeColors[analysis.vowelFamily] || fallbackColor;
+                        // O(1) lookup for multi-syllable rhyme (Fix 1)
+                        const isMultiSyllable = multiSyllableCharStarts.has(charStart);
 
-                      // O(1) lookup for multi-syllable rhyme (Fix 1)
-                      const isMultiSyllable = multiSyllableCharStarts.has(charStart);
+                        // O(1) lookup for highlighted line (Fix 1)
+                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
-                      // O(1) lookup for highlighted line (Fix 1)
-                      const isLineHighlighted = highlightedLinesSet.has(lineIndex);
-
-                      return (
-                        <button
-                          key={start}
-                          type="button"
-                          ref={(el) => {
-                            if (el) {
-                              wordRefs.current.set(charStart, el);
-                            } else {
-                              wordRefs.current.delete(charStart);
-                            }
-                          }}
-                          className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
-                          style={{ color }}
-                          onClick={(e) => handleWordClick(e, token)}
-                          data-char-start={charStart}
-                          data-syllables={isMultiSyllable ? analysis.syllables?.length : undefined}
-                        >
-                          {token}
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                        return (
+                          <span
+                            key={start}
+                            className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                            style={{ color }}
+                            data-char-start={charStart}
+                            data-syllables={isMultiSyllable ? analysis.syllables?.length : undefined}
+                          >
+                            {token}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {isEditable && (
-        <div className="editor-footer">
-          <div className="editor-hint">
-            <kbd>Ctrl</kbd>+<kbd>S</kbd> to save
-            {onCancel && (
-              <>
-                {" "}&middot; <kbd>Esc</kbd> to cancel
-              </>
-            )}
-          </div>
-        </div>
-      )}
-      <span className="sr-only" role="status" aria-live="polite">
-        {saveStatus}
-      </span>
     </motion.div>
   );
 });

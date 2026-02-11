@@ -1006,7 +1006,7 @@ src/
 │       ├── ScrollList.jsx            # Sidebar scroll list
 │       ├── GrimoireScroll.jsx        # Decorative wrapper
 │       └── AnnotationPanel.jsx       # Word analysis slide-in panel
-├── hooks/
+├── hooks/Ca
 │   ├── usePhonemeEngine.jsx          # CMU dictionary context
 │   ├── useScrolls.jsx               # localStorage CRUD for scrolls
 │   ├── useProgression.jsx            # XP/school unlock system

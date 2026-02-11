@@ -11,7 +11,7 @@ export class TransportAdapter {
    * @param {Object} [options] Request options (e.g., headers).
    * @returns {Promise<any>} The response data.
    */
-  async get(path, options) {
+  async get(_path, _options) {
     throw new Error("TransportAdapter.get() must be implemented by subclasses.");
   }
 
@@ -22,7 +22,7 @@ export class TransportAdapter {
    * @param {Object} [options] Request options.
    * @returns {Promise<any>} The response data.
    */
-  async post(path, body, options) {
+  async post(_path, _body, _options) {
     throw new Error("TransportAdapter.post() must be implemented by subclasses.");
   }
 
@@ -33,7 +33,7 @@ export class TransportAdapter {
    * @param {Object} [options] Request options.
    * @returns {Promise<any>} The response data.
    */
-  async put(path, body, options) {
+  async put(_path, _body, _options) {
     throw new Error("TransportAdapter.put() must be implemented by subclasses.");
   }
 
@@ -43,7 +43,7 @@ export class TransportAdapter {
    * @param {Object} [options] Request options.
    * @returns {Promise<any>} The response data.
    */
-  async delete(path, options) {
+  async delete(_path, _options) {
     throw new Error("TransportAdapter.delete() must be implemented by subclasses.");
   }
 }

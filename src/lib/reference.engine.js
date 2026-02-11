@@ -44,7 +44,7 @@ export const ReferenceEngine = {
     return { dictKey: null, thesKey: null };
   },
 
-  setKeys(dictKey, thesKey) {
+  setKeys(_dictKey, _thesKey) {
     console.warn("setKeys is deprecated. API keys are now managed on the server.");
   },
 

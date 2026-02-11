@@ -76,9 +76,9 @@ export function useWordLookup() {
    * Looks up a word through the CODEx pipeline.
    * @param {string} word - The word to look up.
    * @returns {Promise<import('../../codex/core/schemas').LexicalEntry|null>}
-   */
+  */
   const lookup = useCallback((word) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const trimmedWord = String(word || '').trim();
 
       if (!trimmedWord) {

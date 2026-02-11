@@ -29,6 +29,7 @@ export default function ActivityFeed({ activity }) {
             <div className="collab-card">
                 <h2 className="collab-card__title">Activity</h2>
                 <p className="collab-card__empty">No activity yet.</p>
+                <p className="collab-card__hint">Create a task or send an agent heartbeat to start the event stream.</p>
             </div>
         );
     }
@@ -44,7 +45,7 @@ export default function ActivityFeed({ activity }) {
                             {ACTION_LABELS[entry.action] || entry.action}
                         </span>
                         {entry.details?.title && (
-                            <span className="activity-entry__detail">"{entry.details.title}"</span>
+                            <span className="activity-entry__detail">&quot;{entry.details.title}&quot;</span>
                         )}
                         {entry.details?.name && (
                             <span className="activity-entry__detail">{entry.details.name}</span>

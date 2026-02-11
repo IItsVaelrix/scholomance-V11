@@ -3,7 +3,6 @@ import { useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools.js";
 import { useAmbientPlayer } from "../../hooks/useAmbientPlayer.jsx";
-import { useCurrentSong } from "../../hooks/useCurrentSong.jsx";
 import { useProgression } from "../../hooks/useProgression.jsx";
 import { getSchoolAudioConfig } from "../../lib/ambient/schoolAudio.config.js";
 import "./ListenPage.css";
@@ -25,20 +24,23 @@ function formatXp(value) {
 
 export default function ListenPage() {
   const [isTrackSwitchLocked, setIsTrackSwitchLocked] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState(null);
   const trackSwitchTimerRef = useRef(null);
   const fileInputRef = useRef(null);
 
   const { search } = useLocation();
-  const isAdmin = new URLSearchParams(search).get("admin") === "echo";
+  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
+  const adminToken = searchParams.get("admin");
+  const isAdmin = adminToken === "echo";
 
   const { progression, checkUnlocked } = useProgression();
-  const { setCurrentKey } = useCurrentSong();
   const {
     status,
     currentSchoolId,
     isPlaying,
     isTuning,
+    signalLevel,
     volume,
     setVolume,
     autoplayAmbient,
@@ -53,7 +55,9 @@ export default function ListenPage() {
     toggleAutoplayAmbient,
     toggleCyclingEnabled,
     unlockAudio,
-  } = useAmbientPlayer(progression.unlockedSchools);
+  } = useAmbientPlayer(progression.unlockedSchools, {
+    adminToken: isAdmin ? adminToken : null,
+  });
 
   const stations = useMemo(
     () =>
@@ -94,6 +98,19 @@ export default function ListenPage() {
         : "Signal paused";
   const providerLabel = getProviderLabel(currentStation?.trackUrl);
   const canSwitchTracks = hasPlayableSignal && !isTuning && !isTrackSwitchLocked;
+  const canCycleStations = canSwitchTracks && cyclingEnabled && playableSchools.length > 1;
+  const livePulse = Math.max(0, Math.min(1, Number.isFinite(signalLevel) ? signalLevel : 0));
+
+  const buildAdminApiUrl = useCallback(
+    (path) => {
+      if (!isAdmin || !adminToken || !import.meta.env.PROD) {
+        return path;
+      }
+      const separator = path.includes("?") ? "&" : "?";
+      return `${path}${separator}admin=${encodeURIComponent(adminToken)}`;
+    },
+    [isAdmin, adminToken]
+  );
 
   useEffect(
     () => () => {
@@ -115,32 +132,32 @@ export default function ListenPage() {
     }, TRACK_SWITCH_DELAY_MS);
   }, []);
 
-  const handleTuneStation = (stationId, isUnlocked = true) => {
+  const handleTuneStation = async (stationId, isUnlocked = true) => {
     if (!isUnlocked || !canSwitchTracks) return;
     lockTrackSwitching();
-    unlockAudio();
+    await unlockAudio();
     // For dynamic schools we don't have setCurrentKey mappings in library
-    tuneToSchool(stationId);
+    await tuneToSchool(stationId);
   };
 
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (!hasPlayableSignal) return;
-    unlockAudio();
-    togglePlayPause();
+    await unlockAudio();
+    await togglePlayPause();
   };
 
-  const handlePreviousStation = () => {
-    if (!canSwitchTracks) return;
+  const handlePreviousStation = async () => {
+    if (!canCycleStations) return;
     lockTrackSwitching();
-    unlockAudio();
-    tunePreviousSchool();
+    await unlockAudio();
+    await tunePreviousSchool();
   };
 
-  const handleNextStation = () => {
-    if (!canSwitchTracks) return;
+  const handleNextStation = async () => {
+    if (!canCycleStations) return;
     lockTrackSwitching();
-    unlockAudio();
-    tuneNextSchool();
+    await unlockAudio();
+    await tuneNextSchool();
   };
 
   const handleVolumeChange = (event) => {
@@ -149,26 +166,36 @@ export default function ListenPage() {
 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || isUploading) return;
 
-    setUploadStatus("Uploading...");
+    setIsUploading(true);
+    setUploadStatus(`Uploading ${file.name}...`);
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const res = await fetch("/api/upload", {
+      const res = await fetch(buildAdminApiUrl("/api/upload"), {
         method: "POST",
         body: formData,
       });
       if (res.ok) {
-        setUploadStatus("Uploaded successfully!");
-        refreshDynamicSchools();
+        await refreshDynamicSchools();
+        setUploadStatus(`Uploaded successfully! (${file.name})`);
         setTimeout(() => setUploadStatus(null), 3000);
+      } else if (res.status === 401) {
+        setUploadStatus("Upload failed: unauthorized.");
+      } else if (res.status === 429) {
+        setUploadStatus("Upload failed: rate limited.");
       } else {
         setUploadStatus("Upload failed.");
       }
-    } catch (err) {
+    } catch {
       setUploadStatus("Error uploading.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -209,8 +236,9 @@ export default function ListenPage() {
                 type="button" 
                 className="btn btn-primary btn-sm"
                 onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
               >
-                Upload Audio
+                {isUploading ? "Uploading..." : "Upload Audio"}
               </button>
             </div>
           </div>
@@ -234,7 +262,9 @@ export default function ListenPage() {
                       className={`listen-station-btn ${isActive ? "is-active" : ""} ${
                         station.unlocked ? "" : "is-locked"
                       }`}
-                      onClick={() => handleTuneStation(station.id, station.unlocked)}
+                      onClick={() => {
+                        void handleTuneStation(station.id, station.unlocked);
+                      }}
                       disabled={!station.unlocked || !canSwitchTracks}
                       style={{ "--station-color": station.color }}
                     >
@@ -268,7 +298,9 @@ export default function ListenPage() {
                         <button
                           type="button"
                           className={`listen-station-btn ${isActive ? "is-active" : ""}`}
-                          onClick={() => handleTuneStation(s.id)}
+                          onClick={() => {
+                            void handleTuneStation(s.id);
+                          }}
                           disabled={!canSwitchTracks}
                           style={{ "--station-color": "var(--school-void)" }}
                         >
@@ -278,7 +310,7 @@ export default function ListenPage() {
                             <span className="listen-station-sub">Local Archive</span>
                           </span>
                           <span className="listen-station-glyph" aria-hidden="true">
-                            ⚿
+                            *
                           </span>
                         </button>
                       </li>
@@ -298,7 +330,10 @@ export default function ListenPage() {
           >
             <div
               className={`listen-now-aura ${isPlaying ? "is-live" : ""}`}
-              style={{ "--listen-accent": currentStation?.color || "var(--active-school-color)" }}
+              style={{
+                "--listen-accent": currentStation?.color || "var(--active-school-color)",
+                "--listen-pulse": livePulse.toFixed(3),
+              }}
               aria-hidden="true"
             />
             <div className="listen-now-meta">
@@ -311,24 +346,30 @@ export default function ListenPage() {
               <button
                 type="button"
                 className="listen-control-btn"
-                onClick={handlePreviousStation}
-                disabled={!canSwitchTracks}
+                onClick={() => {
+                  void handlePreviousStation();
+                }}
+                disabled={!canCycleStations}
               >
                 Prev
               </button>
               <button
                 type="button"
                 className="listen-control-btn is-primary"
-                onClick={handlePlayPause}
+                onClick={() => {
+                  void handlePlayPause();
+                }}
                 disabled={!hasPlayableSignal}
               >
-                {isPlaying ? "Pause" : "Play"}
+                {isPlaying || isTuning ? "Pause" : "Play"}
               </button>
               <button
                 type="button"
                 className="listen-control-btn"
-                onClick={handleNextStation}
-                disabled={!canSwitchTracks}
+                onClick={() => {
+                  void handleNextStation();
+                }}
+                disabled={!canCycleStations}
               >
                 Next
               </button>
@@ -359,7 +400,10 @@ export default function ListenPage() {
             <button
               type="button"
               className={`listen-toggle ${autoplayAmbient ? "is-on" : ""}`}
-              onClick={toggleAutoplayAmbient}
+              onClick={() => {
+                void toggleAutoplayAmbient();
+              }}
+              aria-pressed={autoplayAmbient}
             >
               <span>Autoplay</span>
               <strong>{autoplayAmbient ? "On" : "Off"}</strong>
@@ -369,6 +413,7 @@ export default function ListenPage() {
               type="button"
               className={`listen-toggle ${cyclingEnabled ? "is-on" : ""}`}
               onClick={toggleCyclingEnabled}
+              aria-pressed={cyclingEnabled}
             >
               <span>Cycle Mode</span>
               <strong>{cyclingEnabled ? "On" : "Locked"}</strong>
@@ -379,3 +424,4 @@ export default function ListenPage() {
     </section>
   );
 }
+

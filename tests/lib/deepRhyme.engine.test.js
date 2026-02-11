@@ -67,7 +67,7 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     const engine = new DeepRhymeEngine(createMockPhonemeEngine());
     const result = engine.analyzeDocument([
       'line one alpha',
-      'line two alpha',
+      'line two omega',
     ].join('\n'));
 
     expect(result.endRhymeConnections).toHaveLength(1);
@@ -78,9 +78,9 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     const engine = new DeepRhymeEngine(createMockPhonemeEngine());
     const result = engine.analyzeDocument([
       'verse one alpha',
-      'verse two alpha',
-      'verse three alpha',
-      'verse four alpha',
+      'verse two omega',
+      'verse three luna',
+      'verse four sonata',
     ].join('\n'));
 
     // Previous behavior produced 6 (4 choose 2) connections.
@@ -101,5 +101,16 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
 
     expect(result.endRhymeConnections).toHaveLength(1);
     expect(result.endRhymeConnections[0].type).toBe('assonance');
+  });
+
+  it('does not count repeated lexical endings as rhyme connections', () => {
+    const engine = new DeepRhymeEngine(createMockPhonemeEngine());
+    const result = engine.analyzeDocument([
+      "I'm a joy boy",
+      "I'm a joy boy",
+    ].join('\n'));
+
+    expect(result.endRhymeConnections).toHaveLength(0);
+    expect(result.schemePattern).toBe('AB');
   });
 });

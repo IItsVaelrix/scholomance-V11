@@ -1,0 +1,67 @@
+.analysis-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 400px;
+  height: 100%;
+  background: var(--background-color-translucent);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid var(--border-color);
+  z-index: 100;
+  transform: translateX(100%);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.23, 1, 0.32, 1), opacity 0.5s ease;
+  overflow-y: auto;
+  padding: var(--spacing-8);
+}
+
+.analysis-mode .analysis-panel {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.analysis-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-6);
+}
+
+.analysis-panel h2 {
+  font-size: var(--font-size-lg);
+  color: var(--title-color);
+  margin-bottom: var(--spacing-2);
+}
+
+.analysis-panel p {
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
+}
+
+.chart-placeholder {
+  width: 100%;
+  padding: var(--spacing-4);
+  background-color: var(--background-offset);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.chart-placeholder h4 {
+  margin-bottom: var(--spacing-3);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.chart-mock {
+  width: 100%;
+  height: 150px;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--background-offset),
+    var(--background-offset) 10px,
+    var(--background-body) 10px,
+    var(--background-body) 20px
+  );
+  border-radius: var(--border-radius-sm);
+}

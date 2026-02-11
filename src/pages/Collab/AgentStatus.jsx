@@ -15,7 +15,11 @@ export default function AgentStatus({ agents }) {
         return (
             <div className="collab-card">
                 <h2 className="collab-card__title">Agents</h2>
-                <p className="collab-card__empty">No agents registered. Start an AI session and register it.</p>
+                <p className="collab-card__empty">No agents registered yet.</p>
+                <p className="collab-card__hint">
+                    Register one from terminal:
+                    <code>$env:AGENT_ID=&apos;agent-backend&apos;; node scripts/collab-client.js register --name &quot;Backend Agent&quot; --role backend --capabilities node,fastify</code>
+                </p>
             </div>
         );
     }

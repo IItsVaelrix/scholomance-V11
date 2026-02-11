@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { z } from "zod";
 import { SCHOOLS } from "../data/schools";
 import {
   AMBIENT_PLAYER_STATES,
@@ -6,16 +7,44 @@ import {
 } from "../lib/ambient/ambientPlayer.service";
 import { getPlayableSchoolIds, getSchoolAudioConfig } from "../lib/ambient/schoolAudio.config";
 
-export function useAmbientPlayer(unlockedSchools = []) {
+const AudioFileSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+});
+const AudioFileListSchema = z.array(AudioFileSchema);
+
+export function useAmbientPlayer(unlockedSchools = [], options = {}) {
   const service = useMemo(() => getAmbientPlayerService(), []);
   const [state, setState] = useState(() => service.getState());
   const [dynamicSchools, setDynamicSchools] = useState([]);
+  const adminToken =
+    typeof options.adminToken === "string" && options.adminToken.trim()
+      ? options.adminToken.trim()
+      : null;
+
+  const buildAudioApiUrl = useCallback(
+    (path) => {
+      if (!adminToken || !import.meta.env.PROD) {
+        return path;
+      }
+      const separator = path.includes("?") ? "&" : "?";
+      return `${path}${separator}admin=${encodeURIComponent(adminToken)}`;
+    },
+    [adminToken]
+  );
 
   const fetchDynamicSchools = useCallback(async () => {
     try {
-      const res = await fetch("/api/audio-files");
+      const res = await fetch(buildAudioApiUrl("/api/audio-files"));
       if (res.ok) {
-        const files = await res.json();
+        const rawData = await res.json();
+        const parsed = AudioFileListSchema.safeParse(rawData);
+        if (!parsed.success) {
+          console.error("Invalid audio files payload", parsed.error);
+          return;
+        }
+        
+        const files = parsed.data;
         const schools = files.map((f) => ({
           id: `dynamic-${f.name}`,
           name: f.name.split(".")[0].replace(/_/g, " "),
@@ -30,7 +59,7 @@ export function useAmbientPlayer(unlockedSchools = []) {
     } catch (e) {
       console.error("Failed to fetch dynamic schools:", e);
     }
-  }, [service]);
+  }, [buildAudioApiUrl, service]);
 
   useEffect(() => {
     fetchDynamicSchools();

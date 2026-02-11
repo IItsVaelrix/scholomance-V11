@@ -19,7 +19,33 @@ const CODExContext = createContext(null);
  * Feature flag for using the new CODEx pipeline vs legacy ReferenceEngine.
  * Set via environment variable or defaults to true.
  */
-const USE_CODEX_PIPELINE = import.meta.env.VITE_USE_CODEX_PIPELINE !== 'false';
+const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
+const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes']);
+
+/**
+ * Parses a boolean-like environment flag string.
+ * Accepts common forms:
+ * - true: "true", "1", "on", "yes"
+ * - false: "false", "0", "off", "no"
+ *
+ * Unknown values fall back to defaultValue.
+ *
+ * @param {string|undefined|null} rawValue
+ * @param {boolean} [defaultValue=true]
+ * @returns {boolean}
+ */
+export function parseBooleanEnvFlag(rawValue, defaultValue = true) {
+  if (rawValue === undefined || rawValue === null || rawValue === '') {
+    return defaultValue;
+  }
+
+  const normalized = String(rawValue).trim().toLowerCase();
+  if (TRUE_VALUES.has(normalized)) return true;
+  if (FALSE_VALUES.has(normalized)) return false;
+  return defaultValue;
+}
+
+const USE_CODEX_PIPELINE = parseBooleanEnvFlag(import.meta.env.VITE_USE_CODEX_PIPELINE, true);
 
 /**
  * Provider component that initializes CODEx pipelines.

@@ -22,6 +22,7 @@ const router = createBrowserRouter([
       { path: "listen", element: <ListenPage /> },
       { path: "read", element: <ReadPage /> },
       { path: "auth", element: <AuthPage /> },
+      { path: "collab", element: <CollabPage /> },
     ],
   },
 ]);
