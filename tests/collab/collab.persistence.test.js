@@ -1,18 +1,44 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { existsSync, rmSync } from 'fs';
+import os from 'os';
+import path from 'path';
 
 // Note: These tests import the persistence module which creates a real SQLite database.
 // The database path can be overridden with COLLAB_DB_PATH env var for test isolation.
 // In CI, set COLLAB_DB_PATH to a temp file.
 
 let collabPersistence;
+let testDbPath;
 
 beforeAll(async () => {
-    // Set test DB path before importing (uses a unique temp file)
-    const testDbPath = `./scholomance_collab_test_${Date.now()}.sqlite`;
+    // Use OS temp dir to avoid creating repo artifacts.
+    testDbPath = path.join(
+        os.tmpdir(),
+        `scholomance_collab_test_${Date.now()}_${process.pid}.sqlite`,
+    );
     process.env.COLLAB_DB_PATH = testDbPath;
 
-    const mod = await import('../../codex/server/collab/collab.persistence.js');
+    const mod = await import('../../codex/server/collab/collab.persistence.js?test=collab-persistence-suite');
     collabPersistence = mod.collabPersistence;
+});
+
+afterAll(() => {
+    try {
+        collabPersistence?.close?.();
+    } catch {
+        // Best-effort close for test cleanup.
+    }
+
+    for (const suffix of ['', '-wal', '-shm']) {
+        const candidate = `${testDbPath}${suffix}`;
+        if (existsSync(candidate)) {
+            try {
+                rmSync(candidate, { force: true });
+            } catch {
+                // Ignore cleanup errors in test environment.
+            }
+        }
+    }
 });
 
 describe('agents', () => {
@@ -110,6 +136,11 @@ describe('tasks', () => {
         });
         const inProgress = collabPersistence.tasks.getAll({ status: 'in_progress' });
         expect(inProgress.every(t => t.status === 'in_progress')).toBe(true);
+    });
+
+    it('should paginate task listings with limit/offset', () => {
+        const page = collabPersistence.tasks.getAll({}, { limit: 1, offset: 0 });
+        expect(page).toHaveLength(1);
     });
 
     it('should set completed_at when marking done', () => {
@@ -324,5 +355,13 @@ describe('activity', () => {
         });
         const geminiActivity = collabPersistence.activity.getRecent(10, { agent: 'test-gemini' });
         expect(geminiActivity.every(a => a.agent_id === 'test-gemini')).toBe(true);
+    });
+
+    it('should paginate activity with offset', () => {
+        const firstPage = collabPersistence.activity.getRecent(1, {});
+        const secondPage = collabPersistence.activity.getRecent(1, {}, 1);
+        expect(firstPage).toHaveLength(1);
+        expect(secondPage).toHaveLength(1);
+        expect(firstPage[0].id).not.toBe(secondPage[0].id);
     });
 });

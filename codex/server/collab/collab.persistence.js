@@ -2,6 +2,7 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { applySqlitePragmas, runSqliteMigrations } from '../db/sqlite.migrations.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,88 +11,170 @@ const DB_PATH = process.env.COLLAB_DB_PATH
     ? path.resolve(process.env.COLLAB_DB_PATH)
     : path.join(ROOT, 'scholomance_collab.sqlite');
 
-function ensureSchema(database) {
-    database.exec(`
-        CREATE TABLE IF NOT EXISTS collab_agents (
-            id TEXT PRIMARY KEY,
-            name TEXT NOT NULL,
-            role TEXT NOT NULL,
-            capabilities TEXT NOT NULL DEFAULT '[]',
-            status TEXT NOT NULL DEFAULT 'offline',
-            current_task_id TEXT,
-            last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-            metadata TEXT DEFAULT '{}'
-        );
+const COLLAB_DB_NAMESPACE = 'collab';
 
-        CREATE TABLE IF NOT EXISTS collab_tasks (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            description TEXT,
-            status TEXT NOT NULL DEFAULT 'backlog',
-            priority INTEGER NOT NULL DEFAULT 1,
-            assigned_agent TEXT,
-            created_by TEXT,
-            depends_on TEXT DEFAULT '[]',
-            file_paths TEXT DEFAULT '[]',
-            pipeline_run_id TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            completed_at DATETIME,
-            result TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS collab_file_locks (
-            file_path TEXT PRIMARY KEY,
-            locked_by TEXT NOT NULL,
-            task_id TEXT,
-            locked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            expires_at DATETIME
-        );
-
-        CREATE TABLE IF NOT EXISTS collab_pipeline_runs (
-            id TEXT PRIMARY KEY,
-            pipeline_type TEXT NOT NULL,
-            stages TEXT NOT NULL,
-            current_stage INTEGER NOT NULL DEFAULT 0,
-            status TEXT NOT NULL DEFAULT 'pending',
-            trigger_task_id TEXT,
-            results TEXT DEFAULT '{}',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            completed_at DATETIME
-        );
-
-        CREATE TABLE IF NOT EXISTS collab_activity (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            agent_id TEXT,
-            action TEXT NOT NULL,
-            target_type TEXT,
-            target_id TEXT,
-            details TEXT DEFAULT '{}',
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_tasks_status ON collab_tasks(status);
-        CREATE INDEX IF NOT EXISTS idx_tasks_agent ON collab_tasks(assigned_agent);
-        CREATE INDEX IF NOT EXISTS idx_activity_created ON collab_activity(created_at);
-        CREATE INDEX IF NOT EXISTS idx_pipeline_status ON collab_pipeline_runs(status);
-    `);
-}
+const COLLAB_MIGRATIONS = [
+    {
+        version: 1,
+        name: 'create_collab_agents',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_agents (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    role TEXT NOT NULL,
+                    capabilities TEXT NOT NULL DEFAULT '[]',
+                    status TEXT NOT NULL DEFAULT 'offline',
+                    current_task_id TEXT,
+                    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    metadata TEXT DEFAULT '{}'
+                );
+            `);
+        },
+    },
+    {
+        version: 2,
+        name: 'create_collab_tasks',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_tasks (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    status TEXT NOT NULL DEFAULT 'backlog',
+                    priority INTEGER NOT NULL DEFAULT 1,
+                    assigned_agent TEXT,
+                    created_by TEXT,
+                    depends_on TEXT DEFAULT '[]',
+                    file_paths TEXT DEFAULT '[]',
+                    pipeline_run_id TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    completed_at DATETIME,
+                    result TEXT
+                );
+            `);
+        },
+    },
+    {
+        version: 3,
+        name: 'create_collab_file_locks',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_file_locks (
+                    file_path TEXT PRIMARY KEY,
+                    locked_by TEXT NOT NULL,
+                    task_id TEXT,
+                    locked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME
+                );
+            `);
+        },
+    },
+    {
+        version: 4,
+        name: 'create_collab_pipeline_runs',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_pipeline_runs (
+                    id TEXT PRIMARY KEY,
+                    pipeline_type TEXT NOT NULL,
+                    stages TEXT NOT NULL,
+                    current_stage INTEGER NOT NULL DEFAULT 0,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    trigger_task_id TEXT,
+                    results TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    completed_at DATETIME
+                );
+            `);
+        },
+    },
+    {
+        version: 5,
+        name: 'create_collab_activity',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_activity (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    agent_id TEXT,
+                    action TEXT NOT NULL,
+                    target_type TEXT,
+                    target_id TEXT,
+                    details TEXT DEFAULT '{}',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+            `);
+        },
+    },
+    {
+        version: 6,
+        name: 'add_collab_indexes',
+        up(database) {
+            database.exec(`
+                CREATE INDEX IF NOT EXISTS idx_tasks_status ON collab_tasks(status);
+                CREATE INDEX IF NOT EXISTS idx_tasks_agent ON collab_tasks(assigned_agent);
+                CREATE INDEX IF NOT EXISTS idx_tasks_pipeline_run ON collab_tasks(pipeline_run_id);
+                CREATE INDEX IF NOT EXISTS idx_activity_created ON collab_activity(created_at);
+                CREATE INDEX IF NOT EXISTS idx_activity_agent_created ON collab_activity(agent_id, created_at DESC);
+                CREATE INDEX IF NOT EXISTS idx_pipeline_status ON collab_pipeline_runs(status);
+                CREATE INDEX IF NOT EXISTS idx_locks_expires_at ON collab_file_locks(expires_at);
+            `);
+        },
+    },
+];
 
 let db;
+let dbState = {
+    currentVersion: 0,
+    appliedVersions: [],
+    pragmas: null,
+};
+let isClosed = false;
+
 try {
     mkdirSync(path.dirname(DB_PATH), { recursive: true });
     db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
-    ensureSchema(db);
-    console.log('[COLLAB] Connected to collaboration database.');
+    dbState.pragmas = applySqlitePragmas(db, {
+        busyTimeoutMs: process.env.DB_BUSY_TIMEOUT_MS,
+    });
+    const migrationResult = runSqliteMigrations(db, {
+        namespace: COLLAB_DB_NAMESPACE,
+        migrations: COLLAB_MIGRATIONS,
+    });
+    dbState = {
+        ...dbState,
+        ...migrationResult,
+    };
+    console.log(
+        `[DB:collab] Connected. version=${dbState.currentVersion}, journal=${dbState.pragmas.journalMode}, foreign_keys=${dbState.pragmas.foreignKeys}, busy_timeout=${dbState.pragmas.busyTimeout}`,
+    );
 } catch (error) {
-    console.error(`[COLLAB] Failed to connect to database at ${DB_PATH}.`);
+    console.error(`[DB:collab] Failed to connect to database at ${DB_PATH}.`);
     console.error(error);
     process.exit(1);
 }
 
-process.on('exit', () => db.close());
+function closeDatabase() {
+    if (isClosed) return;
+    isClosed = true;
+    if (db?.open) {
+        db.close();
+        console.log('[DB:collab] Connection closed.');
+    }
+}
+
+function getStatus() {
+    return {
+        path: DB_PATH,
+        namespace: COLLAB_DB_NAMESPACE,
+        version: dbState.currentVersion,
+        pragmas: dbState.pragmas,
+    };
+}
+
+process.on('exit', closeDatabase);
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
@@ -160,7 +243,12 @@ function createTask({ id, title, description, priority, file_paths, depends_on, 
     return getTask(id);
 }
 
-function getAllTasks(filters = {}) {
+function getAllTasks(filters = {}, pagination = {}) {
+    const rawLimit = Number.isInteger(Number(pagination.limit)) ? Number(pagination.limit) : 50;
+    const rawOffset = Number.isInteger(Number(pagination.offset)) ? Number(pagination.offset) : 0;
+    const limit = Math.max(1, rawLimit);
+    const offset = Math.max(0, rawOffset);
+
     let query = 'SELECT * FROM collab_tasks WHERE 1=1';
     const params = [];
 
@@ -177,7 +265,8 @@ function getAllTasks(filters = {}) {
         params.push(filters.priority);
     }
 
-    query += ' ORDER BY priority DESC, created_at ASC';
+    query += ' ORDER BY priority DESC, created_at ASC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     const rows = db.prepare(query).all(...params);
     return rows.map(parseTaskRow);
 }
@@ -335,7 +424,12 @@ function createPipelineRun({ id, pipeline_type, stages, trigger_task_id }) {
     return getPipelineRun(id);
 }
 
-function getAllPipelineRuns(filters = {}) {
+function getAllPipelineRuns(filters = {}, pagination = {}) {
+    const rawLimit = Number.isInteger(Number(pagination.limit)) ? Number(pagination.limit) : 50;
+    const rawOffset = Number.isInteger(Number(pagination.offset)) ? Number(pagination.offset) : 0;
+    const limit = Math.max(1, rawLimit);
+    const offset = Math.max(0, rawOffset);
+
     let query = 'SELECT * FROM collab_pipeline_runs WHERE 1=1';
     const params = [];
 
@@ -344,7 +438,8 @@ function getAllPipelineRuns(filters = {}) {
         params.push(filters.status);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
     const rows = db.prepare(query).all(...params);
     return rows.map(parsePipelineRow);
 }
@@ -417,7 +512,9 @@ function logActivity({ agent_id, action, target_type, target_id, details }) {
     stmt.run(agent_id || null, action, target_type || null, target_id || null, JSON.stringify(details || {}));
 }
 
-function getRecentActivity(limit = 50, filters = {}) {
+function getRecentActivity(limit = 50, filters = {}, offset = 0) {
+    const safeLimit = Math.max(1, Number(limit) || 50);
+    const safeOffset = Math.max(0, Number(offset) || 0);
     let query = 'SELECT * FROM collab_activity WHERE 1=1';
     const params = [];
 
@@ -430,8 +527,8 @@ function getRecentActivity(limit = 50, filters = {}) {
         params.push(filters.action);
     }
 
-    query += ' ORDER BY created_at DESC LIMIT ?';
-    params.push(limit);
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    params.push(safeLimit, safeOffset);
 
     const rows = db.prepare(query).all(...params);
     return rows.map(row => ({
@@ -476,4 +573,6 @@ export const collabPersistence = {
         log: logActivity,
         getRecent: getRecentActivity,
     },
+    close: closeDatabase,
+    getStatus,
 };

@@ -27,6 +27,7 @@ import { persistence } from './persistence.adapter.js';
 import { collabPersistence } from './collab/collab.persistence.js';
 import { collabRoutes } from './collab/collab.routes.js';
 import { wordLookupRoutes } from './routes/wordLookup.routes.js';
+import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
 import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
 
@@ -669,6 +670,7 @@ fastify.addHook('onSend', async (request, _reply, payload) => {
 });
 
 fastify.register(wordLookupRoutes);
+fastify.register(panelAnalysisRoutes);
 
 if (ENABLE_COLLAB_API) {
     if (IS_PRODUCTION) {

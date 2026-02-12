@@ -26,13 +26,17 @@
 }
 
 /* Global state when any panel is being dragged - Optimized */
-body.is-dragging-panel {
+body.is-dragging-panel,
+body.is-dragging-panel * {
   cursor: grabbing !important;
+  user-select: none !important;
 }
 
 /* Kill pointer events on specific high-cost containers during drag */
 body.is-dragging-panel .ide-main-content,
 body.is-dragging-panel .primary-nav,
+body.is-dragging-panel .vignette,
+body.is-dragging-panel .scanlines,
 body.is-dragging-panel .aurora-background {
   pointer-events: none !important;
 }

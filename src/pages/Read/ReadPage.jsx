@@ -8,8 +8,7 @@ import {
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { usePhonemeEngine } from "../../hooks/usePhonemeEngine.jsx";
 import { useScrolls } from "../../hooks/useScrolls.jsx";
-import { useDeepRhymeAnalysis } from "../../hooks/useDeepRhymeAnalysis.jsx";
-import { useScoring } from "../../hooks/useScoring.js";
+import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
 import { SCHOOLS } from "../../data/schools.js";
 
@@ -79,6 +78,8 @@ export default function ReadPage() {
     analysis: deepAnalysis,
     schemeDetection,
     meterDetection,
+    scoreData,
+    vowelSummary,
     isAnalyzing,
     analyzeDocument,
     activeConnections,
@@ -86,7 +87,7 @@ export default function ReadPage() {
     clearHighlight,
     literaryDevices,
     emotion,
-  } = useDeepRhymeAnalysis();
+  } = usePanelAnalysis();
 
   const editorRef = useRef(null);
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
@@ -96,7 +97,6 @@ export default function ReadPage() {
   }, [editorContent, activeScroll?.content]);
 
   const truesightContent = editorContent || activeScroll?.content;
-  const { scoreData } = useScoring(truesightContent);
   const activeVowelColors = useMemo(
     () => getVowelColorsForSchool(selectedSchool, theme),
     [selectedSchool, theme]
@@ -106,26 +106,16 @@ export default function ReadPage() {
     if (!isTruesight || analysisMode !== ANALYSIS_MODES.VOWEL) {
       return { families: [], totalWords: 0, uniqueWords: 0 };
     }
-    const words = truesightContent?.match(/[A-Za-z']+/g) || [];
-    if (!engine || words.length === 0) {
+    if (!vowelSummary || !Array.isArray(vowelSummary.families)) {
       return { families: [], totalWords: 0, uniqueWords: 0 };
     }
-    const counts = new Map();
-    const uniqueWords = new Set();
-    for (const word of words) {
-      const clean = String(word).replace(/[^A-Za-z']/g, "").toUpperCase();
-      if (!clean) continue;
-      uniqueWords.add(clean);
-      const analysis = analyzedWords.get(clean) || engine.analyzeWord(clean);
-      const familyId = analysis?.vowelFamily ? String(analysis.vowelFamily).toUpperCase() : null;
-      if (familyId) {
-        counts.set(familyId, (counts.get(familyId) || 0) + 1);
-      }
-    }
-    const totalWords = Array.from(counts.values()).reduce((sum, count) => sum + count, 0);
+    const totalWords = Number(vowelSummary.totalWords) || 0;
     const fallbackColor = theme === "light" ? "#1a1a2e" : "#f8f9ff";
-    const families = Array.from(counts.entries())
-      .map(([id, count]) => {
+    const families = vowelSummary.families
+      .map((family) => {
+        const id = String(family?.id || "").toUpperCase();
+        const count = Number(family?.count) || 0;
+        if (!id || count <= 0) return null;
         const schoolMeta = getSchoolMetaFromVowelFamily(engine, id);
         return {
           id,
@@ -136,9 +126,14 @@ export default function ReadPage() {
           schoolGlyph: schoolMeta.schoolGlyph,
         };
       })
+      .filter(Boolean)
       .sort((a, b) => b.count - a.count);
-    return { families, totalWords, uniqueWords: uniqueWords.size };
-  }, [isTruesight, analysisMode, truesightContent, engine, analyzedWords, theme, activeVowelColors]);
+    return {
+      families,
+      totalWords,
+      uniqueWords: Number(vowelSummary.uniqueWords) || 0,
+    };
+  }, [isTruesight, analysisMode, vowelSummary, engine, theme, activeVowelColors]);
 
   useEffect(() => {
     if (isTruesight && truesightContent && engine && isReady) {
@@ -158,14 +153,10 @@ export default function ReadPage() {
   }, [isTruesight, truesightContent, engine, isReady, analyzedWords]);
 
   useEffect(() => {
-    if (
-      isTruesight &&
-      truesightContent &&
-      (analysisMode === ANALYSIS_MODES.RHYME || analysisMode === ANALYSIS_MODES.SCHEME)
-    ) {
+    if (truesightContent && (isTruesight || showScorePanel)) {
       analyzeDocument(truesightContent);
     }
-  }, [isTruesight, analysisMode, truesightContent, analyzeDocument]);
+  }, [isTruesight, showScorePanel, truesightContent, analyzeDocument]);
 
   useEffect(() => {
     const handleResize = () => {

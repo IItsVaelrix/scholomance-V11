@@ -85,8 +85,12 @@ dict_data/*
 !dict_data/.gitkeep
 !dict_data/README.md
 scholomance_user.sqlite
+scholomance_user.sqlite-shm
+scholomance_user.sqlite-wal
 scholomance_dict.sqlite
 scholomance_collab.sqlite
+scholomance_collab.sqlite-shm
+scholomance_collab.sqlite-wal
 scholomance_collab_test_*.sqlite
 scholomance_collab_test_*.sqlite-shm
 scholomance_collab_test_*.sqlite-wal

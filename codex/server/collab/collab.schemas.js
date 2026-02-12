@@ -73,3 +73,35 @@ export const AdvancePipelineSchema = z.object({
 export const FailPipelineSchema = z.object({
     reason: z.string().min(1).max(1024),
 });
+
+// --- Query Schemas (pagination + strict list filters) ---
+
+export const MAX_PAGE_LIMIT = 100;
+
+export const PaginationQuerySchema = z.object({
+    limit: z.coerce.number().int().min(1).max(MAX_PAGE_LIMIT).default(50),
+    offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const ListTasksQuerySchema = PaginationQuerySchema.extend({
+    status: TaskStatus.optional(),
+    agent: z.string().min(1).max(64).optional(),
+    priority: z.coerce.number().int().min(0).max(3).optional(),
+});
+
+export const PipelineRunStatus = z.enum([
+    'pending', 'running', 'completed', 'failed',
+]);
+
+export const ListPipelinesQuerySchema = PaginationQuerySchema.extend({
+    status: PipelineRunStatus.optional(),
+});
+
+export const ListActivityQuerySchema = PaginationQuerySchema.extend({
+    agent: z.string().min(1).max(64).optional(),
+    action: z.string().min(1).max(128).optional(),
+});
+
+export const LockCheckQuerySchema = z.object({
+    path: z.string().min(1).max(1024),
+});

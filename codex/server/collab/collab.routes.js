@@ -15,6 +15,10 @@ import {
     CreatePipelineSchema,
     AdvancePipelineSchema,
     FailPipelineSchema,
+    ListTasksQuerySchema,
+    ListPipelinesQuerySchema,
+    ListActivityQuerySchema,
+    LockCheckQuerySchema,
 } from './collab.schemas.js';
 
 function uuid() {
@@ -81,12 +85,16 @@ export async function collabRoutes(fastify, _options) {
     // ========================
 
     fastify.get('/tasks', async (request, reply) => {
+        const parsedQuery = parseZod(ListTasksQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+
+        const { status, agent, priority, limit, offset } = parsedQuery.data;
         const filters = {
-            status: request.query.status,
-            agent: request.query.agent,
-            priority: request.query.priority !== undefined ? Number(request.query.priority) : undefined,
+            status,
+            agent,
+            priority,
         };
-        const tasks = collabPersistence.tasks.getAll(filters);
+        const tasks = collabPersistence.tasks.getAll(filters, { limit, offset });
         return reply.code(200).send(tasks);
     });
 
@@ -236,8 +244,9 @@ export async function collabRoutes(fastify, _options) {
     });
 
     fastify.get('/locks/check', async (request, reply) => {
-        const filePath = request.query.path;
-        if (!filePath) return reply.code(400).send({ error: 'path query parameter required' });
+        const parsedQuery = parseZod(LockCheckQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+        const filePath = parsedQuery.data.path;
 
         const lock = collabPersistence.locks.check(filePath);
         return reply.code(200).send({ locked: !!lock, lock });
@@ -248,8 +257,12 @@ export async function collabRoutes(fastify, _options) {
     // ========================
 
     fastify.get('/pipelines', async (request, reply) => {
-        const filters = { status: request.query.status };
-        const pipelines = collabPersistence.pipelines.getAll(filters);
+        const parsedQuery = parseZod(ListPipelinesQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+
+        const { status, limit, offset } = parsedQuery.data;
+        const filters = { status };
+        const pipelines = collabPersistence.pipelines.getAll(filters, { limit, offset });
         return reply.code(200).send(pipelines);
     });
 
@@ -402,12 +415,15 @@ export async function collabRoutes(fastify, _options) {
     // ========================
 
     fastify.get('/activity', async (request, reply) => {
-        const limit = request.query.limit ? Number(request.query.limit) : 50;
+        const parsedQuery = parseZod(ListActivityQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+
+        const { limit, offset, agent, action } = parsedQuery.data;
         const filters = {
-            agent: request.query.agent,
-            action: request.query.action,
+            agent,
+            action,
         };
-        const activity = collabPersistence.activity.getRecent(limit, filters);
+        const activity = collabPersistence.activity.getRecent(limit, filters, offset);
         return reply.code(200).send(activity);
     });
 

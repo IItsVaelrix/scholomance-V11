@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import Draggable from 'react-draggable';
 import { ResizableBox } from 'react-resizable';
 import PropTypes from 'prop-types';
 import { Storage } from '../../lib/storage';
 import './FloatingPanel.css';
 
 /**
- * A generic floating, draggable, and resizable panel for the IDE.
- * Persists its position and size to localStorage based on the provided id.
+ * A high-performance floating, draggable, and resizable panel.
+ * Uses direct DOM manipulation and Pointer Capture for zero-latency 'sticky' dragging.
+ * Persists its position and size to localStorage.
  */
 export default function FloatingPanel({
   id,
@@ -23,54 +23,97 @@ export default function FloatingPanel({
   zIndex = 100,
   className = '',
 }) {
-  const [position, setPosition] = useState(() => {
-    const saved = Storage.getItem(`panel-pos-${id}`);
-    return saved ? JSON.parse(saved) : { x: defaultX, y: defaultY };
-  });
-
   const [size, setSize] = useState(() => {
     const saved = Storage.getItem(`panel-size-${id}`);
     return saved ? JSON.parse(saved) : { width: defaultWidth, height: defaultHeight };
   });
 
   const [isDragging, setIsDragging] = useState(false);
-  const nodeRef = useRef(null);
+  const panelRef = useRef(null);
+  const dragData = useRef({
+    startX: 0,
+    startY: 0,
+    initialX: 0,
+    initialY: 0,
+    currentX: 0,
+    currentY: 0,
+  });
 
-  // Save position and size on change
+  const applyPosition = (x, y) => {
+    if (panelRef.current) {
+      panelRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    }
+  };
+
+  // Initialize position from storage or defaults
   useEffect(() => {
-    Storage.setItem(`panel-pos-${id}`, JSON.stringify(position));
-  }, [id, position]);
+    const saved = Storage.getItem(`panel-pos-${id}`);
+    const pos = saved ? JSON.parse(saved) : { x: defaultX, y: defaultY };
+    dragData.current.currentX = pos.x;
+    dragData.current.currentY = pos.y;
 
+    applyPosition(pos.x, pos.y);
+  }, [id, defaultX, defaultY]);
+
+  // Save size on change
   useEffect(() => {
     Storage.setItem(`panel-size-${id}`, JSON.stringify(size));
   }, [id, size]);
 
-  const handleDragStart = (e) => {
+  const handlePointerDown = (e) => {
+    // Only drag on left click or touch
+    if (e.button !== 0 && e.button !== undefined) return;
+    
+    const header = e.currentTarget;
+    header.setPointerCapture(e.pointerId);
+    
     setIsDragging(true);
     document.body.classList.add('is-dragging-panel');
-    
-    // Lock the pointer to the handle so fast movement doesn't escape
-    if (e.target.setPointerCapture) {
-      try {
-        e.target.setPointerCapture(e.pointerId);
-      } catch (err) {
-        // Fallback for non-pointer events if any
-      }
-    }
-  };
 
-  const handleDragStop = (e, data) => {
-    setIsDragging(false);
-    document.body.classList.remove('is-dragging-panel');
-    setPosition({ x: data.x, y: data.y });
-    
-    if (e.target.releasePointerCapture) {
-      try {
-        e.target.releasePointerCapture(e.pointerId);
-      } catch (err) {
-        // Fallback
+    dragData.current.startX = e.clientX;
+    dragData.current.startY = e.clientY;
+    dragData.current.initialX = dragData.current.currentX;
+    dragData.current.initialY = dragData.current.currentY;
+
+    const handlePointerMove = (moveEvent) => {
+      if (moveEvent.cancelable) {
+        moveEvent.preventDefault();
       }
-    }
+      const deltaX = moveEvent.clientX - dragData.current.startX;
+      const deltaY = moveEvent.clientY - dragData.current.startY;
+
+      const nextX = dragData.current.initialX + deltaX;
+      const nextY = dragData.current.initialY + deltaY;
+      dragData.current.currentX = nextX;
+      dragData.current.currentY = nextY;
+
+      // Keep the panel fully synchronized with the pointer at event frequency.
+      applyPosition(nextX, nextY);
+    };
+
+    const handlePointerUp = (upEvent) => {
+      if (header.hasPointerCapture?.(upEvent.pointerId)) {
+        header.releasePointerCapture(upEvent.pointerId);
+      }
+      header.removeEventListener('pointermove', handlePointerMove);
+      header.removeEventListener('pointerup', handlePointerUp);
+      header.removeEventListener('pointercancel', handlePointerUp);
+      
+      setIsDragging(false);
+      document.body.classList.remove('is-dragging-panel');
+
+      applyPosition(dragData.current.currentX, dragData.current.currentY);
+
+      // Final persistence
+      Storage.setItem(`panel-pos-${id}`, JSON.stringify({
+        x: dragData.current.currentX,
+        y: dragData.current.currentY
+      }));
+    };
+
+    header.addEventListener('pointermove', handlePointerMove);
+    header.addEventListener('pointerup', handlePointerUp);
+    header.addEventListener('pointercancel', handlePointerUp);
   };
 
   const onResize = (event, { size: newSize }) => {
@@ -78,57 +121,53 @@ export default function FloatingPanel({
   };
 
   return (
-    <Draggable
-      nodeRef={nodeRef}
-      handle=".panel-header"
-      defaultPosition={position}
-      onStart={handleDragStart}
-      onStop={handleDragStop}
-      enableUserSelectHack={true}
+    <div
+      ref={panelRef}
+      className={`floating-panel ${className} ${isDragging ? 'is-dragging' : ''}`}
+      style={{
+        position: 'fixed',
+        zIndex,
+        width: size.width,
+        height: size.height,
+        left: 0,
+        top: 0,
+        touchAction: 'none', // Critical for pointer events on mobile
+      }}
     >
-      <div
-        ref={nodeRef}
-        className={`floating-panel ${className} ${isDragging ? 'is-dragging' : ''}`}
-        style={{
-          position: 'fixed',
-          zIndex,
-          width: size.width,
-          height: size.height,
-          left: 0,
-          top: 0,
-        }}
+      <ResizableBox
+        width={size.width}
+        height={size.height}
+        minConstraints={[minWidth, minHeight]}
+        onResize={onResize}
+        resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
       >
-        <ResizableBox
-          width={size.width}
-          height={size.height}
-          minConstraints={[minWidth, minHeight]}
-          onResize={onResize}
-          resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
-        >
-          <div className="panel-container" style={{ width: '100%', height: '100%' }}>
-            <div className="panel-header">
-              <div className="panel-drag-handle">
-                <span className="drag-dots">:::</span>
-                <h3 className="panel-title">{title}</h3>
-              </div>
-              {onClose && (
-                <button
-                  type="button"
-                  className="panel-close-btn"
-                  onClick={onClose}
-                  aria-label="Close panel"
-                >
-                  &#x2715;
-                </button>
-              )}
+        <div className="panel-container" style={{ width: '100%', height: '100%' }}>
+          <div 
+            className="panel-header"
+            onPointerDown={handlePointerDown}
+          >
+            <div className="panel-drag-handle">
+              <span className="drag-dots">:::</span>
+              <h3 className="panel-title">{title}</h3>
             </div>
-            <div className={`panel-content ${isDragging ? 'pointer-events-none' : ''}`}>
-              {children}
-            </div>
+            {onClose && (
+              <button
+                type="button"
+                className="panel-close-btn"
+                onClick={onClose}
+                onPointerDown={(e) => e.stopPropagation()} // Don't drag when closing
+                aria-label="Close panel"
+              >
+                &#x2715;
+              </button>
+            )}
           </div>
-        </ResizableBox>
-      </div>
-    </Draggable>
+          <div className={`panel-content ${isDragging ? 'pointer-events-none' : ''}`}>
+            {children}
+          </div>
+        </div>
+      </ResizableBox>
+    </div>
   );
 }
 
