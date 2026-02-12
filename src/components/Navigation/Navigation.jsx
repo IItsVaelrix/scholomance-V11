@@ -5,14 +5,35 @@ import { LINKS } from "../../data/library";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useAuth } from "../../hooks/useAuth.jsx";
 
+function normalizeAdminList(rawValue) {
+  return String(rawValue || "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function isAdminUser(user) {
+  if (!user) return false;
+  if (user.isAdmin === true) return true;
+  if (String(user.role || "").toLowerCase() === "admin") return true;
+
+  const adminAllowlist = normalizeAdminList(import.meta.env.VITE_ADMIN_USERNAMES || "admin");
+  const username = String(user.username || "").toLowerCase();
+  const email = String(user.email || "").toLowerCase();
+
+  return adminAllowlist.includes(username) || adminAllowlist.includes(email);
+}
+
 export default function Navigation() {
   const location = useLocation();
   const activeSection = location.pathname.replace("/", "") || "watch";
   const [isMenuOpen, setIsMenuOpen] = useState(false); // For mobile
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const canAccessCollab = isAdminUser(user);
   const nextThemeLabel = theme === "dark" ? "light" : "dark";
   const themeGlyph = theme === "dark" ? "\u2600\uFE0F" : "\uD83C\uDF19";
+  const navLinks = LINKS.filter((link) => link.id !== "collab" || canAccessCollab);
 
   return (
     <nav className="primary-nav w-full z-100" aria-label="Primary navigation">
@@ -25,7 +46,7 @@ export default function Navigation() {
           id="nav-links"
           className={`nav-links flex gap-8 items-center ${isMenuOpen ? "flex-col absolute top-20 left-0 w-full p-8 glass-strong" : "hidden md:flex"}`}
         >
-          {[...LINKS, { id: "auth", path: "/auth", label: user ? user.username : "Portal" }].map((l) => (
+          {[...navLinks, { id: "auth", path: "/auth", label: user ? user.username : "Portal" }].map((l) => (
             <div key={l.id} className="relative">
               <NavLink
                 to={l.path}

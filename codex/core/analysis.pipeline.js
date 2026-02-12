@@ -1,4 +1,5 @@
 import { PhonemeEngine } from "../../src/lib/phoneme.engine.js";
+import { WORD_REGEX_GLOBAL } from "../../src/lib/wordTokenization.js";
 
 /**
  * @typedef {import('./schemas').AnalyzedDocument} AnalyzedDocument
@@ -6,7 +7,7 @@ import { PhonemeEngine } from "../../src/lib/phoneme.engine.js";
  * @typedef {import('./schemas').AnalyzedWord} AnalyzedWord
  */
 
-const WORD_REGEX = /[A-Za-z]+(?:['-][A-Za-z]+)*/g;
+const WORD_REGEX = WORD_REGEX_GLOBAL;
 const SENTENCE_SPLIT_REGEX = /[.!?]+|\n+/;
 const TERMINAL_PUNCTUATION_REGEX = /[.!?;:]$/;
 
@@ -284,7 +285,7 @@ function countTokens(tokens) {
   return frequency;
 }
 
-function stemWord(token) {
+export function stemWord(token) {
   if (!token || token.length <= 3) return token;
   if (token.endsWith("ies") && token.length > 4) return `${token.slice(0, -3)}y`;
   if (token.endsWith("ing") && token.length > 5) return token.slice(0, -3);

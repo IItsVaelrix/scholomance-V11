@@ -2,13 +2,12 @@ import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHand
 import { motion } from "framer-motion";
 import SyllableCounter from "./SyllableCounter.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
-import { usePhonemeEngine } from "../../hooks/usePhonemeEngine.jsx";
+import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
+import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 
 const MAX_CONTENT_LENGTH = 50000;
 const CONTENT_DEBOUNCE_MS = 300;
 const MIN_EDITOR_HEIGHT = 0;
-const LINE_TOKEN_REGEX = /[A-Za-z']+|\s+|[^A-Za-z'\s]+/g;
-const WORD_TOKEN_REGEX = /^[A-Za-z']+$/;
 const DEFAULT_LINE_HEIGHT = 28;
 const MARKDOWN_FORMATS = {
   heading: { prefix: "## ", suffix: "", lineStart: true },
@@ -25,15 +24,21 @@ function buildOverlayLines(content) {
   for (let lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
     const lineText = rawLines[lineIndex];
     const tokens = [];
+    let wordIndex = 0;
 
     for (const match of lineText.matchAll(LINE_TOKEN_REGEX)) {
       const token = match[0];
       const localStart = match.index ?? 0;
+      const isWord = WORD_TOKEN_REGEX.test(token);
       tokens.push({
         token,
         start: documentOffset + localStart,
         lineIndex,
+        wordIndex: isWord ? wordIndex : null,
       });
+      if (isWord) {
+        wordIndex += 1;
+      }
     }
 
     lines.push({ lineIndex, tokens });
@@ -41,6 +46,13 @@ function buildOverlayLines(content) {
   }
 
   return lines;
+}
+
+function normalizeWordToken(token) {
+  return String(token || "")
+    .trim()
+    .replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, "")
+    .toUpperCase();
 }
 
 // Common function words that don't carry meaningful phonemic weight for analysis.
@@ -95,10 +107,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   isTruesight = false,
   onContentChange,
   analyzedWords = new Map(),
+  analyzedWordsByIdentity = new Map(),
+  analyzedWordsByCharStart = new Map(),
   activeConnections = [],
+  lineSyllableCounts = [],
   highlightedLines = [],
   vowelColors = null,
   theme = 'dark',
+  onWordActivate,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -108,7 +124,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
   const textareaRef = useRef(null);
   const truesightOverlayRef = useRef(null);
-  const { engine } = usePhonemeEngine();
   const showSyllableCounter = isEditable || isTruesight;
 
   const BUFFER = 10;
@@ -156,8 +171,129 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     return set;
   }, [activeConnections]);
 
+  const normalizedWordByCharStart = useMemo(() => {
+    const map = new Map();
+    for (const { tokens } of overlayLines) {
+      for (const { token, start } of tokens) {
+        if (!WORD_TOKEN_REGEX.test(token)) continue;
+        map.set(start, normalizeWordToken(token));
+      }
+    }
+    return map;
+  }, [overlayLines]);
+
+  const allowLegacyWordFallback = useMemo(() => (
+    analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
+  ), [analyzedWordsByIdentity, analyzedWordsByCharStart]);
+
+  // Build color activation context from active connections.
+  // 1) Color direct connected words.
+  // 2) If a stop-word endpoint is excluded, allow family substitution only when that
+  //    family has no non-stop connected representative.
+  const connectionColorContext = useMemo(() => {
+    const connectedTokenCharStarts = new Set();
+    const stopWordFamilies = new Set();
+    const nonStopWordFamilies = new Set();
+
+    if (!Array.isArray(activeConnections) || activeConnections.length === 0) {
+      return {
+        connectedTokenCharStarts,
+        substitutionFamilies: new Set(),
+      };
+    }
+
+    const resolveNormalizedWord = (wordRef) => {
+      if (!wordRef || typeof wordRef !== "object") return "";
+      if (Number.isInteger(wordRef.charStart)) {
+        const normalizedByOffset = normalizedWordByCharStart.get(wordRef.charStart);
+        if (normalizedByOffset) {
+          return normalizedByOffset;
+        }
+      }
+      return normalizeWordToken(wordRef.word);
+    };
+
+    const resolveWordFamily = (wordRef, normalizedWord) => {
+      if (!wordRef || typeof wordRef !== "object") return "";
+
+      const directFamily = normalizeVowelFamily(wordRef.vowelFamily);
+      if (directFamily) return directFamily;
+
+      if (Number.isInteger(wordRef.charStart)) {
+        const byOffsetFamily = normalizeVowelFamily(analyzedWordsByCharStart.get(wordRef.charStart)?.vowelFamily);
+        if (byOffsetFamily) return byOffsetFamily;
+      }
+
+      if (allowLegacyWordFallback) {
+        const analyzedFamily = normalizeVowelFamily(analyzedWords.get(normalizedWord)?.vowelFamily);
+        if (analyzedFamily) return analyzedFamily;
+      }
+
+      return "";
+    };
+
+    const registerWordRef = (wordRef) => {
+      if (!wordRef || typeof wordRef !== "object") return;
+
+      if (Number.isInteger(wordRef.charStart)) {
+        connectedTokenCharStarts.add(wordRef.charStart);
+      }
+
+      const normalizedWord = resolveNormalizedWord(wordRef);
+      const family = resolveWordFamily(wordRef, normalizedWord);
+      if (!family) return;
+
+      if (STOP_WORDS.has(normalizedWord)) {
+        stopWordFamilies.add(family);
+        return;
+      }
+
+      nonStopWordFamilies.add(family);
+    };
+
+    for (const conn of activeConnections) {
+      registerWordRef(conn?.wordA);
+      registerWordRef(conn?.wordB);
+    }
+
+    const substitutionFamilies = new Set();
+    for (const family of stopWordFamilies) {
+      if (!nonStopWordFamilies.has(family)) {
+        substitutionFamilies.add(family);
+      }
+    }
+
+    return {
+      connectedTokenCharStarts,
+      substitutionFamilies,
+    };
+  }, [activeConnections, allowLegacyWordFallback, analyzedWords, analyzedWordsByCharStart, normalizedWordByCharStart]);
+
   // Pre-compute Set for O(1) highlighted line lookups (Fix 1)
   const highlightedLinesSet = useMemo(() => new Set(highlightedLines || []), [highlightedLines]);
+
+  const emitWordActivation = useCallback((trigger, payload, event) => {
+    if (!onWordActivate || !payload) return;
+
+    const rect = event?.currentTarget?.getBoundingClientRect?.();
+    onWordActivate({
+      ...payload,
+      trigger,
+      source: trigger === "pin" && Number(event?.detail) === 0 ? "keyboard" : "pointer",
+      anchorRect: rect
+        ? {
+          left: rect.left,
+          top: rect.top,
+          right: rect.right,
+          bottom: rect.bottom,
+          width: rect.width,
+          height: rect.height,
+        }
+        : null,
+      clientX: Number.isFinite(event?.clientX) ? event.clientX : null,
+      clientY: Number.isFinite(event?.clientY) ? event.clientY : null,
+    });
+  }, [onWordActivate]);
 
   // Apply formatting to selected text
   const applyFormat = useCallback((type) => {
@@ -385,7 +521,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         {showSyllableCounter && (
           <SyllableCounter
             content={content}
-            engine={engine}
+            lineCounts={lineSyllableCounts}
             scrollTop={scrollTop}
             viewportHeight={editorHeight}
             lineHeightPx={lineHeightPx}
@@ -436,36 +572,95 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                       key={li}
                       className={`truesight-line${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
                     >
-                      {tokens.map(({ token, start, lineIndex }) => {
+                      {tokens.map(({ token, start, lineIndex, wordIndex }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
                         const clean = isWord ? token.toUpperCase() : "";
-                        const analysis = isWord ? analyzedWords.get(clean) : null;
                         const charStart = start;
+                        const charEnd = charStart + token.length;
+                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+                        const analysis = isWord
+                          ? (
+                            analyzedWordsByIdentity.get(identityKey) ||
+                            analyzedWordsByCharStart.get(charStart) ||
+                            (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
+                          )
+                          : null;
 
-                        if (!isWord || !analysis || STOP_WORDS.has(clean)) {
+                        if (!isWord || !analysis) {
+                          return <span key={start}>{token}</span>;
+                        }
+
+                        const isStopWord = STOP_WORDS.has(clean);
+
+                        const wordVowelFamily = normalizeVowelFamily(analysis.vowelFamily);
+                        const isDirectConnectionWord = connectionColorContext.connectedTokenCharStarts.has(charStart);
+                        const isFamilySubstituteWord = (
+                          !isDirectConnectionWord &&
+                          Boolean(wordVowelFamily) &&
+                          connectionColorContext.substitutionFamilies.has(wordVowelFamily)
+                        );
+                        const shouldColorWord = !isStopWord && (isDirectConnectionWord || isFamilySubstituteWord);
+                        const wordPayload = {
+                          word: token,
+                          normalizedWord: clean,
+                          lineIndex,
+                          wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
+                          charStart,
+                          charEnd,
+                          vowelFamily: wordVowelFamily || null,
+                          isStopWord,
+                        };
+
+                        if (!shouldColorWord && !onWordActivate) {
                           return <span key={start}>{token}</span>;
                         }
 
                         const activeColors = vowelColors || VOWEL_COLORS;
                         const fallbackColor = theme === 'light' ? "#1a1a2e" : "#f8f9ff";
-                        const color = activeColors[analysis.vowelFamily] || fallbackColor;
+                        const color = shouldColorWord
+                          ? (activeColors[wordVowelFamily] || fallbackColor)
+                          : undefined;
 
                         // O(1) lookup for multi-syllable rhyme (Fix 1)
-                        const isMultiSyllable = multiSyllableCharStarts.has(charStart);
+                        const isMultiSyllable = shouldColorWord && multiSyllableCharStarts.has(charStart);
 
                         // O(1) lookup for highlighted line (Fix 1)
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
+                        if (!onWordActivate) {
+                          return (
+                            <span
+                              key={start}
+                              className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                              style={{ color }}
+                              data-char-start={charStart}
+                              data-syllables={isMultiSyllable ? (Number(analysis.syllableCount) || undefined) : undefined}
+                            >
+                              {token}
+                            </span>
+                          );
+                        }
+
                         return (
-                          <span
+                          <button
                             key={start}
-                            className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
-                            style={{ color }}
+                            type="button"
+                            className={shouldColorWord
+                              ? `grimoire-word grimoire-word--interactive ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`
+                              : "truesight-word-token"
+                            }
+                            style={shouldColorWord ? { color } : undefined}
                             data-char-start={charStart}
-                            data-syllables={isMultiSyllable ? analysis.syllables?.length : undefined}
+                            data-line-index={lineIndex}
+                            data-word-index={wordIndex}
+                            onMouseEnter={(event) => emitWordActivation("hover", wordPayload, event)}
+                            onMouseLeave={(event) => emitWordActivation("leave", wordPayload, event)}
+                            onFocus={(event) => emitWordActivation("hover", wordPayload, event)}
+                            onBlur={(event) => emitWordActivation("leave", wordPayload, event)}
+                            onClick={(event) => emitWordActivation("pin", wordPayload, event)}
                           >
                             {token}
-                          </span>
+                          </button>
                         );
                       })}
                     </div>

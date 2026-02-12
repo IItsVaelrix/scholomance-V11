@@ -231,6 +231,12 @@ docker run --rm -p 3000:3000 -e NODE_ENV=production -e TRUST_PROXY=true -e SESSI
 npm test -- --run
 ```
 
+- Accessibility gate (same suite enforced in CI):
+
+```bash
+npx vitest run tests/accessibility.test.jsx
+```
+
 - Visual regression (Chromium only):
 
 ```bash
@@ -265,11 +271,12 @@ npm run test:visual:full
 ## Pre-push checklist
 
 1. Run `npm run lint`.
-2. Run `npm test -- --run`.
-3. Run `npm run build`.
-4. Verify `git status` contains only intended changes.
-5. Ensure `.env`, local SQLite files, and temporary artifacts are not staged.
-6. Push branch:
+2. Run `npx vitest run tests/accessibility.test.jsx`.
+3. Run `npm test -- --run`.
+4. Run `npm run build`.
+5. Verify `git status` contains only intended changes.
+6. Ensure `.env`, local SQLite files, and temporary artifacts are not staged.
+7. Push branch:
 
 ```bash
 git push -u origin main

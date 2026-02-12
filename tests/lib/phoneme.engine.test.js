@@ -67,6 +67,13 @@ describe('PhonemeEngine', () => {
       expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('AY');   // -ire pattern
     });
 
+    it('keeps long-A cluster words in EY family', () => {
+      const words = ['BASE', 'FACE', 'PAY', 'PLAY', 'DISPLAY', 'BEIGE', 'GAUGE', 'PLAGUE', 'MALAISE', 'ACHE'];
+      words.forEach((word) => {
+        expect(PhonemeEngine.guessVowelFamily(word)).toBe('EY');
+      });
+    });
+
     it('should map fallback vowel family A to SONIC school', () => {
       expect(PhonemeEngine.getSchoolFromVowelFamily('A')).toBe('SONIC');
     });
@@ -88,6 +95,31 @@ describe('PhonemeEngine', () => {
   });
 
   describe('Deep Analysis', () => {
+    it('aligns IN-cluster words to a shared stressed family', () => {
+      const words = ['obsidian', 'olympian', 'victim', 'rhythm', 'median'];
+      const stressedFamilies = words.map((word) => {
+        const result = PhonemeEngine.analyzeDeep(word);
+        expect(result).toBeTruthy();
+        const syllables = Array.isArray(result?.syllables) ? result.syllables : [];
+        const stressed = syllables.find((syl) => Number(syl?.stress) > 0) || syllables[0];
+        return String(stressed?.vowelFamily || '').toUpperCase();
+      });
+
+      expect(new Set(stressedFamilies)).toEqual(new Set(['IH']));
+    });
+
+    it('aligns stressed U-sound cluster words to one family', () => {
+      const words = ['stuck', 'bucket', 'buckets', 'cutting'];
+      const stressedFamilies = words.map((word) => {
+        const result = PhonemeEngine.analyzeDeep(word);
+        expect(result).toBeTruthy();
+        const syllables = Array.isArray(result?.syllables) ? result.syllables : [];
+        const stressed = syllables.find((syl) => Number(syl?.stress) > 0) || syllables[0];
+        return String(stressed?.vowelFamily || '').toUpperCase();
+      });
+      expect(new Set(stressedFamilies)).toEqual(new Set(['A']));
+    });
+
     it('should return syllable breakdown for analyzeDeep', () => {
       const result = PhonemeEngine.analyzeDeep('hello');
       expect(result).toBeTruthy();

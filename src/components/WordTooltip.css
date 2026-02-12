@@ -253,6 +253,33 @@
   margin-bottom: 0;
 }
 
+.card-insight-section {
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed rgba(58, 40, 24, 0.28);
+}
+
+.card-insight-title {
+  margin: 0 0 4px 0;
+  font-family: var(--font-family-heading, "Cinzel", serif);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #4b3521;
+}
+
+.card-insight-line {
+  margin: 0 0 4px 0;
+  color: #2a1c11;
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
+.card-insight-line--error {
+  color: #8f1d1d;
+  font-weight: 600;
+}
+
 .card-flavor-divider {
   height: 1px;
   background: linear-gradient(

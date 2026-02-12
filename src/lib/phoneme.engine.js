@@ -52,6 +52,19 @@ const VOWEL_FAMILY_TO_SCHOOL = {
   IH: "PSYCHIC", IY: "PSYCHIC",
 };
 
+// Targeted pronunciation overrides for high-impact words that the fallback
+// spelling heuristics frequently misread. These ARPAbet-like sequences are
+// consumed by analyzeSyllables for stress-aware rhyme grouping.
+const WORD_PHONEME_OVERRIDES = Object.freeze({
+  SOUL: ["S", "OW1", "L"],
+  HOLE: ["HH", "OW1", "L"],
+  RHYTHM: ["R", "IH1", "DH", "AH0", "M"],
+  VICTIM: ["V", "IH1", "K", "T", "IH0", "M"],
+  OBSIDIAN: ["AH0", "B", "S", "IH1", "D", "IY0", "AH0", "N"],
+  OLYMPIAN: ["AH0", "L", "IH1", "M", "P", "IY0", "AH0", "N"],
+  MEDIAN: ["M", "IH1", "D", "IY0", "AH0", "N"],
+});
+
 const PhonemeDictSchema = z.object({
   vowel_families: z.array(z.unknown())
 }).passthrough();
@@ -134,7 +147,8 @@ export const PhonemeEngine = {
 
     // Fallback: pattern-based analysis using English spelling rules
     const vowelMatch = upper.match(/[AEIOU]+/g);
-    if (!vowelMatch) {
+    const hasOverridePhonemes = Boolean(WORD_PHONEME_OVERRIDES[upper]);
+    if (!vowelMatch && !hasOverridePhonemes) {
       /** @type {PhonemeAnalysis} */
       const result = {
         vowelFamily: "UH",
@@ -150,7 +164,9 @@ export const PhonemeEngine = {
     // Pass the full word to guessVowelFamily for pattern matching
     const vowelFamily = this.guessVowelFamily(upper);
     const coda = this.extractCoda(upper);
-    const phonemes = this.splitToPhonemes(upper);
+    const phonemes = hasOverridePhonemes
+      ? [...WORD_PHONEME_OVERRIDES[upper]]
+      : this.splitToPhonemes(upper);
 
     // Count syllables by counting vowel phonemes
     const syllableCount = phonemes.filter(p =>
@@ -194,6 +210,8 @@ export const PhonemeEngine = {
       'COULD': 'UH', 'WOULD': 'UH', 'SHOULD': 'UH',  // silent L, /ʊ/ sound
       'SAID': 'EH', 'SAYS': 'EH',  // not /eɪ/ like "paid"
       'HAVE': 'AE', 'GIVE': 'IH', 'LIVE': 'IH',  // short vowels despite -ve ending
+      'RHYTHM': 'IH', 'VICTIM': 'IH',
+      'OBSIDIAN': 'IH', 'OLYMPIAN': 'IH', 'MEDIAN': 'IH',
 
       // -ite words with long E sound (IY), not AY diphthong
       'ELITE': 'IY', 'PETITE': 'IY', 'SUITE': 'IY', 'ANTIQUE': 'IY', 'DAMOCLES': 'IY',
@@ -211,6 +229,9 @@ export const PhonemeEngine = {
 
       // Gaia/Mayan have AY diphthong, not EY
       'GAIA': 'AY', 'MAYAN': 'AY', 'MAYA': 'AY', 'PAPAYA': 'AY',
+
+      // Long-A outliers that should stay in the EY family cluster
+      'BEIGE': 'EY', 'GAUGE': 'EY', 'PLAGUE': 'EY', 'MALAISE': 'EY', 'ACHE': 'EY',
 
       // -osed words have OW sound (same as "show")
       'CLOSED': 'OW', 'POSED': 'OW', 'COMPOSED': 'OW', 'DISPOSED': 'OW',
@@ -358,6 +379,11 @@ export const PhonemeEngine = {
    * @returns {string[]} An array of phonemes.
    */
   splitToPhonemes(word) {
+    const upper = String(word || "").toUpperCase();
+    if (WORD_PHONEME_OVERRIDES[upper]) {
+      return [...WORD_PHONEME_OVERRIDES[upper]];
+    }
+
     // Maps single vowels to ARPAbet equivalents
     const VOWEL_TO_ARPABET = {
       'A': 'AA', 'E': 'EH', 'I': 'IH', 'O': 'AO', 'U': 'AH',
@@ -373,14 +399,23 @@ export const PhonemeEngine = {
     let i = 0;
     let syllableIndex = 0;
 
-    while (i < word.length) {
-      const char = word[i];
-      const next = word[i + 1] || '';
+    while (i < upper.length) {
+      const char = upper[i];
+      const next = upper[i + 1] || '';
       const digraph = char + next;
 
       if (/[AEIOU]/.test(char)) {
+        // OUL often maps to long-O in words like SOUL/SHOULDER/BOULDER.
+        if (upper.slice(i, i + 3) === 'OUL') {
+          const stress = syllableIndex % 2 === 0 ? '1' : '0';
+          phonemes.push('OW' + stress);
+          syllableIndex++;
+          i += 2;
+          continue;
+        }
+
         // Handle final -UIT words (SUIT, FRUIT) as /UW/.
-        if (digraph === 'UI' && /UIT$/.test(word.slice(i))) {
+        if (digraph === 'UI' && /UIT$/.test(upper.slice(i))) {
           const stress = syllableIndex % 2 === 0 ? '1' : '0';
           phonemes.push('UW' + stress);
           syllableIndex++;

@@ -5,7 +5,6 @@ import Navigation from "./components/Navigation/Navigation.jsx";
 import AtmosphereSync from "./components/AtmosphereSync.jsx";
 import { SongProvider } from "./hooks/useCurrentSong.jsx";
 import { useAmbientPlayer } from "./hooks/useAmbientPlayer.jsx";
-import { PhonemeEngineProvider } from "./hooks/usePhonemeEngine.jsx";
 import { ProgressionProvider, useProgression } from "./hooks/useProgression.jsx";
 import { CODExProvider } from "./hooks/useCODExPipeline.jsx";
 import { AuthProvider } from "./hooks/useAuth.jsx";
@@ -67,8 +66,7 @@ export default function App() {
     <CODExProvider>
       <AuthProvider>
         <ProgressionProvider>
-          <PhonemeEngineProvider>
-            <SongProvider>
+          <SongProvider>
             <AtmosphereSync />
             <div className="aurora-background" aria-hidden="true" />
             <div className="vignette" aria-hidden="true" />
@@ -97,8 +95,7 @@ export default function App() {
                 </motion.main>
               </AnimatePresence>
             </div>
-            </SongProvider>
-          </PhonemeEngineProvider>
+          </SongProvider>
         </ProgressionProvider>
       </AuthProvider>
     </CODExProvider>

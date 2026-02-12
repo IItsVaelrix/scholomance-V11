@@ -6,16 +6,18 @@ import {
 } from "react-resizable-panels";
 
 import { useTheme } from "../../hooks/useTheme.jsx";
-import { usePhonemeEngine } from "../../hooks/usePhonemeEngine.jsx";
 import { useScrolls } from "../../hooks/useScrolls.jsx";
 import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
+import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
 import { SCHOOLS } from "../../data/schools.js";
+import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 
 import RhymeSchemePanel from "../../components/RhymeSchemePanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
 import HeuristicScorePanel from "../../components/HeuristicScorePanel.jsx";
 import VowelFamilyPanel from "../../components/VowelFamilyPanel.jsx";
+import WordTooltip from "../../components/WordTooltip.jsx";
 
 import ScrollEditor from "./ScrollEditor.jsx";
 import ScrollList from "./ScrollList.jsx";
@@ -31,9 +33,61 @@ const SCHOOL_GLYPHS = {
   ALCHEMY: "\u2697",
   WILL: "\u26A1",
 };
+const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
+  A: "SONIC",
+  AA: "SONIC",
+  AE: "SONIC",
+  AH: "SONIC",
+  AO: "VOID",
+  AW: "VOID",
+  OW: "VOID",
+  UW: "VOID",
+  AY: "ALCHEMY",
+  EY: "ALCHEMY",
+  OY: "ALCHEMY",
+  EH: "WILL",
+  ER: "WILL",
+  UH: "WILL",
+  IH: "PSYCHIC",
+  IY: "PSYCHIC",
+});
+const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
+const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
+const TOOLTIP_WIDTH = 390;
+const TOOLTIP_HEIGHT = 510;
+const TOOLTIP_MARGIN = 12;
+const TOOLTIP_OFFSET_X = 14;
+const TOOLTIP_OFFSET_Y = -8;
 
-function getSchoolMetaFromVowelFamily(engine, familyId) {
-  const schoolId = engine?.getSchoolFromVowelFamily?.(familyId);
+const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanFlag(
+  import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER,
+  false
+);
+
+function parseBooleanFlag(rawValue, defaultValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return defaultValue;
+  }
+  const normalized = String(rawValue).trim().toLowerCase();
+  if (TRUE_VALUES.has(normalized)) return true;
+  if (FALSE_VALUES.has(normalized)) return false;
+  return defaultValue;
+}
+
+function clampTooltipPosition(position) {
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 900;
+  const maxX = Math.max(TOOLTIP_MARGIN, viewportWidth - TOOLTIP_WIDTH - TOOLTIP_MARGIN);
+  const maxY = Math.max(TOOLTIP_MARGIN, viewportHeight - TOOLTIP_HEIGHT - TOOLTIP_MARGIN);
+  return {
+    x: Math.min(Math.max(TOOLTIP_MARGIN, Number(position?.x) || TOOLTIP_MARGIN), maxX),
+    y: Math.min(Math.max(TOOLTIP_MARGIN, Number(position?.y) || TOOLTIP_MARGIN), maxY),
+  };
+}
+
+function getSchoolMetaFromVowelFamily(familyId) {
+  const normalizedFamily = normalizeVowelFamily(familyId);
+  const schoolId = VOWEL_FAMILY_TO_SCHOOL[normalizedFamily] || null;
   if (!schoolId) {
     return { schoolName: "Unbound", schoolGlyph: "\u2736" };
   }
@@ -45,9 +99,7 @@ function getSchoolMetaFromVowelFamily(engine, familyId) {
 
 export default function ReadPage() {
   const { theme } = useTheme();
-  const { isReady, engine } = usePhonemeEngine();
   const { scrolls, saveScroll, deleteScroll, getScrollById } = useScrolls();
-  const [analyzedWords, setAnalyzedWords] = useState(() => new Map());
   const [activeScrollId, setActiveScrollId] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -88,8 +140,23 @@ export default function ReadPage() {
     literaryDevices,
     emotion,
   } = usePanelAnalysis();
+  const {
+    lookup,
+    data: lookupData,
+    isLoading: isLookupLoading,
+    error: lookupError,
+    reset: resetWordLookup,
+  } = useWordLookup();
 
   const editorRef = useRef(null);
+  const focusReturnRef = useRef(null);
+  const [tooltipState, setTooltipState] = useState({
+    visible: false,
+    pinned: false,
+    token: null,
+    position: { x: TOOLTIP_MARGIN, y: TOOLTIP_MARGIN },
+    localAnalysis: null,
+  });
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
 
   const lineCount = useMemo(() => {
@@ -101,6 +168,70 @@ export default function ReadPage() {
     () => getVowelColorsForSchool(selectedSchool, theme),
     [selectedSchool, theme]
   );
+  const analyzedWords = useMemo(() => {
+    const map = new Map();
+    const wordProfiles = Array.isArray(deepAnalysis?.wordAnalyses) ? deepAnalysis.wordAnalyses : [];
+    for (const profile of wordProfiles) {
+      const normalized = String(profile?.normalizedWord || "").toUpperCase();
+      if (!normalized || map.has(normalized)) continue;
+      map.set(normalized, {
+        word: String(profile?.word || ""),
+        normalizedWord: normalized,
+        lineIndex: Number.isInteger(profile?.lineIndex) ? profile.lineIndex : -1,
+        wordIndex: Number.isInteger(profile?.wordIndex) ? profile.wordIndex : -1,
+        charStart: Number.isInteger(profile?.charStart) ? profile.charStart : -1,
+        charEnd: Number.isInteger(profile?.charEnd) ? profile.charEnd : -1,
+        vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
+        syllableCount: Number(profile?.syllableCount) || 0,
+        rhymeKey: profile?.rhymeKey || null,
+      });
+    }
+    return map;
+  }, [deepAnalysis]);
+  const analyzedWordsByIdentity = useMemo(() => {
+    const map = new Map();
+    const wordProfiles = Array.isArray(deepAnalysis?.wordAnalyses) ? deepAnalysis.wordAnalyses : [];
+    for (const profile of wordProfiles) {
+      const lineIndex = Number(profile?.lineIndex);
+      const wordIndex = Number(profile?.wordIndex);
+      const charStart = Number(profile?.charStart);
+      if (!Number.isInteger(lineIndex) || !Number.isInteger(wordIndex) || !Number.isInteger(charStart) || charStart < 0) {
+        continue;
+      }
+      map.set(`${lineIndex}:${wordIndex}:${charStart}`, {
+        word: String(profile?.word || ""),
+        normalizedWord: String(profile?.normalizedWord || "").toUpperCase(),
+        lineIndex,
+        wordIndex,
+        charStart,
+        charEnd: Number.isInteger(profile?.charEnd) ? profile.charEnd : -1,
+        vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
+        syllableCount: Number(profile?.syllableCount) || 0,
+        rhymeKey: profile?.rhymeKey || null,
+      });
+    }
+    return map;
+  }, [deepAnalysis]);
+  const analyzedWordsByCharStart = useMemo(() => {
+    const map = new Map();
+    const wordProfiles = Array.isArray(deepAnalysis?.wordAnalyses) ? deepAnalysis.wordAnalyses : [];
+    for (const profile of wordProfiles) {
+      const charStart = Number(profile?.charStart);
+      if (!Number.isInteger(charStart) || charStart < 0) continue;
+      map.set(charStart, {
+        word: String(profile?.word || ""),
+        normalizedWord: String(profile?.normalizedWord || "").toUpperCase(),
+        lineIndex: Number.isInteger(profile?.lineIndex) ? profile.lineIndex : -1,
+        wordIndex: Number.isInteger(profile?.wordIndex) ? profile.wordIndex : -1,
+        charStart,
+        charEnd: Number.isInteger(profile?.charEnd) ? profile.charEnd : -1,
+        vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
+        syllableCount: Number(profile?.syllableCount) || 0,
+        rhymeKey: profile?.rhymeKey || null,
+      });
+    }
+    return map;
+  }, [deepAnalysis]);
 
   const vowelFamilyAnalytics = useMemo(() => {
     if (!isTruesight || analysisMode !== ANALYSIS_MODES.VOWEL) {
@@ -116,7 +247,7 @@ export default function ReadPage() {
         const id = String(family?.id || "").toUpperCase();
         const count = Number(family?.count) || 0;
         if (!id || count <= 0) return null;
-        const schoolMeta = getSchoolMetaFromVowelFamily(engine, id);
+        const schoolMeta = getSchoolMetaFromVowelFamily(id);
         return {
           id,
           count,
@@ -133,24 +264,7 @@ export default function ReadPage() {
       totalWords,
       uniqueWords: Number(vowelSummary.uniqueWords) || 0,
     };
-  }, [isTruesight, analysisMode, vowelSummary, engine, theme, activeVowelColors]);
-
-  useEffect(() => {
-    if (isTruesight && truesightContent && engine && isReady) {
-      const newEntries = [];
-      const words = truesightContent.match(/[A-Za-z']+/g) || [];
-      for (const word of words) {
-        const clean = word.toUpperCase();
-        if (clean && !analyzedWords.has(clean)) {
-          const result = engine.analyzeWord(clean);
-          if (result) newEntries.push([clean, { word: clean, ...result }]);
-        }
-      }
-      if (newEntries.length > 0) {
-        setAnalyzedWords((prev) => new Map([...prev, ...newEntries]));
-      }
-    }
-  }, [isTruesight, truesightContent, engine, isReady, analyzedWords]);
+  }, [isTruesight, analysisMode, vowelSummary, theme, activeVowelColors]);
 
   useEffect(() => {
     if (truesightContent && (isTruesight || showScorePanel)) {
@@ -223,6 +337,203 @@ export default function ReadPage() {
     editorRef.current?.save?.();
   }, []);
 
+  const resolveTooltipPosition = useCallback((activation) => {
+    const rect = activation?.anchorRect;
+    const x = rect?.right
+      ? rect.right + TOOLTIP_OFFSET_X
+      : (Number.isFinite(activation?.clientX) ? activation.clientX + TOOLTIP_OFFSET_X : TOOLTIP_MARGIN);
+    const y = rect?.top
+      ? rect.top + TOOLTIP_OFFSET_Y
+      : (Number.isFinite(activation?.clientY) ? activation.clientY + TOOLTIP_OFFSET_Y : TOOLTIP_MARGIN);
+    return clampTooltipPosition({ x, y });
+  }, []);
+
+  const buildTooltipAnalysis = useCallback((activation) => {
+    const normalizedWord = String(activation?.normalizedWord || "").toUpperCase();
+    const localWordAnalysis = analyzedWordsByCharStart.get(activation?.charStart) || analyzedWords.get(normalizedWord) || null;
+    const fallbackVowelFamily = normalizeVowelFamily(
+      activation?.vowelFamily || localWordAnalysis?.vowelFamily
+    );
+    const schoolMeta = getSchoolMetaFromVowelFamily(fallbackVowelFamily);
+
+    const allConnections = Array.isArray(deepAnalysis?.allConnections) ? deepAnalysis.allConnections : [];
+    const tokenLinks = allConnections
+      .filter((connection) => {
+        const matchesA = connection?.wordA?.lineIndex === activation?.lineIndex &&
+          connection?.wordA?.charStart === activation?.charStart;
+        const matchesB = connection?.wordB?.lineIndex === activation?.lineIndex &&
+          connection?.wordB?.charStart === activation?.charStart;
+        return matchesA || matchesB;
+      })
+      .map((connection) => {
+        const matchesA = connection?.wordA?.lineIndex === activation?.lineIndex &&
+          connection?.wordA?.charStart === activation?.charStart;
+        const opposite = matchesA ? connection?.wordB : connection?.wordA;
+        return {
+          type: connection?.type || "near",
+          score: Number(connection?.score) || 0,
+          groupLabel: connection?.groupLabel || null,
+          linkedWord: opposite?.word || "",
+          gate: ENABLE_SYNTAX_RHYME_LAYER ? (connection?.syntax?.gate || null) : null,
+          reasons: ENABLE_SYNTAX_RHYME_LAYER && Array.isArray(connection?.syntax?.reasons)
+            ? connection.syntax.reasons
+            : [],
+        };
+      });
+
+    const syntaxSummary = deepAnalysis?.syntaxSummary;
+    const syntaxIdentity = `${activation?.lineIndex}:${activation?.wordIndex}:${activation?.charStart}`;
+    const syntaxToken = ENABLE_SYNTAX_RHYME_LAYER
+      ? (
+        syntaxSummary?.tokenByIdentity?.get?.(syntaxIdentity) ||
+        syntaxSummary?.tokenByCharStart?.get?.(activation?.charStart) ||
+        null
+      )
+      : null;
+
+    return {
+      core: {
+        vowelFamily: fallbackVowelFamily || null,
+        schoolName: schoolMeta.schoolName,
+        schoolGlyph: schoolMeta.schoolGlyph,
+        skin: selectedSchool,
+        syllableCount: Number(localWordAnalysis?.syllableCount) || null,
+        rhymeKey: localWordAnalysis?.rhymeKey || null,
+      },
+      rhyme: {
+        links: tokenLinks,
+        gateReasons: Array.from(new Set(tokenLinks.flatMap((link) => link.reasons))).slice(0, 6),
+      },
+      syntax: syntaxToken
+        ? {
+          role: syntaxToken.role,
+          lineRole: syntaxToken.lineRole,
+          stressRole: syntaxToken.stressRole,
+          rhymePolicy: syntaxToken.rhymePolicy,
+          reasons: Array.isArray(syntaxToken.reasons) ? syntaxToken.reasons : [],
+        }
+        : null,
+    };
+  }, [analyzedWords, analyzedWordsByCharStart, deepAnalysis, selectedSchool]);
+
+  const handleCloseTooltip = useCallback(() => {
+    setTooltipState((prev) => ({
+      ...prev,
+      visible: false,
+      pinned: false,
+      token: null,
+      localAnalysis: null,
+    }));
+    resetWordLookup();
+    if (focusReturnRef.current && typeof focusReturnRef.current.focus === "function") {
+      focusReturnRef.current.focus();
+    }
+    focusReturnRef.current = null;
+  }, [resetWordLookup]);
+
+  const handleTooltipDrag = useCallback((position) => {
+    setTooltipState((prev) => ({
+      ...prev,
+      position: clampTooltipPosition(position),
+    }));
+  }, []);
+
+  const handleWordActivate = useCallback((activation) => {
+    if (!activation || !activation.normalizedWord || !isTruesight) {
+      return;
+    }
+
+    if (activation.trigger === "leave") {
+      setTooltipState((prev) => {
+        if (prev.pinned) return prev;
+        return {
+          ...prev,
+          visible: false,
+          token: null,
+          localAnalysis: null,
+        };
+      });
+      return;
+    }
+
+    const position = resolveTooltipPosition(activation);
+    const localAnalysis = buildTooltipAnalysis(activation);
+
+    if (activation.trigger === "hover") {
+      setTooltipState((prev) => {
+        if (prev.pinned) return prev;
+        return {
+          ...prev,
+          visible: true,
+          pinned: false,
+          token: activation,
+          position,
+          localAnalysis,
+        };
+      });
+      return;
+    }
+
+    if (activation.trigger === "pin") {
+      if (typeof document !== "undefined" && document.activeElement) {
+        focusReturnRef.current = document.activeElement;
+      }
+      setTooltipState((prev) => ({
+        ...prev,
+        visible: true,
+        pinned: true,
+        token: activation,
+        position,
+        localAnalysis,
+      }));
+      resetWordLookup();
+      lookup(activation.normalizedWord);
+    }
+  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition]);
+
+  useEffect(() => {
+    if (!isTruesight) {
+      setTooltipState((prev) => ({
+        ...prev,
+        visible: false,
+        pinned: false,
+        token: null,
+        localAnalysis: null,
+      }));
+      resetWordLookup();
+    }
+  }, [isTruesight, resetWordLookup]);
+
+  const tooltipWordData = useMemo(() => {
+    if (!tooltipState.visible || !tooltipState.token) return null;
+
+    const baseWordData = {
+      word: tooltipState.token.word,
+      vowelFamily: tooltipState.localAnalysis?.core?.vowelFamily || null,
+      rhymeKey: tooltipState.localAnalysis?.core?.rhymeKey || null,
+      syllableCount: tooltipState.localAnalysis?.core?.syllableCount || undefined,
+    };
+
+    if (!tooltipState.pinned || !lookupData) {
+      return baseWordData;
+    }
+
+    const selectedWord = String(tooltipState.token.normalizedWord || "").toUpperCase();
+    const lookupWord = String(lookupData.word || "").toUpperCase();
+    if (lookupWord && lookupWord !== selectedWord) {
+      return baseWordData;
+    }
+
+    return {
+      ...baseWordData,
+      ...lookupData,
+      word: lookupData.word || baseWordData.word,
+      vowelFamily: lookupData.vowelFamily || baseWordData.vowelFamily,
+      rhymeKey: lookupData.rhymeKey || baseWordData.rhymeKey,
+      syllableCount: lookupData.syllableCount || baseWordData.syllableCount,
+    };
+  }, [lookupData, tooltipState]);
+
   return (
     <div className="ide-layout-wrapper">
       <main className="ide-main-content">
@@ -266,7 +577,7 @@ export default function ReadPage() {
                   analysisMode={analysisMode}
                   onModeChange={handleModeChange}
                   isAnalyzing={isAnalyzing}
-                  disabled={!isReady}
+                  disabled={false}
                 />
                 {isTruesight && (
                   <select
@@ -295,7 +606,7 @@ export default function ReadPage() {
                     type="button"
                     className="toolbar-btn toolbar-btn--save"
                     onClick={handleToolbarSave}
-                    disabled={!isReady}
+                    disabled={false}
                     title="Save current scroll (Ctrl+S)"
                   >
                     Save
@@ -318,14 +629,18 @@ export default function ReadPage() {
                     onSave={handleSaveScroll}
                     onCancel={isEditing ? handleCancelEdit : undefined}
                     isEditable={isEditable}
-                    disabled={!isReady}
+                    disabled={false}
                     isTruesight={isTruesight}
                     onContentChange={setEditorContent}
                     analyzedWords={analyzedWords}
+                    analyzedWordsByIdentity={analyzedWordsByIdentity}
+                    analyzedWordsByCharStart={analyzedWordsByCharStart}
                     activeConnections={activeConnections}
+                    lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
                     highlightedLines={highlightedLines}
                     vowelColors={activeVowelColors}
                     theme={theme}
+                    onWordActivate={handleWordActivate}
                   />
                 ) : (
                   <div className="scroll-placeholder">
@@ -392,6 +707,19 @@ export default function ReadPage() {
             isEmbedded={true}
           />
         </FloatingPanel>
+      )}
+
+      {isTruesight && tooltipState.visible && tooltipState.token && (
+        <WordTooltip
+          wordData={tooltipWordData}
+          analysis={tooltipState.localAnalysis}
+          isLoading={tooltipState.pinned && isLookupLoading}
+          error={tooltipState.pinned ? lookupError : null}
+          x={tooltipState.position.x}
+          y={tooltipState.position.y}
+          onDrag={handleTooltipDrag}
+          onClose={handleCloseTooltip}
+        />
       )}
     </div>
   );

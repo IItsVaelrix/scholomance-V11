@@ -6,6 +6,8 @@
 
 import { PhonemeEngine } from "./phoneme.engine.js";
 import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
+import { normalizeVowelFamily } from "./vowelFamily.js";
+import { WORD_REGEX_GLOBAL } from "./wordTokenization.js";
 
 /**
  * @typedef {object} WordPosition
@@ -25,6 +27,7 @@ import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
  * @property {WordPosition} wordA - First word position.
  * @property {WordPosition} wordB - Second word position.
  * @property {string} groupLabel - Rhyme group letter (A, B, C...).
+ * @property {{ gate: string, multiplier: number, reasons: string[] }=} syntax
  */
 
 /**
@@ -47,19 +50,31 @@ import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
  * @property {RhymeConnection[]} allConnections - Combined connections.
  * @property {Map<string, number[]>} rhymeGroups - Map of rhyme key to line indices.
  * @property {string} schemePattern - Detected scheme pattern (e.g., "ABAB").
+ * @property {object|null} syntaxSummary - Optional syntax layer diagnostics.
  * @property {object} statistics - Counts and metrics.
  */
 
-/** Word tokenizer regex - splits on whitespace, keeps punctuation attached */
-const WORD_REGEX = /[A-Za-z']+/g;
+/** Shared tokenizer used across pipeline/UI to keep token offsets aligned. */
+const WORD_REGEX = WORD_REGEX_GLOBAL;
 
 /** Minimum score to consider words as rhyming */
 const RHYME_THRESHOLD = 0.65;
+/** Assonance is weaker than rhyme/slant, so allow a lower score floor. */
+const ASSONANCE_THRESHOLD = 0.60;
+/** Stable score used when stressed-vowel assonance is detected without terminal rhyme. */
+const STRESSED_ASSONANCE_SCORE = 0.62;
 /** When the same rhyme key appears more than this count, avoid quadratic scans */
 const MAX_FULL_PAIR_SCAN_OCCURRENCES = 2;
+/** Connection types that can activate Truesight rhyme interpretation. */
+const TRUESIGHT_RHYME_TYPES = new Set(['perfect', 'near', 'slant', 'assonance']);
 
 /** Identical lexical repetitions are usually refrain, not rhyme. */
 const IGNORE_IDENTICAL_WORD_RHYMES = true;
+const SYNTAX_GATES = Object.freeze({
+  ALLOW: 'allow',
+  ALLOW_WEAK: 'allow_weak',
+  SUPPRESS: 'suppress',
+});
 
 /**
  * Deep Rhyme Analysis Engine
@@ -68,22 +83,39 @@ export class DeepRhymeEngine {
   constructor(phonemeEngine = PhonemeEngine) {
     this.engine = phonemeEngine;
     this.analysisCache = new Map();
+    this.syntaxLayerContext = null;
+    this.syntaxGateCounters = null;
   }
 
   /**
    * Analyzes an entire document for rhyme patterns.
    * @param {string} text - Full document text.
+   * @param {object} [options]
+   * @param {object|null} [options.syntaxLayer]
    * @returns {DocumentAnalysis} Complete document analysis.
    */
-  analyzeDocument(text) {
+  analyzeDocument(text, options = {}) {
     if (!text || typeof text !== 'string') {
       return this.emptyDocumentAnalysis();
     }
 
-    const cacheKey = text.slice(0, 100) + text.length;
+    const syntaxLayer = options?.syntaxLayer?.enabled ? options.syntaxLayer : null;
+    const syntaxCacheTag = syntaxLayer
+      ? `|syntax:1:${syntaxLayer.syntaxSummary?.tokenCount || syntaxLayer.tokens?.length || 0}`
+      : '|syntax:0';
+    const cacheKey = `${text.slice(0, 100)}${text.length}${syntaxCacheTag}`;
     if (this.analysisCache.has(cacheKey)) {
       return this.analysisCache.get(cacheKey);
     }
+
+    this.syntaxLayerContext = syntaxLayer;
+    this.syntaxGateCounters = {
+      enabled: Boolean(syntaxLayer),
+      totalCandidates: 0,
+      suppressedPairs: 0,
+      weakenedPairs: 0,
+      keptPairs: 0,
+    };
 
     const rawLines = text.split('\n');
     const lines = [];
@@ -118,9 +150,12 @@ export class DeepRhymeEngine {
       allConnections,
       rhymeGroups,
       schemePattern,
-      statistics: this.computeStatistics(lines, allConnections),
+      syntaxSummary: syntaxLayer?.syntaxSummary || null,
+      statistics: this.computeStatistics(lines, allConnections, this.syntaxGateCounters),
     };
 
+    this.syntaxLayerContext = null;
+    this.syntaxGateCounters = null;
     this.analysisCache.set(cacheKey, result);
     return result;
   }
@@ -159,6 +194,7 @@ export class DeepRhymeEngine {
         charStart,
         charEnd,
         analysis: deepAnalysis,
+        syntaxToken: this.getSyntaxToken(lineIndex, i, charStart),
       });
     }
 
@@ -182,6 +218,37 @@ export class DeepRhymeEngine {
   }
 
   /**
+   * Looks up a syntax token for a word position using identity-first matching.
+   * @param {number} lineIndex
+   * @param {number} wordIndex
+   * @param {number} charStart
+   * @returns {object|null}
+   */
+  getSyntaxToken(lineIndex, wordIndex, charStart) {
+    const syntaxLayer = this.syntaxLayerContext;
+    if (!syntaxLayer) return null;
+
+    const identityKey = `${lineIndex}:${wordIndex}:${charStart}`;
+    if (syntaxLayer.tokenByIdentity instanceof Map && syntaxLayer.tokenByIdentity.has(identityKey)) {
+      return syntaxLayer.tokenByIdentity.get(identityKey) || null;
+    }
+
+    if (syntaxLayer.tokenByCharStart instanceof Map && syntaxLayer.tokenByCharStart.has(charStart)) {
+      return syntaxLayer.tokenByCharStart.get(charStart) || null;
+    }
+
+    if (Array.isArray(syntaxLayer.tokens)) {
+      return syntaxLayer.tokens.find((token) => (
+        token?.lineNumber === lineIndex &&
+        token?.wordIndex === wordIndex &&
+        token?.charStart === charStart
+      )) || null;
+    }
+
+    return null;
+  }
+
+  /**
    * Finds rhymes between words within a single line.
    * Optimized with rhyme key grouping: O(g²) instead of O(w²) (Fix 5)
    * @param {Array} words - Analyzed words from a line.
@@ -190,8 +257,8 @@ export class DeepRhymeEngine {
   findInternalRhymes(words) {
     const connections = [];
 
-    // Don't check the last word (that's for end-rhymes)
-    const internalWords = words.slice(0, -1);
+    // Include all words so line-final words can still form internal assonance/rhyme.
+    const internalWords = words;
     if (internalWords.length < 2) return connections;
 
     // Build phonetic buckets (exact rhyme key + terminal vowel family).
@@ -275,10 +342,186 @@ export class DeepRhymeEngine {
     if (seenPairs.has(pairKey)) return;
     seenPairs.add(pairKey);
 
-    const connection = this.scoreConnection(wordA, wordB);
-    if (connection && connection.score >= RHYME_THRESHOLD) {
+    const syntaxGate = this.syntaxLayerContext
+      ? this.evaluateSyntaxGate(wordA, wordB)
+      : null;
+    if (syntaxGate) {
+      this.recordSyntaxGateDecision(syntaxGate);
+      if (syntaxGate.gate === SYNTAX_GATES.SUPPRESS) {
+        return;
+      }
+    }
+
+    const connection = this.scoreConnection(wordA, wordB, syntaxGate);
+    if (this.isTruesightRhymeConnection(connection)) {
       out.push(connection);
     }
+  }
+
+  /**
+   * Applies syntax-aware gate policy to a candidate pair.
+   * @param {object} wordA
+   * @param {object} wordB
+   * @returns {{gate: string, multiplier: number, reasons: string[]}}
+   */
+  evaluateSyntaxGate(wordA, wordB) {
+    const tokenA = wordA?.syntaxToken || null;
+    const tokenB = wordB?.syntaxToken || null;
+
+    if (!this.syntaxLayerContext) {
+      return {
+        gate: SYNTAX_GATES.ALLOW,
+        multiplier: 1,
+        reasons: ['no_syntax_layer'],
+      };
+    }
+
+    if (!tokenA && !tokenB) {
+      return {
+        gate: SYNTAX_GATES.ALLOW,
+        multiplier: 1,
+        reasons: ['missing_syntax_token'],
+      };
+    }
+
+    const aFunction = tokenA?.role === 'function';
+    const bFunction = tokenB?.role === 'function';
+    const aLineEnd = tokenA?.lineRole === 'line_end';
+    const bLineEnd = tokenB?.lineRole === 'line_end';
+    const hasFunctionNonEnd = (aFunction && !aLineEnd) || (bFunction && !bLineEnd);
+    const isInternalPair = wordA?.lineIndex === wordB?.lineIndex;
+    const hasLineAnchor = aLineEnd || bLineEnd || !isInternalPair;
+    const phoneticAffinity = this.evaluatePhoneticAffinity(wordA?.analysis, wordB?.analysis);
+
+    if (aFunction && bFunction && !aLineEnd && !bLineEnd) {
+      return {
+        gate: SYNTAX_GATES.SUPPRESS,
+        multiplier: 0,
+        reasons: ['both_function_non_terminal'],
+      };
+    }
+
+    if (aFunction && bFunction && aLineEnd && bLineEnd) {
+      return {
+        gate: SYNTAX_GATES.ALLOW_WEAK,
+        multiplier: 0.9,
+        reasons: ['both_function_line_end_exception'],
+      };
+    }
+
+    if (hasFunctionNonEnd) {
+      // Preserve strong assonance/rhyme cues when syntax differs, especially when
+      // one endpoint is line-anchored or cross-line.
+      if (phoneticAffinity.sharedStressedFamily && hasLineAnchor) {
+        return {
+          gate: SYNTAX_GATES.ALLOW_WEAK,
+          multiplier: 0.97,
+          reasons: ['contains_function_non_terminal', 'phonetic_affinity_override'],
+        };
+      }
+
+      return {
+        gate: SYNTAX_GATES.ALLOW_WEAK,
+        multiplier: 0.88,
+        reasons: ['contains_function_non_terminal'],
+      };
+    }
+
+    const stemA = String(tokenA?.stem || '').trim();
+    const stemB = String(tokenB?.stem || '').trim();
+    const normalizedA = String(tokenA?.normalized || this.normalizeWord(wordA?.word)).trim();
+    const normalizedB = String(tokenB?.normalized || this.normalizeWord(wordB?.word)).trim();
+    const isStemEcho = Boolean(
+      isInternalPair &&
+      stemA &&
+      stemB &&
+      stemA === stemB &&
+      normalizedA &&
+      normalizedB &&
+      normalizedA !== normalizedB
+    );
+
+    if (isStemEcho) {
+      return {
+        gate: SYNTAX_GATES.ALLOW_WEAK,
+        multiplier: 0.85,
+        reasons: ['same_stem_internal_echo'],
+      };
+    }
+
+    return {
+      gate: SYNTAX_GATES.ALLOW,
+      multiplier: 1,
+      reasons: ['default_allow'],
+    };
+  }
+
+  /**
+   * Evaluates lightweight phonetic affinity used by syntax gating.
+   * @param {object|null} analysisA
+   * @param {object|null} analysisB
+   * @returns {{sharedRhymeKey: boolean, sharedTerminalFamily: boolean, sharedStressedFamily: boolean}}
+   */
+  evaluatePhoneticAffinity(analysisA, analysisB) {
+    if (!analysisA || !analysisB) {
+      return {
+        sharedRhymeKey: false,
+        sharedTerminalFamily: false,
+        sharedStressedFamily: false,
+      };
+    }
+
+    const rhymeA = String(analysisA?.rhymeKey || '').trim();
+    const rhymeB = String(analysisB?.rhymeKey || '').trim();
+    const sharedRhymeKey = Boolean(rhymeA && rhymeB && rhymeA === rhymeB);
+
+    const terminalA = this.getTerminalVowelFamily(analysisA);
+    const terminalB = this.getTerminalVowelFamily(analysisB);
+    const sharedTerminalFamily = Boolean(terminalA && terminalB && terminalA === terminalB);
+
+    const stressedA = this.getPrimaryStressedVowelFamily(analysisA);
+    const stressedB = this.getPrimaryStressedVowelFamily(analysisB);
+    const sharedStressedFamily = Boolean(stressedA && stressedB && stressedA === stressedB);
+
+    return {
+      sharedRhymeKey,
+      sharedTerminalFamily,
+      sharedStressedFamily,
+    };
+  }
+
+  /**
+   * Tracks syntax gate counters for analysis diagnostics.
+   * @param {{gate: string}} syntaxGate
+   */
+  recordSyntaxGateDecision(syntaxGate) {
+    if (!this.syntaxGateCounters?.enabled) return;
+    this.syntaxGateCounters.totalCandidates += 1;
+    if (syntaxGate?.gate === SYNTAX_GATES.SUPPRESS) {
+      this.syntaxGateCounters.suppressedPairs += 1;
+      return;
+    }
+    if (syntaxGate?.gate === SYNTAX_GATES.ALLOW_WEAK) {
+      this.syntaxGateCounters.weakenedPairs += 1;
+      return;
+    }
+    this.syntaxGateCounters.keptPairs += 1;
+  }
+
+  /**
+   * Returns true when a scored pair is a valid rhyme connection for Truesight.
+   * Assonance is only considered for cross-line interpretation to avoid noisy
+   * single-line color activation in free-form prose.
+   * @param {RhymeConnection | null} connection
+   * @returns {boolean}
+   */
+  isTruesightRhymeConnection(connection) {
+    if (!connection) return false;
+    if (!TRUESIGHT_RHYME_TYPES.has(connection.type)) return false;
+    if (connection.type === 'assonance') {
+      return Number(connection.score) >= ASSONANCE_THRESHOLD;
+    }
+    return Number(connection.score) >= RHYME_THRESHOLD;
   }
 
   /**
@@ -333,6 +576,11 @@ export class DeepRhymeEngine {
       if (terminalVowel) {
         addToBucket(`vowel:${terminalVowel}`, word);
       }
+
+      const stressedVowel = this.getPrimaryStressedVowelFamily(analysis);
+      if (stressedVowel) {
+        addToBucket(`stress:${stressedVowel}`, word);
+      }
     }
 
     return buckets;
@@ -346,15 +594,47 @@ export class DeepRhymeEngine {
   getTerminalVowelFamily(analysis) {
     const syllables = analysis?.syllables;
     if (Array.isArray(syllables) && syllables.length > 0) {
-      return syllables[syllables.length - 1]?.vowelFamily || null;
+      const family = normalizeVowelFamily(syllables[syllables.length - 1]?.vowelFamily);
+      return family || null;
     }
 
     const rhymeKey = analysis?.rhymeKey;
     if (typeof rhymeKey === 'string' && rhymeKey.includes('-')) {
-      return rhymeKey.split('-')[0] || null;
+      const family = normalizeVowelFamily(rhymeKey.split('-')[0]);
+      return family || null;
     }
 
     return null;
+  }
+
+  /**
+   * Returns the primary stressed syllable vowel family (fallback: first syllable).
+   * @param {object} analysis
+   * @returns {string|null}
+   */
+  getPrimaryStressedVowelFamily(analysis) {
+    const syllables = analysis?.syllables;
+    if (!Array.isArray(syllables) || syllables.length === 0) {
+      return this.getTerminalVowelFamily(analysis);
+    }
+    const stressed = syllables.find((syl) => Number(syl?.stress) > 0) || syllables[0];
+    const family = normalizeVowelFamily(stressed?.vowelFamily);
+    return family || null;
+  }
+
+  /**
+   * Computes a stressed-vowel assonance fallback when terminal rhyme scoring misses.
+   * @param {object} analysisA
+   * @param {object} analysisB
+   * @returns {number}
+   */
+  scoreStressedAssonance(analysisA, analysisB) {
+    const stressedA = this.getPrimaryStressedVowelFamily(analysisA);
+    const stressedB = this.getPrimaryStressedVowelFamily(analysisB);
+    if (!stressedA || !stressedB || stressedA !== stressedB) {
+      return 0;
+    }
+    return STRESSED_ASSONANCE_SCORE;
   }
 
   /**
@@ -372,9 +652,10 @@ export class DeepRhymeEngine {
    * Scores the rhyme connection between two words.
    * @param {object} wordA - First word with analysis.
    * @param {object} wordB - Second word with analysis.
+   * @param {{gate: string, multiplier: number, reasons: string[]}} [syntaxGate]
    * @returns {RhymeConnection|null}
    */
-  scoreConnection(wordA, wordB) {
+  scoreConnection(wordA, wordB, syntaxGate = null) {
     const analysisA = wordA.analysis;
     const analysisB = wordB.analysis;
 
@@ -382,26 +663,37 @@ export class DeepRhymeEngine {
 
     // Use multi-syllable scoring
     const multiMatch = this.engine.scoreMultiSyllableMatch(analysisA, analysisB);
+    const stressedAssonanceScore = multiMatch.syllablesMatched === 0
+      ? this.scoreStressedAssonance(analysisA, analysisB)
+      : 0;
 
-    if (multiMatch.syllablesMatched === 0) return null;
+    if (multiMatch.syllablesMatched === 0 && stressedAssonanceScore <= 0) return null;
+
+    const baseScore = Math.max(Number(multiMatch.score) || 0, stressedAssonanceScore);
+    const multiplier = Number(syntaxGate?.multiplier);
+    const appliedMultiplier = Number.isFinite(multiplier) && multiplier > 0 ? multiplier : 1;
+    const connectionScore = baseScore * appliedMultiplier;
+    const syllablesMatched = multiMatch.syllablesMatched > 0
+      ? multiMatch.syllablesMatched
+      : (stressedAssonanceScore > 0 ? 1 : 0);
 
     // Determine rhyme type based on score
     let type = 'consonance';
-    if (multiMatch.score >= RHYME_TYPES.PERFECT.minScore) {
+    if (connectionScore >= RHYME_TYPES.PERFECT.minScore) {
       type = 'perfect';
-    } else if (multiMatch.score >= RHYME_TYPES.NEAR.minScore) {
+    } else if (connectionScore >= RHYME_TYPES.NEAR.minScore) {
       type = 'near';
-    } else if (multiMatch.score >= RHYME_TYPES.SLANT.minScore) {
+    } else if (connectionScore >= RHYME_TYPES.SLANT.minScore) {
       type = 'slant';
-    } else if (multiMatch.score >= RHYME_TYPES.ASSONANCE.minScore) {
+    } else if (connectionScore >= RHYME_TYPES.ASSONANCE.minScore) {
       type = 'assonance';
     }
 
     return {
       type,
       subtype: multiMatch.type,
-      score: multiMatch.score,
-      syllablesMatched: multiMatch.syllablesMatched,
+      score: connectionScore,
+      syllablesMatched,
       wordA: {
         lineIndex: wordA.lineIndex,
         wordIndex: wordA.wordIndex,
@@ -417,6 +709,13 @@ export class DeepRhymeEngine {
         word: wordB.word,
       },
       groupLabel: null,
+      syntax: syntaxGate
+        ? {
+          gate: syntaxGate.gate || SYNTAX_GATES.ALLOW,
+          multiplier: appliedMultiplier,
+          reasons: Array.isArray(syntaxGate.reasons) ? syntaxGate.reasons : [],
+        }
+        : undefined,
     };
   }
 
@@ -499,9 +798,10 @@ export class DeepRhymeEngine {
    * Computes statistics for the analysis.
    * @param {LineAnalysis[]} lines
    * @param {RhymeConnection[]} connections
+   * @param {{enabled: boolean, totalCandidates: number, suppressedPairs: number, weakenedPairs: number, keptPairs: number}|null} syntaxGateCounters
    * @returns {object}
    */
-  computeStatistics(lines, connections) {
+  computeStatistics(lines, connections, syntaxGateCounters = null) {
     const stats = {
       totalLines: lines.length,
       totalWords: lines.reduce((sum, l) => sum + l.words.length, 0),
@@ -512,6 +812,13 @@ export class DeepRhymeEngine {
       internalCount: 0,
       multiSyllableCount: 0,
       endRhymeCount: 0,
+      syntaxGating: {
+        enabled: Boolean(syntaxGateCounters?.enabled),
+        totalCandidates: Number(syntaxGateCounters?.totalCandidates) || 0,
+        suppressedPairs: Number(syntaxGateCounters?.suppressedPairs) || 0,
+        weakenedPairs: Number(syntaxGateCounters?.weakenedPairs) || 0,
+        keptPairs: Number(syntaxGateCounters?.keptPairs) || 0,
+      },
     };
 
     for (const conn of connections) {
@@ -544,6 +851,7 @@ export class DeepRhymeEngine {
       allConnections: [],
       rhymeGroups: new Map(),
       schemePattern: '',
+      syntaxSummary: null,
       statistics: {
         totalLines: 0,
         totalWords: 0,
@@ -554,6 +862,13 @@ export class DeepRhymeEngine {
         internalCount: 0,
         multiSyllableCount: 0,
         endRhymeCount: 0,
+        syntaxGating: {
+          enabled: false,
+          totalCandidates: 0,
+          suppressedPairs: 0,
+          weakenedPairs: 0,
+          keptPairs: 0,
+        },
       },
     };
   }

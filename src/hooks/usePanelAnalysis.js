@@ -2,9 +2,10 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { analyzeLiteraryDevices, detectEmotion } from "../lib/literaryDevices.detector.js";
+import { normalizeVowelFamily } from "../lib/vowelFamily.js";
+import { buildSyntaxLayer } from "../lib/syntax.layer.js";
 import { analyzeText } from "../../codex/core/analysis.pipeline.js";
 import { createScoringEngine } from "../../codex/core/scoring.engine.js";
-
 import { alliterationDensityHeuristic } from "../../codex/core/heuristics/alliteration_density.js";
 import { literaryDeviceRichnessHeuristic } from "../../codex/core/heuristics/literary_device_richness.js";
 import { meterRegularityHeuristic } from "../../codex/core/heuristics/meter_regularity.js";
@@ -14,15 +15,11 @@ import { vocabularyRichnessHeuristic } from "../../codex/core/heuristics/vocabul
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
-
 const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
 const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
-
-const USE_SERVER_PANEL_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
-const ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK = parseBooleanFlag(
-  import.meta.env.VITE_ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK,
-  true
-);
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
+  .trim()
+  .replace(/\/+$/, "");
 
 const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
@@ -49,6 +46,13 @@ function parseBooleanFlag(rawValue, defaultValue) {
   return defaultValue;
 }
 
+const USE_SERVER_PANEL_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
+const ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK = parseBooleanFlag(
+  import.meta.env.VITE_ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK,
+  true
+);
+const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanFlag(import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER, false);
+
 function createScoreEngine() {
   const engine = createScoringEngine();
   SCORE_HEURISTICS.forEach((heuristicDef) => {
@@ -59,6 +63,46 @@ function createScoreEngine() {
     });
   });
   return engine;
+}
+
+function getPrimaryStressedVowelFamily(analyzedWord) {
+  const syllables = Array.isArray(analyzedWord?.deepPhonetics?.syllables)
+    ? analyzedWord.deepPhonetics.syllables
+    : [];
+  const stressed = syllables.find((syllable) => Number(syllable?.stress) > 0) || syllables[0];
+  const fallback = analyzedWord?.phonetics?.vowelFamily;
+  return normalizeVowelFamily(stressed?.vowelFamily || fallback);
+}
+
+function buildAnalysisWordProfiles(analyzedDoc) {
+  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
+  const profiles = [];
+
+  for (const line of lines) {
+    const lineIndex = Number.isInteger(line?.number) ? line.number : 0;
+    const words = Array.isArray(line?.words) ? line.words : [];
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
+      const analyzedWord = words[wordIndex];
+      profiles.push({
+        word: String(analyzedWord?.text || ""),
+        normalizedWord: String(analyzedWord?.normalized || "").toUpperCase(),
+        lineIndex,
+        wordIndex,
+        charStart: Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1,
+        charEnd: Number.isInteger(analyzedWord?.end) ? analyzedWord.end : -1,
+        vowelFamily: getPrimaryStressedVowelFamily(analyzedWord) || null,
+        syllableCount: Number(analyzedWord?.syllableCount) || 0,
+        rhymeKey: analyzedWord?.deepPhonetics?.rhymeKey || analyzedWord?.phonetics?.rhymeKey || null,
+      });
+    }
+  }
+
+  return profiles;
+}
+
+function buildLineSyllableCounts(analyzedDoc) {
+  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
+  return lines.map((line) => Number(line?.syllableCount) || 0);
 }
 
 function normalizeGroupMap(value) {
@@ -87,23 +131,84 @@ function normalizeVowelSummary(value) {
     return EMPTY_VOWEL_SUMMARY;
   }
 
-  const families = Array.isArray(value.families)
-    ? value.families
-      .map((family) => {
-        const id = String(family?.id || "").trim().toUpperCase();
-        const count = Number(family?.count) || 0;
-        const percent = Number(family?.percent) || 0;
-        if (!id || count <= 0) return null;
-        return { id, count, percent };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.count - a.count)
-    : [];
+  const familyCounts = new Map();
+  if (Array.isArray(value.families)) {
+    value.families.forEach((family) => {
+      const id = normalizeVowelFamily(family?.id);
+      const count = Number(family?.count) || 0;
+      if (!id || count <= 0) return;
+      familyCounts.set(id, (familyCounts.get(id) || 0) + count);
+    });
+  }
+
+  const totalWordsFromFamilies = Array.from(familyCounts.values()).reduce((sum, count) => sum + count, 0);
+  const totalWords = Number(value.totalWords) || totalWordsFromFamilies;
+  const families = Array.from(familyCounts.entries())
+    .map(([id, count]) => ({
+      id,
+      count,
+      percent: totalWords > 0 ? count / totalWords : 0,
+    }))
+    .sort((a, b) => b.count - a.count);
 
   return {
     families,
-    totalWords: Number(value.totalWords) || 0,
+    totalWords,
     uniqueWords: Number(value.uniqueWords) || 0,
+  };
+}
+
+function normalizeSyntaxSummary(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const tokens = Array.isArray(value.tokens)
+    ? value.tokens
+      .map((token) => {
+        const lineNumber = Number(token?.lineNumber);
+        const wordIndex = Number(token?.wordIndex);
+        const charStart = Number(token?.charStart);
+        if (!Number.isInteger(lineNumber) || !Number.isInteger(wordIndex) || !Number.isInteger(charStart)) {
+          return null;
+        }
+        return {
+          word: String(token?.word || ""),
+          normalized: String(token?.normalized || "").toLowerCase(),
+          lineNumber,
+          wordIndex,
+          charStart,
+          charEnd: Number.isInteger(Number(token?.charEnd)) ? Number(token?.charEnd) : -1,
+          role: String(token?.role || "content"),
+          lineRole: String(token?.lineRole || "line_mid"),
+          stressRole: String(token?.stressRole || "unknown"),
+          stem: String(token?.stem || ""),
+          rhymePolicy: String(token?.rhymePolicy || "allow"),
+          reasons: Array.isArray(token?.reasons) ? token.reasons.map((reason) => String(reason)) : [],
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  const tokenByIdentity = new Map();
+  const tokenByCharStart = new Map();
+  tokens.forEach((token) => {
+    const identity = `${token.lineNumber}:${token.wordIndex}:${token.charStart}`;
+    tokenByIdentity.set(identity, token);
+    tokenByCharStart.set(token.charStart, token);
+  });
+
+  return {
+    enabled: Boolean(value.enabled),
+    tokenCount: Number(value.tokenCount) || tokens.length,
+    roleCounts: value.roleCounts || { content: 0, function: 0 },
+    lineRoleCounts: value.lineRoleCounts || { line_start: 0, line_mid: 0, line_end: 0 },
+    stressRoleCounts: value.stressRoleCounts || { primary: 0, secondary: 0, unstressed: 0, unknown: 0 },
+    rhymePolicyCounts: value.rhymePolicyCounts || { allow: 0, allow_weak: 0, suppress: 0 },
+    reasonCounts: value.reasonCounts || {},
+    tokens,
+    tokenByIdentity,
+    tokenByCharStart,
   };
 }
 
@@ -127,6 +232,11 @@ function normalizePanelPayload(rawPayload) {
       ...payload.analysis,
       allConnections: Array.isArray(payload.analysis.allConnections) ? payload.analysis.allConnections : [],
       rhymeGroups: normalizeGroupMap(payload.analysis.rhymeGroups),
+      syntaxSummary: normalizeSyntaxSummary(payload.analysis.syntaxSummary),
+      wordAnalyses: Array.isArray(payload.analysis.wordAnalyses) ? payload.analysis.wordAnalyses : [],
+      lineSyllableCounts: Array.isArray(payload.analysis.lineSyllableCounts)
+        ? payload.analysis.lineSyllableCounts.map((value) => Number(value) || 0)
+        : [],
     }
     : null;
 
@@ -149,37 +259,6 @@ function normalizePanelPayload(rawPayload) {
   };
 }
 
-async function analyzePanelsOnServer(text) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch("/api/analysis/panels", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ text }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Panel analysis request failed (${response.status})`);
-    }
-
-    const payload = await response.json();
-    return normalizePanelPayload(payload);
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error("Panel analysis timed out");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 function buildLocalVowelSummary(analyzedDoc) {
   if (!analyzedDoc || !Array.isArray(analyzedDoc.allWords)) {
     return EMPTY_VOWEL_SUMMARY;
@@ -192,7 +271,7 @@ function buildLocalVowelSummary(analyzedDoc) {
     const normalized = String(word?.normalized || "").trim().toUpperCase();
     if (normalized) uniqueWords.add(normalized);
 
-    const familyId = String(word?.phonetics?.vowelFamily || "").trim().toUpperCase();
+    const familyId = normalizeVowelFamily(word?.phonetics?.vowelFamily);
     if (!familyId) return;
     counts.set(familyId, (counts.get(familyId) || 0) + 1);
   });
@@ -216,16 +295,25 @@ function buildLocalVowelSummary(analyzedDoc) {
 function analyzePanelsLocally(text, deepRhymeEngine, scoreEngine) {
   const analyzedDoc = analyzeText(text);
   const scoreData = scoreEngine.calculateScore(analyzedDoc);
-  const deepAnalysis = deepRhymeEngine.analyzeDocument(text);
+  const syntaxLayer = ENABLE_SYNTAX_RHYME_LAYER ? buildSyntaxLayer(analyzedDoc) : null;
+
+  const deepAnalysis = deepRhymeEngine.analyzeDocument(
+    text,
+    syntaxLayer ? { syntaxLayer } : {}
+  );
   const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
   const meter = analyzeMeter(deepAnalysis.lines);
   const literaryDevices = analyzeLiteraryDevices(text);
   const emotion = detectEmotion(text);
 
-  return normalizePanelPayload({
+  return {
     source: "local-runtime",
     data: {
-      analysis: deepAnalysis,
+      analysis: {
+        ...deepAnalysis,
+        wordAnalyses: buildAnalysisWordProfiles(analyzedDoc),
+        lineSyllableCounts: buildLineSyllableCounts(analyzedDoc),
+      },
       scheme,
       meter,
       literaryDevices,
@@ -233,7 +321,42 @@ function analyzePanelsLocally(text, deepRhymeEngine, scoreEngine) {
       scoreData,
       vowelSummary: buildLocalVowelSummary(analyzedDoc),
     },
-  });
+  };
+}
+
+function getPanelAnalysisEndpoint() {
+  return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";
+}
+
+async function analyzePanelsOnServer(text) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(getPanelAnalysisEndpoint(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ text }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Panel analysis request failed (${response.status})`);
+    }
+
+    const payload = await response.json();
+    return normalizePanelPayload(payload);
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("Panel analysis timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export function usePanelAnalysis() {
@@ -339,10 +462,13 @@ export function usePanelAnalysis() {
             if (!ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK) {
               throw serverError;
             }
+            result = analyzePanelsLocally(
+              nextText,
+              deepRhymeEngineRef.current,
+              scoreEngineRef.current
+            );
           }
-        }
-
-        if (!result) {
+        } else {
           result = analyzePanelsLocally(
             nextText,
             deepRhymeEngineRef.current,

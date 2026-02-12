@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useId } from 'react';
 import { ResizableBox } from 'react-resizable';
 import PropTypes from 'prop-types';
 import { Storage } from '../../lib/storage';
@@ -22,6 +22,9 @@ export default function FloatingPanel({
   defaultY = 100,
   zIndex = 100,
   className = '',
+  role = 'dialog',
+  modal = false,
+  ariaLabel,
 }) {
   const [size, setSize] = useState(() => {
     const saved = Storage.getItem(`panel-size-${id}`);
@@ -30,6 +33,7 @@ export default function FloatingPanel({
 
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef(null);
+  const titleId = useId();
   const dragData = useRef({
     startX: 0,
     startY: 0,
@@ -120,10 +124,23 @@ export default function FloatingPanel({
     setSize({ width: newSize.width, height: newSize.height });
   };
 
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape' && onClose) {
+      event.stopPropagation();
+      onClose();
+    }
+  };
+
   return (
     <div
       ref={panelRef}
       className={`floating-panel ${className} ${isDragging ? 'is-dragging' : ''}`}
+      role={role}
+      aria-modal={modal ? 'true' : undefined}
+      aria-label={ariaLabel}
+      aria-labelledby={ariaLabel ? undefined : titleId}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
       style={{
         position: 'fixed',
         zIndex,
@@ -148,7 +165,7 @@ export default function FloatingPanel({
           >
             <div className="panel-drag-handle">
               <span className="drag-dots">:::</span>
-              <h3 className="panel-title">{title}</h3>
+              <h3 id={titleId} className="panel-title">{title}</h3>
             </div>
             {onClose && (
               <button
@@ -184,4 +201,7 @@ FloatingPanel.propTypes = {
   defaultY: PropTypes.number,
   zIndex: PropTypes.number,
   className: PropTypes.string,
+  role: PropTypes.string,
+  modal: PropTypes.bool,
+  ariaLabel: PropTypes.string,
 };

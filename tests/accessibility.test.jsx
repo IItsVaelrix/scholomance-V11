@@ -1,136 +1,140 @@
-// tests/accessibility.test.js
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { axe, toHaveNoViolations } from "jest-axe";
 import { MemoryRouter } from "react-router-dom";
-import { vi } from 'vitest';
-import { PhonemeEngine } from '../src/lib/phoneme.engine';
+import { vi } from "vitest";
 
-// Mocked Providers & Components
-import App from "../src/App";
-import GrimoireScroll from "../src/pages/Read/GrimoireScroll";
-import ScrollEditor from "../src/pages/Read/ScrollEditor";
-import Navigation from "../src/components/Navigation/Navigation";
-import { PhonemeEngineProvider } from "../src/hooks/usePhonemeEngine.jsx";
-import { ProgressionProvider } from "../src/hooks/useProgression.jsx";
-import { SongProvider } from "../src/hooks/useCurrentSong.jsx";
+import App from "../src/App.jsx";
+import Navigation from "../src/components/Navigation/Navigation.jsx";
+import FloatingPanel from "../src/components/shared/FloatingPanel.jsx";
 import { ThemeProvider } from "../src/hooks/useTheme.jsx";
-import ListenPage from "../src/pages/Listen/ListenPage";
+import ListenPage from "../src/pages/Listen/ListenPage.jsx";
+import GrimoireScroll from "../src/pages/Read/GrimoireScroll.jsx";
+import ScrollEditor from "../src/pages/Read/ScrollEditor.jsx";
 
-
-vi.spyOn(PhonemeEngine, 'init').mockResolvedValue(14);
-vi.mock('../src/pages/Listen/HolographicEmbed.jsx', () => ({
-  default: () => <div>Holographic Embed Mock</div>,
+const authState = vi.hoisted(() => ({
+  user: null,
 }));
 
-vi.mock('../src/hooks/useCurrentSong', async () => ({
-  ...await vi.importActual('../src/hooks/useCurrentSong'),
-  useCurrentSong: () => ({
-    currentKey: 'SONG_1',
-    currentSong: { school: 'ABJURATION', title: 'Aegis of the Fifth Moon' },
-    setCurrentKey: vi.fn(),
-    library: {
-      SONG_1: { school: 'ABJURATION', title: 'Aegis of the Fifth Moon' },
+vi.mock("../src/hooks/useAuth.jsx", () => ({
+  AuthProvider: ({ children }) => children,
+  useAuth: () => ({
+    user: authState.user,
+    isLoading: false,
+    login: vi.fn(),
+    register: vi.fn(),
+    logout: vi.fn(),
+    checkMe: vi.fn(),
+  }),
+}));
+
+vi.mock("../src/hooks/usePhonemeEngine.jsx", () => ({
+  PhonemeEngineProvider: ({ children }) => children,
+  usePhonemeEngine: () => ({
+    isReady: true,
+    engine: {
+      countSyllables: () => 1,
+      analyzeWord: () => null,
     },
   }),
 }));
-vi.mock('../src/hooks/useProgression', async () => ({
-  ...await vi.importActual('../src/hooks/useProgression'),
+
+vi.mock("../src/hooks/useProgression.jsx", () => ({
+  ProgressionProvider: ({ children }) => children,
   useProgression: () => ({
-    progression: { xp: 1000, unlockedSchools: ['ABJURATION', 'SONIC'] },
-    checkUnlocked: (id) => ['ABJURATION', 'SONIC'].includes(id),
-    addXp: vi.fn(),
+    progression: { xp: 1000, unlockedSchools: ["SONIC", "ABJURATION"] },
+    checkUnlocked: (schoolId) => ["SONIC", "ABJURATION"].includes(schoolId),
+    addXP: vi.fn(),
+    resetProgression: vi.fn(),
+    getNextUnlock: vi.fn(),
+    levelInfo: { level: 1, currentXp: 1000, nextXp: 2000, progress: 0.5 },
+    availableSchools: ["SONIC", "ABJURATION"],
+    totalSchools: 6,
   }),
 }));
 
-vi.mock('../src/hooks/useAmbientPlayer', () => ({
+vi.mock("../src/hooks/useCurrentSong.jsx", () => ({
+  SongProvider: ({ children }) => children,
+  useCurrentSong: () => ({
+    currentKey: "SONG_1",
+    currentSong: { school: "ABJURATION", title: "Aegis of the Fifth Moon" },
+    setCurrentKey: vi.fn(),
+    library: {
+      SONG_1: { school: "ABJURATION", title: "Aegis of the Fifth Moon" },
+    },
+  }),
+}));
+
+vi.mock("../src/hooks/useAmbientPlayer.jsx", () => ({
   useAmbientPlayer: () => ({
-    status: 'PLAYING',
-    currentSchoolId: 'SONIC',
-    isPlaying: true,
-    isPaused: false,
+    status: "PAUSED",
+    currentSchoolId: "SONIC",
+    isPlaying: false,
+    isPaused: true,
     isTuning: false,
+    signalLevel: 0.6,
     volume: 0.5,
     setVolume: vi.fn(),
     autoplayAmbient: false,
     cyclingEnabled: true,
-    playableSchools: ['SONIC'],
-    tuneToSchool: vi.fn(),
-    tuneNextSchool: vi.fn(),
-    tunePreviousSchool: vi.fn(),
-    play: vi.fn(),
-    pause: vi.fn(),
-    togglePlayPause: vi.fn(),
-    toggleAutoplayAmbient: vi.fn(),
+    playableSchools: ["SONIC"],
+    dynamicSchools: [],
+    refreshDynamicSchools: vi.fn(),
+    tuneToSchool: vi.fn(async () => {}),
+    tuneNextSchool: vi.fn(async () => {}),
+    tunePreviousSchool: vi.fn(async () => {}),
+    play: vi.fn(async () => {}),
+    pause: vi.fn(async () => {}),
+    togglePlayPause: vi.fn(async () => {}),
+    toggleAutoplayAmbient: vi.fn(async () => {}),
     toggleCyclingEnabled: vi.fn(),
-    unlockAudio: vi.fn(),
+    unlockAudio: vi.fn(async () => {}),
   }),
 }));
 
 expect.extend(toHaveNoViolations);
 
+function renderWithThemeAndRouter(ui, route = "/") {
+  return render(
+    <ThemeProvider>
+      <MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>
+    </ThemeProvider>
+  );
+}
+
 describe("Accessibility Suite", () => {
-  it("should have no accessibility violations in the main App layout", async () => {
-    const { container } = render(
-      <ThemeProvider>
-        <ProgressionProvider>
-          <PhonemeEngineProvider>
-            <SongProvider>
-              <MemoryRouter>
-                <App />
-              </MemoryRouter>
-            </SongProvider>
-          </PhonemeEngineProvider>
-        </ProgressionProvider>
-      </ThemeProvider>
-    );
-    // Wait for the app to render something, e.g., the navigation
-    await screen.findByRole('navigation');
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authState.user = null;
   });
 
-  it("GrimoireScroll should be keyboard accessible", async () => {
+  it("should have no accessibility violations in App shell", async () => {
+    const { container } = renderWithThemeAndRouter(<App />);
+    await screen.findByRole("navigation", { name: /primary navigation/i });
+    expect(await axe(container)).toHaveNoViolations();
+  });
+
+  it("GrimoireScroll should remain keyboard accessible", async () => {
     const { container } = render(
-      <GrimoireScroll 
-        text="The quick brown fox" 
-        onWordClick={() => {}} 
-        isEngineReady={true} 
-      />
+      <GrimoireScroll text="The quick brown fox" onWordClick={() => {}} isEngineReady={true} />
     );
-    
-    // Check for violations
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-    
-    // Ensure words are buttons
-    const buttons = container.querySelectorAll('.grimoire-word');
+    expect(await axe(container)).toHaveNoViolations();
+
+    const buttons = container.querySelectorAll(".grimoire-word");
     expect(buttons.length).toBeGreaterThan(0);
-    buttons.forEach(btn => {
-      expect(btn.tagName).toBe('BUTTON');
-      expect(btn).toHaveAttribute('aria-label');
+    buttons.forEach((btn) => {
+      expect(btn.tagName).toBe("BUTTON");
+      expect(btn).toHaveAttribute("aria-label");
     });
   });
 
   describe("ScrollEditor", () => {
     it("should have no axe violations", async () => {
-      const { container } = render(
-        <ProgressionProvider>
-          <PhonemeEngineProvider>
-            <ScrollEditor onSave={() => {}} />
-          </PhonemeEngineProvider>
-        </ProgressionProvider>
-      );
+      const { container } = render(<ScrollEditor onSave={() => {}} isEditable={true} />);
       expect(await axe(container)).toHaveNoViolations();
     });
-  
-    it("should connect labels to inputs", () => {
-      render(
-        <ProgressionProvider>
-          <PhonemeEngineProvider>
-            <ScrollEditor onSave={() => {}} />
-          </PhonemeEngineProvider>
-        </ProgressionProvider>
-      );
+
+    it("should expose labeled fields", () => {
+      render(<ScrollEditor onSave={() => {}} isEditable={true} />);
       expect(screen.getByLabelText(/scroll title/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/scroll content/i)).toBeInTheDocument();
     });
@@ -138,49 +142,65 @@ describe("Accessibility Suite", () => {
 
   describe("Navigation", () => {
     it("should have no axe violations", async () => {
-        const { container } = render(
-            <ThemeProvider>
-                <MemoryRouter>
-                    <Navigation />
-                </MemoryRouter>
-            </ThemeProvider>
-        );
-        expect(await axe(container)).toHaveNoViolations();
-    });
-
-    it("should have a primary navigation landmark", () => {
-        render(
-            <ThemeProvider>
-                <MemoryRouter>
-                    <Navigation />
-                </MemoryRouter>
-            </ThemeProvider>
-        );
-        expect(screen.getByRole('navigation', {name: /primary navigation/i })).toBeInTheDocument();
-    });
-  });
-  
-  describe("ListenPage", () => {
-    it("should have no axe violations", async () => {
-      const { container } = render(
-        <ProgressionProvider>
-          <MemoryRouter>
-              <ListenPage />
-          </MemoryRouter>
-        </ProgressionProvider>
-      );
-      // Wait for async content
-      await screen.findByRole('heading', { name: 'Sonic Thaumaturgy' });
+      const { container } = renderWithThemeAndRouter(<Navigation />, "/listen");
       expect(await axe(container)).toHaveNoViolations();
     });
 
-    it("should have a live region for announcements", () => {
-        render(
-            <MemoryRouter>
-                <ListenPage />
-            </MemoryRouter>
-        );
-        expect(screen.getByRole('status')).toBeInTheDocument();
+    it("should expose a primary navigation landmark", () => {
+      renderWithThemeAndRouter(<Navigation />);
+      expect(screen.getByRole("navigation", { name: /primary navigation/i })).toBeInTheDocument();
+    });
+
+    it("should mark the active route with aria-current", () => {
+      renderWithThemeAndRouter(<Navigation />, "/listen");
+      expect(screen.getByRole("link", { name: /listen/i })).toHaveAttribute("aria-current", "page");
+    });
+
+    it("should hide collab nav link for non-admin users", () => {
+      authState.user = { username: "scribe", email: "scribe@example.com" };
+      renderWithThemeAndRouter(<Navigation />);
+      expect(screen.queryByRole("link", { name: /collab/i })).not.toBeInTheDocument();
+    });
+
+    it("should show collab nav link for admin users", () => {
+      authState.user = { username: "admin", email: "admin@example.com" };
+      renderWithThemeAndRouter(<Navigation />);
+      expect(screen.getByRole("link", { name: /collab/i })).toBeInTheDocument();
+    });
+  });
+
+  describe("ListenPage", () => {
+    it("should have no axe violations", async () => {
+      const { container } = renderWithThemeAndRouter(<ListenPage />, "/listen");
+      await screen.findByRole("heading", { name: /scholomance signal chamber/i });
+      expect(await axe(container)).toHaveNoViolations();
+    });
+
+    it("should include a polite live region for announcements", () => {
+      renderWithThemeAndRouter(<ListenPage />, "/listen");
+      expect(screen.getByRole("status")).toBeInTheDocument();
+    });
+  });
+
+  describe("FloatingPanel", () => {
+    it("should expose dialog semantics", () => {
+      render(
+        <FloatingPanel id="a11y-dialog" title="CODEx Metrics" onClose={() => {}}>
+          <div>Panel content</div>
+        </FloatingPanel>
+      );
+      expect(screen.getByRole("dialog", { name: /codex metrics/i })).toBeInTheDocument();
+    });
+
+    it("should dismiss on Escape when onClose is provided", () => {
+      const onClose = vi.fn();
+      render(
+        <FloatingPanel id="a11y-escape" title="Rhyme Scheme" onClose={onClose}>
+          <button type="button">Focusable child</button>
+        </FloatingPanel>
+      );
+      fireEvent.keyDown(screen.getByRole("dialog", { name: /rhyme scheme/i }), { key: "Escape" });
+      expect(onClose).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -144,7 +144,7 @@ export const RHYME_TYPES = {
   ASSONANCE: {
     id: "assonance",
     name: "Assonance",
-    minScore: 0.65,
+    minScore: 0.60,
     color: "#fbbf24",
     lightColor: "#d97706",
     description: "Matching vowel sounds only",

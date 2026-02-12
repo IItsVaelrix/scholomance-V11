@@ -629,8 +629,36 @@
   user-select: text;
 }
 
+.ide-layout-wrapper .grimoire-word--interactive {
+  border: 0;
+  cursor: pointer;
+}
+
 .ide-layout-wrapper .grimoire-word:hover {
   background: rgba(255, 255, 255, 0.1);
+}
+
+.ide-layout-wrapper .grimoire-word--interactive:focus-visible,
+.ide-layout-wrapper .truesight-word-token:focus-visible {
+  outline: 1px solid rgba(124, 198, 255, 0.9);
+  outline-offset: 1px;
+}
+
+.ide-layout-wrapper .truesight-word-token {
+  display: inline;
+  margin: 0;
+  padding: 0 0.08em;
+  border: 0;
+  border-radius: 0.2em;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+
+.ide-layout-wrapper .truesight-word-token:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .ide-layout-wrapper .word--multi-rhyme {

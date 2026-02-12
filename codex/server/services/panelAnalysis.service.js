@@ -14,6 +14,8 @@ import { vocabularyRichnessHeuristic } from '../../core/heuristics/vocabulary_ri
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
 import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detector.js';
 import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literaryDevices.detector.js';
+import { normalizeVowelFamily } from '../../../src/lib/vowelFamily.js';
+import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
 
 const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
@@ -29,6 +31,59 @@ const EMPTY_VOWEL_SUMMARY = Object.freeze({
   totalWords: 0,
   uniqueWords: 0,
 });
+
+function getPrimaryStressedVowelFamily(analyzedWord) {
+  const syllables = Array.isArray(analyzedWord?.deepPhonetics?.syllables)
+    ? analyzedWord.deepPhonetics.syllables
+    : [];
+  const stressed = syllables.find((syllable) => Number(syllable?.stress) > 0) || syllables[0];
+  const fallback = analyzedWord?.phonetics?.vowelFamily;
+  return normalizeVowelFamily(stressed?.vowelFamily || fallback);
+}
+
+function buildAnalysisWordProfiles(analyzedDoc) {
+  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
+  const profiles = [];
+
+  for (const line of lines) {
+    const lineIndex = Number.isInteger(line?.number) ? line.number : 0;
+    const words = Array.isArray(line?.words) ? line.words : [];
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
+      const analyzedWord = words[wordIndex];
+      profiles.push({
+        word: String(analyzedWord?.text || ''),
+        normalizedWord: String(analyzedWord?.normalized || '').toUpperCase(),
+        lineIndex,
+        wordIndex,
+        charStart: Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1,
+        charEnd: Number.isInteger(analyzedWord?.end) ? analyzedWord.end : -1,
+        vowelFamily: getPrimaryStressedVowelFamily(analyzedWord) || null,
+        syllableCount: Number(analyzedWord?.syllableCount) || 0,
+        rhymeKey: analyzedWord?.deepPhonetics?.rhymeKey || analyzedWord?.phonetics?.rhymeKey || null,
+      });
+    }
+  }
+
+  return profiles;
+}
+
+function buildLineSyllableCounts(analyzedDoc) {
+  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
+  return lines.map((line) => Number(line?.syllableCount) || 0);
+}
+
+const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes']);
+const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
+
+function parseBooleanFlag(rawValue, defaultValue) {
+  if (rawValue === undefined || rawValue === null || rawValue === '') {
+    return defaultValue;
+  }
+  const normalized = String(rawValue).trim().toLowerCase();
+  if (TRUE_VALUES.has(normalized)) return true;
+  if (FALSE_VALUES.has(normalized)) return false;
+  return defaultValue;
+}
 
 function createScoreEngine() {
   const engine = createScoringEngine();
@@ -71,7 +126,7 @@ function summarizeVowelFamilies(analyzedDoc) {
       uniqueWords.add(normalized);
     }
 
-    const familyId = String(analyzedWord?.phonetics?.vowelFamily || '').trim().toUpperCase();
+    const familyId = normalizeVowelFamily(analyzedWord?.phonetics?.vowelFamily);
     if (!familyId) continue;
     familyCounts.set(familyId, (familyCounts.get(familyId) || 0) + 1);
   }
@@ -96,7 +151,7 @@ function summarizeVowelFamilies(analyzedDoc) {
   };
 }
 
-function toMinimalAnalysisPayload(analysis) {
+function toMinimalAnalysisPayload(analysis, analyzedDoc) {
   if (!analysis || typeof analysis !== 'object') {
     return null;
   }
@@ -106,6 +161,9 @@ function toMinimalAnalysisPayload(analysis) {
     statistics: analysis.statistics || null,
     schemePattern: typeof analysis.schemePattern === 'string' ? analysis.schemePattern : '',
     rhymeGroups: toSerializableGroupEntries(analysis.rhymeGroups),
+    syntaxSummary: analysis.syntaxSummary || null,
+    wordAnalyses: buildAnalysisWordProfiles(analyzedDoc),
+    lineSyllableCounts: buildLineSyllableCounts(analyzedDoc),
   };
 }
 
@@ -129,6 +187,10 @@ function normalizeInputText(rawText) {
 
 export function createPanelAnalysisService(options = {}) {
   const log = options.log ?? console;
+  const enableSyntaxRhymeLayer = options.enableSyntaxRhymeLayer ?? parseBooleanFlag(
+    process.env.ENABLE_SYNTAX_RHYME_LAYER,
+    false
+  );
   const scoreEngine = createScoreEngine();
   const deepRhymeEngine = new DeepRhymeEngine();
 
@@ -141,15 +203,19 @@ export function createPanelAnalysisService(options = {}) {
     try {
       const analyzedDoc = analyzeText(text);
       const scoreData = scoreEngine.calculateScore(analyzedDoc);
+      const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
 
-      const deepAnalysis = deepRhymeEngine.analyzeDocument(text);
+      const deepAnalysis = deepRhymeEngine.analyzeDocument(
+        text,
+        syntaxLayer ? { syntaxLayer } : {}
+      );
       const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
       const meter = analyzeMeter(deepAnalysis.lines);
       const literaryDevices = analyzeLiteraryDevices(text);
       const emotion = detectEmotion(text);
 
       return {
-        analysis: toMinimalAnalysisPayload(deepAnalysis),
+        analysis: toMinimalAnalysisPayload(deepAnalysis, analyzedDoc),
         scheme: scheme
           ? {
             ...scheme,

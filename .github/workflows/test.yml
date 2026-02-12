@@ -31,6 +31,9 @@ jobs:
     - name: Verify backend contract
       run: npm run verify:backend-contract
 
+    - name: Run accessibility test suite
+      run: npx vitest run tests/accessibility.test.jsx
+
     - name: Run tests
       run: npm run test -- --run
 
