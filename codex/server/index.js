@@ -29,16 +29,61 @@ import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 
 import 'dotenv/config';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+function parseBooleanEnv(name, defaultValue = false) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined) {
+        return defaultValue;
+    }
+    if (rawValue === 'true') {
+        return true;
+    }
+    if (rawValue === 'false') {
+        return false;
+    }
+    throw new Error(`${name} must be either "true" or "false" when set`);
+}
+
+function parseTrustProxyEnv() {
+    const rawValue = process.env.TRUST_PROXY;
+    if (rawValue === undefined) {
+        return false;
+    }
+    if (rawValue === 'true') {
+        return true;
+    }
+    if (rawValue === 'false') {
+        return false;
+    }
+    const maybeNumber = Number(rawValue);
+    if (Number.isInteger(maybeNumber) && maybeNumber >= 0) {
+        return maybeNumber;
+    }
+    // Supports trust proxy values like "loopback" or CIDR strings.
+    return rawValue;
+}
+
+function getAudioAdminToken() {
+    const token = typeof process.env.AUDIO_ADMIN_TOKEN === 'string'
+        ? process.env.AUDIO_ADMIN_TOKEN.trim()
+        : '';
+    if (IS_PRODUCTION && token.length === 0) {
+        throw new Error('AUDIO_ADMIN_TOKEN environment variable is required in production');
+    }
+    return token.length > 0 ? token : null;
+}
+
 function getSessionSecret() {
     const secret = process.env.SESSION_SECRET;
     if (!secret) {
-        if (process.env.NODE_ENV === 'production') {
+        if (IS_PRODUCTION) {
             throw new Error('SESSION_SECRET environment variable is required in production');
         }
         console.warn('[SESSION] Using development secret - NOT FOR PRODUCTION');
         return crypto.randomBytes(32).toString('hex');
     }
-    if (process.env.NODE_ENV === 'production' && secret.length < 32) {
+    if (IS_PRODUCTION && secret.length < 32) {
         throw new Error('SESSION_SECRET must be at least 32 characters in production');
     }
     if (secret.length < 32) {
@@ -54,6 +99,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
 const FRONTEND_DIST_PATH = path.join(PROJECT_ROOT, 'dist');
 const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_PATH, 'index.html');
 const PUBLIC_PATH = path.join(PROJECT_ROOT, 'public');
+const TRUST_PROXY = parseTrustProxyEnv();
+const ENABLE_COLLAB_API = parseBooleanEnv('ENABLE_COLLAB_API', !IS_PRODUCTION);
 const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
     ? path.resolve(process.env.AUDIO_STORAGE_PATH) 
     : path.join(PUBLIC_PATH, 'audio');
@@ -65,7 +112,7 @@ if (!existsSync(AUDIO_UPLOAD_PATH)) {
 
 const fastify = Fastify({
   logger: true,
-  trustProxy: true
+  trustProxy: TRUST_PROXY
 });
 
 // Register multipart for uploads
@@ -79,9 +126,9 @@ const SESSION_COOKIE_NAME = 'scholomance.sid';
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS ?? 5000);
-const AUDIO_ADMIN_TOKEN = String(process.env.AUDIO_ADMIN_TOKEN ?? 'echo');
+const AUDIO_ADMIN_TOKEN = getAudioAdminToken();
 const SHOULD_SERVE_FRONTEND =
-    process.env.NODE_ENV === 'production' &&
+    IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
     existsSync(FRONTEND_INDEX_PATH);
 
@@ -94,6 +141,20 @@ const registerBodySchema = z.object({
     username: z.string().min(3).max(20),
     email: z.string().email(),
     password: z.string().min(8),
+});
+
+const progressionBodySchema = z.object({
+    xp: z.number().int().min(0),
+    unlockedSchools: z.array(z.string()).min(1),
+});
+
+const scrollParamsSchema = z.object({
+    id: z.string().min(1).max(128),
+});
+
+const scrollBodySchema = z.object({
+    title: z.string().trim().min(1).max(256),
+    content: z.string().max(500000).optional().default(''),
 });
 
 function toFastifySchema(zodSchema) {
@@ -144,9 +205,10 @@ let sessionStore = null;
 if (useRedisStore) {
   const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
   const isUpstash = redisUrl.includes('upstash.io');
+  const isRedisLabs = redisUrl.includes('redislabs.com');
   const isTls = redisUrl.startsWith('rediss://');
   
-  fastify.log.info(`[REDIS] Initializing ${isUpstash ? 'Upstash ' : ''}Redis connection (TLS: ${isTls})...`);
+  fastify.log.info(`[REDIS] Initializing ${isUpstash ? 'Upstash ' : isRedisLabs ? 'RedisLabs ' : ''}Redis connection (TLS: ${isTls})...`);
   
   redisClient = createClient({ 
     url: redisUrl,
@@ -203,19 +265,31 @@ const csrfPreValidation = async (request, reply) => {
   return fastify.csrfProtection(request, reply);
 };
 
-function readQueryParamAsString(queryValue) {
-  if (typeof queryValue === 'string') return queryValue;
-  if (Array.isArray(queryValue) && typeof queryValue[0] === 'string') return queryValue[0];
+function readHeaderAsString(headerValue) {
+  if (typeof headerValue === 'string') return headerValue;
+  if (Array.isArray(headerValue) && typeof headerValue[0] === 'string') return headerValue[0];
   return null;
 }
 
+function secureTokenEquals(left, right) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  if (leftBuffer.length !== rightBuffer.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
 function isAudioAdminRequest(request) {
-  const queryAdmin = readQueryParamAsString(request.query?.admin);
-  return Boolean(AUDIO_ADMIN_TOKEN) && queryAdmin === AUDIO_ADMIN_TOKEN;
+  const headerToken = readHeaderAsString(request.headers['x-audio-admin-token']);
+  if (!headerToken || !AUDIO_ADMIN_TOKEN) {
+    return false;
+  }
+  return secureTokenEquals(headerToken, AUDIO_ADMIN_TOKEN);
 }
 
 function isAudioRequestAuthorized(request) {
-  if (process.env.NODE_ENV !== 'production') {
+  if (!IS_PRODUCTION) {
     return true;
   }
   if (request.session?.user) {
@@ -305,7 +379,7 @@ fastify.post('/auth/login', {
         if (!user) return reply.status(401).send({ message: 'Invalid credentials' });
         const valid = await bcrypt.compare(password, user.password);
         if (!valid) return reply.status(401).send({ message: 'Invalid credentials' });
-        request.session.user = { id: user.id, username: user.username };
+        request.session.user = { id: user.id, username: user.username, email: user.email };
         return reply.status(200).send({ message: 'Logged in successfully' });
     },
 });
@@ -320,11 +394,28 @@ fastify.post('/auth/logout', {
 });
 
 fastify.get('/auth/me', async (request, reply) => {
-    if (request.session.user) {
-        reply.status(200).send({ user: request.session.user });
-    } else {
+    if (!request.session.user) {
         reply.status(401).send({ message: 'Not authenticated' });
+        return;
     }
+
+    if (!request.session.user.email || !request.session.user.username) {
+        const persistedUser = persistence.users.findById(request.session.user.id);
+        if (!persistedUser) {
+            await request.session.destroy();
+            reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
+            reply.status(401).send({ message: 'Not authenticated' });
+            return;
+        }
+        request.session.user = {
+            ...request.session.user,
+            id: persistedUser.id,
+            username: persistedUser.username,
+            email: persistedUser.email,
+        };
+    }
+
+    reply.status(200).send({ user: request.session.user });
 });
 
 // Reference API Proxy Routes
@@ -347,8 +438,54 @@ fastify.get('/api/progression', { preHandler: [requireAuth] }, async (request) =
 fastify.post('/api/progression', {
     preValidation: [csrfPreValidation],
     preHandler: [requireAuth],
+    schema: { body: toFastifySchema(progressionBodySchema) },
     handler: async (request) => {
         return persistence.progression.save(request.session.user.id, request.body);
+    }
+});
+
+fastify.delete('/api/progression', {
+    preValidation: [csrfPreValidation],
+    preHandler: [requireAuth],
+    handler: async (request) => {
+        return persistence.progression.reset(request.session.user.id);
+    }
+});
+
+fastify.get('/api/scrolls', { preHandler: [requireAuth] }, async (request) => {
+    return persistence.scrolls.getAll(request.session.user.id);
+});
+
+fastify.post('/api/scrolls/:id', {
+    preValidation: [csrfPreValidation],
+    preHandler: [requireAuth],
+    schema: {
+        params: toFastifySchema(scrollParamsSchema),
+        body: toFastifySchema(scrollBodySchema),
+    },
+    handler: async (request, reply) => {
+        const saved = persistence.scrolls.save(
+            request.params.id,
+            request.session.user.id,
+            request.body,
+        );
+        if (!saved) {
+            return reply.status(409).send({ message: 'Scroll id already exists for another user.' });
+        }
+        return saved;
+    }
+});
+
+fastify.delete('/api/scrolls/:id', {
+    preValidation: [csrfPreValidation],
+    preHandler: [requireAuth],
+    schema: { params: toFastifySchema(scrollParamsSchema) },
+    handler: async (request, reply) => {
+        const deleted = persistence.scrolls.delete(request.params.id, request.session.user.id);
+        if (!deleted) {
+            return reply.status(404).send({ message: 'Scroll not found.' });
+        }
+        return { ok: true };
     }
 });
 
@@ -385,7 +522,21 @@ fastify.post('/api/upload', async (request, reply) => {
 fastify.decorate('redis', redisClient);
 
 fastify.register(wordLookupRoutes);
-fastify.register(collabRoutes, { prefix: '/collab' });
+
+if (ENABLE_COLLAB_API) {
+    if (IS_PRODUCTION) {
+        fastify.log.warn('[COLLAB] API enabled in production; all routes require authentication.');
+    }
+    fastify.register(async function collabApiPlugin(instance) {
+        instance.addHook('preHandler', requireAuth);
+        instance.register(collabRoutes, { prefix: '/collab' });
+    });
+} else {
+    fastify.log.info('[COLLAB] API disabled. Set ENABLE_COLLAB_API=true to enable.');
+    fastify.all('/collab/*', async (_request, reply) => {
+        return reply.code(404).send({ message: 'Not found' });
+    });
+}
 
 if (SHOULD_SERVE_FRONTEND) {
     fastify.register(fastifyStatic, { root: FRONTEND_DIST_PATH, prefix: '/', index: ['index.html'] });

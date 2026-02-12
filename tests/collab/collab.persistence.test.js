@@ -185,6 +185,73 @@ describe('file locks', () => {
     });
 });
 
+describe('task assignment transactions', () => {
+    it('should assign and lock all files in one operation', () => {
+        const taskId = `task-assign-success-${Date.now()}`;
+        const fileA = `src/pages/TxnA-${Date.now()}.jsx`;
+        const fileB = `src/pages/TxnB-${Date.now()}.jsx`;
+
+        collabPersistence.tasks.create({
+            id: taskId,
+            title: 'Transactional assign success',
+            priority: 2,
+            file_paths: [fileA, fileB],
+            depends_on: [],
+            created_by: 'human',
+        });
+
+        const result = collabPersistence.tasks.assignWithLocks(taskId, 'test-claude', [fileA, fileB], 30);
+        expect(result.conflict).toBe(false);
+        expect(result.task).toBeTruthy();
+        expect(result.task.status).toBe('assigned');
+        expect(result.task.assigned_agent).toBe('test-claude');
+
+        const lockA = collabPersistence.locks.check(fileA);
+        const lockB = collabPersistence.locks.check(fileB);
+        expect(lockA?.locked_by).toBe('test-claude');
+        expect(lockB?.locked_by).toBe('test-claude');
+    });
+
+    it('should not leak partial locks when one file conflicts', () => {
+        const stamp = Date.now();
+        const taskId = `task-assign-conflict-${stamp}`;
+        const freeFile = `src/pages/TxnFree-${stamp}.jsx`;
+        const conflictedFile = `src/pages/TxnConflict-${stamp}.jsx`;
+
+        collabPersistence.tasks.create({
+            id: taskId,
+            title: 'Transactional assign conflict',
+            priority: 2,
+            file_paths: [freeFile, conflictedFile],
+            depends_on: [],
+            created_by: 'human',
+        });
+
+        collabPersistence.locks.acquire({
+            file_path: conflictedFile,
+            agent_id: 'test-gemini',
+            ttl_minutes: 30,
+        });
+
+        const result = collabPersistence.tasks.assignWithLocks(
+            taskId,
+            'test-claude',
+            [freeFile, conflictedFile],
+            30,
+        );
+        expect(result.conflict).toBe(true);
+        expect(result.file).toBe(conflictedFile);
+        expect(result.locked_by).toBe('test-gemini');
+
+        const freeFileLock = collabPersistence.locks.check(freeFile);
+        expect(freeFileLock).toBeNull();
+
+        const task = collabPersistence.tasks.getById(taskId);
+        expect(task.status).toBe('backlog');
+        expect(task.assigned_agent).toBeNull();
+    });
+});
+
 describe('pipeline runs', () => {
     let pipelineId;
 

@@ -58,7 +58,7 @@ export const AcquireLockSchema = z.object({
 // --- Pipeline Schemas ---
 
 export const PipelineType = z.enum([
-    'code_review_test', 'schema_change', 'bug_fix',
+    'code_review_test', 'schema_change', 'bug_fix', 'ui_feature',
 ]);
 
 export const CreatePipelineSchema = z.object({

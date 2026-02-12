@@ -13,7 +13,7 @@
  */
 
 import { on, emit } from './eventBus.js';
-import { getFromCache, setInCache } from './cache.js';
+import { getFromCache, setInCache, clearCache } from './cache.js';
 import { isActionAllowed } from './rateLimit.js';
 import { mergeLexicalEntries } from '../core/schemas.js';
 
@@ -215,9 +215,6 @@ export function requestWordLookup(word, options = {}) {
  * Useful for testing or when dictionary data changes.
  */
 export function clearWordLookupCache() {
-  // Note: This clears all cache entries.
-  // In a more sophisticated implementation, we'd only clear lexical entries.
-  const { clearCache } = require('./cache.js');
   clearCache();
 }
 

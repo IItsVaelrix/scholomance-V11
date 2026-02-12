@@ -17,6 +17,7 @@ export const requireAuth = async (request, reply) => {
             request.session.user = {
                 id: devUser.id,
                 username: devUser.username,
+                email: devUser.email,
                 guest: true,
                 isDevelopmentBypass: true,
             };

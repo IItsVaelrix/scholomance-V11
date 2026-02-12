@@ -9,12 +9,22 @@
  * @see AI_Architecture_V2.md section 3.2
  */
 
+import { DictionaryAdapter } from './dictionary.adapter.js';
+import { LocalDictionaryAdapter, createLocalAdapter as createLocalAdapterSync } from './local.adapter.js';
+import { DatamuseAdapter, createDatamuseAdapter as createDatamuseAdapterSync } from './datamuse.adapter.js';
+import { PersistenceAdapter } from './persistence.adapter.js';
+import { TransportAdapter } from './transport.adapter.js';
+
 // Re-export adapter classes
-export { DictionaryAdapter } from './dictionary.adapter.js';
-export { LocalDictionaryAdapter, createLocalAdapter } from './local.adapter.js';
-export { DatamuseAdapter, createDatamuseAdapter } from './datamuse.adapter.js';
-export { PersistenceAdapter } from './persistence.adapter.js';
-export { TransportAdapter } from './transport.adapter.js';
+export {
+  DictionaryAdapter,
+  LocalDictionaryAdapter,
+  createLocalAdapterSync as createLocalAdapter,
+  DatamuseAdapter,
+  createDatamuseAdapterSync as createDatamuseAdapter,
+  PersistenceAdapter,
+  TransportAdapter,
+};
 
 /**
  * Creates the default adapter chain for word lookup.
@@ -26,21 +36,18 @@ export { TransportAdapter } from './transport.adapter.js';
  * @returns {import('./dictionary.adapter.js').DictionaryAdapter[]} Array of adapters in priority order.
  */
 export function createAdapterChain(options = {}) {
-  const { createLocalAdapter } = require('./local.adapter.js');
-  const { createDatamuseAdapter } = require('./datamuse.adapter.js');
-
   const adapters = [];
 
   // 1. Local Scholomance Dictionary (primary)
   if (options.scholomanceAPI) {
-    const localAdapter = createLocalAdapter(options.scholomanceAPI);
+    const localAdapter = createLocalAdapterSync(options.scholomanceAPI);
     if (localAdapter.isAvailable()) {
       adapters.push(localAdapter);
     }
   }
 
   // 2. Datamuse API (fallback)
-  adapters.push(createDatamuseAdapter(options.datamuseOptions));
+  adapters.push(createDatamuseAdapterSync(options.datamuseOptions));
 
   return adapters;
 }

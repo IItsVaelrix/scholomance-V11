@@ -215,6 +215,51 @@ function updateTask(id, updates) {
     return getTask(id);
 }
 
+function assignTaskWithLocks(taskId, agentId, filePaths = [], ttlMinutes = 30) {
+    const tx = db.transaction((id, assignedAgent, paths, ttl) => {
+        expireStaleLocks();
+
+        for (const filePath of paths) {
+            const existing = db.prepare('SELECT * FROM collab_file_locks WHERE file_path = ?').get(filePath);
+            if (existing && existing.locked_by !== assignedAgent) {
+                return {
+                    conflict: true,
+                    file: filePath,
+                    locked_by: existing.locked_by,
+                    task_id: existing.task_id,
+                };
+            }
+        }
+
+        const lockStmt = db.prepare(`
+            INSERT INTO collab_file_locks (file_path, locked_by, task_id, locked_at, expires_at)
+            VALUES (?, ?, ?, datetime('now'), datetime('now', '+' || ? || ' minutes'))
+            ON CONFLICT(file_path) DO UPDATE SET
+                locked_by = excluded.locked_by,
+                task_id = excluded.task_id,
+                locked_at = excluded.locked_at,
+                expires_at = excluded.expires_at
+        `);
+        for (const filePath of paths) {
+            lockStmt.run(filePath, assignedAgent, id, ttl);
+        }
+
+        const updateResult = db.prepare(`
+            UPDATE collab_tasks
+            SET assigned_agent = ?, status = 'assigned', updated_at = datetime('now')
+            WHERE id = ?
+        `).run(assignedAgent, id);
+
+        if (updateResult.changes === 0) {
+            return { conflict: false, task: null };
+        }
+
+        return { conflict: false, task: getTask(id) };
+    });
+
+    return tx(taskId, agentId, filePaths, ttlMinutes);
+}
+
 function deleteTask(id) {
     const result = db.prepare('DELETE FROM collab_tasks WHERE id = ?').run(id);
     return result.changes > 0;
@@ -409,6 +454,7 @@ export const collabPersistence = {
         getAll: getAllTasks,
         getById: getTask,
         update: updateTask,
+        assignWithLocks: assignTaskWithLocks,
         delete: deleteTask,
     },
     locks: {

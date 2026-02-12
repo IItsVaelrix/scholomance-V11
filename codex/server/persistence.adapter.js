@@ -67,6 +67,11 @@ function findUserByEmail(email) {
     return stmt.get(email);
 }
 
+function findUserById(id) {
+    const stmt = db.prepare('SELECT * FROM users WHERE id = ?');
+    return stmt.get(id);
+}
+
 function createUser(username, email, hashedPassword) {
     const stmt = db.prepare('INSERT INTO users (username, email, password) VALUES (?, ?, ?)');
     const result = stmt.run(username, email, hashedPassword);
@@ -100,6 +105,10 @@ function saveProgression(userId, { xp, unlockedSchools }) {
     const unlockedSchoolsJson = JSON.stringify(unlockedSchools);
     stmt.run(userId, xp, unlockedSchoolsJson);
     return getProgression(userId);
+}
+
+function resetProgression(userId) {
+    return saveProgression(userId, { xp: 0, unlockedSchools: ['SONIC'] });
 }
 
 // --- Scrolls ---
@@ -150,11 +159,13 @@ export const persistence = {
     users: {
         findByUsername: findUserByUsername,
         findByEmail: findUserByEmail,
+        findById: findUserById,
         createUser: createUser,
     },
     progression: {
         get: getProgression,
         save: saveProgression,
+        reset: resetProgression,
     },
     scrolls: {
         getAll: getScrolls,

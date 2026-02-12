@@ -32,7 +32,7 @@ function parseZod(schema, data) {
 
 /**
  * Fastify plugin that registers all /collab/* routes.
- * No authentication required - this is local dev tooling.
+ * Authentication is applied by the parent plugin when configured.
  */
 export async function collabRoutes(fastify, _options) {
 
@@ -174,27 +174,22 @@ export async function collabRoutes(fastify, _options) {
             }
         }
 
-        // Acquire file locks
-        for (const fp of task.file_paths) {
-            const lockResult = collabPersistence.locks.acquire({
-                file_path: fp,
-                agent_id: agent.id,
-                task_id: id,
-                ttl_minutes: 30,
+        const assignmentResult = collabPersistence.tasks.assignWithLocks(
+            id,
+            agent.id,
+            task.file_paths,
+            30,
+        );
+        if (assignmentResult.conflict) {
+            return reply.code(409).send({
+                error: 'File lock conflict',
+                file: assignmentResult.file,
+                locked_by: assignmentResult.locked_by,
             });
-            if (lockResult.conflict) {
-                return reply.code(409).send({
-                    error: 'File lock conflict',
-                    file: fp,
-                    locked_by: lockResult.locked_by,
-                });
-            }
         }
-
-        const updated = collabPersistence.tasks.update(id, {
-            assigned_agent: agent.id,
-            status: 'assigned',
-        });
+        if (!assignmentResult.task) {
+            return reply.code(404).send({ error: 'Task not found' });
+        }
 
         collabPersistence.activity.log({
             agent_id: agent.id,
@@ -203,7 +198,7 @@ export async function collabRoutes(fastify, _options) {
             target_id: id,
             details: { agent_name: agent.name },
         });
-        return reply.code(200).send(updated);
+        return reply.code(200).send(assignmentResult.task);
     });
 
     // ========================

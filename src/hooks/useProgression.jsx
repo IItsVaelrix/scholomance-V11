@@ -23,6 +23,10 @@ const ProgressionPayloadSchema = z.object({
   discoveryHistory: z.array(z.string()).optional()
 }).passthrough();
 
+const CSRF_HEADER = "x-csrf-token";
+let cachedCsrfToken = null;
+let csrfPromise = null;
+
 function getApiUrl(path) {
   const origin = typeof window !== "undefined" && window.location?.origin
     ? window.location.origin
@@ -32,6 +36,28 @@ function getApiUrl(path) {
   } catch {
     return path;
   }
+}
+
+async function getCsrfToken() {
+  if (cachedCsrfToken) return cachedCsrfToken;
+  if (csrfPromise) return csrfPromise;
+
+  csrfPromise = fetch(getApiUrl('/auth/csrf-token'), { credentials: 'include' })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch CSRF token: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      cachedCsrfToken = data?.token || null;
+      return cachedCsrfToken;
+    })
+    .finally(() => {
+      csrfPromise = null;
+    });
+
+  return csrfPromise;
 }
 
 // --- Debounce Utility ---
@@ -58,9 +84,17 @@ export function ProgressionProvider({ children }) {
   // Debounced function to save progression to the server
   const debouncedSave = useRef(debounce(async (newProgression) => {
     try {
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        throw new Error("Missing CSRF token");
+      }
       await fetch(getApiUrl('/api/progression'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          [CSRF_HEADER]: csrfToken,
+        },
         body: JSON.stringify({
           xp: newProgression.xp,
           unlockedSchools: newProgression.unlockedSchools
@@ -76,7 +110,7 @@ export function ProgressionProvider({ children }) {
     const fetchProgression = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(getApiUrl('/api/progression'));
+        const response = await fetch(getApiUrl('/api/progression'), { credentials: 'include' });
         if (response.ok) {
           const data = await response.json();
           const parsed = ProgressionPayloadSchema.safeParse(data);
@@ -172,7 +206,17 @@ export function ProgressionProvider({ children }) {
       ...optimisticReset,
     }));
     try {
-      const response = await fetch(getApiUrl('/api/progression'), { method: 'DELETE' });
+      const csrfToken = await getCsrfToken();
+      if (!csrfToken) {
+        throw new Error("Missing CSRF token");
+      }
+      const response = await fetch(getApiUrl('/api/progression'), {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          [CSRF_HEADER]: csrfToken,
+        },
+      });
       if (response.ok) {
         const data = await response.json();
         const parsed = ProgressionPayloadSchema.safeParse(data);

@@ -3,9 +3,10 @@ import {
   setupWordLookupPipeline,
   requestWordLookup,
   EVENTS,
+  clearWordLookupCache,
 } from '../../codex/runtime/wordLookupPipeline.js';
 import { emit, on, clearAllListeners } from '../../codex/runtime/eventBus.js';
-import { clearCache } from '../../codex/runtime/cache.js';
+import { clearCache, setInCache, getFromCache } from '../../codex/runtime/cache.js';
 import { resetRateLimit } from '../../codex/runtime/rateLimit.js';
 
 // Mock adapter for testing
@@ -117,6 +118,15 @@ describe('[Runtime] WordLookupPipeline', () => {
   });
 
   describe('Caching', () => {
+    it('clearWordLookupCache() clears lookup cache entries', () => {
+      setInCache('lexical:cached-word', { word: 'cached-word' }, 60000);
+      expect(getFromCache('lexical:cached-word')).toEqual({ word: 'cached-word' });
+
+      clearWordLookupCache();
+
+      expect(getFromCache('lexical:cached-word')).toBeNull();
+    });
+
     it('returns cached result on second lookup', async () => {
       // First lookup
       await new Promise((resolve) => {
