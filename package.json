@@ -12,6 +12,7 @@
     "test:visual:full": "node --input-type=module -e \"import { spawnSync } from 'node:child_process'; const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'; const result = spawnSync(cmd, ['playwright', 'test'], { stdio: 'inherit', env: { ...process.env, PW_FULL_MATRIX: 'true' } }); process.exit(result.status ?? 1);\"",
     "security:qa": "node scripts/security/security-qa.js",
     "security:audit": "node scripts/security/dependency-audit.js",
+    "verify:backend-contract": "node scripts/verify-backend-contract.js",
     "test": "vitest",
     "preview": "vite preview",
     "start": "node codex/server/index.js",

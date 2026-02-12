@@ -85,16 +85,22 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `NODE_ENV` | No | `development` | Runtime mode. |
 | `HOST` | No | `0.0.0.0` | Fastify bind host. |
 | `PORT` | No | `3000` | Fastify port. |
+| `TRUST_PROXY` | No | `false` | Fastify `trustProxy` setting (`true`/`false`, hop count, or proxy string). |
 | `SERVE_FRONTEND` | No | `true` in production | If not `false`, server serves `dist/` in production. |
 | `USER_DB_PATH` | No | `./scholomance_user.sqlite` | SQLite path for users/progression/scrolls. |
 | `COLLAB_DB_PATH` | No | `./scholomance_collab.sqlite` | SQLite path for collaboration state. |
+| `ENABLE_COLLAB_API` | No | `true` in development, `false` in production | Enables `/collab/*` backend routes. |
 | `REDIS_URL` | Required in production | `redis://localhost:6379` | Redis connection for sessions. |
 | `ENABLE_REDIS_SESSIONS` | No | `false` in development | Forces Redis sessions in development if `true`. |
 | `API_TIMEOUT_MS` | No | `5000` | External API timeout in ms. |
-| `AUDIO_ADMIN_TOKEN` | No | `echo` | Admin query token used for upload controls. |
+| `DB_BUSY_TIMEOUT_MS` | No | `5000` | SQLite busy timeout in ms for both user and collab databases. |
+| `SHUTDOWN_TIMEOUT_MS` | No | `10000` | Max graceful-shutdown wait before forced exit. |
+| `AUDIO_STORAGE_PATH` | No | `./public/audio` | Directory for uploaded audio files served at `/audio/*`. |
+| `AUDIO_ADMIN_TOKEN` | Yes in production | unset in development | Admin header token for audio upload/list fallback (`x-audio-admin-token`). |
 | `ENABLE_DEV_AUTH` | No | `false` | Development-only auth bypass (`test` user) when `NODE_ENV=development`. |
 | `VITE_USE_CODEX_PIPELINE` | No | `true` | Enables CODEx runtime initialization in client. |
 | `VITE_API_BASE_URL` | No | browser origin fallback | Base API origin for non-browser/test contexts. |
+| `SCHOLOMANCE_DICT_API_URL` | No | unset | Server-side Scholomance dictionary API base URL used by `/api/word-lookup*` routes. |
 | `VITE_SCHOLOMANCE_DICT_API_URL` | No | unset | Optional local dictionary API endpoint. |
 | `VITE_DICTIONARY_API_URL` | No | set in `.env.example` | Optional/legacy dictionary provider URL. |
 | `VITE_THESAURUS_API_URL` | No | set in `.env.example` | Optional/legacy thesaurus provider URL. |
@@ -120,6 +126,9 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 
 - Health:
 - `GET /health`
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /metrics`
 - Auth and session:
 - `GET /auth/csrf-token`
 - `POST /auth/register`
@@ -130,14 +139,17 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 - `GET /api/progression` (auth required)
 - `POST /api/progression` (auth + CSRF)
 - `DELETE /api/progression` (auth + CSRF)
+- `GET /api/scrolls` (auth required)
+- `POST /api/scrolls/:id` (auth + CSRF)
+- `DELETE /api/scrolls/:id` (auth + CSRF)
 - `GET /api/rhymes/:word`
 - `GET /api/audio-files`
-- `POST /api/upload` (admin token/session gated)
+- `POST /api/upload` (session or `x-audio-admin-token` gated in production)
 - Word lookup:
 - `GET /api/word-lookup/:word`
 - `POST /api/word-lookup/batch`
 - Collaboration tooling (prefix `/collab`):
-- agents, tasks, locks, pipelines, activity, status.
+- agents, tasks, locks, pipelines, activity, status (`ENABLE_COLLAB_API=true`, auth required when enabled).
 
 ## Data and persistence
 
@@ -163,6 +175,7 @@ python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127
 ```
 
 3. Set:
+- `SCHOLOMANCE_DICT_API_URL=http://127.0.0.1:8787/api/lexicon`
 - `VITE_SCHOLOMANCE_DICT_API_URL=http://127.0.0.1:8787/api/lexicon`
 
 Reference: `DICT_BUILD.md`.
@@ -195,6 +208,7 @@ node scripts/collab-client.js status
 ### Render blueprint
 
 - `render.yaml` defines `scholomance-app` (Docker runtime) and a persistent disk mounted at `/var/data`.
+- Render health checks use `GET /health/ready`.
 - Set `REDIS_URL` to your Upstash connection string.
 - Keep `USER_DB_PATH=/var/data/scholomance_user.sqlite`.
 
@@ -206,7 +220,7 @@ Build and run:
 
 ```bash
 docker build -t scholomance .
-docker run --rm -p 3000:3000 -e NODE_ENV=production -e SESSION_SECRET="<32+ chars>" -e REDIS_URL="redis://host:6379" -e USER_DB_PATH="/var/data/scholomance_user.sqlite" scholomance
+docker run --rm -p 3000:3000 -e NODE_ENV=production -e TRUST_PROXY=true -e SESSION_SECRET="<32+ chars>" -e AUDIO_ADMIN_TOKEN="<long-random-token>" -e REDIS_URL="redis://host:6379" -e USER_DB_PATH="/var/data/scholomance_user.sqlite" scholomance
 ```
 
 ## Testing strategy
@@ -238,7 +252,7 @@ npm run test:visual:full
 - No API data in frontend dev:
 - ensure backend is running on `localhost:3000` so Vite proxy can forward requests.
 - Upload admin panel not visible:
-- in production, include query token `?admin=<AUDIO_ADMIN_TOKEN>` or use authenticated session.
+- in production, authenticate with session or send `x-audio-admin-token: <AUDIO_ADMIN_TOKEN>` on API requests.
 
 ## Documentation index
 

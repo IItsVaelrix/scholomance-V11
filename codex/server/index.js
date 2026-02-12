@@ -24,8 +24,11 @@ import { pipeline } from 'stream/promises';
 import path from 'path';
 import { requireAuth } from './auth-pre-handler.js';
 import { persistence } from './persistence.adapter.js';
+import { collabPersistence } from './collab/collab.persistence.js';
 import { collabRoutes } from './collab/collab.routes.js';
 import { wordLookupRoutes } from './routes/wordLookup.routes.js';
+import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
+import { createOpsMetrics } from './observability.metrics.js';
 
 import 'dotenv/config';
 
@@ -62,6 +65,16 @@ function parseTrustProxyEnv() {
     }
     // Supports trust proxy values like "loopback" or CIDR strings.
     return rawValue;
+}
+
+function parsePositiveIntEnv(name, defaultValue) {
+    const rawValue = process.env[name];
+    if (rawValue === undefined) return defaultValue;
+    const parsed = Number(rawValue);
+    if (Number.isInteger(parsed) && parsed > 0) {
+        return parsed;
+    }
+    throw new Error(`${name} must be a positive integer when set`);
 }
 
 function getAudioAdminToken() {
@@ -110,10 +123,11 @@ if (!existsSync(AUDIO_UPLOAD_PATH)) {
     mkdirSync(AUDIO_UPLOAD_PATH, { recursive: true });
 }
 
-const fastify = Fastify({
+export const fastify = Fastify({
   logger: true,
   trustProxy: TRUST_PROXY
 });
+fastify.decorate('opsMetrics', createOpsMetrics());
 
 // Register multipart for uploads
 fastify.register(multipart, {
@@ -126,6 +140,7 @@ const SESSION_COOKIE_NAME = 'scholomance.sid';
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS ?? 5000);
+const SHUTDOWN_TIMEOUT_MS = parsePositiveIntEnv('SHUTDOWN_TIMEOUT_MS', 10000);
 const AUDIO_ADMIN_TOKEN = getAudioAdminToken();
 const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
@@ -233,6 +248,55 @@ if (useRedisStore) {
   });
 }
 
+function getLivenessReport() {
+  return {
+    status: 'live',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function isDatabaseReady(status) {
+  return Boolean(
+    status &&
+    typeof status === 'object' &&
+    Number.isInteger(status.version) &&
+    status.version >= 1
+  );
+}
+
+function getReadinessReport() {
+  const userDbStatus = persistence.getStatus?.() ?? null;
+  const collabDbStatus = collabPersistence.getStatus?.() ?? null;
+  const userDbReady = isDatabaseReady(userDbStatus);
+  const collabDbReady = isDatabaseReady(collabDbStatus);
+  const redisReady = !useRedisStore || Boolean(redisClient?.isReady);
+  const ready = userDbReady && collabDbReady && redisReady;
+
+  return {
+    status: ready ? 'ready' : 'degraded',
+    ready,
+    timestamp: new Date().toISOString(),
+    checks: {
+      userDb: {
+        ready: userDbReady,
+        version: userDbStatus?.version ?? null,
+        path: userDbStatus?.path ?? null,
+      },
+      collabDb: {
+        ready: collabDbReady,
+        version: collabDbStatus?.version ?? null,
+        path: collabDbStatus?.path ?? null,
+      },
+      redis: {
+        ready: redisReady,
+        enabled: useRedisStore,
+        connected: Boolean(redisClient?.isOpen),
+      },
+    },
+  };
+}
+
 // 2. Register cookie and session plugins
 fastify.register(fastifyCookie);
 const sessionOptions = {
@@ -262,7 +326,15 @@ const csrfPreValidation = async (request, reply) => {
   if (typeof fastify.csrfProtection !== 'function') {
     return reply.status(500).send({ message: 'CSRF protection is not initialized.' });
   }
-  return fastify.csrfProtection(request, reply);
+  return new Promise((resolve, reject) => {
+    fastify.csrfProtection(request, reply, (error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
 };
 
 function readHeaderAsString(headerValue) {
@@ -313,7 +385,11 @@ fastify.register(helmet, {
   },
 });
 
-fastify.addContentTypeParser("application/json", { bodyLimit: 1_000_000 }, fastify.getDefaultJsonParser("error"));
+fastify.addContentTypeParser(
+    'application/json',
+    { parseAs: 'string', bodyLimit: 1_000_000 },
+    fastify.getDefaultJsonParser('error', 'error'),
+);
 
 // 3. Register global rate limiting (per-user when authenticated, per-IP otherwise)
 fastify.register(rateLimit, {
@@ -326,6 +402,7 @@ fastify.register(rateLimit, {
     return request.session?.user?.id || request.ip;
   },
   errorResponseBuilder: (_request, _reply) => {
+    fastify.opsMetrics.increment('rateLimitHits');
     return {
       statusCode: 429,
       error: 'Too Many Requests',
@@ -342,13 +419,44 @@ fastify.register(fastifyStatic, {
 });
 
 // Health route
+fastify.get('/health/live', async () => {
+  return getLivenessReport();
+});
+
+fastify.get('/health/ready', async (_request, reply) => {
+  const readiness = getReadinessReport();
+  const statusCode = readiness.ready ? 200 : 503;
+  return reply.code(statusCode).send(readiness);
+});
+
 fastify.get('/health', async () => {
-  return { message: 'Scholomance CODEx Server is running.' };
+  return {
+    ...getLivenessReport(),
+    message: 'Scholomance CODEx Server is running.',
+  };
+});
+
+fastify.get('/metrics', async () => {
+  const readiness = getReadinessReport();
+  return {
+    timestamp: new Date().toISOString(),
+    process: {
+      pid: process.pid,
+      nodeVersion: process.version,
+      env: process.env.NODE_ENV || 'development',
+      uptimeSeconds: Math.floor(process.uptime()),
+    },
+    readiness: {
+      ready: readiness.ready,
+      status: readiness.status,
+    },
+    counters: fastify.opsMetrics.snapshot(),
+  };
 });
 
 // Route to provide CSRF token to the client
-fastify.get('/auth/csrf-token', async (request) => {
-    const token = request.csrfToken();
+fastify.get('/auth/csrf-token', async (_request, reply) => {
+    const token = await reply.generateCsrf();
     return { token };
 });
 
@@ -376,9 +484,15 @@ fastify.post('/auth/login', {
     handler: async (request, reply) => {
         const { username, password } = request.body;
         const user = persistence.users.findByUsername(username);
-        if (!user) return reply.status(401).send({ message: 'Invalid credentials' });
+        if (!user) {
+            fastify.opsMetrics.increment('authFailures');
+            return reply.status(401).send({ message: 'Invalid credentials' });
+        }
         const valid = await bcrypt.compare(password, user.password);
-        if (!valid) return reply.status(401).send({ message: 'Invalid credentials' });
+        if (!valid) {
+            fastify.opsMetrics.increment('authFailures');
+            return reply.status(401).send({ message: 'Invalid credentials' });
+        }
         request.session.user = { id: user.id, username: user.username, email: user.email };
         return reply.status(200).send({ message: 'Logged in successfully' });
     },
@@ -507,19 +621,52 @@ fastify.get('/api/audio-files', async (request, reply) => {
 
 fastify.post('/api/upload', async (request, reply) => {
     if (!isAudioRequestAuthorized(request)) {
+        fastify.opsMetrics.increment('uploadFailures');
         return reply.status(401).send({ message: 'Unauthorized' });
     }
-    const data = await request.file();
-    if (!data) return reply.status(400).send({ message: 'No file' });
-    if (!/\.(mp3|wav|ogg|m4a)$/i.test(data.filename)) return reply.status(400).send({ message: 'Invalid type' });
-    const safeFilename = data.filename.replace(/[^a-z0-9.-]/gi, '_').toLowerCase();
-    const targetPath = path.join(AUDIO_UPLOAD_PATH, safeFilename);
-    await pipeline(data.file, createWriteStream(targetPath));
-    return { message: 'Uploaded', filename: safeFilename, url: `/audio/${safeFilename}` };
+    try {
+        const data = await request.file();
+        if (!data) {
+            fastify.opsMetrics.increment('uploadFailures');
+            return reply.status(400).send({ message: 'No file' });
+        }
+        if (!/\.(mp3|wav|ogg|m4a)$/i.test(data.filename)) {
+            fastify.opsMetrics.increment('uploadFailures');
+            return reply.status(400).send({ message: 'Invalid type' });
+        }
+        const safeFilename = data.filename.replace(/[^a-z0-9.-]/gi, '_').toLowerCase();
+        const targetPath = path.join(AUDIO_UPLOAD_PATH, safeFilename);
+        await pipeline(data.file, createWriteStream(targetPath));
+        return { message: 'Uploaded', filename: safeFilename, url: `/audio/${safeFilename}` };
+    } catch (error) {
+        fastify.opsMetrics.increment('uploadFailures');
+        if (error?.code === 'FST_INVALID_MULTIPART_CONTENT_TYPE') {
+            return reply.status(400).send({ message: 'No file' });
+        }
+        fastify.log.error({ err: error }, '[UPLOAD] Failed to store uploaded file.');
+        return reply.status(500).send({ message: 'Upload failed' });
+    }
 });
 
 // Expose Redis client to route plugins for shared caching
 fastify.decorate('redis', redisClient);
+
+fastify.addHook('onSend', async (request, _reply, payload) => {
+    const requestPath = stripQueryFromUrl(request.raw?.url || request.url || '');
+    if (request.method !== 'GET' || !requestPath.startsWith('/api/word-lookup/')) {
+        return payload;
+    }
+    if (typeof payload !== 'string') {
+        return payload;
+    }
+    try {
+        const parsedPayload = JSON.parse(payload);
+        fastify.opsMetrics.recordWordLookup(parsedPayload?.source);
+    } catch {
+        fastify.opsMetrics.recordWordLookup();
+    }
+    return payload;
+});
 
 fastify.register(wordLookupRoutes);
 
@@ -541,20 +688,119 @@ if (ENABLE_COLLAB_API) {
 if (SHOULD_SERVE_FRONTEND) {
     fastify.register(fastifyStatic, { root: FRONTEND_DIST_PATH, prefix: '/', index: ['index.html'] });
     fastify.setNotFoundHandler((request, reply) => {
+        const requestPath = stripQueryFromUrl(request.raw?.url || request.url);
+        if (isApiRoutePath(requestPath)) {
+            return reply.code(404).send({
+                message: 'Route not found',
+                path: requestPath,
+            });
+        }
         return reply.type('text/html; charset=utf-8').sendFile('index.html');
+    });
+} else {
+    fastify.setNotFoundHandler((request, reply) => {
+        const requestPath = stripQueryFromUrl(request.raw?.url || request.url);
+        if (isApiRoutePath(requestPath)) {
+            return reply.code(404).send({
+                message: 'Route not found',
+                path: requestPath,
+            });
+        }
+        return reply.code(404).send({ message: 'Not found' });
     });
 }
 
-const start = async () => {
-  try {
-    if (redisClient) await redisClient.connect();
-    await fastify.listen({ host: HOST, port: PORT });
-  } catch (err) {
-    fastify.log.error(err);
-    process.exit(1);
-  }
+let shutdownPromise = null;
+
+async function closeRedisConnection() {
+    if (!redisClient || !redisClient.isOpen) {
+        return;
+    }
+
+    try {
+        await redisClient.quit();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[REDIS] Graceful quit failed, forcing disconnect.');
+        try {
+            redisClient.disconnect();
+        } catch {
+            // Ignore disconnect errors during shutdown.
+        }
+    }
+}
+
+function closePersistenceConnections() {
+    try {
+        persistence.close();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[DB:user] Failed to close cleanly.');
+    }
+    try {
+        collabPersistence.close();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[DB:collab] Failed to close cleanly.');
+    }
+}
+
+export async function gracefulShutdown(signal = 'manual', { exitCode = 0, exitProcess = true } = {}) {
+    if (shutdownPromise) return shutdownPromise;
+
+    shutdownPromise = (async () => {
+        fastify.log.info({ signal }, '[LIFECYCLE] Shutdown initiated.');
+        const timeoutId = setTimeout(() => {
+            fastify.log.error(
+                { timeoutMs: SHUTDOWN_TIMEOUT_MS, signal },
+                '[LIFECYCLE] Shutdown timeout reached. Forcing process exit.',
+            );
+            if (exitProcess) {
+                process.exit(1);
+            }
+        }, SHUTDOWN_TIMEOUT_MS);
+        if (typeof timeoutId.unref === 'function') {
+            timeoutId.unref();
+        }
+
+        try {
+            await fastify.close();
+        } catch (error) {
+            fastify.log.error({ err: error }, '[LIFECYCLE] Fastify close failed.');
+        }
+
+        await closeRedisConnection();
+        closePersistenceConnections();
+        clearTimeout(timeoutId);
+
+        fastify.log.info({ signal }, '[LIFECYCLE] Shutdown complete.');
+        if (exitProcess) {
+            process.exit(exitCode);
+        }
+    })();
+
+    return shutdownPromise;
+}
+
+export const start = async () => {
+    try {
+        if (redisClient && !redisClient.isOpen) {
+            await redisClient.connect();
+        }
+        await fastify.listen({ host: HOST, port: PORT });
+    } catch (error) {
+        fastify.log.error(error);
+        await closeRedisConnection();
+        closePersistenceConnections();
+        process.exit(1);
+    }
 };
 
-if (path.resolve(process.argv[1]) === path.resolve(__filename)) {
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(__filename)) {
+    for (const signal of ['SIGTERM', 'SIGINT']) {
+        process.once(signal, () => {
+            gracefulShutdown(signal).catch((error) => {
+                fastify.log.error({ err: error, signal }, '[LIFECYCLE] Shutdown failed unexpectedly.');
+                process.exit(1);
+            });
+        });
+    }
     start();
 }

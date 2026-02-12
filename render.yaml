@@ -4,7 +4,7 @@ services:
     runtime: docker
     dockerfilePath: ./Dockerfile
     autoDeploy: true
-    healthCheckPath: /health
+    healthCheckPath: /health/ready
     disk:
       name: scholomance-data
       mountPath: /var/data
@@ -20,6 +20,12 @@ services:
         value: /var/data/scholomance_collab.sqlite
       - key: AUDIO_STORAGE_PATH
         value: /var/data/audio
+      - key: TRUST_PROXY
+        value: true
+      - key: ENABLE_COLLAB_API
+        value: false
+      - key: AUDIO_ADMIN_TOKEN
+        sync: false
       - key: REDIS_URL
         sync: false # This tells Render to ask for the value during deploy
       - key: SESSION_SECRET

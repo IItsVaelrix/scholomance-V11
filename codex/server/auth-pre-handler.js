@@ -25,5 +25,6 @@ export const requireAuth = async (request, reply) => {
         }
     }
 
+    request.server?.opsMetrics?.increment?.('authFailures');
     return reply.status(401).send({ message: 'Unauthorized: Please log in.' });
 };

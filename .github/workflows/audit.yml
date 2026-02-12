@@ -11,17 +11,17 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
-        node-version: '18' # Assuming Node.js 18, adjust if necessary
+        node-version: '20'
+        cache: npm
 
     - name: Install dependencies
-      run: npm install
+      run: npm ci
 
     - name: Run npm audit
       run: npm audit --audit-level=moderate # Adjust audit level as needed
       continue-on-error: false # Fail the job if vulnerabilities are found
-
