@@ -47,11 +47,9 @@ export async function authRoutes(fastify, _opts) {
     fastify.get('/captcha', {
         handler: async (request, reply) => {
             const challenge = captchaService.generateChallenge();
-            // Store solution in session
-            request.session.captcha = {
-                id: challenge.id,
-                solution: challenge.solution
-            };
+            // Store solution in session using primitives
+            request.session.captchaId = challenge.id;
+            request.session.captchaSolution = challenge.solution;
             await request.session.save();
             return { id: challenge.id, text: challenge.text };
         }
@@ -65,12 +63,15 @@ export async function authRoutes(fastify, _opts) {
             const { username, email, password, captchaId, captchaAnswer } = request.body;
 
             // 1. Verify CAPTCHA
-            const sessionCaptcha = request.session.captcha;
-            if (!sessionCaptcha || sessionCaptcha.id !== captchaId || !captchaService.validate(captchaAnswer, sessionCaptcha.solution)) {
+            const sessionCaptchaId = request.session.captchaId;
+            const sessionCaptchaSolution = request.session.captchaSolution;
+            
+            if (!sessionCaptchaId || sessionCaptchaId !== captchaId || !captchaService.validate(captchaAnswer, sessionCaptchaSolution)) {
                 return reply.status(400).send({ message: 'Invalid CAPTCHA' });
             }
             // Clear CAPTCHA after use
-            request.session.captcha = null;
+            request.session.captchaId = null;
+            request.session.captchaSolution = null;
             await request.session.save();
 
             // 2. Check existing user

@@ -33,8 +33,8 @@ export class CaptchaService {
    * @returns {boolean}
    */
   validate(input, expected) {
-    if (!input || !expected) return false;
-    return input.trim() === expected;
+    if (input === undefined || input === null || expected === undefined || expected === null) return false;
+    return String(input).trim() === String(expected).trim();
   }
 }
 
