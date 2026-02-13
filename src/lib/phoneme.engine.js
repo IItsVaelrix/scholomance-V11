@@ -100,10 +100,26 @@ export const PhonemeEngine = {
   async init() {
     this.clearCache();
     try {
-      const [dictRaw, rulesRaw] = await Promise.all([
-        fetch("/phoneme_dictionary_v2.json").then((r) => r.json()),
-        fetch("/rhyme_matching_rules_v2.json").then((r) => r.json()),
-      ]);
+      let dictRaw, rulesRaw;
+
+      if (typeof window === "undefined") {
+        // Server-side: Use fs to read from public folder
+        const fs = await import("fs");
+        const path = await import("path");
+        const publicPath = path.join(process.cwd(), "public");
+        
+        dictRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "phoneme_dictionary_v2.json"), "utf8"));
+        rulesRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "rhyme_matching_rules_v2.json"), "utf8"));
+      } else {
+        // Browser-side: Use fetch
+        const [d, r] = await Promise.all([
+          fetch("/phoneme_dictionary_v2.json").then((res) => res.json()),
+          fetch("/rhyme_matching_rules_v2.json").then((res) => res.json()),
+        ]);
+        dictRaw = d;
+        rulesRaw = r;
+      }
+
       const dictParsed = PhonemeDictSchema.safeParse(dictRaw);
       const rulesParsed = PhonemeRulesSchema.safeParse(rulesRaw);
       if (dictParsed.success && rulesParsed.success) {
@@ -112,13 +128,24 @@ export const PhonemeEngine = {
         return dictParsed.data.vowel_families.length;
       }
       return 14;
-    } catch (err) { return 14; }
+    } catch (err) { 
+      if (typeof window === "undefined") {
+        console.error("[PhonemeEngine] Failed to load dictionaries on server:", err);
+      }
+      return 14; 
+    }
+  },
+
+  async ensureInitialized() {
+    if (this.DICT_V2 && this.RULES_V2) return;
+    await this.init();
   },
 
   /**
    * Pre-fetches authoritative rhyme families for a document in bulk.
    */
   async ensureAuthorityBatch(words) {
+    await this.ensureInitialized();
     if (!ScholomanceDictionaryAPI.isEnabled() || !words?.length) return;
     const missing = words.filter(w => !this.AUTHORITY_CACHE.has(w.toUpperCase()));
     if (!missing.length) return;
@@ -131,7 +158,9 @@ export const PhonemeEngine = {
   },
 
   analyzeWord(word) {
-    const start = performance.now();
+    // Note: analyzeWord is synchronous, but init is asynchronous.
+    // In production, init() should be called during startup.
+    // If not, we might fall back to the 14-family default if DICT_V2 is null.
     const upper = String(word || "").toUpperCase();
     if (!upper) return null;
     if (this.WORD_CACHE.has(upper)) return this.WORD_CACHE.get(upper);

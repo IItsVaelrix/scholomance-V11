@@ -31,6 +31,7 @@ import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
+import { PhonemeEngine } from '../../src/lib/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
 
 import 'dotenv/config';
@@ -688,6 +689,7 @@ export const start = async () => {
         if (redisClient && !redisClient.isOpen) {
             await redisClient.connect();
         }
+        await PhonemeEngine.init();
         await fastify.listen({ host: HOST, port: PORT });
     } catch (error) {
         fastify.log.error(error);
