@@ -37,7 +37,7 @@ export default function Navigation() {
 
   return (
     <nav className="primary-nav w-full z-100" aria-label="Primary navigation">
-      <div className="container nav-inner flex items-center justify-between">
+      <div className="nav-inner flex items-center justify-between">
         <NavLink to="/watch" className="nav-brand font-bold" aria-label="Scholomance Home">
           SCHOLOMANCE
         </NavLink>
@@ -46,7 +46,14 @@ export default function Navigation() {
           id="nav-links"
           className={`nav-links flex gap-8 items-center ${isMenuOpen ? "flex-col absolute top-20 left-0 w-full p-8 glass-strong" : "hidden md:flex"}`}
         >
-          {[...navLinks, { id: "auth", path: "/auth", label: user ? user.username : "Portal" }].map((l) => (
+          {[
+            ...navLinks, 
+            { 
+              id: user ? "profile" : "auth", 
+              path: user ? "/profile" : "/auth", 
+              label: user ? user.username : "Portal" 
+            }
+          ].map((l) => (
             <div key={l.id} className="relative">
               <NavLink
                 to={l.path}
@@ -59,7 +66,7 @@ export default function Navigation() {
               {activeSection === l.id && (
                 <motion.div
                   layoutId="nav-highlight"
-                  className="absolute -bottom-2 left-0 w-full h-0.5 bg-white"
+                  className="absolute bottom-0 left-0 w-full h-0.5"
                   style={{ backgroundColor: "var(--active-school-color)" }}
                   transition={{ type: "spring", bounce: 0.25, duration: 0.6 }}
                 />

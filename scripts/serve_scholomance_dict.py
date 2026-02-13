@@ -3,7 +3,7 @@
 serve_scholomance_dict.py
 
 Minimal HTTP API for the Scholomance offline dictionary SQLite database.
-This service is intentionally shaped for future MUD expansion.
+Enhanced with a robust rhyme lookup layer and batch lookups for efficiency.
 """
 
 from __future__ import annotations
@@ -80,6 +80,27 @@ def lookup_entries(conn: sqlite3.Connection, word: str, limit: int = 5) -> List[
     ).fetchall()
     return [normalize_entry(row) for row in rows]
 
+def lookup_rhymes(conn: sqlite3.Connection, word: str, limit: int = 50) -> Dict[str, Any]:
+    row = conn.execute(
+        "SELECT rhyme_family FROM rhyme_index WHERE word_lower = ?",
+        (word.lower(),)
+    ).fetchone()
+    if not row: return {"family": None, "words": []}
+    family = row["rhyme_family"]
+    rhyme_rows = conn.execute(
+        "SELECT word_lower FROM rhyme_index WHERE rhyme_family = ? AND word_lower != ? LIMIT ?",
+        (family, word.lower(), limit)
+    ).fetchall()
+    return {"family": family, "words": [r["word_lower"] for r in rhyme_rows]}
+
+def batch_lookup_families(conn: sqlite3.Connection, words: List[str]) -> Dict[str, str]:
+    if not words: return {}
+    placeholders = ', '.join('?' for _ in words)
+    rows = conn.execute(
+        f"SELECT word_lower, rhyme_family FROM rhyme_index WHERE word_lower IN ({placeholders})",
+        [w.lower() for w in words]
+    ).fetchall()
+    return {row["word_lower"].upper(): row["rhyme_family"] for row in rows}
 
 def lookup_synonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> List[str]:
     rows = conn.execute(
@@ -96,19 +117,13 @@ def lookup_synonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> Lis
     results = []
     for row in rows:
         lemma = row["lemma"]
-        if not isinstance(lemma, str):
-            continue
+        if not isinstance(lemma, str): continue
         clean = lemma.strip()
-        if not clean or clean.lower() == word.lower():
-            continue
-        if clean.lower() in seen:
-            continue
+        if not clean or clean.lower() == word.lower() or clean.lower() in seen: continue
         seen.add(clean.lower())
         results.append(clean)
-        if len(results) >= limit:
-            break
+        if len(results) >= limit: break
     return results
-
 
 def lookup_antonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> List[str]:
     rows = conn.execute(
@@ -126,19 +141,13 @@ def lookup_antonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> Lis
     results = []
     for row in rows:
         lemma = row["lemma"]
-        if not isinstance(lemma, str):
-            continue
+        if not isinstance(lemma, str): continue
         clean = lemma.strip()
-        if not clean or clean.lower() == word.lower():
-            continue
-        if clean.lower() in seen:
-            continue
+        if not clean or clean.lower() == word.lower() or clean.lower() in seen: continue
         seen.add(clean.lower())
         results.append(clean)
-        if len(results) >= limit:
-            break
+        if len(results) >= limit: break
     return results
-
 
 def search_entries(conn: sqlite3.Connection, query: str, limit: int = 20) -> List[Dict[str, Any]]:
     try:
@@ -152,10 +161,8 @@ def search_entries(conn: sqlite3.Connection, query: str, limit: int = 20) -> Lis
             """,
             (query, limit),
         ).fetchall()
-    except sqlite3.OperationalError:
-        return []
+    except sqlite3.OperationalError: return []
     return [normalize_entry(row) for row in rows]
-
 
 def suggest_entries(conn: sqlite3.Connection, prefix: str, limit: int = 10) -> List[Dict[str, Any]]:
     rows = conn.execute(
@@ -169,20 +176,6 @@ def suggest_entries(conn: sqlite3.Connection, prefix: str, limit: int = 10) -> L
     ).fetchall()
     return [{"headword": row["headword"], "pos": row["pos"]} for row in rows]
 
-
-def mud_stub(word: str) -> Dict[str, Any]:
-    return {
-        "tags": [],
-        "hooks": [],
-        "entities": {
-            "items": [],
-            "npcs": [],
-            "locations": [],
-        },
-        "seed": word.lower(),
-    }
-
-
 class DictionaryHandler(BaseHTTPRequestHandler):
     conn = None
     lock = threading.Lock()
@@ -193,7 +186,7 @@ class DictionaryHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(data)))
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
         self.wfile.write(data)
@@ -201,9 +194,28 @@ class DictionaryHandler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
+
+    def do_POST(self) -> None:
+        parsed = urlparse(self.path)
+        if parsed.path == "/api/lexicon/lookup-batch":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(body)
+                words = data.get("words", [])
+                if not isinstance(words, list):
+                    self.send_json(400, {"error": "words must be a list"})
+                    return
+                with self.lock:
+                    results = batch_lookup_families(self.conn, words)
+                self.send_json(200, {"families": results})
+            except json.JSONDecodeError:
+                self.send_json(400, {"error": "Invalid JSON"})
+            return
+        self.send_json(404, {"error": "Not found"})
 
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
@@ -215,95 +227,50 @@ class DictionaryHandler(BaseHTTPRequestHandler):
             if not word:
                 self.send_json(400, {"error": "Missing word"})
                 return
-
             with self.lock:
                 entries = lookup_entries(self.conn, word, limit=5)
                 synonyms = lookup_synonyms(self.conn, word, limit=20)
                 antonyms = lookup_antonyms(self.conn, word, limit=20)
-
+                rhyme_data = lookup_rhymes(self.conn, word, limit=50)
             definition = None
             if entries:
                 first = entries[0]
                 gloss = extract_gloss(first.get("senses") or [])
                 if gloss:
-                    definition = {
-                        "text": gloss,
-                        "partOfSpeech": first.get("pos") or "",
-                        "source": first.get("source") or "scholomance",
-                    }
-
-            payload = {
-                "word": word,
-                "definition": definition,
-                "entries": entries,
-                "synonyms": synonyms,
-                "antonyms": antonyms,
-                "rhymes": [],
-                "lore": mud_stub(word),
-            }
+                    definition = {"text": gloss, "partOfSpeech": first.get("pos") or "", "source": first.get("source") or "scholomance"}
+            payload = {"word": word, "definition": definition, "entries": entries, "synonyms": synonyms, "antonyms": antonyms, "rhymes": rhyme_data["words"], "rhymeFamily": rhyme_data["family"], "lore": {"seed": word.lower()}}
             self.send_json(200, payload)
             return
 
         if path == "/api/lexicon/search":
             query = (params.get("q") or [""])[0].strip()
-            if not query:
-                self.send_json(400, {"error": "Missing query"})
-                return
+            if not query: self.send_json(400, {"error": "Missing query"}); return
             limit = int((params.get("limit") or ["20"])[0])
-            with self.lock:
-                entries = search_entries(self.conn, query, limit=limit)
-            results = []
-            for entry in entries:
-                gloss = extract_gloss(entry.get("senses") or [])
-                results.append(
-                    {
-                        "headword": entry.get("headword"),
-                        "pos": entry.get("pos"),
-                        "definition": gloss,
-                        "source": entry.get("source"),
-                    }
-                )
+            with self.lock: entries = search_entries(self.conn, query, limit=limit)
+            results = [{"headword": e.get("headword"), "pos": e.get("pos"), "definition": extract_gloss(e.get("senses") or []), "source": e.get("source")} for e in entries]
             self.send_json(200, {"query": query, "results": results})
             return
 
         if path == "/api/lexicon/suggest":
             prefix = (params.get("prefix") or [""])[0].strip()
-            if not prefix:
-                self.send_json(400, {"error": "Missing prefix"})
-                return
+            if not prefix: self.send_json(400, {"error": "Missing prefix"}); return
             limit = int((params.get("limit") or ["10"])[0])
-            with self.lock:
-                results = suggest_entries(self.conn, prefix, limit=limit)
+            with self.lock: results = suggest_entries(self.conn, prefix, limit=limit)
             self.send_json(200, {"prefix": prefix, "results": results})
             return
 
         self.send_json(404, {"error": "Not found"})
 
-    def log_message(self, format: str, *args) -> None:
-        return
-
-
 def main() -> None:
     ap = argparse.ArgumentParser(description="Serve Scholomance dictionary API")
     ap.add_argument("--db", default=DEFAULT_DB_PATH, help="Path to scholomance_dict.sqlite")
-    ap.add_argument("--host", default=DEFAULT_HOST)
-    ap.add_argument("--port", type=int, default=DEFAULT_PORT)
+    ap.add_argument("--host", default=DEFAULT_HOST); ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = ap.parse_args()
-
-    conn = connect_db(args.db)
-    DictionaryHandler.conn = conn
-
+    conn = connect_db(args.db); DictionaryHandler.conn = conn
     server = ThreadingHTTPServer((args.host, args.port), DictionaryHandler)
     print(f"Scholomance dictionary API running on http://{args.host}:{args.port}")
-    print("Base URL: /api/lexicon")
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server.server_close()
-        conn.close()
+    try: server.serve_forever()
+    except KeyboardInterrupt: pass
+    finally: server.server_close(); conn.close()
 
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__": main()

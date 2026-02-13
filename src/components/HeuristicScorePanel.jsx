@@ -1,9 +1,6 @@
 /**
  * HeuristicScorePanel
- * Floating panel showing real-time CODEx heuristic score breakdown.
- * Displays animated bars for each scoring heuristic with explanations.
- *
- * @see ARCH.md section 3 - Fix 3
+ * Floating panel showing real-time CODEx heuristic score breakdown and literary genre.
  */
 
 import { motion, AnimatePresence } from 'framer-motion';
@@ -41,7 +38,7 @@ function HeuristicBar({ trace, index }) {
   );
 }
 
-export default function HeuristicScorePanel({ scoreData, visible, isEmbedded = false, onClose = null }) {
+export default function HeuristicScorePanel({ scoreData, genreProfile, visible, isEmbedded = false, onClose = null }) {
   if (!visible || !scoreData) return null;
 
   const content = (
@@ -69,6 +66,16 @@ export default function HeuristicScorePanel({ scoreData, visible, isEmbedded = f
       {isEmbedded && (
         <div className="score-embedded-summary">
           Total Score: <span className="score-value-small">{scoreData.totalScore}</span>
+        </div>
+      )}
+
+      {genreProfile && (
+        <div className="genre-profile-section">
+          <div className="genre-label">Detected Genre</div>
+          <div className="genre-value">
+            {genreProfile.genre} 
+            <span className="genre-confidence">{(genreProfile.confidence * 100).toFixed(0)}% confidence</span>
+          </div>
         </div>
       )}
 

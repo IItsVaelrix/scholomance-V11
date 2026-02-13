@@ -115,7 +115,7 @@ describe('usePanelAnalysis hook', () => {
     expect(result.current.analysis?.allConnections?.[0]?.syntax?.gate).toBe('allow_weak');
   });
 
-  it('falls back to local runtime analysis when server analysis fails', async () => {
+  it('returns an error when server analysis fails', async () => {
     global.fetch = vi.fn().mockRejectedValue(new Error('server unavailable'));
 
     const { result } = renderHook(() => usePanelAnalysis());
@@ -131,10 +131,9 @@ describe('usePanelAnalysis hook', () => {
     });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(result.current.source).toBe('local-runtime');
-    expect(result.current.error).toBe(null);
-    expect(result.current.analysis).toBeTruthy();
-    expect(Array.isArray(result.current.analysis?.allConnections)).toBe(true);
-    expect(result.current.scoreData).toBeTruthy();
+    expect(result.current.source).toBe(null);
+    expect(result.current.error).toBe('server unavailable');
+    expect(result.current.analysis).toBe(null);
+    expect(result.current.scoreData).toBe(null);
   });
 });

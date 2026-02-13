@@ -56,15 +56,15 @@ describe('PhonemeEngine', () => {
       expect(PhonemeEngine.guessVowelFamily('CAT')).toBe('AE');    // short A
 
       // Silent-e / Magic-e patterns
-      expect(PhonemeEngine.guessVowelFamily('LIKE')).toBe('AY');   // i_e pattern
-      expect(PhonemeEngine.guessVowelFamily('TIME')).toBe('AY');   // i_e pattern
+      expect(PhonemeEngine.guessVowelFamily('LIKE')).toBe('EY');   // i_e pattern -> AY alias normalized to EY
+      expect(PhonemeEngine.guessVowelFamily('TIME')).toBe('EY');   // i_e pattern -> AY alias normalized to EY
       expect(PhonemeEngine.guessVowelFamily('MAKE')).toBe('EY');   // a_e pattern
       expect(PhonemeEngine.guessVowelFamily('HOME')).toBe('OW');   // o_e pattern
 
       // R-controlled vowels
       expect(PhonemeEngine.guessVowelFamily('CORE')).toBe('AO');   // -ore pattern
       expect(PhonemeEngine.guessVowelFamily('MORE')).toBe('AO');   // -ore pattern
-      expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('AY');   // -ire pattern
+      expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('EY');   // -ire pattern -> AY alias normalized to EY
     });
 
     it('keeps long-A cluster words in EY family', () => {

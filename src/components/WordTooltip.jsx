@@ -1,11 +1,16 @@
-import { useRef, useLayoutEffect, useEffect } from "react";
+import { useRef, useLayoutEffect, useEffect, useState, useId } from "react";
 import PropTypes from "prop-types";
-import { motion, useMotionValue } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS } from "../data/schools.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
 import "./WordTooltip.css";
+
+const TOOLTIP_MIN_WIDTH = 300;
+const TOOLTIP_MIN_HEIGHT = 350;
+const TOOLTIP_DEFAULT_WIDTH = 390;
+const TOOLTIP_DEFAULT_HEIGHT = 510;
 
 const SCHOOL_ICONS = {
   Evocation: "\uD83D\uDD25",
@@ -17,23 +22,13 @@ const SCHOOL_ICONS = {
   Necromancy: "\uD83D\uDC80",
   Transmutation: "\u2697\uFE0F",
 };
+
 const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
-  A: "SONIC",
-  AA: "SONIC",
-  AE: "SONIC",
-  AH: "SONIC",
-  AO: "VOID",
-  AW: "VOID",
-  OW: "VOID",
-  UW: "VOID",
-  AY: "ALCHEMY",
-  EY: "ALCHEMY",
-  OY: "ALCHEMY",
-  EH: "WILL",
-  ER: "WILL",
-  UH: "WILL",
-  IH: "PSYCHIC",
-  IY: "PSYCHIC",
+  A: "SONIC", AA: "SONIC", AE: "SONIC", AH: "SONIC",
+  AO: "VOID", AW: "VOID", OW: "VOID", UW: "VOID",
+  AY: "ALCHEMY", EY: "ALCHEMY", OY: "ALCHEMY",
+  EH: "WILL", ER: "WILL", UH: "WILL",
+  IH: "PSYCHIC", IY: "PSYCHIC",
 });
 
 function getSchoolNameFromVowelFamily(vowelFamily) {
@@ -55,32 +50,93 @@ const getRarity = (word) => {
 const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClose }) => {
   const { theme } = useTheme();
   const vowelPalette = getVowelColorsForSchool("DEFAULT", theme);
-  const tooltipRef = useRef(null);
+  const containerRef = useRef(null);
+  const titleId = useId();
+  
+  const [size, setSize] = useState({ width: TOOLTIP_DEFAULT_WIDTH, height: TOOLTIP_DEFAULT_HEIGHT });
+  const [pos, setPos] = useState({ x, y });
+  const [isInteracting, setIsInteracting] = useState(false);
 
-  const motionX = useMotionValue(0);
-  const motionY = useMotionValue(0);
-
+  // Sync incoming position
   useLayoutEffect(() => {
-    motionX.set(0);
-    motionY.set(0);
-  }, [x, y, motionX, motionY]);
+    setPos({ x, y });
+  }, [x, y]);
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
+
+  // High-performance Drag Logic
+  const handleDragStart = (e) => {
+    if (e.button !== 0) return;
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    setIsInteracting(true);
+
+    const startX = e.clientX - pos.x;
+    const startY = e.clientY - pos.y;
+
+    const handlePointerMove = (moveEvent) => {
+      const nextX = moveEvent.clientX - startX;
+      const nextY = moveEvent.clientY - startY;
+      setPos({ x: nextX, y: nextY });
+    };
+
+    const handlePointerUp = (upEvent) => {
+      target.releasePointerCapture(upEvent.pointerId);
+      target.removeEventListener("pointermove", handlePointerMove);
+      target.removeEventListener("pointerup", handlePointerUp);
+      setIsInteracting(false);
+      onDrag({ x: pos.x, y: pos.y });
+    };
+
+    target.addEventListener("pointermove", handlePointerMove);
+    target.addEventListener("pointerup", handlePointerUp);
+  };
+
+  // High-performance Resize Logic
+  const handleResizeStart = (e) => {
+    e.stopPropagation();
+    if (e.button !== 0) return;
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+    setIsInteracting(true);
+
+    const startWidth = size.width;
+    const startHeight = size.height;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    const handlePointerMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+      setSize({
+        width: Math.max(TOOLTIP_MIN_WIDTH, startWidth + deltaX),
+        height: Math.max(TOOLTIP_MIN_HEIGHT, startHeight + deltaY)
+      });
+    };
+
+    const handlePointerUp = (upEvent) => {
+      target.releasePointerCapture(upEvent.pointerId);
+      target.removeEventListener("pointermove", handlePointerMove);
+      target.removeEventListener("pointerup", handlePointerUp);
+      setIsInteracting(false);
+    };
+
+    target.addEventListener("pointermove", handlePointerMove);
+    target.addEventListener("pointerup", handlePointerUp);
+  };
 
   const cardContent = () => {
     if (isLoading && !wordData && !analysis) {
       return (
         <div className="word-card word-card--loading">
           <div className="card-frame">
-            <div className="card-inner">
+            <div className="card-inner" aria-busy="true">
               <div className="card-loading-spinner" />
               <p className="card-loading-text">Divining word essence...</p>
             </div>
@@ -93,28 +149,10 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       return (
         <div className="word-card word-card--error">
           <div className="card-frame">
-            <button className="card-close-btn" onClick={onClose} aria-label="Close">
-              &#x2715;
-            </button>
-            <div className="card-inner">
-              <div className="card-error-icon">&#x26A0;&#xFE0F;</div>
+            <button className="card-close-btn" onClick={onClose} aria-label="Close card">&#x2715;</button>
+            <div className="card-inner" role="alert">
+              <div className="card-error-icon" aria-hidden="true">&#x26A0;&#xFE0F;</div>
               <p className="card-error-text">{error}</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (!wordData && !analysis) {
-      return (
-        <div className="word-card word-card--empty">
-          <div className="card-frame">
-            <button className="card-close-btn" onClick={onClose} aria-label="Close">
-              &#x2715;
-            </button>
-            <div className="card-inner">
-              <div className="card-empty-icon">?</div>
-              <p className="card-empty-text">Unknown arcane word</p>
             </div>
           </div>
         </div>
@@ -125,23 +163,20 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     const rhymeContext = analysis?.rhyme || null;
     const syntaxGate = analysis?.syntax || null;
 
-    const word = String(wordData?.word || "");
+    const word = String(wordData?.word || analysis?.token?.word || "Unknown");
     const definition = wordData?.definition || null;
     const definitions = Array.isArray(wordData?.definitions) ? wordData.definitions : [];
     const synonyms = Array.isArray(wordData?.synonyms) ? wordData.synonyms : [];
     const antonyms = Array.isArray(wordData?.antonyms) ? wordData.antonyms : [];
     const rhymes = Array.isArray(wordData?.rhymes) ? wordData.rhymes : [];
+    const slantRhymes = Array.isArray(wordData?.slantRhymes) ? wordData.slantRhymes : [];
     const rhymeKey = wordData?.rhymeKey || localCore?.rhymeKey || null;
     const ipa = typeof wordData?.ipa === "string" ? wordData.ipa : null;
 
     const partOfSpeech = definition?.partOfSpeech;
     const allDefs = definitions.length > 0
       ? [...new Set(definitions)].slice(0, 5)
-      : definition?.text
-        ? [definition.text]
-        : isLoading
-          ? ["Loading lexicon..."]
-          : ["No definition found."];
+      : (definition?.text ? [definition.text] : ["No arcane definitions found."]);
 
     const vowelFamily = normalizeVowelFamily(localCore?.vowelFamily || wordData?.vowelFamily);
     const schoolName = localCore?.schoolName || getSchoolNameFromVowelFamily(vowelFamily);
@@ -156,32 +191,23 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     const syntaxReasons = Array.isArray(syntaxGate?.reasons) ? syntaxGate.reasons.slice(0, 6) : [];
 
     return (
-      <div className={`word-card word-card--${rarity}`} style={{ cursor: "grab" }}>
+      <div className={`word-card word-card--${rarity}`}>
         <div className="card-frame">
-          <button className="card-close-btn" onClick={onClose} aria-label="Close">
-            &#x2715;
-          </button>
+          <button className="card-close-btn" onClick={onClose} aria-label="Close card">&#x2715;</button>
 
-          <div className="card-mana-cost" style={{ backgroundColor: vowelColor }}>
-            <span className="mana-value">{syllables}</span>
+          <div className="card-mana-cost" style={{ backgroundColor: vowelColor }} aria-label={`${syllables} syllables`}>
+            <span className="mana-value" aria-hidden="true">{syllables}</span>
           </div>
 
           <div className="card-inner">
-            <div className="card-name-banner">
-              <h3 className="card-name">{word || "Unknown"}</h3>
-            </div>
+            <header className="card-name-banner" onPointerDown={handleDragStart} style={{ cursor: "grab" }}>
+              <h3 id={titleId} className="card-name">{word}</h3>
+            </header>
 
-            <div className="card-art-frame" style={{ borderColor: vowelColor }}>
-              <div
-                className="card-art"
-                style={{ background: `radial-gradient(ellipse at center, ${vowelColor}22 0%, transparent 70%)` }}
-              >
+            <div className="card-art-frame" style={{ borderColor: vowelColor }} aria-hidden="true">
+              <div className="card-art" style={{ background: `radial-gradient(ellipse at center, ${vowelColor}22 0%, transparent 70%)` }}>
                 <span className="card-school-icon">{schoolIcon}</span>
-                {vowelFamily && (
-                  <span className="card-vowel-glyph" style={{ color: vowelColor }}>
-                    {vowelFamily}
-                  </span>
-                )}
+                {vowelFamily && <span className="card-vowel-glyph" style={{ color: vowelColor }}>{vowelFamily}</span>}
               </div>
             </div>
 
@@ -191,100 +217,58 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
               </span>
             </div>
 
-            <div className="card-text-box">
-              {localCore && (
-                <div className="card-insight-section">
-                  <p className="card-insight-title">Core</p>
-                  <p className="card-insight-line">
-                    {(localCore.schoolGlyph || schoolIcon)} {(localCore.schoolName || "Unbound")} | Skin {(localCore.skin || "DEFAULT")}
-                  </p>
-                  {localCore.vowelFamily && (
-                    <p className="card-insight-line">Vowel Family: {localCore.vowelFamily}</p>
-                  )}
-                </div>
-              )}
-
-              {allDefs.length === 1 ? (
-                <p className="card-definition">{allDefs[0]}</p>
-              ) : (
-                <ol className="card-definitions-list">
-                  {allDefs.map((def, index) => (
-                    <li key={index} className="card-definition">{def}</li>
-                  ))}
-                </ol>
-              )}
-
+            <div className="card-text-box" tabIndex="0">
+              {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
+              
               {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
-              {isLoading && <p className="card-insight-line">Gathering lexicon data...</p>}
-              {error && <p className="card-insight-line card-insight-line--error">{error}</p>}
 
-              {(synonyms.length > 0 || antonyms.length > 0) && <div className="card-flavor-divider" />}
+              {(synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0) && <div className="card-flavor-divider" />}
 
-              {synonyms.length > 0 && (
-                <p className="card-flavor-text">
-                  <span className="flavor-label">Allies:</span> {synonyms.slice(0, 5).join(", ")}
-                </p>
-              )}
-
-              {antonyms.length > 0 && (
-                <p className="card-flavor-text">
-                  <span className="flavor-label">Foes:</span> {antonyms.slice(0, 5).join(", ")}
-                </p>
-              )}
-
-              {rhymes.length > 0 && (
-                <p className="card-flavor-text">
-                  <span className="flavor-label">Resonates:</span> {rhymes.slice(0, 5).join(", ")}
-                </p>
-              )}
+              {synonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Allies:</span> {synonyms.join(", ")}</p>}
+              {antonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Foes:</span> {antonyms.join(", ")}</p>}
+              {rhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Resonates:</span> {rhymes.join(", ")}</p>}
+              {slantRhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Near Echo:</span> {slantRhymes.join(", ")}</p>}
 
               {rhymeLinks.length > 0 && (
                 <div className="card-insight-section">
-                  <p className="card-insight-title">Rhyme Context</p>
-                  {rhymeLinks.map((link, index) => (
-                    <p key={`${link.linkedWord || "word"}-${index}`} className="card-insight-line">
-                      {(link.linkedWord || "Unknown")} | {(link.type || "near")} ({(Number(link.score) || 0).toFixed(2)})
+                  <p className="card-insight-title">Connections</p>
+                  {rhymeLinks.map((link, i) => (
+                    <p key={i} className="card-insight-line">
+                      {link.linkedWord} | {link.type} ({(link.score || 0).toFixed(2)})
                     </p>
                   ))}
                 </div>
               )}
-
-              {syntaxGate && (
-                <div className="card-insight-section">
-                  <p className="card-insight-title">Syntax Gate</p>
-                  <p className="card-insight-line">
-                    {(syntaxGate.role || "content")} | {(syntaxGate.lineRole || "line_mid")} | {(syntaxGate.stressRole || "unknown")}
-                  </p>
-                  <p className="card-insight-line">Policy: {syntaxGate.rhymePolicy || "allow"}</p>
-                  {syntaxReasons.length > 0 && (
-                    <p className="card-insight-line">Reasons: {syntaxReasons.join(", ")}</p>
-                  )}
-                  {gateReasons.length > 0 && (
-                    <p className="card-insight-line">Pair gates: {gateReasons.join(", ")}</p>
-                  )}
-                </div>
-              )}
             </div>
 
-            <div className="card-footer">
+            <footer className="card-footer">
               {rhymeKey && (
                 <div className="card-stat card-stat--left" title="Rhyme Key">
-                  <span className="stat-icon">&#x266A;</span>
+                  <span className="stat-icon" aria-hidden="true">&#x266A;</span>
                   <span className="stat-value">{rhymeKey}</span>
                 </div>
               )}
-              <div className="card-rarity-gem" data-rarity={rarity} />
+              <div className="card-rarity-gem" data-rarity={rarity} aria-label={`Rarity: ${rarity}`} />
               <div className="card-stat card-stat--right" title="Syllables">
                 <span className="stat-value">{syllables}</span>
-                <span className="stat-icon">&#x25C6;</span>
+                <span className="stat-icon" aria-hidden="true">&#x25C6;</span>
               </div>
-            </div>
+            </footer>
           </div>
 
-          <div className="card-corner card-corner--tl" />
-          <div className="card-corner card-corner--tr" />
-          <div className="card-corner card-corner--bl" />
-          <div className="card-corner card-corner--br" />
+          <div className="card-corner card-corner--tl" aria-hidden="true" />
+          <div className="card-corner card-corner--tr" aria-hidden="true" />
+          <div className="card-corner card-corner--bl" aria-hidden="true" />
+          <div className="card-corner card-corner--br" aria-hidden="true" />
+          
+          <div 
+            className="card-resize-handle" 
+            onPointerDown={handleResizeStart}
+            role="separator"
+            aria-label="Resize card"
+            aria-valuenow={size.width}
+            style={{ cursor: "nwse-resize" }}
+          />
         </div>
       </div>
     );
@@ -292,36 +276,25 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
   return (
     <motion.div
-      ref={tooltipRef}
-      className="word-tooltip-container"
+      ref={containerRef}
+      role="dialog"
+      aria-labelledby={titleId}
+      aria-modal="false"
+      className={`word-tooltip-container ${isInteracting ? "is-interacting" : ""}`}
       style={{
         position: "fixed",
-        top: y,
-        left: x,
-        x: motionX,
-        y: motionY,
+        top: 0,
+        left: 0,
+        width: size.width,
+        height: size.height,
+        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
         zIndex: 1000,
+        touchAction: "none"
       }}
-      initial={{ opacity: 0, scale: 0.9 }}
+      initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ type: "spring", damping: 25, stiffness: 400 }}
-      drag
-      dragConstraints={{
-        left: -x + 10,
-        right: window.innerWidth - x - 390,
-        top: -y + 10,
-        bottom: window.innerHeight - y - 510,
-      }}
-      dragElastic={0}
-      dragMomentum={false}
-      dragTransition={{ bounceStiffness: 600, bounceDamping: 30 }}
-      onDragEnd={() => {
-        const finalX = x + motionX.get();
-        const finalY = y + motionY.get();
-        onDrag({ x: finalX, y: finalY });
-      }}
-      whileDrag={{ cursor: "grabbing", scale: 1.02 }}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.15 }}
     >
       {cardContent()}
     </motion.div>
@@ -341,6 +314,7 @@ WordTooltip.propTypes = {
     synonyms: PropTypes.arrayOf(PropTypes.string),
     antonyms: PropTypes.arrayOf(PropTypes.string),
     rhymes: PropTypes.arrayOf(PropTypes.string),
+    slantRhymes: PropTypes.arrayOf(PropTypes.string),
     rhymeKey: PropTypes.string,
     syllableCount: PropTypes.number,
     ipa: PropTypes.string,

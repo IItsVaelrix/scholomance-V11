@@ -6,6 +6,7 @@ import {
   getAmbientPlayerService,
 } from "../lib/ambient/ambientPlayer.service";
 import { getPlayableSchoolIds, getSchoolAudioConfig } from "../lib/ambient/schoolAudio.config";
+import { fetchAudioFiles, normalizeAdminToken, type AudioFilePayload } from "../lib/audioAdminApi";
 
 const AudioFileSchema = z.object({
   name: z.string(),
@@ -13,29 +14,28 @@ const AudioFileSchema = z.object({
 });
 const AudioFileListSchema = z.array(AudioFileSchema);
 
-export function useAmbientPlayer(unlockedSchools = [], options = {}) {
-  const service = useMemo(() => getAmbientPlayerService(), []);
-  const [state, setState] = useState(() => service.getState());
-  const [dynamicSchools, setDynamicSchools] = useState([]);
-  const adminToken =
-    typeof options.adminToken === "string" && options.adminToken.trim()
-      ? options.adminToken.trim()
-      : null;
+type AmbientPlayerOptions = {
+  adminToken?: string | null;
+};
 
-  const buildAudioApiUrl = useCallback(
-    (path) => {
-      if (!adminToken || !import.meta.env.PROD) {
-        return path;
-      }
-      const separator = path.includes("?") ? "&" : "?";
-      return `${path}${separator}admin=${encodeURIComponent(adminToken)}`;
-    },
-    [adminToken]
-  );
+type DynamicSchool = {
+  id: string;
+  name: string;
+  trackUrl: string;
+  paletteKey: "void";
+  orbSkinKey: "void";
+  isDynamic: true;
+};
+
+export function useAmbientPlayer(unlockedSchools: string[] = [], options: AmbientPlayerOptions = {}): any {
+  const service = useMemo(() => getAmbientPlayerService(), []);
+  const [state, setState] = useState<Record<string, any>>(() => service.getState());
+  const [dynamicSchools, setDynamicSchools] = useState<DynamicSchool[]>([]);
+  const adminToken = normalizeAdminToken(options.adminToken);
 
   const fetchDynamicSchools = useCallback(async () => {
     try {
-      const res = await fetch(buildAudioApiUrl("/api/audio-files"));
+      const res = await fetchAudioFiles(adminToken);
       if (res.ok) {
         const rawData = await res.json();
         const parsed = AudioFileListSchema.safeParse(rawData);
@@ -43,31 +43,37 @@ export function useAmbientPlayer(unlockedSchools = [], options = {}) {
           console.error("Invalid audio files payload", parsed.error);
           return;
         }
-        
-        const files = parsed.data;
-        const schools = files.map((f) => ({
-          id: `dynamic-${f.name}`,
-          name: f.name.split(".")[0].replace(/_/g, " "),
-          trackUrl: f.url,
+
+        const files: AudioFilePayload[] = parsed.data;
+        const schools: DynamicSchool[] = files.map((file) => ({
+          id: `dynamic-${file.name}`,
+          name: file.name.split(".")[0].replace(/_/g, " "),
+          trackUrl: file.url,
           paletteKey: "void",
           orbSkinKey: "void",
           isDynamic: true,
         }));
         setDynamicSchools(schools);
         service.setDynamicSchools(schools);
+        return;
       }
-    } catch (e) {
-      console.error("Failed to fetch dynamic schools:", e);
+
+      if (res.status === 401) {
+        setDynamicSchools([]);
+        service.setDynamicSchools([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch dynamic schools:", error);
     }
-  }, [buildAudioApiUrl, service]);
+  }, [adminToken, service]);
 
   useEffect(() => {
-    fetchDynamicSchools();
+    void fetchDynamicSchools();
   }, [fetchDynamicSchools]);
 
   const playableSchools = useMemo(() => {
     const base = getPlayableSchoolIds(unlockedSchools);
-    const dynamicIds = dynamicSchools.map((s) => s.id);
+    const dynamicIds = dynamicSchools.map((school) => school.id);
     return [...base, ...dynamicIds];
   }, [unlockedSchools, dynamicSchools]);
 
@@ -77,21 +83,27 @@ export function useAmbientPlayer(unlockedSchools = [], options = {}) {
     service.setPlayableSchools(playableSchools);
   }, [service, playableSchools]);
 
-  const currentSchoolId = state.schoolId;
-  const queuedSchoolId = state.queuedSchoolId;
-  
-  const findSchool = (id) => {
+  const currentSchoolId = state.schoolId as string | null;
+  const queuedSchoolId = state.queuedSchoolId as string | null;
+
+  const schoolMap = SCHOOLS as Record<string, any>;
+
+  const findSchool = (id: string | null) => {
     if (!id) return null;
-    return SCHOOLS[id] || dynamicSchools.find((s) => s.id === id) || null;
+    return schoolMap[id] || dynamicSchools.find((school) => school.id === id) || null;
   };
 
   const currentSchool = findSchool(currentSchoolId);
   const queuedSchool = findSchool(queuedSchoolId);
-  
-  const currentSchoolConfig = currentSchoolId ? (SCHOOLS[currentSchoolId] ? getSchoolAudioConfig(currentSchoolId) : dynamicSchools.find(s => s.id === currentSchoolId)) : null;
+
+  const currentSchoolConfig = currentSchoolId
+    ? schoolMap[currentSchoolId]
+      ? getSchoolAudioConfig(currentSchoolId)
+      : dynamicSchools.find((school) => school.id === currentSchoolId) || null
+    : null;
 
   const tuneToSchool = useCallback(
-    async (schoolId) => {
+    async (schoolId: string) => {
       await service.unlockAudio();
       return await service.setSchool(schoolId);
     },
@@ -123,7 +135,7 @@ export function useAmbientPlayer(unlockedSchools = [], options = {}) {
   }, [service]);
 
   const setVolume = useCallback(
-    (value) => {
+    (value: number) => {
       service.setVolume(value);
     },
     [service]
@@ -134,14 +146,14 @@ export function useAmbientPlayer(unlockedSchools = [], options = {}) {
   }, [service]);
 
   const setAutoplayAmbient = useCallback(
-    async (enabled) => {
+    async (enabled: boolean) => {
       await service.setAutoplayAmbient(enabled);
     },
     [service]
   );
 
   const setCyclingEnabled = useCallback(
-    (enabled) => {
+    (enabled: boolean) => {
       service.setCyclingEnabled(enabled);
     },
     [service]
@@ -152,7 +164,7 @@ export function useAmbientPlayer(unlockedSchools = [], options = {}) {
   }, [service]);
 
   const setOrbVisibility = useCallback(
-    (visible) => {
+    (visible: boolean) => {
       service.setOrbVisibility(visible);
     },
     [service]

@@ -1,15 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools.js";
-import { useAmbientPlayer } from "../../hooks/useAmbientPlayer.jsx";
+import { useAmbientPlayer } from "../../hooks/useAmbientPlayer";
 import { useProgression } from "../../hooks/useProgression.jsx";
 import { getSchoolAudioConfig } from "../../lib/ambient/schoolAudio.config.js";
+import {
+  normalizeAdminToken,
+  readAudioAdminError,
+  uploadAudioFile,
+} from "../../lib/audioAdminApi";
 import "./ListenPage.css";
 
 const TRACK_SWITCH_DELAY_MS = 1500;
 
-function getProviderLabel(trackUrl) {
+function getProviderLabel(trackUrl: string | null | undefined) {
   if (!trackUrl) return "Unknown source";
   const normalized = String(trackUrl).toLowerCase();
   if (normalized.includes("youtube") || normalized.includes("youtu.be")) return "YouTube";
@@ -18,21 +22,18 @@ function getProviderLabel(trackUrl) {
   return "External stream";
 }
 
-function formatXp(value) {
+function formatXp(value: number) {
   return new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(value)));
 }
 
 export default function ListenPage() {
   const [isTrackSwitchLocked, setIsTrackSwitchLocked] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadStatus, setUploadStatus] = useState(null);
-  const trackSwitchTimerRef = useRef(null);
-  const fileInputRef = useRef(null);
-
-  const { search } = useLocation();
-  const searchParams = useMemo(() => new URLSearchParams(search), [search]);
-  const adminToken = searchParams.get("admin");
-  const isAdmin = adminToken === "echo";
+  const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+  const [adminTokenInput, setAdminTokenInput] = useState("");
+  const trackSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const adminToken = normalizeAdminToken(adminTokenInput);
 
   const { progression, checkUnlocked } = useProgression();
   const {
@@ -56,13 +57,13 @@ export default function ListenPage() {
     toggleCyclingEnabled,
     unlockAudio,
   } = useAmbientPlayer(progression.unlockedSchools, {
-    adminToken: isAdmin ? adminToken : null,
+    adminToken,
   });
 
   const stations = useMemo(
     () =>
       Object.values(SCHOOLS)
-        .map((school) => {
+        .map((school: any) => {
           const config = getSchoolAudioConfig(school.id);
           if (!config?.trackUrl) return null;
           return {
@@ -73,16 +74,16 @@ export default function ListenPage() {
           };
         })
         .filter(Boolean)
-        .sort((a, b) => a.unlockXP - b.unlockXP),
+        .sort((a: any, b: any) => a.unlockXP - b.unlockXP),
     [checkUnlocked]
   );
 
   const currentStation = useMemo(() => {
     if (!stations.length && !dynamicSchools.length) return null;
     return (
-      stations.find((station) => station.id === currentSchoolId) ||
-      dynamicSchools.find((s) => s.id === currentSchoolId) ||
-      stations.find((station) => station.unlocked) ||
+      stations.find((station: any) => station.id === currentSchoolId) ||
+      dynamicSchools.find((school: any) => school.id === currentSchoolId) ||
+      stations.find((station: any) => station.unlocked) ||
       stations[0] ||
       dynamicSchools[0]
     );
@@ -100,17 +101,6 @@ export default function ListenPage() {
   const canSwitchTracks = hasPlayableSignal && !isTuning && !isTrackSwitchLocked;
   const canCycleStations = canSwitchTracks && cyclingEnabled && playableSchools.length > 1;
   const livePulse = Math.max(0, Math.min(1, Number.isFinite(signalLevel) ? signalLevel : 0));
-
-  const buildAdminApiUrl = useCallback(
-    (path) => {
-      if (!isAdmin || !adminToken || !import.meta.env.PROD) {
-        return path;
-      }
-      const separator = path.includes("?") ? "&" : "?";
-      return `${path}${separator}admin=${encodeURIComponent(adminToken)}`;
-    },
-    [isAdmin, adminToken]
-  );
 
   useEffect(
     () => () => {
@@ -132,11 +122,10 @@ export default function ListenPage() {
     }, TRACK_SWITCH_DELAY_MS);
   }, []);
 
-  const handleTuneStation = async (stationId, isUnlocked = true) => {
+  const handleTuneStation = async (stationId: string, isUnlocked = true) => {
     if (!isUnlocked || !canSwitchTracks) return;
     lockTrackSwitching();
     await unlockAudio();
-    // For dynamic schools we don't have setCurrentKey mappings in library
     await tuneToSchool(stationId);
   };
 
@@ -160,30 +149,36 @@ export default function ListenPage() {
     await tuneNextSchool();
   };
 
-  const handleVolumeChange = (event) => {
+  const handleVolumeChange = (event: ChangeEvent<HTMLInputElement>) => {
     setVolume(Number(event.target.value));
   };
 
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
     if (!file || isUploading) return;
+    if (!adminToken) {
+      setUploadStatus("Upload failed: admin token required.");
+      return;
+    }
 
     setIsUploading(true);
     setUploadStatus(`Uploading ${file.name}...`);
-    const formData = new FormData();
-    formData.append("file", file);
 
     try {
-      const res = await fetch(buildAdminApiUrl("/api/upload"), {
-        method: "POST",
-        body: formData,
-      });
+      const res = await uploadAudioFile(file, adminToken);
       if (res.ok) {
         await refreshDynamicSchools();
         setUploadStatus(`Uploaded successfully! (${file.name})`);
         setTimeout(() => setUploadStatus(null), 3000);
       } else if (res.status === 401) {
-        setUploadStatus("Upload failed: unauthorized.");
+        const errorData = await readAudioAdminError(res);
+        if (errorData?.reason === "missing_admin_token") {
+          setUploadStatus("Upload failed: missing admin token.");
+        } else if (errorData?.reason === "invalid_admin_token") {
+          setUploadStatus("Upload failed: invalid admin token.");
+        } else {
+          setUploadStatus("Upload failed: unauthorized.");
+        }
       } else if (res.status === 429) {
         setUploadStatus("Upload failed: rate limited.");
       } else {
@@ -199,8 +194,10 @@ export default function ListenPage() {
     }
   };
 
+  const hasAdminToken = Boolean(adminToken);
+
   return (
-    <section className="section min-h-screen listen-page">
+    <section className="section listen-page">
       <div role="status" aria-live="polite" className="sr-only">
         {currentStation
           ? `${statusLabel}. ${currentStation.name} at ${Math.round(volume * 100)} percent volume.`
@@ -217,41 +214,54 @@ export default function ListenPage() {
           </p>
         </header>
 
-        {isAdmin && (
-          <div className="listen-admin-panel glass-elevated p-6 mb-8 rounded-xl flex items-center justify-between animate-fadeIn">
-            <div>
-              <h3 className="text-lg font-bold mb-1">Chamber of Echoes</h3>
-              <p className="text-sm text-muted">Direct upload to local archive</p>
-            </div>
-            <div className="flex items-center gap-4">
-              {uploadStatus && <span className="text-xs font-mono">{uploadStatus}</span>}
-              <input
-                type="file"
-                accept="audio/*"
-                ref={fileInputRef}
-                onChange={handleUpload}
-                className="hidden"
-              />
-              <button 
-                type="button" 
-                className="btn btn-primary btn-sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              >
-                {isUploading ? "Uploading..." : "Upload Audio"}
-              </button>
-            </div>
+        <div className="listen-admin-panel glass-elevated p-4 mb-4 rounded-xl flex items-center justify-between animate-fadeIn">
+          <div>
+            <h2 className="text-lg font-bold mb-1">Chamber of Echoes</h2>
+            <p className="text-sm text-muted">Direct upload to local archive</p>
           </div>
-        )}
+          <div className="flex items-center gap-3 flex-wrap justify-end">
+            <label htmlFor="listen-admin-token" className="sr-only">
+              Audio admin token
+            </label>
+            <input
+              id="listen-admin-token"
+              type="password"
+              value={adminTokenInput}
+              onChange={(event) => setAdminTokenInput(event.target.value)}
+              placeholder="Audio admin token"
+              className="listen-admin-token-input"
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Audio admin token"
+            />
+            {uploadStatus && <span className="text-xs font-mono">{uploadStatus}</span>}
+            <input
+              type="file"
+              accept="audio/*"
+              ref={fileInputRef}
+              onChange={handleUpload}
+              className="hidden"
+              aria-label="Audio file upload"
+            />
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || !hasAdminToken}
+            >
+              {isUploading ? "Uploading..." : "Upload Audio"}
+            </button>
+          </div>
+        </div>
 
         <div className="listen-board">
           <aside className="listen-station-panel glass" aria-label="Available stations">
             <div className="listen-panel-heading">
               <h2>Stations</h2>
-              <span>{stations.filter((station) => !station.unlocked).length} locked</span>
+              <span>{stations.filter((station: any) => !station.unlocked).length} locked</span>
             </div>
             <ul className="listen-station-list">
-              {stations.map((station) => {
+              {stations.map((station: any) => {
                 const isActive = station.id === currentSchoolId;
                 const xpRemaining = Math.max(0, station.unlockXP - progression.xp);
                 const stationProviderLabel = getProviderLabel(station.trackUrl);
@@ -266,7 +276,7 @@ export default function ListenPage() {
                         void handleTuneStation(station.id, station.unlocked);
                       }}
                       disabled={!station.unlocked || !canSwitchTracks}
-                      style={{ "--station-color": station.color }}
+                      style={{ "--station-color": station.color } as CSSProperties}
                     >
                       <span className="listen-station-dot" aria-hidden="true" />
                       <span className="listen-station-meta">
@@ -291,22 +301,22 @@ export default function ListenPage() {
                   <span>{dynamicSchools.length} items</span>
                 </div>
                 <ul className="listen-station-list">
-                  {dynamicSchools.map((s) => {
-                    const isActive = s.id === currentSchoolId;
+                  {dynamicSchools.map((school: any) => {
+                    const isActive = school.id === currentSchoolId;
                     return (
-                      <li key={s.id}>
+                      <li key={school.id}>
                         <button
                           type="button"
                           className={`listen-station-btn ${isActive ? "is-active" : ""}`}
                           onClick={() => {
-                            void handleTuneStation(s.id);
+                            void handleTuneStation(school.id);
                           }}
                           disabled={!canSwitchTracks}
-                          style={{ "--station-color": "var(--school-void)" }}
+                          style={{ "--station-color": "var(--school-void)" } as CSSProperties}
                         >
                           <span className="listen-station-dot" aria-hidden="true" />
                           <span className="listen-station-meta">
-                            <span className="listen-station-name">{s.name}</span>
+                            <span className="listen-station-name">{school.name}</span>
                             <span className="listen-station-sub">Local Archive</span>
                           </span>
                           <span className="listen-station-glyph" aria-hidden="true">
@@ -330,10 +340,12 @@ export default function ListenPage() {
           >
             <div
               className={`listen-now-aura ${isPlaying ? "is-live" : ""}`}
-              style={{
-                "--listen-accent": currentStation?.color || "var(--active-school-color)",
-                "--listen-pulse": livePulse.toFixed(3),
-              }}
+              style={
+                {
+                  "--listen-accent": currentStation?.color || "var(--active-school-color)",
+                  "--listen-pulse": livePulse.toFixed(3),
+                } as CSSProperties
+              }
               aria-hidden="true"
             />
             <div className="listen-now-meta">
@@ -424,4 +436,3 @@ export default function ListenPage() {
     </section>
   );
 }
-

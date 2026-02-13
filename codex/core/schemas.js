@@ -118,6 +118,7 @@
  * @property {string[]} synonyms - An array of synonyms.
  * @property {string[]} antonyms - An array of antonyms.
  * @property {string[]} rhymes - An array of rhyming words.
+ * @property {string[]} slantRhymes - An array of slant rhyming words.
  * @property {string} [etymology] - The word's origin.
  * @property {string} [ipa] - The IPA pronunciation.
  * @property {Object} [lore] - MUD-specific lore data.
@@ -138,6 +139,7 @@ export function createEmptyLexicalEntry(word) {
     synonyms: [],
     antonyms: [],
     rhymes: [],
+    slantRhymes: [],
     etymology: undefined,
     ipa: undefined,
     lore: undefined,
@@ -160,6 +162,7 @@ export function mergeLexicalEntries(base, overlay) {
     synonyms: overlay.synonyms?.length ? overlay.synonyms : base.synonyms,
     antonyms: overlay.antonyms?.length ? overlay.antonyms : base.antonyms,
     rhymes: overlay.rhymes?.length ? overlay.rhymes : base.rhymes,
+    slantRhymes: overlay.slantRhymes?.length ? overlay.slantRhymes : base.slantRhymes,
     etymology: overlay.etymology ?? base.etymology,
     ipa: overlay.ipa ?? base.ipa,
     lore: overlay.lore ?? base.lore,

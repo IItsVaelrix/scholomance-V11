@@ -48,6 +48,7 @@ export default function RhymeDiagramPanel({
   visible,
   onConnectionHover,
   onConnectionLeave,
+  onConnectionClick,
   highlightedLines,
 }) {
   const { theme } = useTheme();
@@ -151,6 +152,7 @@ export default function RhymeDiagramPanel({
                           onMouseLeave={onConnectionLeave}
                           onFocus={() => onConnectionHover?.(lines)}
                           onBlur={onConnectionLeave}
+                          onClick={() => onConnectionClick?.(lines)}
                         >
                           <span className="rhyme-conn-words">
                             <span className="rhyme-conn-word">{conn.wordA.word}</span>
@@ -201,6 +203,7 @@ RhymeDiagramPanel.propTypes = {
   visible: PropTypes.bool,
   onConnectionHover: PropTypes.func,
   onConnectionLeave: PropTypes.func,
+  onConnectionClick: PropTypes.func,
   highlightedLines: PropTypes.arrayOf(PropTypes.number),
 };
 
@@ -210,5 +213,6 @@ RhymeDiagramPanel.defaultProps = {
   visible: true,
   onConnectionHover: null,
   onConnectionLeave: null,
+  onConnectionClick: null,
   highlightedLines: [],
 };

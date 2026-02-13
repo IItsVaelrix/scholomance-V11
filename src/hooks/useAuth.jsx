@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const register = async (username, email, password) => {
+  const register = async (username, email, password, captchaId, captchaAnswer) => {
     const token = await fetchCsrfToken();
     const res = await fetch('/auth/register', {
       method: 'POST',
@@ -82,7 +82,7 @@ export function AuthProvider({ children }) {
         'Content-Type': 'application/json',
         'x-csrf-token': token
       },
-      body: JSON.stringify({ username, email, password })
+      body: JSON.stringify({ username, email, password, captchaId, captchaAnswer })
     });
 
     if (res.ok) {

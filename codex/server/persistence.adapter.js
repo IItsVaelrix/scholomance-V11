@@ -72,6 +72,16 @@ const USER_MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 5,
+    name: 'add_email_verification',
+    up(database) {
+      database.exec(`
+        ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0;
+        ALTER TABLE users ADD COLUMN verificationToken TEXT;
+      `);
+    },
+  },
 ];
 
 let db;
@@ -143,10 +153,20 @@ function findUserById(id) {
   return stmt.get(id);
 }
 
-function createUser(username, email, hashedPassword) {
-  const stmt = db.prepare('INSERT INTO users (username, email, password) VALUES (?, ?, ?)');
-  const result = stmt.run(username, email, hashedPassword);
+function findUserByVerificationToken(token) {
+  const stmt = db.prepare('SELECT * FROM users WHERE verificationToken = ?');
+  return stmt.get(token);
+}
+
+function createUser(username, email, hashedPassword, verificationToken) {
+  const stmt = db.prepare('INSERT INTO users (username, email, password, verificationToken, verified) VALUES (?, ?, ?, ?, 0)');
+  const result = stmt.run(username, email, hashedPassword, verificationToken);
   return { id: result.lastInsertRowid, username, email };
+}
+
+function verifyUser(userId) {
+  const stmt = db.prepare('UPDATE users SET verified = 1, verificationToken = NULL WHERE id = ?');
+  stmt.run(userId);
 }
 
 // --- Progression ---
@@ -229,7 +249,9 @@ export const persistence = {
     findByUsername: findUserByUsername,
     findByEmail: findUserByEmail,
     findById: findUserById,
+    findByVerificationToken: findUserByVerificationToken,
     createUser: createUser,
+    verifyUser: verifyUser,
   },
   progression: {
     get: getProgression,

@@ -96,10 +96,16 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `DB_BUSY_TIMEOUT_MS` | No | `5000` | SQLite busy timeout in ms for both user and collab databases. |
 | `SHUTDOWN_TIMEOUT_MS` | No | `10000` | Max graceful-shutdown wait before forced exit. |
 | `AUDIO_STORAGE_PATH` | No | `./public/audio` | Directory for uploaded audio files served at `/audio/*`. |
-| `AUDIO_ADMIN_TOKEN` | Yes in production | unset in development | Admin header token for audio upload/list fallback (`x-audio-admin-token`). |
+| `AUDIO_ADMIN_TOKEN` | Yes in production | unset in development | Required admin header token for audio upload/list routes (`x-audio-admin-token`). |
 | `ENABLE_DEV_AUTH` | No | `false` | Development-only auth bypass (`test` user) when `NODE_ENV=development`. |
 | `VITE_USE_CODEX_PIPELINE` | No | `true` | Enables CODEx runtime initialization in client. |
+| `VITE_USE_SERVER_PANEL_ANALYSIS` | No | `true` | Frontend kill switch for Read-page panel analysis requests. |
+| `VITE_USE_SERVER_ANALYSIS` | No | `true` | Frontend kill switch for `useDeepRhymeAnalysis` server requests. |
 | `VITE_API_BASE_URL` | No | browser origin fallback | Base API origin for non-browser/test contexts. |
+| `ENABLE_PANEL_ANALYSIS_CACHE` | No | `true` | Enables in-memory caching for `/api/analysis/panels`. |
+| `ENABLE_PANEL_ANALYSIS_REDIS_CACHE` | No | `true` | Enables Redis L2 caching for `/api/analysis/panels` when Redis is ready. |
+| `PANEL_ANALYSIS_CACHE_TTL_MS` | No | `300000` | Cache TTL in milliseconds for panel-analysis responses. |
+| `PANEL_ANALYSIS_CACHE_MAX_SIZE` | No | `1000` | Max in-memory panel-analysis cache entries before FIFO eviction. |
 | `SCHOLOMANCE_DICT_API_URL` | No | unset | Server-side Scholomance dictionary API base URL used by `/api/word-lookup*` routes. |
 | `VITE_SCHOLOMANCE_DICT_API_URL` | No | unset | Optional local dictionary API endpoint. |
 | `VITE_DICTIONARY_API_URL` | No | set in `.env.example` | Optional/legacy dictionary provider URL. |
@@ -114,6 +120,7 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `npm run build` | Build frontend production bundle. |
 | `npm run preview` | Preview built frontend with Vite preview server. |
 | `npm run lint` | ESLint checks with zero warnings allowed. |
+| `npm run typecheck` | Run TypeScript checks for frontend `.ts/.tsx` and targeted backend `checkJs` modules. |
 | `npm test` | Run Vitest suite. |
 | `npm run test:visual` | Run Chromium Playwright visual tests. |
 | `npm run test:visual:full` | Run full Playwright project matrix. |
@@ -143,13 +150,30 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 - `POST /api/scrolls/:id` (auth + CSRF)
 - `DELETE /api/scrolls/:id` (auth + CSRF)
 - `GET /api/rhymes/:word`
-- `GET /api/audio-files`
-- `POST /api/upload` (session or `x-audio-admin-token` gated in production)
+- `GET /api/audio-files` (`x-audio-admin-token` required in production)
+- `POST /api/upload` (`x-audio-admin-token` required in production)
 - Word lookup:
 - `GET /api/word-lookup/:word`
 - `POST /api/word-lookup/batch`
+- Panel analysis:
+- `POST /api/analysis/panels`
 - Collaboration tooling (prefix `/collab`):
 - agents, tasks, locks, pipelines, activity, status (`ENABLE_COLLAB_API=true`, auth required when enabled).
+
+### Panel Analysis Ops Notes
+
+- `POST /api/analysis/panels` emits:
+  - `X-Cache`: `MISS`, `HIT`, `HIT-REDIS`, or `BYPASS`
+  - `X-Analysis-Duration-Ms`: request processing duration
+  - `X-Analysis-Cache-Ttl-Ms`: active cache TTL config
+- `/metrics` now includes panel analysis counters:
+  - `panelAnalysisRequests`
+  - `panelAnalysisCacheHitsMemory`
+  - `panelAnalysisCacheHitsRedis`
+  - `panelAnalysisCacheMisses`
+  - `panelAnalysisErrors`
+  - `panelAnalysisCacheHitRatio`
+  - `panelAnalysisAvgDurationMs`
 
 ## Data and persistence
 
@@ -257,8 +281,18 @@ npm run test:visual:full
 - verify `REDIS_URL` and run `node scripts/verify-upstash.js`.
 - No API data in frontend dev:
 - ensure backend is running on `localhost:3000` so Vite proxy can forward requests.
-- Upload admin panel not visible:
-- in production, authenticate with session or send `x-audio-admin-token: <AUDIO_ADMIN_TOKEN>` on API requests.
+- Uploads fail with `missing_admin_token` or `invalid_admin_token`:
+- enter a valid audio admin token in the Listen page upload panel, or send `x-audio-admin-token: <AUDIO_ADMIN_TOKEN>` when calling the API directly.
+
+## TypeScript adoption status
+
+- TypeScript is now enabled incrementally.
+- Converted modules:
+  - `src/pages/Listen/ListenPage.tsx`
+  - `src/hooks/useAmbientPlayer.ts`
+  - `src/lib/audioAdminApi.ts`
+- Backend runtime remains Node ESM JavaScript.
+- Targeted backend type-safety for audio auth is enforced via `tsconfig.checkjs.json` on `codex/server/audioAuth.js`.
 
 ## Documentation index
 

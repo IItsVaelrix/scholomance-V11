@@ -18,7 +18,9 @@
       "Bash(npm install:*)",
       "Bash(npx vite build)",
       "Bash(node -e:*)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(gh pr list:*)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

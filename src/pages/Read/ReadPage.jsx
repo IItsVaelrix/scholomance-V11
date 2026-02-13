@@ -4,14 +4,17 @@ import {
   Panel,
   Separator as PanelResizeHandle,
 } from "react-resizable-panels";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useScrolls } from "../../hooks/useScrolls.jsx";
+import { useProgression } from "../../hooks/useProgression.jsx";
 import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
 import { SCHOOLS } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
+import { buildColorMap } from "../../lib/colorCodex.js";
 
 import RhymeSchemePanel from "../../components/RhymeSchemePanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
@@ -22,6 +25,10 @@ import WordTooltip from "../../components/WordTooltip.jsx";
 import ScrollEditor from "./ScrollEditor.jsx";
 import ScrollList from "./ScrollList.jsx";
 import TruesightControls, { ANALYSIS_MODES } from "./TruesightControls.jsx";
+import { TopBar, StatusBar } from "./IDEChrome.jsx";
+import ToolsSidebar from "./ToolsSidebar.jsx";
+import SearchPanel from "./SearchPanel.jsx";
+import Minimap from "./Minimap.jsx";
 import FloatingPanel from "../../components/shared/FloatingPanel.jsx";
 import "./IDE.css";
 
@@ -100,6 +107,7 @@ function getSchoolMetaFromVowelFamily(familyId) {
 export default function ReadPage() {
   const { theme } = useTheme();
   const { scrolls, saveScroll, deleteScroll, getScrollById } = useScrolls();
+  const { addXP, progression } = useProgression();
   const [activeScrollId, setActiveScrollId] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -113,15 +121,31 @@ export default function ReadPage() {
     if (typeof window === "undefined") return false;
     return window.innerWidth <= 960;
   });
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [saveStatus, setSaveStatus] = useState("Saved");
+  const [sidebarTab, setSidebarTab] = useState("FILES"); // FILES, SEARCH, TOOLS
+  const [showMinimap, setShowMinimap] = useState(false);
+  const [toasts, setToasts] = useState([]);
+
+  const addToast = useCallback((message, type = "info") => {
+    const id = Date.now();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 4000);
+  }, []);
 
   const schoolList = useMemo(
     () => [
-      { id: "DEFAULT", name: "Truesight", glyph: SCHOOL_GLYPHS.DEFAULT },
-      ...["SONIC", "PSYCHIC", "VOID", "ALCHEMY", "WILL"].map((id) => ({
-        id,
-        name: SCHOOLS[id].name,
-        glyph: SCHOOL_GLYPHS[id] || "\u2736",
-      })),
+      { id: "DEFAULT", name: "Truesight", glyph: String(SCHOOL_GLYPHS.DEFAULT || "") },
+      ...["SONIC", "PSYCHIC", "VOID", "ALCHEMY", "WILL"].map((id) => {
+        const school = SCHOOLS[id];
+        return {
+          id: String(id),
+          name: String(school?.name || id),
+          glyph: String(SCHOOL_GLYPHS[id] || school?.glyph || "\u2736"),
+        };
+      }),
     ],
     []
   );
@@ -130,6 +154,7 @@ export default function ReadPage() {
     analysis: deepAnalysis,
     schemeDetection,
     meterDetection,
+    genreProfile,
     scoreData,
     vowelSummary,
     isAnalyzing,
@@ -158,12 +183,13 @@ export default function ReadPage() {
     localAnalysis: null,
   });
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
+  const activeScrollContent = String(activeScroll?.content || "");
+  const truesightContent = isEditable ? editorContent : activeScrollContent;
 
   const lineCount = useMemo(() => {
-    return (editorContent || activeScroll?.content || "").split("\n").length;
-  }, [editorContent, activeScroll?.content]);
+    return truesightContent.split("\n").length;
+  }, [truesightContent]);
 
-  const truesightContent = editorContent || activeScroll?.content;
   const activeVowelColors = useMemo(
     () => getVowelColorsForSchool(selectedSchool, theme),
     [selectedSchool, theme]
@@ -233,6 +259,16 @@ export default function ReadPage() {
     return map;
   }, [deepAnalysis]);
 
+  const colorMap = useMemo(() => {
+    if (!deepAnalysis?.wordAnalyses || !deepAnalysis?.allConnections) return null;
+    return buildColorMap(
+      deepAnalysis.wordAnalyses,
+      deepAnalysis.allConnections,
+      activeVowelColors,
+      { theme }
+    );
+  }, [deepAnalysis, activeVowelColors, theme]);
+
   const vowelFamilyAnalytics = useMemo(() => {
     if (!isTruesight || analysisMode !== ANALYSIS_MODES.VOWEL) {
       return { families: [], totalWords: 0, uniqueWords: 0 };
@@ -266,9 +302,20 @@ export default function ReadPage() {
     };
   }, [isTruesight, analysisMode, vowelSummary, theme, activeVowelColors]);
 
+  const overlayConnections = useMemo(() => {
+    if (!isTruesight) {
+      return [];
+    }
+    return Array.isArray(activeConnections) ? activeConnections : [];
+  }, [isTruesight, activeConnections]);
+
   useEffect(() => {
     if (truesightContent && (isTruesight || showScorePanel)) {
+      // Only re-analyze if content has actually changed from what we last analyzed
       analyzeDocument(truesightContent);
+    } else if (!isTruesight && !showScorePanel) {
+      // If nothing needs analysis, we could potentially clear it or just let it stay
+      // but let's not call analyzeDocument unnecessarily.
     }
   }, [isTruesight, showScorePanel, truesightContent, analyzeDocument]);
 
@@ -282,42 +329,75 @@ export default function ReadPage() {
 
   const handleSaveScroll = useCallback(
     async (title, content) => {
+      setSaveStatus("Saving...");
       const isUpdate = Boolean(isEditing && activeScrollId);
       const savedScroll = await saveScroll({ id: isUpdate ? activeScrollId : undefined, title, content });
-      if (!savedScroll) return;
+      if (!savedScroll) {
+        setSaveStatus("Error");
+        addToast("Failed to save scroll", "error");
+        return;
+      }
+      
+      // Calculate XP
+      let xpAwarded = 100; // Base
+      let source = "basic_submission";
+      
+      const hasComplexAnalysis = (deepAnalysis?.allConnections?.length || 0) > 5 || schemeDetection?.id !== 'none';
+      if (hasComplexAnalysis) {
+        xpAwarded = 250;
+        source = "complex_analysis";
+      }
+      
+      if (selectedSchool !== 'DEFAULT') {
+        xpAwarded = 300;
+        source = "school_specific";
+      }
+
+      addXP(xpAwarded, source, savedScroll.id);
+      addToast(`Scroll Saved! +${xpAwarded} XP`, "success");
+
+      setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
+      setEditorContent(String(savedScroll.content || content || ""));
       setIsEditing(false);
       setIsEditable(false);
     },
-    [isEditing, activeScrollId, saveScroll]
+    [isEditing, activeScrollId, saveScroll, addXP, addToast, deepAnalysis, schemeDetection, selectedSchool]
   );
 
   const handleSelectScroll = useCallback((id) => {
+    const selected = getScrollById(id);
     setActiveScrollId(id);
+    setEditorContent(String(selected?.content || ""));
     setIsEditing(false);
     setIsEditable(false);
     setHighlightedLines([]);
-  }, []);
+    setSaveStatus("Saved");
+  }, [getScrollById]);
 
   const handleNewScroll = useCallback(() => {
     setActiveScrollId(null);
+    setEditorContent("");
     setIsEditing(false);
     setIsEditable(true);
     setHighlightedLines([]);
+    setSaveStatus("Unsaved");
   }, []);
 
   const handleEditScroll = useCallback(() => {
+    setEditorContent(activeScrollContent);
     setIsEditing(true);
     setIsEditable(true);
     setHighlightedLines([]);
-  }, []);
+  }, [activeScrollContent]);
 
   const handleCancelEdit = useCallback(() => {
     if (activeScrollId) {
+      setEditorContent(activeScrollContent);
       setIsEditing(false);
       setIsEditable(false);
     }
-  }, [activeScrollId]);
+  }, [activeScrollId, activeScrollContent]);
 
   const handleToggleTruesight = useCallback(() => {
     setIsTruesight((prev) => !prev);
@@ -335,6 +415,22 @@ export default function ReadPage() {
 
   const handleToolbarSave = useCallback(() => {
     editorRef.current?.save?.();
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setSidebarTab('SEARCH');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+        e.preventDefault();
+        // Toggle sidebar visibility could go here, but for now let's switch tabs
+        setSidebarTab(prev => prev === 'FILES' ? 'TOOLS' : 'FILES');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const resolveTooltipPosition = useCallback((activation) => {
@@ -475,6 +571,13 @@ export default function ReadPage() {
     }
 
     if (activation.trigger === "pin") {
+      // Block reopening if already pinned for this specific word instance
+      if (tooltipState.pinned &&
+        tooltipState.token?.charStart === activation.charStart &&
+        tooltipState.token?.lineIndex === activation.lineIndex) {
+        return;
+      }
+
       if (typeof document !== "undefined" && document.activeElement) {
         focusReturnRef.current = document.activeElement;
       }
@@ -489,7 +592,7 @@ export default function ReadPage() {
       resetWordLookup();
       lookup(activation.normalizedWord);
     }
-  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition]);
+  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
 
   useEffect(() => {
     if (!isTruesight) {
@@ -534,8 +637,24 @@ export default function ReadPage() {
     };
   }, [lookupData, tooltipState]);
 
+  const totalSyllables = useMemo(() => {
+    const counts = deepAnalysis?.lineSyllableCounts;
+    if (!Array.isArray(counts)) return 0;
+    return counts.reduce((a, b) => a + (Number(b) || 0), 0);
+  }, [deepAnalysis]);
+
   return (
     <div className="ide-layout-wrapper">
+      <TopBar 
+        title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")} 
+        onOpenSearch={() => setSidebarTab('SEARCH')}
+        showMinimap={showMinimap}
+        onToggleMinimap={() => setShowMinimap(!showMinimap)}
+        isEditable={isEditable}
+        activeScrollId={activeScrollId}
+        onEdit={handleEditScroll}
+        progression={progression}
+      />
       <main className="ide-main-content">
         <PanelGroup direction={isNarrowViewport ? "vertical" : "horizontal"}>
           <Panel
@@ -543,23 +662,80 @@ export default function ReadPage() {
             minSize={isNarrowViewport ? "20%" : "15%"}
             className="ide-sidebar"
           >
-            {isTruesight && analysisMode === ANALYSIS_MODES.RHYME ? (
-              <RhymeDiagramPanel
-                connections={activeConnections}
-                lineCount={lineCount}
-                visible={true}
-                onConnectionHover={setHighlightedLines}
-                onConnectionLeave={() => setHighlightedLines([])}
-              />
-            ) : (
-              <ScrollList
-                scrolls={scrolls}
-                activeScrollId={activeScrollId}
-                onSelect={handleSelectScroll}
-                onDelete={deleteScroll}
-                onNewScroll={handleNewScroll}
-              />
-            )}
+            <div className="sidebar-tabs">
+              <button 
+                className={`sidebar-tab ${sidebarTab === 'FILES' ? 'active' : ''}`}
+                onClick={() => setSidebarTab('FILES')}
+                title="Files"
+              >
+                📁
+              </button>
+              <button 
+                className={`sidebar-tab ${sidebarTab === 'SEARCH' ? 'active' : ''}`}
+                onClick={() => setSidebarTab('SEARCH')}
+                title="Search"
+              >
+                🔍
+              </button>
+              <button 
+                className={`sidebar-tab ${sidebarTab === 'TOOLS' ? 'active' : ''}`}
+                onClick={() => setSidebarTab('TOOLS')}
+                title="Tools"
+              >
+                🛠️
+              </button>
+            </div>
+            <div className="sidebar-content">
+              {sidebarTab === 'FILES' && (
+                <ScrollList
+                  scrolls={scrolls}
+                  activeScrollId={activeScrollId}
+                  onSelect={handleSelectScroll}
+                  onDelete={deleteScroll}
+                  onNewScroll={handleNewScroll}
+                />
+              )}
+              {sidebarTab === 'SEARCH' && (
+                <SearchPanel 
+                  content={editorContent} 
+                  onJumpToLine={(line) => {
+                    editorRef.current?.jumpToLine?.(line);
+                  }}
+                />
+              )}
+              {sidebarTab === 'TOOLS' && (
+                <div className="sidebar-tools">
+                  <ToolsSidebar 
+                    isTruesight={isTruesight}
+                    onToggleTruesight={handleToggleTruesight}
+                    analysisMode={analysisMode}
+                    onModeChange={handleModeChange}
+                    isAnalyzing={isAnalyzing}
+                    showScorePanel={showScorePanel}
+                    onToggleScorePanel={() => setShowScorePanel(!showScorePanel)}
+                    selectedSchool={selectedSchool}
+                    onSchoolChange={setSelectedSchool}
+                    schoolList={schoolList}
+                  />
+                  {analysisMode === ANALYSIS_MODES.RHYME && (
+                    <div className="sidebar-sub-panel">
+                      <RhymeDiagramPanel
+                        connections={overlayConnections}
+                        lineCount={lineCount}
+                        visible={true}
+                        onConnectionHover={setHighlightedLines}
+                        onConnectionLeave={() => setHighlightedLines([])}
+                        onConnectionClick={(lines) => {
+                          if (lines && lines.length > 0) {
+                            editorRef.current?.jumpToLine?.(lines[0] + 1);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </Panel>
           <PanelResizeHandle
             style={
@@ -570,55 +746,6 @@ export default function ReadPage() {
           />
           <Panel minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
-              <div className="document-toolbar">
-                <TruesightControls
-                  isTruesight={isTruesight}
-                  onToggle={handleToggleTruesight}
-                  analysisMode={analysisMode}
-                  onModeChange={handleModeChange}
-                  isAnalyzing={isAnalyzing}
-                  disabled={false}
-                />
-                {isTruesight && (
-                  <select
-                    className="school-dropdown"
-                    value={selectedSchool}
-                    onChange={(e) => setSelectedSchool(e.target.value)}
-                    aria-label="Select school color skin"
-                  >
-                    {schoolList.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.glyph} {s.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <button
-                  type="button"
-                  className={`toolbar-btn ${showScorePanel ? 'toolbar-btn--active' : ''}`}
-                  onClick={() => setShowScorePanel(!showScorePanel)}
-                  title="Toggle CODEx Score Panel"
-                >
-                  <span aria-hidden="true">&#x1F4CA;</span> Score
-                </button>
-                {isEditable && (
-                  <button
-                    type="button"
-                    className="toolbar-btn toolbar-btn--save"
-                    onClick={handleToolbarSave}
-                    disabled={false}
-                    title="Save current scroll (Ctrl+S)"
-                  >
-                    Save
-                  </button>
-                )}
-                {!isEditable && activeScrollId && (
-                  <button type="button" className="toolbar-btn" onClick={handleEditScroll}>
-                    Edit
-                  </button>
-                )}
-              </div>
-
               <div className="document-container">
                 {activeScrollId || isEditable ? (
                   <ScrollEditor
@@ -631,16 +758,21 @@ export default function ReadPage() {
                     isEditable={isEditable}
                     disabled={false}
                     isTruesight={isTruesight}
-                    onContentChange={setEditorContent}
+                    onContentChange={(content) => {
+                      setEditorContent(content);
+                      setSaveStatus("Unsaved");
+                    }}
                     analyzedWords={analyzedWords}
                     analyzedWordsByIdentity={analyzedWordsByIdentity}
                     analyzedWordsByCharStart={analyzedWordsByCharStart}
-                    activeConnections={activeConnections}
+                    activeConnections={overlayConnections}
                     lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
                     highlightedLines={highlightedLines}
                     vowelColors={activeVowelColors}
+                    colorMap={colorMap}
                     theme={theme}
                     onWordActivate={handleWordActivate}
+                    onCursorChange={setCursorPos}
                   />
                 ) : (
                   <div className="scroll-placeholder">
@@ -654,7 +786,42 @@ export default function ReadPage() {
           </Panel>
         </PanelGroup>
       </main>
+
+      <StatusBar 
+        line={cursorPos.line} 
+        col={cursorPos.col} 
+        language="Scroll Language" 
+        syllableCount={totalSyllables}
+      />
       
+      {showMinimap && (
+        <FloatingPanel
+          id="minimap-panel"
+          title="Minimap"
+          onClose={() => setShowMinimap(false)}
+          defaultX={window.innerWidth - 180}
+          defaultY={window.innerHeight - 350}
+          defaultWidth={150}
+          defaultHeight={300}
+          minWidth={80}
+          minHeight={100}
+          zIndex={200}
+          className="minimap-floating-panel"
+        >
+          <Minimap 
+            content={editorContent}
+            scrollTop={scrollTop}
+            viewportHeight={editorRef.current?.clientHeight || 0}
+            totalHeight={editorRef.current?.scrollHeight || 1}
+            onScrollTo={(y) => {
+              if (editorRef.current?.scrollTo) {
+                editorRef.current.scrollTo(y);
+              }
+            }}
+          />
+        </FloatingPanel>
+      )}
+
       {isTruesight && analysisMode === ANALYSIS_MODES.VOWEL && (
         <FloatingPanel
           id="vowel-panel"
@@ -703,6 +870,7 @@ export default function ReadPage() {
         >
           <HeuristicScorePanel
             scoreData={scoreData}
+            genreProfile={genreProfile}
             visible={true}
             isEmbedded={true}
           />
@@ -721,6 +889,22 @@ export default function ReadPage() {
           onClose={handleCloseTooltip}
         />
       )}
+
+      <div className="toast-container">
+        <AnimatePresence>
+          {toasts.map((toast) => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, x: 50, scale: 0.9 }}
+              animate={{ opacity: 1, x: 0, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+              className={`toast-item toast-item--${toast.type}`}
+            >
+              {toast.message}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

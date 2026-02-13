@@ -28,8 +28,10 @@ import { collabPersistence } from './collab/collab.persistence.js';
 import { collabRoutes } from './collab/collab.routes.js';
 import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
+import { authRoutes } from './routes/auth.routes.js';
 import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
+import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
 
 import 'dotenv/config';
 
@@ -338,37 +340,11 @@ const csrfPreValidation = async (request, reply) => {
   });
 };
 
-function readHeaderAsString(headerValue) {
-  if (typeof headerValue === 'string') return headerValue;
-  if (Array.isArray(headerValue) && typeof headerValue[0] === 'string') return headerValue[0];
-  return null;
-}
-
-function secureTokenEquals(left, right) {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-  if (leftBuffer.length !== rightBuffer.length) {
-    return false;
-  }
-  return crypto.timingSafeEqual(leftBuffer, rightBuffer);
-}
-
-function isAudioAdminRequest(request) {
-  const headerToken = readHeaderAsString(request.headers['x-audio-admin-token']);
-  if (!headerToken || !AUDIO_ADMIN_TOKEN) {
-    return false;
-  }
-  return secureTokenEquals(headerToken, AUDIO_ADMIN_TOKEN);
-}
-
-function isAudioRequestAuthorized(request) {
-  if (!IS_PRODUCTION) {
-    return true;
-  }
-  if (request.session?.user) {
-    return true;
-  }
-  return isAudioAdminRequest(request);
+function authorizeAudioRouteRequest(request) {
+  return authorizeAudioRequest(request, {
+    isProduction: IS_PRODUCTION,
+    configuredAdminToken: AUDIO_ADMIN_TOKEN,
+  });
 }
 
 // Register Helmet for security headers
@@ -455,83 +431,7 @@ fastify.get('/metrics', async () => {
   };
 });
 
-// Route to provide CSRF token to the client
-fastify.get('/auth/csrf-token', async (_request, reply) => {
-    const token = await reply.generateCsrf();
-    return { token };
-});
-
-// 4. Authentication Routes
-fastify.post('/auth/register', {
-    config: { rateLimit: { max: 10, timeWindow: '10 minutes' } },
-    preValidation: [csrfPreValidation],
-    schema: { body: toFastifySchema(registerBodySchema) },
-    handler: async (request, reply) => {
-        const { username, email, password } = request.body;
-        const existingUser = persistence.users.findByUsername(username);
-        if (existingUser) return reply.status(409).send({ message: 'Username already taken' });
-        const existingEmail = persistence.users.findByEmail(email);
-        if (existingEmail) return reply.status(409).send({ message: 'Email already registered' });
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = persistence.users.createUser(username, email, hashedPassword);
-        return reply.status(201).send({ message: 'User registered successfully', userId: user.id });
-    }
-});
-
-fastify.post('/auth/login', {
-    config: { rateLimit: { max: 5, timeWindow: '1 minute' } },
-    preValidation: [csrfPreValidation],
-    schema: { body: toFastifySchema(loginBodySchema) },
-    handler: async (request, reply) => {
-        const { username, password } = request.body;
-        const user = persistence.users.findByUsername(username);
-        if (!user) {
-            fastify.opsMetrics.increment('authFailures');
-            return reply.status(401).send({ message: 'Invalid credentials' });
-        }
-        const valid = await bcrypt.compare(password, user.password);
-        if (!valid) {
-            fastify.opsMetrics.increment('authFailures');
-            return reply.status(401).send({ message: 'Invalid credentials' });
-        }
-        request.session.user = { id: user.id, username: user.username, email: user.email };
-        return reply.status(200).send({ message: 'Logged in successfully' });
-    },
-});
-
-fastify.post('/auth/logout', {
-    preValidation: [csrfPreValidation],
-    handler: async (request, reply) => {
-        await request.session.destroy();
-        reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-        return reply.status(200).send({ message: 'Logged out successfully' });
-    }
-});
-
-fastify.get('/auth/me', async (request, reply) => {
-    if (!request.session.user) {
-        reply.status(401).send({ message: 'Not authenticated' });
-        return;
-    }
-
-    if (!request.session.user.email || !request.session.user.username) {
-        const persistedUser = persistence.users.findById(request.session.user.id);
-        if (!persistedUser) {
-            await request.session.destroy();
-            reply.clearCookie(SESSION_COOKIE_NAME, { path: '/' });
-            reply.status(401).send({ message: 'Not authenticated' });
-            return;
-        }
-        request.session.user = {
-            ...request.session.user,
-            id: persistedUser.id,
-            username: persistedUser.username,
-            email: persistedUser.email,
-        };
-    }
-
-    reply.status(200).send({ user: request.session.user });
-});
+fastify.register(authRoutes, { prefix: '/auth' });
 
 // Reference API Proxy Routes
 fastify.get('/api/rhymes/:word', async (request, reply) => {
@@ -606,8 +506,9 @@ fastify.delete('/api/scrolls/:id', {
 
 // Upload and Audio List Routes
 fastify.get('/api/audio-files', async (request, reply) => {
-    if (!isAudioRequestAuthorized(request)) {
-        return reply.status(401).send({ message: 'Unauthorized' });
+    const authorization = authorizeAudioRouteRequest(request);
+    if (!authorization.authorized) {
+        return reply.status(401).send(buildAudioUnauthorizedPayload(authorization.reason));
     }
     try {
         const files = readdirSync(AUDIO_UPLOAD_PATH);
@@ -621,9 +522,10 @@ fastify.get('/api/audio-files', async (request, reply) => {
 });
 
 fastify.post('/api/upload', async (request, reply) => {
-    if (!isAudioRequestAuthorized(request)) {
+    const authorization = authorizeAudioRouteRequest(request);
+    if (!authorization.authorized) {
         fastify.opsMetrics.increment('uploadFailures');
-        return reply.status(401).send({ message: 'Unauthorized' });
+        return reply.status(401).send(buildAudioUnauthorizedPayload(authorization.reason));
     }
     try {
         const data = await request.file();

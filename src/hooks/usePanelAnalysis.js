@@ -1,34 +1,15 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
-import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
-import { analyzeLiteraryDevices, detectEmotion } from "../lib/literaryDevices.detector.js";
+import { isComplexScheme } from "../lib/rhymeScheme.detector.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
-import { buildSyntaxLayer } from "../lib/syntax.layer.js";
-import { analyzeText } from "../../codex/core/analysis.pipeline.js";
-import { createScoringEngine } from "../../codex/core/scoring.engine.js";
-import { alliterationDensityHeuristic } from "../../codex/core/heuristics/alliteration_density.js";
-import { literaryDeviceRichnessHeuristic } from "../../codex/core/heuristics/literary_device_richness.js";
-import { meterRegularityHeuristic } from "../../codex/core/heuristics/meter_regularity.js";
-import { phonemeDensityHeuristic } from "../../codex/core/heuristics/phoneme_density.js";
-import { rhymeQualityHeuristic } from "../../codex/core/heuristics/rhyme_quality.js";
-import { vocabularyRichnessHeuristic } from "../../codex/core/heuristics/vocabulary_richness.js";
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
-const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
-const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
-
-const SCORE_HEURISTICS = [
-  phonemeDensityHeuristic,
-  alliterationDensityHeuristic,
-  rhymeQualityHeuristic,
-  meterRegularityHeuristic,
-  literaryDeviceRichnessHeuristic,
-  vocabularyRichnessHeuristic,
-];
+const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
+const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
+const USE_SERVER_PANEL_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -46,63 +27,8 @@ function parseBooleanFlag(rawValue, defaultValue) {
   return defaultValue;
 }
 
-const USE_SERVER_PANEL_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
-const ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK = parseBooleanFlag(
-  import.meta.env.VITE_ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK,
-  true
-);
-const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanFlag(import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER, false);
-
-function createScoreEngine() {
-  const engine = createScoringEngine();
-  SCORE_HEURISTICS.forEach((heuristicDef) => {
-    engine.registerHeuristic({
-      heuristic: heuristicDef.name,
-      scorer: heuristicDef.scorer,
-      weight: heuristicDef.weight,
-    });
-  });
-  return engine;
-}
-
-function getPrimaryStressedVowelFamily(analyzedWord) {
-  const syllables = Array.isArray(analyzedWord?.deepPhonetics?.syllables)
-    ? analyzedWord.deepPhonetics.syllables
-    : [];
-  const stressed = syllables.find((syllable) => Number(syllable?.stress) > 0) || syllables[0];
-  const fallback = analyzedWord?.phonetics?.vowelFamily;
-  return normalizeVowelFamily(stressed?.vowelFamily || fallback);
-}
-
-function buildAnalysisWordProfiles(analyzedDoc) {
-  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
-  const profiles = [];
-
-  for (const line of lines) {
-    const lineIndex = Number.isInteger(line?.number) ? line.number : 0;
-    const words = Array.isArray(line?.words) ? line.words : [];
-    for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
-      const analyzedWord = words[wordIndex];
-      profiles.push({
-        word: String(analyzedWord?.text || ""),
-        normalizedWord: String(analyzedWord?.normalized || "").toUpperCase(),
-        lineIndex,
-        wordIndex,
-        charStart: Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1,
-        charEnd: Number.isInteger(analyzedWord?.end) ? analyzedWord.end : -1,
-        vowelFamily: getPrimaryStressedVowelFamily(analyzedWord) || null,
-        syllableCount: Number(analyzedWord?.syllableCount) || 0,
-        rhymeKey: analyzedWord?.deepPhonetics?.rhymeKey || analyzedWord?.phonetics?.rhymeKey || null,
-      });
-    }
-  }
-
-  return profiles;
-}
-
-function buildLineSyllableCounts(analyzedDoc) {
-  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
-  return lines.map((line) => Number(line?.syllableCount) || 0);
+function getPanelAnalysisEndpoint() {
+  return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";
 }
 
 function normalizeGroupMap(value) {
@@ -259,106 +185,6 @@ function normalizePanelPayload(rawPayload) {
   };
 }
 
-function buildLocalVowelSummary(analyzedDoc) {
-  if (!analyzedDoc || !Array.isArray(analyzedDoc.allWords)) {
-    return EMPTY_VOWEL_SUMMARY;
-  }
-
-  const counts = new Map();
-  const uniqueWords = new Set();
-
-  analyzedDoc.allWords.forEach((word) => {
-    const normalized = String(word?.normalized || "").trim().toUpperCase();
-    if (normalized) uniqueWords.add(normalized);
-
-    const familyId = normalizeVowelFamily(word?.phonetics?.vowelFamily);
-    if (!familyId) return;
-    counts.set(familyId, (counts.get(familyId) || 0) + 1);
-  });
-
-  const totalWords = Array.from(counts.values()).reduce((sum, count) => sum + count, 0);
-  const families = Array.from(counts.entries())
-    .map(([id, count]) => ({
-      id,
-      count,
-      percent: totalWords > 0 ? count / totalWords : 0,
-    }))
-    .sort((a, b) => b.count - a.count);
-
-  return {
-    families,
-    totalWords,
-    uniqueWords: uniqueWords.size,
-  };
-}
-
-function analyzePanelsLocally(text, deepRhymeEngine, scoreEngine) {
-  const analyzedDoc = analyzeText(text);
-  const scoreData = scoreEngine.calculateScore(analyzedDoc);
-  const syntaxLayer = ENABLE_SYNTAX_RHYME_LAYER ? buildSyntaxLayer(analyzedDoc) : null;
-
-  const deepAnalysis = deepRhymeEngine.analyzeDocument(
-    text,
-    syntaxLayer ? { syntaxLayer } : {}
-  );
-  const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
-  const meter = analyzeMeter(deepAnalysis.lines);
-  const literaryDevices = analyzeLiteraryDevices(text);
-  const emotion = detectEmotion(text);
-
-  return {
-    source: "local-runtime",
-    data: {
-      analysis: {
-        ...deepAnalysis,
-        wordAnalyses: buildAnalysisWordProfiles(analyzedDoc),
-        lineSyllableCounts: buildLineSyllableCounts(analyzedDoc),
-      },
-      scheme,
-      meter,
-      literaryDevices,
-      emotion,
-      scoreData,
-      vowelSummary: buildLocalVowelSummary(analyzedDoc),
-    },
-  };
-}
-
-function getPanelAnalysisEndpoint() {
-  return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";
-}
-
-async function analyzePanelsOnServer(text) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(getPanelAnalysisEndpoint(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ text }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Panel analysis request failed (${response.status})`);
-    }
-
-    const payload = await response.json();
-    return normalizePanelPayload(payload);
-  } catch (error) {
-    if (error?.name === "AbortError") {
-      throw new Error("Panel analysis timed out");
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
 export function usePanelAnalysis() {
   const [analysis, setAnalysis] = useState(null);
   const [schemeDetection, setSchemeDetection] = useState(null);
@@ -376,15 +202,9 @@ export function usePanelAnalysis() {
   const debounceTimerRef = useRef(null);
   const lastTextRef = useRef(null);
   const requestIdRef = useRef(0);
-  const deepRhymeEngineRef = useRef(null);
-  const scoreEngineRef = useRef(null);
-
-  if (!deepRhymeEngineRef.current) {
-    deepRhymeEngineRef.current = new DeepRhymeEngine();
-  }
-  if (!scoreEngineRef.current) {
-    scoreEngineRef.current = createScoreEngine();
-  }
+  const abortControllerRef = useRef(null);
+  const lastRequestTimeRef = useRef(0);
+  const isPendingRef = useRef(false);
 
   const resetAnalysisState = useCallback(() => {
     setAnalysis(null);
@@ -399,6 +219,7 @@ export function usePanelAnalysis() {
     setSource(null);
     setError(null);
     setIsAnalyzing(false);
+    isPendingRef.current = false;
   }, []);
 
   const applyResultIfCurrent = useCallback((requestId, result) => {
@@ -408,28 +229,36 @@ export function usePanelAnalysis() {
 
     const normalized = normalizePanelPayload(result);
     const nextAnalysis = normalized.analysis;
+    const allConnections = Array.isArray(nextAnalysis?.allConnections) ? nextAnalysis.allConnections : [];
 
     setAnalysis(nextAnalysis);
     setSchemeDetection(normalized.scheme);
     setMeterDetection(normalized.meter);
     setScoreData(normalized.scoreData);
     setVowelSummary(normalized.vowelSummary);
-    setActiveConnections(nextAnalysis?.allConnections || []);
+    setActiveConnections(allConnections);
+    setHighlightedGroup(null);
     setLiteraryDevices(normalized.literaryDevices);
     setEmotion(normalized.emotion);
     setSource(normalized.source);
     setError(null);
     setIsAnalyzing(false);
+    isPendingRef.current = false;
   }, []);
 
   const analyzeDocument = useCallback((text) => {
     const nextText = typeof text === "string" ? text : String(text || "");
     const trimmedText = nextText.trim();
 
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
+
     if (!trimmedText) {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current);
-        debounceTimerRef.current = null;
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
       }
       lastTextRef.current = null;
       requestIdRef.current += 1;
@@ -437,53 +266,86 @@ export function usePanelAnalysis() {
       return;
     }
 
-    if (nextText === lastTextRef.current) {
+    if (!USE_SERVER_PANEL_ANALYSIS) {
+      setIsAnalyzing(false);
+      setSource("feature-flag-disabled");
+      setError("Panel analysis disabled");
+      return;
+    }
+
+    if (nextText === lastTextRef.current && !isPendingRef.current) {
       return;
     }
     lastTextRef.current = nextText;
 
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-    }
-
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
+
     setIsAnalyzing(true);
     setError(null);
+    isPendingRef.current = true;
 
     debounceTimerRef.current = setTimeout(async () => {
-      try {
-        let result = null;
+      // Respect minimum interval between requests (1s)
+      const MIN_REQUEST_INTERVAL = 1000;
+      const now = Date.now();
+      const timeSinceLast = now - lastRequestTimeRef.current;
+      
+      if (timeSinceLast < MIN_REQUEST_INTERVAL) {
+        const delay = MIN_REQUEST_INTERVAL - timeSinceLast;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        if (requestId !== requestIdRef.current) return;
+      }
 
-        if (USE_SERVER_PANEL_ANALYSIS) {
-          try {
-            result = await analyzePanelsOnServer(nextText);
-          } catch (serverError) {
-            if (!ENABLE_LOCAL_PANEL_ANALYSIS_FALLBACK) {
-              throw serverError;
-            }
-            result = analyzePanelsLocally(
-              nextText,
-              deepRhymeEngineRef.current,
-              scoreEngineRef.current
-            );
-          }
-        } else {
-          result = analyzePanelsLocally(
-            nextText,
-            deepRhymeEngineRef.current,
-            scoreEngineRef.current
-          );
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      lastRequestTimeRef.current = Date.now();
+
+      let didTimeout = false;
+      const timeoutId = setTimeout(() => {
+        didTimeout = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+
+      try {
+        const response = await fetch(getPanelAnalysisEndpoint(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ text: nextText }),
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Analysis failed (${response.status})`);
         }
 
-        applyResultIfCurrent(requestId, result);
+        const payload = await response.json();
+        applyResultIfCurrent(requestId, payload);
       } catch (analysisError) {
-        if (requestId !== requestIdRef.current) {
+        if (requestId !== requestIdRef.current) return;
+
+        if (analysisError?.name === "AbortError") {
+          if (didTimeout) {
+            setError("Analysis timed out");
+            setIsAnalyzing(false);
+            isPendingRef.current = false;
+          }
           return;
         }
-        const message = analysisError instanceof Error ? analysisError.message : "Panel analysis failed";
-        setError(message);
+
+        setError(analysisError.message || "Analysis failed");
         setIsAnalyzing(false);
+        isPendingRef.current = false;
+      } finally {
+        clearTimeout(timeoutId);
+        if (abortControllerRef.current === controller) {
+          abortControllerRef.current = null;
+        }
       }
     }, ANALYSIS_DEBOUNCE_MS);
   }, [applyResultIfCurrent, resetAnalysisState]);
@@ -491,7 +353,8 @@ export function usePanelAnalysis() {
   const highlightRhymeGroup = useCallback((groupLabel) => {
     if (!analysis) return;
 
-    const connections = analysis.allConnections.filter(
+    const allConnections = Array.isArray(analysis.allConnections) ? analysis.allConnections : [];
+    const connections = allConnections.filter(
       (connection) => connection.groupLabel === groupLabel
     );
     setActiveConnections(connections);
@@ -500,7 +363,8 @@ export function usePanelAnalysis() {
 
   const clearHighlight = useCallback(() => {
     if (analysis) {
-      setActiveConnections(analysis.allConnections);
+      const allConnections = Array.isArray(analysis.allConnections) ? analysis.allConnections : [];
+      setActiveConnections(allConnections);
     } else {
       setActiveConnections([]);
     }
@@ -509,7 +373,8 @@ export function usePanelAnalysis() {
 
   const getConnectionsForLine = useCallback((lineIndex) => {
     if (!analysis) return [];
-    return analysis.allConnections.filter(
+    const allConnections = Array.isArray(analysis.allConnections) ? analysis.allConnections : [];
+    return allConnections.filter(
       (connection) =>
         connection.wordA.lineIndex === lineIndex ||
         connection.wordB.lineIndex === lineIndex
@@ -525,6 +390,10 @@ export function usePanelAnalysis() {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
       }
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+      requestIdRef.current += 1;
     };
   }, []);
 

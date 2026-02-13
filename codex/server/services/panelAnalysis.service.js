@@ -16,6 +16,7 @@ import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detecto
 import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literaryDevices.detector.js';
 import { normalizeVowelFamily } from '../../../src/lib/vowelFamily.js';
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
+import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
 
 const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
@@ -173,6 +174,7 @@ function createEmptyPanelPayload() {
     scheme: null,
     meter: null,
     literaryDevices: [],
+    genreProfile: null,
     emotion: 'Neutral',
     scoreData: null,
     vowelSummary: EMPTY_VOWEL_SUMMARY,
@@ -194,7 +196,7 @@ export function createPanelAnalysisService(options = {}) {
   const scoreEngine = createScoreEngine();
   const deepRhymeEngine = new DeepRhymeEngine();
 
-  function analyzePanels(rawText) {
+  async function analyzePanels(rawText) {
     const text = normalizeInputText(rawText);
     if (!text.trim()) {
       return createEmptyPanelPayload();
@@ -205,10 +207,12 @@ export function createPanelAnalysisService(options = {}) {
       const scoreData = scoreEngine.calculateScore(analyzedDoc);
       const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
 
-      const deepAnalysis = deepRhymeEngine.analyzeDocument(
+      const deepAnalysis = await deepRhymeEngine.analyzeDocument(
         text,
         syntaxLayer ? { syntaxLayer } : {}
       );
+      
+      const genreProfile = LiteraryClassifier.classify(analyzedDoc, deepAnalysis);
       const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
       const meter = analyzeMeter(deepAnalysis.lines);
       const literaryDevices = analyzeLiteraryDevices(text);
@@ -223,6 +227,7 @@ export function createPanelAnalysisService(options = {}) {
           }
           : null,
         meter,
+        genreProfile,
         literaryDevices,
         emotion,
         scoreData,

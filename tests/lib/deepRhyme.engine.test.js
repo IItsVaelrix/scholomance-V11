@@ -180,7 +180,7 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(groupSizes).toContain(4);
   });
 
-  it('treats cross-line assonance as Truesight connection at 0.60+', () => {
+  it('treats cross-line assonance as Truesight connection when score is above 0.5', () => {
     const engine = new DeepRhymeEngine(createAssonanceMockPhonemeEngine(0.65));
     const result = engine.analyzeDocument([
       'dark box',
@@ -192,8 +192,8 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.endRhymeConnections[0].type).toBe('assonance');
   });
 
-  it('keeps low-score assonance below Truesight threshold', () => {
-    const engine = new DeepRhymeEngine(createAssonanceMockPhonemeEngine(0.59));
+  it('keeps assonance at 0.5 or lower below Truesight threshold', () => {
+    const engine = new DeepRhymeEngine(createAssonanceMockPhonemeEngine(0.5));
     const result = engine.analyzeDocument([
       'dark box',
       'sharp chops',

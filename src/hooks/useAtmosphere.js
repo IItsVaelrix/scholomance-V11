@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useCurrentSong } from "./useCurrentSong.jsx";
-import { useAmbientPlayer } from "./useAmbientPlayer.jsx";
+import { useAmbientPlayer } from "./useAmbientPlayer";
 import { useProgression } from "./useProgression.jsx";
 import { SCHOOLS, generateSchoolColor } from "../data/schools.js";
 

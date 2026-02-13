@@ -7,7 +7,7 @@ import App from "../src/App.jsx";
 import Navigation from "../src/components/Navigation/Navigation.jsx";
 import FloatingPanel from "../src/components/shared/FloatingPanel.jsx";
 import { ThemeProvider } from "../src/hooks/useTheme.jsx";
-import ListenPage from "../src/pages/Listen/ListenPage.jsx";
+import ListenPage from "../src/pages/Listen/ListenPage";
 import GrimoireScroll from "../src/pages/Read/GrimoireScroll.jsx";
 import ScrollEditor from "../src/pages/Read/ScrollEditor.jsx";
 
@@ -64,7 +64,7 @@ vi.mock("../src/hooks/useCurrentSong.jsx", () => ({
   }),
 }));
 
-vi.mock("../src/hooks/useAmbientPlayer.jsx", () => ({
+vi.mock("../src/hooks/useAmbientPlayer", () => ({
   useAmbientPlayer: () => ({
     status: "PAUSED",
     currentSchoolId: "SONIC",

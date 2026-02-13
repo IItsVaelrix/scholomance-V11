@@ -11,7 +11,9 @@
 }
 
 .word-card {
-  width: clamp(300px, 36vw, 380px);
+  width: 100%;
+  height: 100%;
+  position: relative;
   font-family: var(--font-family-body, "Georgia", serif);
   pointer-events: auto;
   user-select: none;
@@ -24,9 +26,32 @@
   filter: drop-shadow(0 16px 40px rgba(0, 0, 0, 0.65));
 }
 
+.card-resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  z-index: 20;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M22 22L12 22L22 12L22 22Z' fill='rgba(255, 215, 0, 0.6)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  padding: 4px;
+  background-origin: content-box;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.card-resize-handle:hover {
+  opacity: 1;
+}
+
 /* Card Frame - The ornate border */
 .card-frame {
   position: relative;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
   background: linear-gradient(
     145deg,
     #2a1f1a 0%,
@@ -42,6 +67,8 @@
   transform: rotateX(2deg) rotateY(-1deg);
   transform-style: preserve-3d;
   transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .card-frame:hover {
@@ -50,6 +77,10 @@
 
 /* Inner card area */
 .card-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
   background: linear-gradient(
     180deg,
     #1a1510 0%,
@@ -205,6 +236,8 @@
    CARD TEXT BOX
    ═══════════════════════════════════════════════════════════════════════════ */
 .card-text-box {
+  flex: 1;
+  min-height: 0;
   background: linear-gradient(
     180deg,
     rgba(244, 228, 193, 0.95) 0%,
@@ -213,9 +246,23 @@
   border: 1px solid #8a7a5a;
   border-radius: 4px;
   padding: 12px;
-  min-height: 90px;
   overflow-y: auto;
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M22 22L12 22L22 12L22 22Z' fill='rgba(255, 215, 0, 0.4)'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-origin: content-box;
+  box-sizing: border-box;
+  padding: 0 0 5px 5px;
+  cursor: se-resize;
+  z-index: 20;
 }
 
 .card-text-box::-webkit-scrollbar {

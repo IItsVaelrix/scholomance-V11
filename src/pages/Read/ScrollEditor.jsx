@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { motion } from "framer-motion";
-import SyllableCounter from "./SyllableCounter.jsx";
+import Gutter from "./Gutter.jsx";
+import Minimap from "./Minimap.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
@@ -26,6 +27,14 @@ function buildOverlayLines(content) {
     const tokens = [];
     let wordIndex = 0;
 
+    // Basic syntax detection
+    let lineType = "normal";
+    if (lineText.startsWith("#")) {
+      lineType = "heading";
+    } else if (lineText.startsWith("- ") || lineText.startsWith("* ")) {
+      lineType = "list-item";
+    }
+
     for (const match of lineText.matchAll(LINE_TOKEN_REGEX)) {
       const token = match[0];
       const localStart = match.index ?? 0;
@@ -41,7 +50,7 @@ function buildOverlayLines(content) {
       }
     }
 
-    lines.push({ lineIndex, tokens });
+    lines.push({ lineIndex, tokens, lineType });
     documentOffset += lineText.length + 1;
   }
 
@@ -113,8 +122,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   lineSyllableCounts = [],
   highlightedLines = [],
   vowelColors = null,
+  colorMap = null,
   theme = 'dark',
   onWordActivate,
+  onCursorChange,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -337,46 +348,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     setContent(initialContent);
   }, [initialTitle, initialContent]);
 
-  const syncEditorHeight = useCallback(() => {
-    if (!isEditable && !isTruesight) {
-      return;
-    }
-
+  useEffect(() => {
     const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
+    if (!textarea) return undefined;
 
-    const previousHeight = textarea.style.height;
-    // Reset before measuring so height can shrink when content is deleted.
-    textarea.style.height = "0px";
-    const measuredHeight = Math.max(MIN_EDITOR_HEIGHT, textarea.scrollHeight + 8);
-    textarea.style.height = previousHeight;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setEditorHeight(entry.contentRect.height);
+      }
+    });
 
-    setEditorHeight((prev) =>
-      Math.abs(prev - measuredHeight) > 1 ? measuredHeight : prev
-    );
-  }, [isEditable, isTruesight]);
-
-  useEffect(() => {
-    syncEditorHeight();
-  }, [content, title, isEditable, isTruesight, syncEditorHeight]);
-
-  useEffect(() => {
-    if (!isEditable && !isTruesight) {
-      setEditorHeight(MIN_EDITOR_HEIGHT);
-      return undefined;
-    }
-
-    const handleResize = () => {
-      syncEditorHeight();
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [isEditable, isTruesight, syncEditorHeight]);
+    ro.observe(textarea);
+    return () => ro.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!onContentChange) return undefined;
@@ -392,16 +376,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       textareaRef.current.focus();
     }
   }, [isEditable, initialContent]);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const measured = parseFloat(window.getComputedStyle(textarea).lineHeight);
-    if (Number.isFinite(measured) && measured > 0) {
-      setLineHeightPx(measured);
-    }
-  }, [editorHeight, isTruesight]);
 
   // Sync scroll positions between textarea and overlay
   useEffect(() => {
@@ -461,11 +435,39 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [content, title, onSave]);
 
+  const jumpToLine = useCallback((lineNum) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const lines = content.split('\n');
+    let offset = 0;
+    for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
+      offset += lines[i].length + 1;
+    }
+
+    textarea.focus();
+    textarea.setSelectionRange(offset, offset);
+    
+    // Scroll into view
+    const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
+    textarea.scrollTop = (lineNum - 1) * lineHeight;
+  }, [content]);
+
+  const scrollTo = useCallback((y) => {
+    if (textareaRef.current) {
+      textareaRef.current.scrollTop = y;
+    }
+  }, []);
+
   // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
     applyFormat,
     save: handleSave,
-  }), [applyFormat, handleSave]);
+    jumpToLine,
+    scrollTo,
+    get clientHeight() { return textareaRef.current?.clientHeight || 0; },
+    get scrollHeight() { return textareaRef.current?.scrollHeight || 0; },
+  }), [applyFormat, handleSave, jumpToLine, scrollTo]);
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -486,7 +488,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       return;
     }
     setContent(nextValue);
+    handleCursorChange(event);
   }, []);
+
+  const handleCursorChange = useCallback((event) => {
+    if (!onCursorChange) return;
+    const textarea = event.target;
+    const pos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, pos);
+    const lines = textBefore.split('\n');
+    const line = lines.length;
+    const col = lines[lines.length - 1].length + 1;
+    onCursorChange({ line, col });
+  }, [onCursorChange]);
 
   return (
     <motion.div
@@ -500,36 +514,43 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     >
       <div className="editor-header">
         {isEditable ? (
-          <input
-            id="scroll-title"
-            type="text"
-            className="editor-title-input"
-            placeholder="Scroll Title..."
-            aria-label="Scroll Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={disabled || isSaving}
-            maxLength={100}
-            aria-required="true"
-          />
+          <div className="editor-title-container">
+            <input
+              id="scroll-title"
+              type="text"
+              className="editor-title-input"
+              placeholder="Scroll Title..."
+              aria-label="Scroll Title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={disabled || isSaving}
+              maxLength={100}
+              aria-required="true"
+            />
+            <button 
+              type="button" 
+              className="btn btn-primary save-scroll-btn"
+              onClick={handleSave}
+              disabled={disabled || isSaving || !content.trim()}
+            >
+              {isSaving ? "Saving..." : "Save Scroll"}
+            </button>
+          </div>
         ) : (
           <h2 className="editor-title-display">{title || "Untitled Scroll"}</h2>
         )}
       </div>
 
       <div className={`editor-body ${!isEditable ? "read-only" : ""}`}>
-        {showSyllableCounter && (
-          <SyllableCounter
-            content={content}
-            lineCounts={lineSyllableCounts}
-            scrollTop={scrollTop}
-            viewportHeight={editorHeight}
-            lineHeightPx={lineHeightPx}
-          />
-        )}
+        <Gutter
+          content={content}
+          lineCounts={lineSyllableCounts}
+          scrollTop={scrollTop}
+          viewportHeight={editorHeight}
+          lineHeightPx={lineHeightPx}
+        />
         <div
           className="editor-textarea-wrapper"
-          style={isEditable || isTruesight ? { height: `${editorHeight}px` } : undefined}
         >
           {/* Read-only rendered markdown (hidden during editing or Truesight) */}
           {!isEditable && !isTruesight && (
@@ -540,12 +561,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             id="scroll-content"
             ref={textareaRef}
             className={`editor-textarea ${isTruesight ? "truesight-transparent" : ""} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""}`}
+            style={{
+              opacity: isTruesight ? 0 : 1,
+              zIndex: isTruesight ? 1 : 10,
+              pointerEvents: (!isEditable && isTruesight) ? 'none' : 'auto',
+            }}
             placeholder={isEditable
               ? "Inscribe thy verses upon this sacred parchment..."
               : ""}
             value={content}
             onChange={handleContentChange}
             onKeyDown={isEditable ? handleKeyDown : undefined}
+            onKeyUp={handleCursorChange}
+            onClick={handleCursorChange}
             onScroll={handleScroll}
             disabled={disabled || isSaving}
             readOnly={!isEditable}
@@ -556,13 +584,18 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           />
           {isTruesight && (
             <div
+              key={`overlay-${isTruesight}`}
               ref={truesightOverlayRef}
               className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}`}
+              style={{
+                zIndex: 5,
+                pointerEvents: isEditable ? 'none' : 'auto'
+              }}
               aria-hidden="true"
               onScroll={handleOverlayScroll}
             >
               <div style={{ paddingTop, paddingBottom }}>
-                {windowedLines.map(({ lineIndex: li, tokens }) => {
+                {windowedLines.map(({ lineIndex: li, tokens, lineType }) => {
                   const isGroupActive = highlightedLinesSet.size > 0;
                   const isHighlighted = highlightedLinesSet.has(li);
                   const isLineDimmed = isGroupActive && !isHighlighted;
@@ -570,7 +603,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                   return (
                     <div
                       key={li}
-                      className={`truesight-line${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
+                      className={`truesight-line truesight-line--${lineType}${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
                     >
                       {tokens.map(({ token, start, lineIndex, wordIndex }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
@@ -599,6 +632,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           Boolean(wordVowelFamily) &&
                           connectionColorContext.substitutionFamilies.has(wordVowelFamily)
                         );
+                        // Truesight activation should only occur for active rhyme context:
+                        // direct connection endpoints and explicit stop-word family substitutions.
                         const shouldColorWord = !isStopWord && (isDirectConnectionWord || isFamilySubstituteWord);
                         const wordPayload = {
                           word: token,
@@ -611,18 +646,22 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           isStopWord,
                         };
 
-                        if (!shouldColorWord && !onWordActivate) {
+                        if (!shouldColorWord) {
                           return <span key={start}>{token}</span>;
                         }
 
                         const activeColors = vowelColors || VOWEL_COLORS;
                         const fallbackColor = theme === 'light' ? "#1a1a2e" : "#f8f9ff";
+                        const codexEntry = colorMap?.get(charStart) ?? null;
                         const color = shouldColorWord
-                          ? (activeColors[wordVowelFamily] || fallbackColor)
+                          ? (codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
+                          : undefined;
+                        const wordOpacity = shouldColorWord
+                          ? (codexEntry?.opacity ?? undefined)
                           : undefined;
 
-                        // O(1) lookup for multi-syllable rhyme (Fix 1)
-                        const isMultiSyllable = shouldColorWord && multiSyllableCharStarts.has(charStart);
+                        // O(1) lookup for multi-syllable rhyme (Fix 1 + ColorCodex)
+                        const isMultiSyllable = shouldColorWord && (codexEntry?.isMultiSyllable || multiSyllableCharStarts.has(charStart));
 
                         // O(1) lookup for highlighted line (Fix 1)
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
@@ -632,7 +671,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             <span
                               key={start}
                               className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
-                              style={{ color }}
+                              style={{ color, opacity: wordOpacity }}
+                              data-char-start={charStart}
+                              data-syllables={isMultiSyllable ? (Number(analysis.syllableCount) || undefined) : undefined}
+                            >
+                              {token}
+                            </span>
+                          );
+                        }
+
+                        if (!onWordActivate) {
+                          return (
+                            <span
+                              key={start}
+                              className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                              style={{ color, opacity: wordOpacity }}
                               data-char-start={charStart}
                               data-syllables={isMultiSyllable ? (Number(analysis.syllableCount) || undefined) : undefined}
                             >
@@ -645,11 +698,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           <button
                             key={start}
                             type="button"
-                            className={shouldColorWord
-                              ? `grimoire-word grimoire-word--interactive ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`
-                              : "truesight-word-token"
-                            }
-                            style={shouldColorWord ? { color } : undefined}
+                            className={`grimoire-word grimoire-word--interactive ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                            style={{ color, opacity: wordOpacity }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}

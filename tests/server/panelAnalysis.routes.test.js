@@ -36,6 +36,38 @@ describe('[Server] panelAnalysis.routes', () => {
     expect(Array.isArray(payload.data.analysis.rhymeGroups)).toBe(true);
     expect(Array.isArray(payload.data.scheme.groups)).toBe(true);
     expect(Array.isArray(payload.data.vowelSummary.families)).toBe(true);
+    expect(Number(response.headers['x-analysis-duration-ms'])).toBeGreaterThanOrEqual(0);
+    expect(Number(response.headers['x-analysis-cache-ttl-ms'])).toBeGreaterThan(0);
+  });
+
+  it('caches repeated requests in-memory', async () => {
+    const app = await buildApp();
+    const text = [
+      'Ash and ember answer air',
+      'Glass remembers every prayer',
+    ].join('\n');
+
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/analysis/panels',
+      payload: { text },
+    });
+
+    const second = await app.inject({
+      method: 'POST',
+      url: '/api/analysis/panels',
+      payload: { text },
+    });
+
+    await app.close();
+
+    expect(first.statusCode).toBe(200);
+    expect(second.statusCode).toBe(200);
+    expect(first.headers['x-cache']).toBe('MISS');
+    expect(second.headers['x-cache']).toBe('HIT');
+    expect(Number(first.headers['x-analysis-duration-ms'])).toBeGreaterThanOrEqual(0);
+    expect(Number(second.headers['x-analysis-duration-ms'])).toBeGreaterThanOrEqual(0);
+    expect(second.body).toBe(first.body);
   });
 
   it('rejects invalid body payload', async () => {
@@ -53,6 +85,52 @@ describe('[Server] panelAnalysis.routes', () => {
     const payload = response.json();
     expect(payload.error).toBe('Invalid request');
     expect(Array.isArray(payload.details)).toBe(true);
+  });
+
+  it('returns empty panel payload for empty text', async () => {
+    const app = await buildApp();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/analysis/panels',
+      payload: { text: '' },
+    });
+
+    await app.close();
+
+    expect(response.statusCode).toBe(200);
+    const payload = response.json();
+    expect(payload.source).toBe('server-analysis');
+    expect(payload.data.analysis).toBe(null);
+    expect(payload.data.scheme).toBe(null);
+    expect(payload.data.meter).toBe(null);
+    expect(payload.data.scoreData).toBe(null);
+    expect(Array.isArray(payload.data.literaryDevices)).toBe(true);
+    expect(payload.data.emotion).toBe('Neutral');
+    expect(payload.data.vowelSummary).toEqual({
+      families: [],
+      totalWords: 0,
+      uniqueWords: 0,
+    });
+  });
+
+  it('handles very long text payloads within max limit', async () => {
+    const app = await buildApp();
+    const longText = 'word '.repeat(10000).trim();
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/analysis/panels',
+      payload: { text: longText },
+    });
+
+    await app.close();
+
+    expect(response.statusCode).toBe(200);
+    const payload = response.json();
+    expect(payload.source).toBe('server-analysis');
+    expect(payload.data).toBeTruthy();
+    expect(payload.data.scoreData).toBeTruthy();
   });
 
   it('includes syntax summary and connection syntax metadata when enabled', async () => {

@@ -7,10 +7,11 @@ import ErrorBoundary from "./components/shared/ErrorBoundary";
 import { ThemeProvider } from "./hooks/useTheme.jsx";
 
 const WatchPage = lazy(() => import("./pages/Watch/WatchPage.jsx"));
-const ListenPage = lazy(() => import("./pages/Listen/ListenPage.jsx"));
+const ListenPage = lazy(() => import("./pages/Listen/ListenPage"));
 const ReadPage = lazy(() => import("./pages/Read/ReadPage.jsx"));
 const AuthPage = lazy(() => import("./pages/Auth/AuthPage.jsx"));
 const CollabPage = lazy(() => import("./pages/Collab/CollabPage.jsx"));
+const ProfilePage = lazy(() => import("./pages/Profile/ProfilePage.jsx"));
 
 const router = createBrowserRouter([
   {
@@ -22,6 +23,7 @@ const router = createBrowserRouter([
       { path: "listen", element: <ListenPage /> },
       { path: "read", element: <ReadPage /> },
       { path: "auth", element: <AuthPage /> },
+      { path: "profile", element: <ProfilePage /> },
       { path: "collab", element: <CollabPage /> },
     ],
   },

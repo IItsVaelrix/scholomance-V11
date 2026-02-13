@@ -53,6 +53,9 @@ const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDele
           <span className="scroll-word-count">
             {wordCount} words
           </span>
+          <span className="scroll-char-count">
+            {scroll.charCount || 0} chars
+          </span>
           <span className="scroll-date">
             {formattedDate}
           </span>

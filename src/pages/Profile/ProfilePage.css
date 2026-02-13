@@ -1,0 +1,234 @@
+.profile-page {
+  padding-top: 80px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Character Card */
+.profile-card {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-soft);
+  text-align: center;
+  position: sticky;
+  top: 100px;
+}
+
+.avatar-frame {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto var(--space-4);
+  position: relative;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  font-weight: 700;
+  color: white;
+  border: 4px solid var(--bg-surface);
+  box-shadow: 0 0 0 2px var(--border-glow);
+}
+
+.tier-badge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-elevated);
+  border: 1px solid var(--school-sonic);
+  color: var(--school-sonic);
+  padding: 2px 12px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.profile-name {
+  font-size: 1.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.profile-title {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin-bottom: var(--space-6);
+}
+
+.xp-bar-container {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  margin-bottom: var(--space-6);
+  position: relative;
+  overflow: hidden;
+}
+
+.xp-bar-fill {
+  height: 100%;
+  background: var(--gradient-primary);
+  border-radius: 4px;
+}
+
+.xp-text {
+  position: absolute;
+  top: 12px;
+  right: 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.03);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.stat-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Content Panel */
+.content-panel {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  margin-bottom: var(--space-6);
+}
+
+.panel-title {
+  font-size: 1.2rem;
+  margin-bottom: var(--space-6);
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: var(--space-2);
+}
+
+/* Schools Grid */
+.schools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+.school-card {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.school-card.unlocked {
+  border-color: var(--school-color);
+  background: linear-gradient(145deg, rgba(255,255,255,0.05), transparent);
+}
+
+.school-card.unlocked .school-icon {
+  color: var(--school-color);
+  text-shadow: 0 0 10px var(--school-color);
+}
+
+.school-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-2);
+  color: var(--text-muted);
+}
+
+.school-info h3 {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+}
+
+.school-info p {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+/* Achievements */
+.achievements-list {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.achievement-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+}
+
+.achievement-item.unlocked {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-soft);
+}
+
+.ach-icon {
+  font-size: 1.5rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+}
+
+.achievement-item.unlocked .ach-icon {
+  background: var(--gradient-primary);
+  color: white;
+}
+
+.ach-details h3 {
+  font-size: 1rem;
+  margin-bottom: 0.1rem;
+}
+
+.ach-details p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.ach-status {
+  margin-left: auto;
+  font-size: 1.2rem;
+}

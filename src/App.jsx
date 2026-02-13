@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Navigation from "./components/Navigation/Navigation.jsx";
 import AtmosphereSync from "./components/AtmosphereSync.jsx";
 import { SongProvider } from "./hooks/useCurrentSong.jsx";
-import { useAmbientPlayer } from "./hooks/useAmbientPlayer.jsx";
+import { useAmbientPlayer } from "./hooks/useAmbientPlayer";
 import { ProgressionProvider, useProgression } from "./hooks/useProgression.jsx";
 import { CODExProvider } from "./hooks/useCODExPipeline.jsx";
 import { AuthProvider } from "./hooks/useAuth.jsx";

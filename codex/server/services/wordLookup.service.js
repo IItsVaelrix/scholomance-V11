@@ -36,7 +36,18 @@ function extractDefinitionsFromEntries(entries) {
       }
     }
   }
-  return [...new Set(out)];
+  return [...new Set(out)].slice(0, 5);
+}
+
+function constrainLexicalEntry(entry) {
+  if (!entry) return null;
+  entry.definitions = (entry.definitions || []).slice(0, 5);
+  entry.synonyms = (entry.synonyms || []).slice(0, 5);
+  entry.antonyms = (entry.antonyms || []).slice(0, 5);
+  entry.rhymes = (entry.rhymes || []).slice(0, 5);
+  entry.slantRhymes = (entry.slantRhymes || []).slice(0, 5);
+  entry.pos = (entry.pos || []).slice(0, 5);
+  return entry;
 }
 
 function resolveScholomanceDictApiUrl(explicitUrl) {
@@ -134,18 +145,19 @@ export function createWordLookupService(options = {}) {
         };
       }
 
+      const constrained = constrainLexicalEntry(entry);
       const hasData = Boolean(
-        entry.definition ||
-        entry.definitions.length > 0 ||
-        entry.synonyms.length > 0 ||
-        entry.antonyms.length > 0 ||
-        entry.rhymes.length > 0 ||
-        entry.pos.length > 0 ||
-        entry.ipa ||
-        entry.etymology ||
-        entry.lore
+        constrained.definition ||
+        constrained.definitions.length > 0 ||
+        constrained.synonyms.length > 0 ||
+        constrained.antonyms.length > 0 ||
+        constrained.rhymes.length > 0 ||
+        constrained.pos.length > 0 ||
+        constrained.ipa ||
+        constrained.etymology ||
+        constrained.lore
       );
-      return hasData ? entry : null;
+      return hasData ? constrained : null;
     } catch (error) {
       log?.warn?.({ err: error, word }, '[WordLookupService] Scholomance lookup failed, falling back');
       return null;
@@ -211,7 +223,7 @@ export function createWordLookupService(options = {}) {
     }
 
     try {
-      const [synRes, rhymeRes] = await Promise.all([
+      const [synRes, antRes, rhymeRes, slantRes] = await Promise.all([
         fetchWithTimeout(
           fetchImpl,
           `https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=20`,
@@ -219,7 +231,17 @@ export function createWordLookupService(options = {}) {
         ),
         fetchWithTimeout(
           fetchImpl,
+          `https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=20`,
+          externalApiTimeoutMs,
+        ),
+        fetchWithTimeout(
+          fetchImpl,
           `https://api.datamuse.com/words?rel_rhy=${encodeURIComponent(word)}&max=20`,
+          externalApiTimeoutMs,
+        ),
+        fetchWithTimeout(
+          fetchImpl,
+          `https://api.datamuse.com/words?rel_nry=${encodeURIComponent(word)}&max=20`,
           externalApiTimeoutMs,
         ),
       ]);
@@ -233,16 +255,31 @@ export function createWordLookupService(options = {}) {
         }
       }
 
+      if (antRes.ok) {
+        const antData = await antRes.json();
+        const antonyms = normalizeStringArray((Array.isArray(antData) ? antData : []).map((row) => row?.word));
+        if (entry.antonyms.length === 0 && antonyms.length > 0) {
+          entry.antonyms = antonyms;
+          foundData = true;
+        }
+      }
+
       if (rhymeRes.ok) {
         const rhymeData = await rhymeRes.json();
         entry.rhymes = normalizeStringArray((Array.isArray(rhymeData) ? rhymeData : []).map((row) => row?.word));
         if (entry.rhymes.length > 0) foundData = true;
       }
+
+      if (slantRes.ok) {
+        const slantData = await slantRes.json();
+        entry.slantRhymes = normalizeStringArray((Array.isArray(slantData) ? slantData : []).map((row) => row?.word));
+        if (entry.slantRhymes.length > 0) foundData = true;
+      }
     } catch {
       // Datamuse failed as well.
     }
 
-    return foundData ? entry : null;
+    return foundData ? constrainLexicalEntry(entry) : null;
   }
 
   async function lookupWord(rawWord) {
