@@ -87,11 +87,11 @@ export function AuthProvider({ children }) {
       body: JSON.stringify({ username, email, password, captchaId, captchaAnswer })
     });
 
+    const data = await res.json();
     if (res.ok) {
-      return { success: true };
+      return { success: true, ...data };
     } else {
-      const err = await res.json();
-      return { success: false, message: err.message || 'Registration failed' };
+      return { success: false, message: data.message || 'Registration failed' };
     }
   };
 
