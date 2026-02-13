@@ -36,7 +36,7 @@ export default function AuthPage() {
 
   const fetchCaptcha = async () => {
     try {
-      const res = await fetch('/auth/captcha');
+      const res = await fetch('/auth/captcha', { credentials: 'include' });
       const data = await res.json();
       setCaptcha(data);
     } catch (e) {

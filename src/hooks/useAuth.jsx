@@ -15,7 +15,7 @@ export function AuthProvider({ children }) {
 
   const fetchCsrfToken = useCallback(async () => {
     try {
-      const res = await fetch('/auth/csrf-token');
+      const res = await fetch('/auth/csrf-token', { credentials: 'include' });
       if (res.ok) {
         const { token } = await res.json();
         return token;
@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
   const checkMe = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch('/auth/me');
+      const res = await fetch('/auth/me', { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         const parsed = UserSchema.safeParse(data.user);
@@ -62,6 +62,7 @@ export function AuthProvider({ children }) {
         'Content-Type': 'application/json',
         'x-csrf-token': token
       },
+      credentials: 'include',
       body: JSON.stringify({ username, password })
     });
 
@@ -82,6 +83,7 @@ export function AuthProvider({ children }) {
         'Content-Type': 'application/json',
         'x-csrf-token': token
       },
+      credentials: 'include',
       body: JSON.stringify({ username, email, password, captchaId, captchaAnswer })
     });
 
@@ -97,7 +99,8 @@ export function AuthProvider({ children }) {
     const token = await fetchCsrfToken();
     await fetch('/auth/logout', {
       method: 'POST',
-      headers: { 'x-csrf-token': token }
+      headers: { 'x-csrf-token': token },
+      credentials: 'include'
     });
     setUser(null);
   };

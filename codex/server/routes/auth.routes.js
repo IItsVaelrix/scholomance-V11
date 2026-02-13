@@ -52,6 +52,7 @@ export async function authRoutes(fastify, _opts) {
                 id: challenge.id,
                 solution: challenge.solution
             };
+            await request.session.save();
             return { id: challenge.id, text: challenge.text };
         }
     });
@@ -70,6 +71,7 @@ export async function authRoutes(fastify, _opts) {
             }
             // Clear CAPTCHA after use
             request.session.captcha = null;
+            await request.session.save();
 
             // 2. Check existing user
             const existingUser = persistence.users.findByUsername(username);
