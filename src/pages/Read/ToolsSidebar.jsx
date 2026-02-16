@@ -5,6 +5,8 @@ import './IDE.css';
 export default function ToolsSidebar({ 
   isTruesight, 
   onToggleTruesight, 
+  isPredictive,
+  onTogglePredictive,
   analysisMode, 
   onModeChange, 
   isAnalyzing,
@@ -41,6 +43,14 @@ export default function ToolsSidebar({
           <span className="tool-icon">👁️</span>
           <span className="tool-label">Truesight</span>
           <span className={`status-dot ${isTruesight ? 'on' : 'off'}`}></span>
+        </button>
+        <button 
+          className={`sidebar-tool-btn ${isPredictive ? 'active' : ''}`}
+          onClick={onTogglePredictive}
+        >
+          <span className="tool-icon">✨</span>
+          <span className="tool-label">Ritual Prediction</span>
+          <span className={`status-dot ${isPredictive ? 'on' : 'off'}`}></span>
         </button>
         <button 
           className={`sidebar-tool-btn ${showScorePanel ? 'active' : ''}`}

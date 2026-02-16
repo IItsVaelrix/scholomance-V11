@@ -55,11 +55,18 @@ export class SendGridMailerService extends MailerAdapter {
 }
 
 export function createMailerService(logger) {
-    if (process.env.NODE_ENV === 'production' || process.env.SENDGRID_API_KEY) {
+    // Only use SendGrid if the API key is explicitly provided.
+    // Otherwise, fallback to console logging so the app doesn't crash during setup.
+    if (process.env.SENDGRID_API_KEY) {
         return new SendGridMailerService(
             process.env.SENDGRID_API_KEY,
             process.env.EMAIL_FROM
         );
     }
+    
+    if (process.env.NODE_ENV === 'production') {
+        (logger || console).warn('[MAILER] SENDGRID_API_KEY is missing. Falling back to console logging.');
+    }
+    
     return new ConsoleMailerService(logger);
 }

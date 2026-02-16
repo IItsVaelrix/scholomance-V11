@@ -279,7 +279,8 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       ref={containerRef}
       role="dialog"
       aria-labelledby={titleId}
-      aria-modal="false"
+      aria-modal="true"
+      tabIndex="-1"
       className={`word-tooltip-container ${isInteracting ? "is-interacting" : ""}`}
       style={{
         position: "fixed",

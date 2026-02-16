@@ -79,6 +79,8 @@ function scoreAlliterationDensity(doc) {
     return {
       heuristic: 'alliteration_density',
       rawScore: 0,
+      weight: 0.15,
+      contribution: 0,
       explanation: 'Too few words for alliteration.',
       diagnostics: []
     };
@@ -157,6 +159,8 @@ function scoreAlliterationDensity(doc) {
     return {
       heuristic: 'alliteration_density',
       rawScore: 0,
+      weight: 0.15,
+      contribution: 0,
       explanation: 'Not enough consonant-onset content words for alliteration.',
       diagnostics: []
     };

@@ -92,7 +92,13 @@ describe('[Server] index route integration', () => {
         'content-type': 'application/json',
         'x-csrf-token': registerToken,
       },
-      payload: JSON.stringify({ username, email, password }),
+      payload: JSON.stringify({ 
+        username, 
+        email, 
+        password,
+        captchaId: 'test-id',
+        captchaAnswer: 'test-answer'
+      }),
     });
     expect(registerResponse.statusCode).toBe(201);
 

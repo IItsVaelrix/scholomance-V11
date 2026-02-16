@@ -31,7 +31,7 @@ const ASSONANCE_THRESHOLD = 0.5;
 const STRESSED_ASSONANCE_SCORE = 0.62;
 const MAX_FULL_PAIR_SCAN_OCCURRENCES = 2;
 const TRUESIGHT_RHYME_TYPES = new Set(['perfect', 'near', 'slant', 'assonance', 'identity']);
-const IGNORE_IDENTICAL_WORD_RHYMES = false;
+const IGNORE_IDENTICAL_WORD_RHYMES = true;
 const SYNTAX_GATES = Object.freeze({
   ALLOW: 'allow',
   ALLOW_WEAK: 'allow_weak',
@@ -69,7 +69,9 @@ export class DeepRhymeEngine {
     // --- BATCH TOKENIZATION & AUTHORITY LOADING ---
     // Extract all unique words to pre-fetch their authority data in one go.
     const allUniqueWords = [...new Set(text.match(WORD_REGEX) || [])];
-    await this.engine.ensureAuthorityBatch(allUniqueWords);
+    if (typeof this.engine.ensureAuthorityBatch === 'function') {
+      await this.engine.ensureAuthorityBatch(allUniqueWords);
+    }
 
     this.syntaxLayerContext = syntaxLayer;
     this.syntaxGateCounters = { enabled: Boolean(syntaxLayer), totalCandidates: 0, suppressedPairs: 0, weakenedPairs: 0, keptPairs: 0 };
@@ -205,6 +207,12 @@ export class DeepRhymeEngine {
     const phoneticAffinity = this.evaluatePhoneticAffinity(wordA?.analysis, wordB?.analysis);
     if (aFunction && bFunction && !aLineEnd && !bLineEnd) return { gate: SYNTAX_GATES.SUPPRESS, multiplier: 0, reasons: ['both_function_non_terminal'] };
     if (aFunction && bFunction && aLineEnd && bLineEnd) return { gate: SYNTAX_GATES.ALLOW_WEAK, multiplier: 0.9, reasons: ['both_function_line_end_exception'] };
+    
+    // Stem overlap check (same root words like baking/baked)
+    if (tokenA?.stem && tokenB?.stem && tokenA.stem === tokenB.stem) {
+      return { gate: SYNTAX_GATES.ALLOW_WEAK, multiplier: 0.5, reasons: ['stem_overlap'] };
+    }
+
     if (hasFunctionNonEnd) {
       if (phoneticAffinity.sharedStressedFamily && hasLineAnchor) return { gate: SYNTAX_GATES.ALLOW_WEAK, multiplier: 0.97, reasons: ['contains_function_non_terminal', 'phonetic_affinity_override'] };
       return { gate: SYNTAX_GATES.ALLOW_WEAK, multiplier: 0.88, reasons: ['contains_function_non_terminal'] };
@@ -252,23 +260,31 @@ export class DeepRhymeEngine {
       const analysis = word?.analysis;
       if (!analysis) continue;
       if (analysis.rhymeKey) addToBucket(`rhyme:${analysis.rhymeKey}`, word);
-      const terminalVowel = this.getTerminalVowelFamily(analysis);
+      const terminalVowel = this.getTerminalVowelFamilyRaw(analysis);
       if (terminalVowel) addToBucket(`vowel:${terminalVowel}`, word);
-      const stressedVowel = this.getPrimaryStressedVowelFamily(analysis);
+      const stressedVowel = this.getPrimaryStressedVowelFamilyRaw(analysis);
       if (stressedVowel) addToBucket(`stress:${stressedVowel}`, word);
     }
     return buckets;
   }
 
+  getTerminalVowelFamilyRaw(analysis) {
+    if (Array.isArray(analysis?.syllables) && analysis.syllables.length > 0) return analysis.syllables[analysis.syllables.length - 1]?.vowelFamily || null;
+    return (typeof analysis?.rhymeKey === 'string' && analysis.rhymeKey.includes('-')) ? analysis.rhymeKey.split('-')[0] || null : null;
+  }
+
+  getPrimaryStressedVowelFamilyRaw(analysis) {
+    if (!Array.isArray(analysis?.syllables) || analysis.syllables.length === 0) return this.getTerminalVowelFamilyRaw(analysis);
+    const stressed = analysis.syllables.find((syl) => Number(syl?.stress) > 0) || analysis.syllables[0];
+    return stressed?.vowelFamily || null;
+  }
+
   getTerminalVowelFamily(analysis) {
-    if (Array.isArray(analysis?.syllables) && analysis.syllables.length > 0) return normalizeVowelFamily(analysis.syllables[analysis.syllables.length - 1]?.vowelFamily) || null;
-    return (typeof analysis?.rhymeKey === 'string' && analysis.rhymeKey.includes('-')) ? normalizeVowelFamily(analysis.rhymeKey.split('-')[0]) || null : null;
+    return normalizeVowelFamily(this.getTerminalVowelFamilyRaw(analysis));
   }
 
   getPrimaryStressedVowelFamily(analysis) {
-    if (!Array.isArray(analysis?.syllables) || analysis.syllables.length === 0) return this.getTerminalVowelFamily(analysis);
-    const stressed = analysis.syllables.find((syl) => Number(syl?.stress) > 0) || analysis.syllables[0];
-    return normalizeVowelFamily(stressed?.vowelFamily) || null;
+    return normalizeVowelFamily(this.getPrimaryStressedVowelFamilyRaw(analysis));
   }
 
   calculatePhoneticWeight(analysis) {

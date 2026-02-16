@@ -12,14 +12,15 @@ const FUNCTION_WORDS = new Set([
   "do", "does", "did", "have", "has", "had", "done",
   "to", "of", "in", "on", "at", "for", "from", "with", "by", "as",
   "not", "no", "so", "too", "very", "just", "can", "could", "would", "should",
-  "will", "shall", "might", "may", "must"
+  "will", "shall", "might", "may", "must", "across", "against", "among", "around",
+  "before", "behind", "below", "beside", "between", "beyond", "during", "under", "until"
 ]);
 
 /**
  * Lexical triggers for specific part-of-speech context.
  */
-const VERB_TRIGGERS = new Set(["to", "will", "would", "shall", "should", "can", "could", "must", "may", "might"]);
-const NOUN_TRIGGERS = new Set(["the", "a", "an", "this", "that", "these", "those", "my", "your", "his", "her", "its", "our", "their"]);
+const VERB_TRIGGERS = new Set(["to", "will", "would", "shall", "should", "can", "could", "must", "may", "might", "don't", "can't", "won't"]);
+const NOUN_TRIGGERS = new Set(["the", "a", "an", "this", "that", "these", "those", "my", "your", "his", "her", "its", "our", "their", "every", "each", "some", "any"]);
 
 /**
  * Enhanced Syntax Layer Analyzer
@@ -104,7 +105,7 @@ export function buildSyntaxLayer(analyzedDoc) {
       }
 
       // 3. Morphological Suffix Check
-      if (normalized.endsWith("ing") || normalized.endsWith("ed")) {
+      if (normalized.length > 4 && (normalized.endsWith("ing") || normalized.endsWith("ed") || normalized.endsWith("ly") || normalized.endsWith("ness"))) {
           reasons.push("morphological_suffix");
           role = "content";
       }
@@ -131,6 +132,12 @@ export function buildSyntaxLayer(analyzedDoc) {
         reasons.push("function_line_end_exception");
       } else {
         reasons.push("content_default");
+      }
+
+      // 7. Capitalization heuristic (Proper nouns or emphasis)
+      if (analyzedWord.text[0] === analyzedWord.text[0].toUpperCase() && lineRole !== "line_start") {
+          reasons.push("mid_sentence_cap");
+          if (role === "function") role = "content";
       }
 
       registerToken({

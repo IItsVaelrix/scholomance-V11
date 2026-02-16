@@ -7,8 +7,17 @@ vi.mock("../../src/hooks/usePhonemeEngine.jsx", () => ({
 }));
 
 import ScrollEditor from "../../src/pages/Read/ScrollEditor.jsx";
+import { ThemeProvider } from "../../src/hooks/useTheme.jsx";
 
 describe("ScrollEditor Truesight overlay", () => {
+  const renderWithProviders = (ui) => {
+    return render(
+      <ThemeProvider>
+        {ui}
+      </ThemeProvider>
+    );
+  };
+
   it("renders one overlay row per document line, including blank lines", () => {
     const content = [
       "The freedom of Defiance",
@@ -18,12 +27,13 @@ describe("ScrollEditor Truesight overlay", () => {
       "We really need it now",
     ].join("\n");
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="Line mapping"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={new Map()}
         activeConnections={[]}
         highlightedLines={[]}
@@ -41,12 +51,13 @@ describe("ScrollEditor Truesight overlay", () => {
       ["BETA", { vowelFamily: "EY", syllables: [{}, {}] }],
     ]);
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="No connections"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={analyzedWords}
         activeConnections={[]}
         highlightedLines={[]}
@@ -67,17 +78,18 @@ describe("ScrollEditor Truesight overlay", () => {
     const activeConnections = [
       {
         syllablesMatched: 1,
-        wordA: { charStart: 0, lineIndex: 0 },  // Alpha
-        wordB: { charStart: 11, lineIndex: 0 }, // Gamma
+        wordA: { charStart: 0, lineIndex: 0, word: "Alpha", normalizedWord: "ALPHA", vowelFamily: "AE" },
+        wordB: { charStart: 11, lineIndex: 0, word: "gamma", normalizedWord: "GAMMA", vowelFamily: "AE" },
       },
     ];
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="With connections"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={analyzedWords}
         activeConnections={activeConnections}
         highlightedLines={[]}
@@ -100,17 +112,18 @@ describe("ScrollEditor Truesight overlay", () => {
     const activeConnections = [
       {
         syllablesMatched: 1,
-        wordA: { charStart: 0, lineIndex: 0 }, // the (excluded stop word)
-        wordB: { charStart: 4, lineIndex: 0 }, // tone
+        wordA: { charStart: 0, lineIndex: 0, word: "the", normalizedWord: "THE", vowelFamily: "EY" },
+        wordB: { charStart: 4, lineIndex: 0, word: "tone", normalizedWord: "TONE", vowelFamily: "OW" },
       },
     ];
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="Vowel substitution"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={analyzedWords}
         activeConnections={activeConnections}
         highlightedLines={[]}
@@ -131,17 +144,18 @@ describe("ScrollEditor Truesight overlay", () => {
     const activeConnections = [
       {
         syllablesMatched: 1,
-        wordA: { charStart: 0, lineIndex: 0 }, // the (excluded stop word)
-        wordB: { charStart: 4, lineIndex: 0 }, // echo (non-stop connection anchor)
+        wordA: { charStart: 0, lineIndex: 0, word: "the", normalizedWord: "THE", vowelFamily: "EH" },
+        wordB: { charStart: 4, lineIndex: 0, word: "echo", normalizedWord: "ECHO", vowelFamily: "EH" },
       },
     ];
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="No broad family spill"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={analyzedWords}
         activeConnections={activeConnections}
         highlightedLines={[]}
@@ -162,18 +176,19 @@ describe("ScrollEditor Truesight overlay", () => {
     const activeConnections = [
       {
         syllablesMatched: 1,
-        wordA: { charStart: 0, lineIndex: 0 },
-        wordB: { charStart: 11, lineIndex: 0 },
+        wordA: { charStart: 0, lineIndex: 0, word: "Alpha", normalizedWord: "ALPHA", vowelFamily: "AE" },
+        wordB: { charStart: 11, lineIndex: 0, word: "gamma", normalizedWord: "GAMMA", vowelFamily: "AE" },
       },
     ];
     const onWordActivate = vi.fn();
 
-    const { container } = render(
+    const { container } = renderWithProviders(
       <ScrollEditor
         initialTitle="Activation"
         initialContent={content}
         isEditable={false}
         isTruesight={true}
+        analysisMode="rhyme"
         analyzedWords={analyzedWords}
         activeConnections={activeConnections}
         highlightedLines={[]}

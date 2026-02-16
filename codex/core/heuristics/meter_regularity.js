@@ -97,6 +97,8 @@ function scoreMeterRegularity(doc) {
     return {
       heuristic: 'meter_regularity',
       rawScore: 0,
+      weight: 0.15,
+      contribution: 0,
       explanation: 'No lines found.',
       diagnostics: []
     };

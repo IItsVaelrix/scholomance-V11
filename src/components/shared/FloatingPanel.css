@@ -65,6 +65,8 @@ body.is-dragging-panel .aurora-background {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   cursor: grab;
   user-select: none;
+  position: relative;
+  z-index: 15; /* Above react-resizable handles (z-index: 10) so close button is clickable */
 }
 
 .panel-header:active {

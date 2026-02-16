@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { captchaService } from '../../codex/server/services/captcha.service.js';
-import { persistence } from '../../codex/server/persistence.adapter.js';
+import { captchaService } from '../../../codex/server/services/captcha.service.js';
+import { persistence } from '../../../codex/server/persistence.adapter.js';
 import bcrypt from 'bcrypt';
 
 describe('Auth & Security QA Suite', () => {
@@ -61,8 +61,14 @@ describe('Auth & Security QA Suite', () => {
 
   describe('XP & Progression Logic', () => {
     it('should correctly calculate levels and tiers', async () => {
-      // This tests the logic in progressionUtils via the persistence layer
-      const userId = 999999; // Mock ID
+      // Create a dedicated user for this test to satisfy foreign key constraints
+      const user = persistence.users.createUser(
+        `xp_tester_${Date.now()}`,
+        `xp_${Date.now()}@example.com`,
+        'hashed_pass',
+        null
+      );
+      const userId = user.id;
       const progression = persistence.progression.get(userId);
       
       expect(progression.xp).toBe(0);

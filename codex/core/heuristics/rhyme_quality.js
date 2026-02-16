@@ -76,17 +76,19 @@ function buildConnectionDiagnostics(connections, limit = 5) {
     });
 }
 
-function scoreRhymeQuality(doc) {
+async function scoreRhymeQuality(doc) {
   if (!doc || !doc.raw || !doc.raw.trim()) {
     return {
       heuristic: 'rhyme_quality',
       rawScore: 0,
+      weight: 0.25,
+      contribution: 0,
       explanation: 'No text to analyze.',
       diagnostics: []
     };
   }
 
-  const analysis = rhymeEngine.analyzeDocument(doc.raw);
+  const analysis = await rhymeEngine.analyzeDocument(doc.raw);
 
   const endConnections = analysis.endRhymeConnections || [];
   const internalConnections = analysis.internalRhymeConnections || [];
@@ -100,6 +102,8 @@ function scoreRhymeQuality(doc) {
     return {
       heuristic: 'rhyme_quality',
       rawScore: 0,
+      weight: 0.25,
+      contribution: 0,
       explanation: `No rhymes detected in ${lineCount} line${lineCount !== 1 ? 's' : ''}.`,
       diagnostics: []
     };

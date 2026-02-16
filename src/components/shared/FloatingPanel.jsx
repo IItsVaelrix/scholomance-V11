@@ -121,7 +121,9 @@ export default function FloatingPanel({
   };
 
   const onResize = (event, { size: newSize }) => {
-    setSize({ width: newSize.width, height: newSize.height });
+    if (Math.abs(size.width - newSize.width) > 1 || Math.abs(size.height - newSize.height) > 1) {
+      setSize({ width: newSize.width, height: newSize.height });
+    }
   };
 
   const handleKeyDown = (event) => {
@@ -140,7 +142,6 @@ export default function FloatingPanel({
       aria-label={ariaLabel}
       aria-labelledby={ariaLabel ? undefined : titleId}
       onKeyDown={handleKeyDown}
-      tabIndex={-1}
       style={{
         position: 'fixed',
         zIndex,

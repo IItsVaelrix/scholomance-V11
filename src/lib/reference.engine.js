@@ -5,16 +5,20 @@
 
 import { z } from 'zod';
 
+const DefinitionObjectSchema = z.object({
+  text: z.string(),
+  partOfSpeech: z.string().optional(),
+  source: z.string().optional(),
+});
+
 const WordLookupResponseSchema = z.object({
   word: z.string(),
   source: z.string().optional(),
   data: z.object({
-    definition: z.object({
-      text: z.string(),
-      partOfSpeech: z.string().optional(),
-      source: z.string().optional(),
-    }).nullable().optional(),
-    definitions: z.array(z.string()).optional(),
+    // The primary definition for the word.
+    definition: DefinitionObjectSchema.nullable().optional(),
+    // A list of additional definitions, which can be simple strings or full objects.
+    definitions: z.array(z.union([z.string(), DefinitionObjectSchema])).optional(),
     synonyms: z.array(z.string()).optional(),
     antonyms: z.array(z.string()).optional(),
     rhymes: z.array(z.string()).optional(),
@@ -85,9 +89,29 @@ export const ReferenceEngine = {
       console.warn('ReferenceEngine lookup error:', error);
     }
 
+    // Combine all available definitions into a single, structured list.
+    const allDefinitions = [];
+    if (lexicalEntry?.definition) {
+      allDefinitions.push(lexicalEntry.definition);
+    }
+    if (lexicalEntry?.definitions) {
+      for (const def of lexicalEntry.definitions) {
+        if (typeof def === 'string') {
+          // Promote simple string definitions to the standard object format.
+          allDefinitions.push({ text: def, partOfSpeech: '', source: lexicalEntry.source || 'Unknown' });
+        } else if (def && def.text) {
+          // Add object-based definitions, avoiding duplicates if the primary `definition` is also in this list.
+          if (!allDefinitions.some(existing => existing.text === def.text)) {
+            allDefinitions.push(def);
+          }
+        }
+      }
+    }
+
     const result = {
       rhymes: lexicalEntry?.rhymes || [],
-      definition: lexicalEntry?.definition || null,
+      definition: allDefinitions[0] || null, // The first definition is considered primary.
+      definitions: allDefinitions, // The full list of all definitions.
       synonyms: lexicalEntry?.synonyms || [],
       antonyms: lexicalEntry?.antonyms || [],
       lore: lexicalEntry?.lore || null,
@@ -108,6 +132,11 @@ export const ReferenceEngine = {
     return result.definition;
   },
 
+  async getDefinitions(word) {
+    const result = await this.fetchAll(word);
+    return result.definitions;
+  },
+
   async getSynonyms(word) {
     const result = await this.fetchAll(word);
     return result.synonyms;
@@ -118,4 +147,3 @@ export const ReferenceEngine = {
     return result.antonyms;
   },
 };
-

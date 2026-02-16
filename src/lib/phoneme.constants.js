@@ -55,20 +55,20 @@ export const SONORITY_HIERARCHY = {
  */
 export const VOWEL_TO_BASE_FAMILY = {
   'AA': 'A',
-  'AH': 'UH', // Map STRUT to SHORT U base
-  'AX': 'A',
-  'AW': 'A',
+  'AH': 'U',
+  'AX': 'U',
+  'AW': 'AW',
   'AE': 'AE',
   'EH': 'AE',
   'AO': 'AO',
   'OW': 'OW',
   'OY': 'OY',
-  'UW': 'UW',
-  'UH': 'UH', // Map FOOT to SHORT U base
+  'UW': 'U',
+  'UH': 'U',
   'UR': 'UR',
   'IY': 'IY',
   'IH': 'IH',
-  'ER': 'IH',
+  'ER': 'UR',
   'EY': 'EY',
   'AY': 'AY',
 };
@@ -119,4 +119,5 @@ export const DIGRAPH_MAP = {
   'QU': ['K', 'W'],
   'NG': ['NG'],
   'CK': ['K'],
+  'OY': ['OY'],
 };

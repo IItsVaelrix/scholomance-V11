@@ -26,6 +26,8 @@ function scoreLiteraryDeviceRichness(doc) {
     return {
       heuristic: 'literary_device_richness',
       rawScore: 0,
+      weight: 0.15,
+      contribution: 0,
       explanation: 'No text to analyze.',
       diagnostics: []
     };

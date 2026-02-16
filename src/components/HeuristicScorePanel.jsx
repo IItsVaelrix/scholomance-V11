@@ -13,6 +13,7 @@ const HEURISTIC_LABELS = {
   meter_regularity: 'Meter',
   literary_device_richness: 'Literary Devices',
   vocabulary_richness: 'Vocabulary',
+  phonetic_hacking: 'Phonetic Hacking',
 };
 
 function HeuristicBar({ trace, index }) {

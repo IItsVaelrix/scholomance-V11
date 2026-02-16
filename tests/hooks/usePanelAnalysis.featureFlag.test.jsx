@@ -11,9 +11,9 @@ describe('usePanelAnalysis feature flags', () => {
     global.fetch = originalFetch;
   });
 
-  it('skips network analysis when VITE_USE_SERVER_PANEL_ANALYSIS=false', async () => {
+  it('uses client-side fallback when VITE_USE_SERVER_PANEL_ANALYSIS=false', async () => {
     vi.stubEnv('VITE_USE_SERVER_PANEL_ANALYSIS', 'false');
-    global.fetch = vi.fn();
+    global.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
 
     const { usePanelAnalysis } = await import('../../src/hooks/usePanelAnalysis.js');
     const { result } = renderHook(() => usePanelAnalysis());
@@ -22,13 +22,19 @@ describe('usePanelAnalysis feature flags', () => {
       result.current.analyzeDocument('Flame and name');
     });
 
+    // Allow the client-side async analysis to complete
     await act(async () => {
-      await Promise.resolve();
+      await new Promise(r => setTimeout(r, 100));
     });
 
-    expect(global.fetch).not.toHaveBeenCalled();
-    expect(result.current.source).toBe('feature-flag-disabled');
-    expect(result.current.error).toBe('Panel analysis disabled by VITE_USE_SERVER_PANEL_ANALYSIS=false');
+    // Should NOT have called the server panel analysis endpoint
+    const panelCalls = global.fetch.mock.calls.filter(
+      ([url]) => typeof url === 'string' && url.includes('/api/analysis/panels')
+    );
+    expect(panelCalls).toHaveLength(0);
+
+    // Client-side fallback should produce a source of 'client'
+    expect(result.current.source).toBe('client');
     expect(result.current.isAnalyzing).toBe(false);
   });
 });

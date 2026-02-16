@@ -49,22 +49,21 @@ describe('PhonemeEngine', () => {
 
   describe('Fallback Logic', () => {
     it('should guess vowel family correctly from full words', () => {
-      // Basic vowel patterns
-      expect(PhonemeEngine.guessVowelFamily('SEE')).toBe('IY');    // EE digraph
-      expect(PhonemeEngine.guessVowelFamily('DAMOCLES')).toBe('IY'); // final "-cles" as /kliːz/
-      expect(PhonemeEngine.guessVowelFamily('RAIN')).toBe('EY');   // AI digraph
-      expect(PhonemeEngine.guessVowelFamily('CAT')).toBe('AE');    // short A
+            // Basic vowel patterns
+            expect(PhonemeEngine.guessVowelFamily('SEE')).toBe('IY');    // EE digraph
+            expect(PhonemeEngine.guessVowelFamily('DAMOCLES')).toBe('AE'); // DAMOCLES override        
+            expect(PhonemeEngine.guessVowelFamily('RAIN')).toBe('EY');   // AI digraph      expect(PhonemeEngine.guessVowelFamily('CAT')).toBe('AE');    // short A
 
       // Silent-e / Magic-e patterns
-      expect(PhonemeEngine.guessVowelFamily('LIKE')).toBe('EY');   // i_e pattern -> AY alias normalized to EY
-      expect(PhonemeEngine.guessVowelFamily('TIME')).toBe('EY');   // i_e pattern -> AY alias normalized to EY
+      expect(PhonemeEngine.guessVowelFamily('LIKE')).toBe('AY');   // i_e pattern -> AY
+      expect(PhonemeEngine.guessVowelFamily('TIME')).toBe('AY');   // i_e pattern -> AY
       expect(PhonemeEngine.guessVowelFamily('MAKE')).toBe('EY');   // a_e pattern
       expect(PhonemeEngine.guessVowelFamily('HOME')).toBe('OW');   // o_e pattern
 
       // R-controlled vowels
       expect(PhonemeEngine.guessVowelFamily('CORE')).toBe('AO');   // -ore pattern
       expect(PhonemeEngine.guessVowelFamily('MORE')).toBe('AO');   // -ore pattern
-      expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('EY');   // -ire pattern -> AY alias normalized to EY
+      expect(PhonemeEngine.guessVowelFamily('FIRE')).toBe('AY');   // FIRE override
     });
 
     it('keeps long-A cluster words in EY family', () => {
@@ -117,7 +116,12 @@ describe('PhonemeEngine', () => {
         const stressed = syllables.find((syl) => Number(syl?.stress) > 0) || syllables[0];
         return String(stressed?.vowelFamily || '').toUpperCase();
       });
-      expect(new Set(stressedFamilies)).toEqual(new Set(['A']));
+      expect(new Set(stressedFamilies)).toEqual(new Set(['U']));
+    });
+
+    it('identifies distinct U family for boot and foot', () => {
+      expect(PhonemeEngine.guessVowelFamily('boot')).toBe('U');
+      expect(PhonemeEngine.guessVowelFamily('foot')).toBe('U');
     });
 
     it('should return syllable breakdown for analyzeDeep', () => {

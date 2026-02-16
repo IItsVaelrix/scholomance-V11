@@ -13,7 +13,7 @@
  * @param {{ calculateScore: function(string): {totalScore: number, traces: import('./schemas').ScoreTrace[]} }} scoringEngine - The scoring engine instance.
  * @returns {import('./schemas').CombatResult} The result of the combat action.
  */
-export function resolveCombatAction(combatAction, scoringEngine) {
+export async function resolveCombatAction(combatAction, scoringEngine) {
   if (!combatAction || !combatAction.lines || combatAction.lines.length === 0) {
     return {
       damage: 0,
@@ -26,7 +26,7 @@ export function resolveCombatAction(combatAction, scoringEngine) {
   // For now, we'll just score the first line.
   // A real implementation might combine scores from all lines.
   const line = combatAction.lines[0];
-  const { totalScore, traces } = scoringEngine.calculateScore(line);
+  const { totalScore, traces } = await scoringEngine.calculateScore(line);
 
   // The server is the authority on re-scoring. This is the client-side preview logic.
   // The server-side implementation would be nearly identical but use authoritative data.

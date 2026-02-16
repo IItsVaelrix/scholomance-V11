@@ -74,8 +74,8 @@ export function analyzeText(text) {
     let lineWordLengthTotal = 0;
     const lineStressPatterns = [];
 
-    let match;
-    while ((match = WORD_REGEX.exec(lineText)) !== null) {
+    const matches = [...lineText.matchAll(WORD_REGEX)];
+    for (const match of matches) {
       const wordText = match[0];
       const normalized = normalizeWord(wordText);
       const wordStart = lineStart + match.index;

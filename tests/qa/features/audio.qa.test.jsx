@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import ListenPage from "../../src/pages/Listen/ListenPage";
-import { ProgressionProvider } from "../../src/hooks/useProgression";
-import { SongProvider } from "../../src/hooks/useCurrentSong";
+import ListenPage from "../../../src/pages/Listen/ListenPage";
+import { ProgressionProvider } from "../../../src/hooks/useProgression.jsx";
+import { SongProvider } from "../../../src/hooks/useCurrentSong";
 
 // Mock fetch
 global.fetch = vi.fn();

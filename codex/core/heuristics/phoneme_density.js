@@ -47,6 +47,8 @@ function scorePhonemeDensity(doc) {
     return {
       heuristic: 'phoneme_density',
       rawScore: 0,
+      weight: 0.20,
+      contribution: 0,
       explanation: 'No words found.',
       diagnostics: []
     };
@@ -105,6 +107,8 @@ function scorePhonemeDensity(doc) {
     return {
       heuristic: 'phoneme_density',
       rawScore: 0,
+      weight: 0.20,
+      contribution: 0,
       explanation: 'No phoneme data available.',
       diagnostics: []
     };

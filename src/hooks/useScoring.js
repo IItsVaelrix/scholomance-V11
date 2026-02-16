@@ -5,6 +5,7 @@ import { analyzeText } from '../../codex/core/analysis.pipeline.js';
 import { alliterationDensityHeuristic } from '../../codex/core/heuristics/alliteration_density.js';
 import { literaryDeviceRichnessHeuristic } from '../../codex/core/heuristics/literary_device_richness.js';
 import { meterRegularityHeuristic } from '../../codex/core/heuristics/meter_regularity.js';
+import { phoneticHackingHeuristic } from '../../codex/core/heuristics/phonetic_hacking.js';
 import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_density.js';
 import { rhymeQualityHeuristic } from '../../codex/core/heuristics/rhyme_quality.js';
 import { vocabularyRichnessHeuristic } from '../../codex/core/heuristics/vocabulary_richness.js';
@@ -16,6 +17,7 @@ const HEURISTICS = [
   meterRegularityHeuristic,
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,
+  phoneticHackingHeuristic,
 ];
 
 export function useScoring(text) {
@@ -42,10 +44,10 @@ export function useScoring(text) {
     }
 
     setIsScoring(true);
-    const timeoutId = setTimeout(() => {
+    const timeoutId = setTimeout(async () => {
       try {
         const doc = analyzeText(text);
-        const result = engineRef.current.calculateScore(doc);
+        const result = await engineRef.current.calculateScore(doc);
         setScoreData(result);
       } catch (err) {
         console.error('Scoring error:', err);

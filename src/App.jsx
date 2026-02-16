@@ -65,38 +65,36 @@ export default function App() {
   return (
     <CODExProvider>
       <AuthProvider>
-        <ProgressionProvider>
-          <SongProvider>
-            <AtmosphereSync />
-            <div className="aurora-background" aria-hidden="true" />
-            <div className="vignette" aria-hidden="true" />
-            <div className="scanlines" aria-hidden="true" />
-            
-            <div className="page-container">
-              <a href="#main-content" className="skip-link">
-                Skip to main content
-              </a>
-              <Navigation />
-              <AmbientWatchSync isWatchRoute={isWatchRoute} />
-              <AnimatePresence mode="wait">
-                <motion.main
-                  key={location.pathname}
-                  id="main-content"
-                  className="page-content"
-                  variants={pageVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
-                >
-                  <Suspense fallback={<div>Loading...</div>}>
-                    <Outlet />
-                  </Suspense>
-                </motion.main>
-              </AnimatePresence>
-            </div>
-          </SongProvider>
-        </ProgressionProvider>
+        <SongProvider>
+          <AtmosphereSync />
+          <div className="aurora-background" aria-hidden="true" />
+          <div className="vignette" aria-hidden="true" />
+          <div className="scanlines" aria-hidden="true" />
+          
+          <div className="page-container">
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
+            <Navigation />
+            <AmbientWatchSync isWatchRoute={isWatchRoute} />
+            <AnimatePresence mode="wait">
+              <motion.main
+                key={location.pathname}
+                id="main-content"
+                className="page-content"
+                variants={pageVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
+              >
+                <Suspense fallback={<div>Loading...</div>}>
+                  <Outlet />
+                </Suspense>
+              </motion.main>
+            </AnimatePresence>
+          </div>
+        </SongProvider>
       </AuthProvider>
     </CODExProvider>
   );

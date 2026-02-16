@@ -7,6 +7,7 @@
  */
 
 import { normalizeVowelFamily } from "./vowelFamily.js";
+import { weightBalancer } from "./phoneticWeighting.js";
 
 /** Minimum connection score to cluster two words together. */
 const CLUSTER_MIN_SCORE = 0.60;
@@ -264,10 +265,14 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
 
   // 4. Build color entries
   const bestConnMap = buildBestConnectionMap(connections);
+  const balancedWeights = weightBalancer.calculateWeights(wordAnalyses);
 
   for (const [cs, profile] of wordMap) {
     const family = normalizeVowelFamily(profile.vowelFamily);
+    if (!family && !uf.parent.has(cs)) continue;
+
     const bestConn = bestConnMap.get(cs) || null;
+    const balanceWeight = balancedWeights.get(cs) || 1.0;
 
     const root = uf.parent.has(cs) ? uf.find(cs) : null;
     const hasCluster = root !== null && clusterColor.has(root);
@@ -285,16 +290,17 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
     const syntaxMult = bestConn ? bestConn.syntaxMultiplier : 1;
     const phoneticWeight = bestConn ? (bestConn.phoneticWeight || 1) : 1;
     
+    // Combine connection intensity with phonetic balance weight
     const weightIntensity = Math.max(0.85, Math.min(1.15, phoneticWeight));
-    let opacity = BASE_OPACITY + (bestScore * OPACITY_SCALE * weightIntensity);
+    let opacity = (BASE_OPACITY + (bestScore * OPACITY_SCALE * weightIntensity)) * balanceWeight;
     
     // Refrain stabilization: Identity matches should have high, consistent opacity
     if (bestConn?.type === 'identity') {
-        opacity = 0.95;
+        opacity = 0.95 * balanceWeight;
     }
 
     opacity *= syntaxMult;
-    opacity = Math.max(BASE_OPACITY, Math.min(1, opacity));
+    opacity = Math.max(0.2, Math.min(1, opacity));
 
     const isMultiSyllable = bestConn ? bestConn.syllablesMatched >= 2 : false;
     if (isMultiSyllable) {

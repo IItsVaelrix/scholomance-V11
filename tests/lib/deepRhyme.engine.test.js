@@ -151,9 +151,9 @@ function createSyntaxLayer(tokens) {
 }
 
 describe('DeepRhymeEngine duplicate-scheme scanning', () => {
-  it('keeps full scan for 2 same-scheme line endings', () => {
+  it('keeps full scan for 2 same-scheme line endings', async () => {
     const engine = new DeepRhymeEngine(createMockPhonemeEngine());
-    const result = engine.analyzeDocument([
+    const result = await engine.analyzeDocument([
       'line one alpha',
       'line two omega',
     ].join('\n'));
@@ -162,9 +162,9 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.schemePattern).toBe('AA');
   });
 
-  it('avoids quadratic scans when same scheme repeats more than twice', () => {
+  it('avoids quadratic scans when same scheme repeats more than twice', async () => {
     const engine = new DeepRhymeEngine(createMockPhonemeEngine());
-    const result = engine.analyzeDocument([
+    const result = await engine.analyzeDocument([
       'verse one alpha',
       'verse two omega',
       'verse three luna',
@@ -180,9 +180,9 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(groupSizes).toContain(4);
   });
 
-  it('treats cross-line assonance as Truesight connection when score is above 0.5', () => {
+  it('treats cross-line assonance as Truesight connection when score is above 0.5', async () => {
     const engine = new DeepRhymeEngine(createAssonanceMockPhonemeEngine(0.65));
-    const result = engine.analyzeDocument([
+    const result = await engine.analyzeDocument([
       'dark box',
       'sharp chops',
     ].join('\n'));
@@ -192,9 +192,9 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.endRhymeConnections[0].type).toBe('assonance');
   });
 
-  it('keeps assonance at 0.5 or lower below Truesight threshold', () => {
+  it('keeps assonance at 0.5 or lower below Truesight threshold', async () => {
     const engine = new DeepRhymeEngine(createAssonanceMockPhonemeEngine(0.5));
-    const result = engine.analyzeDocument([
+    const result = await engine.analyzeDocument([
       'dark box',
       'sharp chops',
     ].join('\n'));
@@ -203,9 +203,9 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.schemePattern).toBe('AB');
   });
 
-  it('does not count repeated lexical endings as rhyme connections', () => {
+  it('does not count repeated lexical endings as rhyme connections', async () => {
     const engine = new DeepRhymeEngine(createMockPhonemeEngine());
-    const result = engine.analyzeDocument([
+    const result = await engine.analyzeDocument([
       "I'm a joy boy",
       "I'm a joy boy",
     ].join('\n'));
@@ -214,16 +214,16 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.schemePattern).toBe('AB');
   });
 
-  it('detects stressed-vowel assonance even when terminal rhyme does not match', () => {
+  it('detects stressed-vowel assonance even when terminal rhyme does not match', async () => {
     const engine = new DeepRhymeEngine(createStressedAssonanceFallbackMockPhonemeEngine());
-    const result = engine.analyzeDocument('rhythm timid');
+    const result = await engine.analyzeDocument('rhythm timid');
 
     expect(result.internalRhymeConnections).toHaveLength(1);
     expect(result.internalRhymeConnections[0].type).toBe('assonance');
     expect(result.internalRhymeConnections[0].score).toBeGreaterThanOrEqual(0.6);
   });
 
-  it('suppresses internal pairs where both words are non-terminal function words', () => {
+  it('suppresses internal pairs where both words are non-terminal function words', async () => {
     const engine = new DeepRhymeEngine(createUniformScoreMockPhonemeEngine());
     const syntaxLayer = createSyntaxLayer([
       { lineNumber: 0, wordIndex: 0, charStart: 0, role: 'function', lineRole: 'line_start', stem: 'and', normalized: 'and' },
@@ -231,7 +231,7 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
       { lineNumber: 0, wordIndex: 2, charStart: 7, role: 'content', lineRole: 'line_end', stem: 'go', normalized: 'go' },
     ]);
 
-    const result = engine.analyzeDocument('and to go', { syntaxLayer });
+    const result = await engine.analyzeDocument('and to go', { syntaxLayer });
 
     const hasSuppressedPair = result.internalRhymeConnections.some((connection) => {
       const pair = [connection.wordA.word.toLowerCase(), connection.wordB.word.toLowerCase()].sort().join('|');
@@ -243,14 +243,14 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.statistics.syntaxGating.suppressedPairs).toBeGreaterThanOrEqual(1);
   });
 
-  it('allows weakened line-end function pairs and emits gate metadata', () => {
+  it('allows weakened line-end function pairs and emits gate metadata', async () => {
     const engine = new DeepRhymeEngine(createUniformScoreMockPhonemeEngine());
     const syntaxLayer = createSyntaxLayer([
       { lineNumber: 0, wordIndex: 0, charStart: 0, role: 'function', lineRole: 'line_end', stem: 'to', normalized: 'to' },
       { lineNumber: 1, wordIndex: 0, charStart: 3, role: 'function', lineRole: 'line_end', stem: 'so', normalized: 'so' },
     ]);
 
-    const result = engine.analyzeDocument('to\nso', { syntaxLayer });
+    const result = await engine.analyzeDocument('to\nso', { syntaxLayer });
 
     expect(result.endRhymeConnections).toHaveLength(1);
     expect(result.endRhymeConnections[0].syntax?.gate).toBe('allow_weak');
@@ -258,38 +258,38 @@ describe('DeepRhymeEngine duplicate-scheme scanning', () => {
     expect(result.endRhymeConnections[0].syntax?.reasons).toContain('both_function_line_end_exception');
   });
 
-  it('drops weak stem-echo internal pairs below threshold after syntax multiplier', () => {
+  it('drops weak stem-echo internal pairs below threshold after syntax multiplier', async () => {
     const engine = new DeepRhymeEngine(createUniformScoreMockPhonemeEngine(0.7));
     const syntaxLayer = createSyntaxLayer([
       { lineNumber: 0, wordIndex: 0, charStart: 0, role: 'content', lineRole: 'line_start', stem: 'bak', normalized: 'baking' },
       { lineNumber: 0, wordIndex: 1, charStart: 7, role: 'content', lineRole: 'line_end', stem: 'bak', normalized: 'baked' },
     ]);
 
-    const result = engine.analyzeDocument('baking baked', { syntaxLayer });
+    const result = await engine.analyzeDocument('baking baked', { syntaxLayer });
 
     expect(result.internalRhymeConnections).toHaveLength(0);
     expect(result.statistics.syntaxGating.weakenedPairs).toBeGreaterThanOrEqual(1);
   });
 
-  it('keeps function-content pairs when phonetic affinity is strong', () => {
+  it('keeps function-content pairs when phonetic affinity is strong', async () => {
     const engine = new DeepRhymeEngine(createUniformScoreMockPhonemeEngine(0.62));
     const syntaxLayer = createSyntaxLayer([
       { lineNumber: 0, wordIndex: 0, charStart: 0, role: 'function', lineRole: 'line_start', stem: 'to', normalized: 'to' },
       { lineNumber: 0, wordIndex: 1, charStart: 3, role: 'content', lineRole: 'line_end', stem: 'glow', normalized: 'glow' },
     ]);
 
-    const result = engine.analyzeDocument('to glow', { syntaxLayer });
+    const result = await engine.analyzeDocument('to glow', { syntaxLayer });
 
     expect(result.internalRhymeConnections).toHaveLength(1);
     expect(result.internalRhymeConnections[0].syntax?.reasons).toContain('phonetic_affinity_override');
     expect(result.internalRhymeConnections[0].score).toBeGreaterThanOrEqual(0.6);
   });
 
-  it('aligns IN-cluster words into shared end-rhyme connectivity', () => {
+  it('aligns IN-cluster words into shared end-rhyme connectivity', async () => {
     PhonemeEngine.clearCache();
     const engine = new DeepRhymeEngine(PhonemeEngine);
     const text = ['obsidian', 'olympian', 'victim', 'rhythm', 'median'].join('\n');
-    const result = engine.analyzeDocument(text);
+    const result = await engine.analyzeDocument(text);
 
     const connectedWords = new Set(
       result.endRhymeConnections.flatMap((connection) => [

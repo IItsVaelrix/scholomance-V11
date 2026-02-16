@@ -47,7 +47,7 @@ describe("buildColorMap", () => {
     const words = [makeWord(0, "AY"), makeWord(10, "IY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
-    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.EY);
+    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.AY);
     expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.IY);
     expect(map.get(0).groupId).toBeNull();
     expect(map.get(0).rhymeType).toBeNull();
@@ -56,7 +56,8 @@ describe("buildColorMap", () => {
   it("gives unclustered words base opacity", () => {
     const words = [makeWord(0, "AY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
-    expect(map.get(0).opacity).toBeCloseTo(0.45, 2);
+    // 0.45 * 1.1 (AY weight boost) = 0.495
+    expect(map.get(0).opacity).toBeCloseTo(0.495, 2);
   });
 
   it("clusters connected words and assigns canonical cluster color", () => {
@@ -101,10 +102,10 @@ describe("buildColorMap", () => {
   it("maps connection score to opacity gradient", () => {
     const words = [
       makeWord(0, "AY"),
-      makeWord(10, "AY"),
-      makeWord(20, "AY"),
-      makeWord(30, "AY"),
-      makeWord(40, "AY"),
+      makeWord(10, "IY"),
+      makeWord(20, "AE"),
+      makeWord(30, "OW"),
+      makeWord(40, "U"),
     ];
     const connections = [
       makeConnection(0, 10, 0.95, "perfect"),  // high
@@ -116,8 +117,8 @@ describe("buildColorMap", () => {
     expect(map.get(0).opacity).toBeGreaterThan(map.get(20).opacity);
     // Slant rhyme words should have higher opacity than isolated words
     expect(map.get(20).opacity).toBeGreaterThan(map.get(40).opacity);
-    // Isolated word should be at base opacity
-    expect(map.get(40).opacity).toBeCloseTo(0.45, 2);
+    // Isolated word should be at base opacity * balanceWeight (0.45 * 0.82 for U family)
+    expect(map.get(40).opacity).toBeCloseTo(0.45 * 0.82, 2);
   });
 
   it("sets isMultiSyllable flag for connections with syllablesMatched >= 2", () => {
@@ -155,9 +156,9 @@ describe("buildColorMap", () => {
     const connections = [makeConnection(0, 10, 0.90, "near", 1, 0.85)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
-    const fullOpacity = 0.45 + (0.90 * 0.55);
-    const gatedOpacity = fullOpacity * 0.85;
-    expect(map.get(0).opacity).toBeCloseTo(Math.max(0.45, gatedOpacity), 2);
+    const fullOpacity = (0.45 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for AY
+    const gatedOpacity = fullOpacity * 0.85; // Clamp happens AFTER multiplier
+    expect(map.get(0).opacity).toBeCloseTo(Math.min(1.0, Math.max(0.2, gatedOpacity)), 2);
   });
 
   it("does not cluster connections below the minimum score threshold", () => {
@@ -189,7 +190,7 @@ describe("buildColorMap", () => {
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
     expect(map.has(0)).toBe(false); // No color for null family
-    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.EY);
+    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.AY);
   });
 
   it("performs within 10ms for 500 words and 200 connections", () => {

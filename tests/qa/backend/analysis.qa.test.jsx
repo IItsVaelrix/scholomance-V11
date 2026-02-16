@@ -1,14 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { usePanelAnalysis } from "../../src/hooks/usePanelAnalysis.js";
-import { PANEL_ANALYSIS_SCENARIOS } from "./fixtures/panelAnalysis.scenarios.js";
+import { usePanelAnalysis } from "../../../src/hooks/usePanelAnalysis.js";
+import { PANEL_ANALYSIS_SCENARIOS } from "../fixtures/panelAnalysis.scenarios.js";
 import {
   expectPanelAnalysisRequest,
   installPanelAnalysisFetchMock,
   queuePanelAnalysisFailure,
   queuePanelAnalysisSuccess,
-} from "./tools/panelAnalysis.fetchMock.js";
-import { flushAnalysisCycle, restoreClock, useFakeClock } from "./tools/qa.clock.js";
+} from "../tools/panelAnalysis.fetchMock.js";
+import { flushAnalysisCycle, restoreClock, useFakeClock } from "../tools/qa.clock.js";
 
 describe("Panel analysis backend QA", () => {
   let fetchMock;
@@ -39,7 +39,8 @@ describe("Panel analysis backend QA", () => {
       await flushAnalysisCycle();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const analysisCalls = fetchMock.mock.calls.filter(call => String(call[0]).includes("/api/analysis/panels"));
+    expect(analysisCalls).toHaveLength(1);
     expectPanelAnalysisRequest(fetchMock, scenario.text);
     expect(result.current.source).toBe("server-analysis");
     expect(result.current.error).toBe(null);
@@ -56,16 +57,18 @@ describe("Panel analysis backend QA", () => {
     const { result } = renderHook(() => usePanelAnalysis());
 
     act(() => {
-      result.current.analyzeDocument("flame name");
+      // Use unique text to ensure error is cleared and request is made
+      result.current.analyzeDocument("unique failure text");
     });
 
     await act(async () => {
       await flushAnalysisCycle();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(result.current.analysis).toBe(null);
-    expect(result.current.error).toBe("Panel analysis request failed (503)");
+    const analysisCalls = fetchMock.mock.calls.filter(call => String(call[0]).includes("/api/analysis/panels"));
+    expect(analysisCalls).toHaveLength(1);
+    expect(result.current.analysis).not.toBe(null);
+    expect(result.current.error).toBe("Server unavailable — using local analysis");
   });
 
   it("debounces rapid requests and sends only the latest payload", async () => {
@@ -83,7 +86,8 @@ describe("Panel analysis backend QA", () => {
       await flushAnalysisCycle();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const analysisCalls = fetchMock.mock.calls.filter(call => String(call[0]).includes("/api/analysis/panels"));
+    expect(analysisCalls).toHaveLength(1);
     expectPanelAnalysisRequest(fetchMock, scenario.text);
   });
 });

@@ -11,6 +11,7 @@ import { useScrolls } from "../../hooks/useScrolls.jsx";
 import { useProgression } from "../../hooks/useProgression.jsx";
 import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
+import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
 import { SCHOOLS } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
@@ -44,17 +45,16 @@ const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
   A: "SONIC",
   AA: "SONIC",
   AE: "SONIC",
-  AH: "SONIC",
+  U: "VOID",
   AO: "VOID",
   AW: "VOID",
   OW: "VOID",
-  UW: "VOID",
   AY: "ALCHEMY",
   EY: "ALCHEMY",
   OY: "ALCHEMY",
   EH: "WILL",
   ER: "WILL",
-  UH: "WILL",
+  UR: "WILL",
   IH: "PSYCHIC",
   IY: "PSYCHIC",
 });
@@ -112,6 +112,7 @@ export default function ReadPage() {
   const [isEditable, setIsEditable] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isTruesight, setIsTruesight] = useState(false);
+  const [isPredictive, setIsPredictive] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.VOWEL);
   const [editorContent, setEditorContent] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
@@ -125,6 +126,7 @@ export default function ReadPage() {
   const [saveStatus, setSaveStatus] = useState("Saved");
   const [sidebarTab, setSidebarTab] = useState("FILES"); // FILES, SEARCH, TOOLS
   const [showMinimap, setShowMinimap] = useState(false);
+  const [minimapScrollTop, setMinimapScrollTop] = useState(0);
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = "info") => {
@@ -164,6 +166,7 @@ export default function ReadPage() {
     clearHighlight,
     literaryDevices,
     emotion,
+    error: analysisError,
   } = usePanelAnalysis();
   const {
     lookup,
@@ -338,23 +341,26 @@ export default function ReadPage() {
         return;
       }
       
-      // Calculate XP
-      let xpAwarded = 100; // Base
-      let source = "basic_submission";
-      
-      const hasComplexAnalysis = (deepAnalysis?.allConnections?.length || 0) > 5 || schemeDetection?.id !== 'none';
-      if (hasComplexAnalysis) {
-        xpAwarded = 250;
-        source = "complex_analysis";
-      }
-      
-      if (selectedSchool !== 'DEFAULT') {
-        xpAwarded = 300;
-        source = "school_specific";
-      }
+      // Award XP only for new scrolls
+      if (!isUpdate) {
+        // Use the total score from the scoring engine for exponential scaling
+        const totalPower = scoreData?.totalScore || 0;
+        
+        // XP curve: (Power ^ 1.6)
+        // If power is 100, XP is 1584. If power is 50, XP is 527.
+        // We add a small base to ensure even very simple scrolls give something.
+        const baseXP = 25;
+        const powerXP = Math.round(Math.pow(totalPower, 1.6));
+        const xpAwarded = baseXP + powerXP;
+        
+        const source = totalPower > 70 ? "legendary_submission" : 
+                      totalPower > 40 ? "expert_submission" : "basic_submission";
 
-      addXP(xpAwarded, source, savedScroll.id);
-      addToast(`Scroll Saved! +${xpAwarded} XP`, "success");
+        addXP(xpAwarded, source, savedScroll.id);
+        addToast(`Scroll Saved! +${xpAwarded} XP`, "success");
+      } else {
+        addToast("Scroll Updated!", "success");
+      }
 
       setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
@@ -362,7 +368,7 @@ export default function ReadPage() {
       setIsEditing(false);
       setIsEditable(false);
     },
-    [isEditing, activeScrollId, saveScroll, addXP, addToast, deepAnalysis, schemeDetection, selectedSchool]
+    [isEditing, activeScrollId, saveScroll, addXP, addToast, deepAnalysis, schemeDetection, selectedSchool, scoreData]
   );
 
   const handleSelectScroll = useCallback((id) => {
@@ -643,6 +649,27 @@ export default function ReadPage() {
     return counts.reduce((a, b) => a + (Number(b) || 0), 0);
   }, [deepAnalysis]);
 
+  const { predict, getCompletions, checkSpelling, getSpellingSuggestions, isReady: predictorReady } = usePredictor();
+  const [misspellings, setMisspellings] = useState([]);
+
+  // Document-wide spellcheck (debounced via editorContent)
+  useEffect(() => {
+    if (!isPredictive || !predictorReady || !editorContent) {
+      setMisspellings([]);
+      return;
+    }
+    const allWords = editorContent.match(/\b(\w+)\b/g) || [];
+    const uniqueWords = [...new Set(allWords)];
+    const errors = uniqueWords
+      .filter(w => w.length > 2 && !checkSpelling(w))
+      .map(w => {
+        const index = allWords.indexOf(w);
+        const prevWord = index > 0 ? allWords[index - 1] : null;
+        return { word: w, suggestions: getSpellingSuggestions(w, prevWord, 3) };
+      });
+    setMisspellings(errors);
+  }, [editorContent, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
+
   return (
     <div className="ide-layout-wrapper">
       <TopBar 
@@ -708,6 +735,8 @@ export default function ReadPage() {
                   <ToolsSidebar 
                     isTruesight={isTruesight}
                     onToggleTruesight={handleToggleTruesight}
+                    isPredictive={isPredictive}
+                    onTogglePredictive={() => setIsPredictive(prev => !prev)}
                     analysisMode={analysisMode}
                     onModeChange={handleModeChange}
                     isAnalyzing={isAnalyzing}
@@ -758,6 +787,12 @@ export default function ReadPage() {
                     isEditable={isEditable}
                     disabled={false}
                     isTruesight={isTruesight}
+                    isPredictive={isPredictive}
+                    predict={predict}
+                    getCompletions={getCompletions}
+                    checkSpelling={checkSpelling}
+                    getSpellingSuggestions={getSpellingSuggestions}
+                    predictorReady={predictorReady}
                     onContentChange={(content) => {
                       setEditorContent(content);
                       setSaveStatus("Unsaved");
@@ -770,9 +805,12 @@ export default function ReadPage() {
                     highlightedLines={highlightedLines}
                     vowelColors={activeVowelColors}
                     colorMap={colorMap}
+                    syntaxLayer={deepAnalysis?.syntaxLayer}
+                    analysisMode={analysisMode}
                     theme={theme}
                     onWordActivate={handleWordActivate}
                     onCursorChange={setCursorPos}
+                    onScrollChange={setMinimapScrollTop}
                   />
                 ) : (
                   <div className="scroll-placeholder">
@@ -787,11 +825,12 @@ export default function ReadPage() {
         </PanelGroup>
       </main>
 
-      <StatusBar 
-        line={cursorPos.line} 
-        col={cursorPos.col} 
-        language="Scroll Language" 
+      <StatusBar
+        line={cursorPos.line}
+        col={cursorPos.col}
+        language="Scroll Language"
         syllableCount={totalSyllables}
+        analysisError={analysisError}
       />
       
       {showMinimap && (
@@ -810,7 +849,7 @@ export default function ReadPage() {
         >
           <Minimap 
             content={editorContent}
-            scrollTop={scrollTop}
+            scrollTop={minimapScrollTop}
             viewportHeight={editorRef.current?.clientHeight || 0}
             totalHeight={editorRef.current?.scrollHeight || 1}
             onScrollTo={(y) => {
@@ -888,6 +927,39 @@ export default function ReadPage() {
           onDrag={handleTooltipDrag}
           onClose={handleCloseTooltip}
         />
+      )}
+
+      {isPredictive && misspellings.length > 0 && (
+        <FloatingPanel
+          id="spellcheck-panel"
+          title="Spellcheck"
+          onClose={() => setIsPredictive(false)}
+          defaultX={window.innerWidth - 300}
+          defaultY={window.innerHeight - 300}
+          className="spellcheck-panel"
+        >
+          <div className="misspellings-list">
+            {misspellings.map((err, i) => (
+              <div key={i} className="misspelling-item">
+                <span className="error-word">{err.word}</span>
+                <div className="error-suggestions">
+                  {err.suggestions.map((s, j) => (
+                    <button
+                      key={j}
+                      className="btn-tiny"
+                      onClick={() => {
+                        const newContent = editorContent.replace(new RegExp(`\\b${err.word}\\b`, 'g'), s);
+                        editorRef.current?.replaceContent?.(newContent);
+                      }}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </FloatingPanel>
       )}
 
       <div className="toast-container">

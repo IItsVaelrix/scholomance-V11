@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
-import { isComplexScheme } from "../lib/rhymeScheme.detector.js";
+import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
+import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
@@ -181,7 +182,50 @@ function normalizePanelPayload(rawPayload) {
     emotion: typeof payload.emotion === "string" ? payload.emotion : "Neutral",
     scoreData: payload.scoreData || null,
     vowelSummary: normalizeVowelSummary(payload.vowelSummary),
+    genreProfile: payload.genreProfile || null,
     source: rawPayload?.source ?? payload.source ?? null,
+  };
+}
+
+const clientEngine = new DeepRhymeEngine();
+
+function buildVowelSummaryFromAnalysis(analysis) {
+  if (!analysis?.lines) return EMPTY_VOWEL_SUMMARY;
+  const familyCounts = new Map();
+  let totalWords = 0;
+  for (const line of analysis.lines) {
+    const words = line.words || [];
+    for (const word of words) {
+      if (!word.vowelFamily) continue;
+      const normalized = normalizeVowelFamily(word.vowelFamily);
+      if (!normalized) continue;
+      familyCounts.set(normalized, (familyCounts.get(normalized) || 0) + 1);
+      totalWords++;
+    }
+  }
+  const families = Array.from(familyCounts.entries())
+    .map(([id, count]) => ({ id, count, percent: totalWords > 0 ? count / totalWords : 0 }))
+    .sort((a, b) => b.count - a.count);
+  return { families, totalWords, uniqueWords: familyCounts.size };
+}
+
+async function runClientSideAnalysis(text) {
+  const analysis = await clientEngine.analyzeDocument(text);
+  const scheme = detectScheme(analysis.schemePattern, analysis.rhymeGroups);
+  const meter = analyzeMeter(analysis.lines);
+  const vowelSummary = buildVowelSummaryFromAnalysis(analysis);
+  return {
+    data: {
+      analysis,
+      scheme,
+      meter,
+      literaryDevices: [],
+      emotion: "Neutral",
+      scoreData: null,
+      genreProfile: null,
+      vowelSummary,
+    },
+    source: "client",
   };
 }
 
@@ -198,6 +242,7 @@ export function usePanelAnalysis() {
   const [emotion, setEmotion] = useState("Neutral");
   const [source, setSource] = useState(null);
   const [error, setError] = useState(null);
+  const [genreProfile, setGenreProfile] = useState(null);
 
   const debounceTimerRef = useRef(null);
   const lastTextRef = useRef(null);
@@ -216,6 +261,7 @@ export function usePanelAnalysis() {
     setHighlightedGroup(null);
     setLiteraryDevices([]);
     setEmotion("Neutral");
+    setGenreProfile(null);
     setSource(null);
     setError(null);
     setIsAnalyzing(false);
@@ -240,6 +286,7 @@ export function usePanelAnalysis() {
     setHighlightedGroup(null);
     setLiteraryDevices(normalized.literaryDevices);
     setEmotion(normalized.emotion);
+    setGenreProfile(normalized.genreProfile);
     setSource(normalized.source);
     setError(null);
     setIsAnalyzing(false);
@@ -267,36 +314,35 @@ export function usePanelAnalysis() {
     }
 
     if (!USE_SERVER_PANEL_ANALYSIS) {
-      setIsAnalyzing(false);
-      setSource("feature-flag-disabled");
-      setError("Panel analysis disabled");
+      requestIdRef.current += 1;
+      const requestId = requestIdRef.current;
+      setIsAnalyzing(true);
+      runClientSideAnalysis(trimmedText)
+        .then((result) => applyResultIfCurrent(requestId, result))
+        .catch(() => {
+          setIsAnalyzing(false);
+          setError("Client-side analysis failed");
+        });
       return;
     }
 
-    if (nextText === lastTextRef.current && !isPendingRef.current) {
+    if (nextText === lastTextRef.current && !isPendingRef.current && analysis) {
       return;
     }
+    const isActuallyNewText = nextText !== lastTextRef.current;
     lastTextRef.current = nextText;
 
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
+    console.log(`[usePanelAnalysis] analyzeDocument triggered for requestId: ${requestId}, text: "${nextText.slice(0, 20)}..."`);
 
     setIsAnalyzing(true);
-    setError(null);
+    if (isActuallyNewText) {
+        setError(null);
+    }
     isPendingRef.current = true;
 
     debounceTimerRef.current = setTimeout(async () => {
-      // Respect minimum interval between requests (1s)
-      const MIN_REQUEST_INTERVAL = 1000;
-      const now = Date.now();
-      const timeSinceLast = now - lastRequestTimeRef.current;
-      
-      if (timeSinceLast < MIN_REQUEST_INTERVAL) {
-        const delay = MIN_REQUEST_INTERVAL - timeSinceLast;
-        await new Promise(resolve => setTimeout(resolve, delay));
-        if (requestId !== requestIdRef.current) return;
-      }
-
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -338,9 +384,19 @@ export function usePanelAnalysis() {
           return;
         }
 
-        setError(analysisError.message || "Analysis failed");
-        setIsAnalyzing(false);
-        isPendingRef.current = false;
+        // Attempt client-side fallback on server failure
+        try {
+          const fallback = await runClientSideAnalysis(nextText);
+          applyResultIfCurrent(requestId, fallback);
+          // Only show error if we didn't get any result yet
+          if (!analysis) {
+            setError("Server unavailable — using local analysis");
+          }
+        } catch {
+          setError(analysisError.message || "Analysis failed");
+          setIsAnalyzing(false);
+          isPendingRef.current = false;
+        }
       } finally {
         clearTimeout(timeoutId);
         if (abortControllerRef.current === controller) {
@@ -405,6 +461,7 @@ export function usePanelAnalysis() {
     literaryDevices,
     emotion,
     scoreData,
+    genreProfile,
     vowelSummary,
     isAnalyzing,
     source,

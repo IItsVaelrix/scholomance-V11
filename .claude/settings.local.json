@@ -20,7 +20,11 @@
       "Bash(node -e:*)",
       "Bash(timeout:*)",
       "Bash(gh pr list:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(npm run start:*)",
+      "Bash(findstr:*)",
+      "Bash(git status:*)",
+      "Bash(git add:*)"
     ]
   }
 }

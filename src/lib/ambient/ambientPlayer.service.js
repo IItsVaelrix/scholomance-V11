@@ -1424,7 +1424,7 @@ export class AmbientPlayerService {
   }
 
   _startSignalMonitor() {
-    if (this.signalMonitorTimer || this.listeners.size === 0) return;
+    if (!canUseBrowser() || this.signalMonitorTimer || this.listeners.size === 0) return;
     const pollMs = toPositiveMs(this.options.signalPollMs, DEFAULT_OPTIONS.signalPollMs);
     this.signalMonitorTimer = setInterval(() => {
       const nextSignal = this._computeSignalLevel();

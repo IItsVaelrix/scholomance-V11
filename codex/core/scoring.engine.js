@@ -20,7 +20,7 @@ export function createScoringEngine(initialHeuristics = []) {
     heuristics.push(heuristic);
   }
 
-  function calculateScore(input) {
+  async function calculateScore(input) {
     if (!input) {
       return { totalScore: 0, traces: [] };
     }
@@ -38,14 +38,14 @@ export function createScoringEngine(initialHeuristics = []) {
        // Most will fail or return 0. Let's let them run but they expect a doc.
     }
 
-    const traces = heuristics.map((h) => {
-      const raw = h.scorer(doc);
+    const traces = await Promise.all(heuristics.map(async (h) => {
+      const raw = await h.scorer(doc);
       return {
         ...raw,
         weight: h.weight,
         contribution: raw.rawScore * h.weight * 100,
       };
-    });
+    }));
 
     const totalScore = traces.reduce((sum, t) => sum + t.contribution, 0);
 

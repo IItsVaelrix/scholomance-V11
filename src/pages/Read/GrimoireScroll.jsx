@@ -36,7 +36,7 @@ export default function GrimoireScroll({
           className="grimoire-word"
           disabled={!isEngineReady || !clean}
           onClick={() => handleWordClick(clean)}
-          aria-label={`Analyze word: ${clean || "word"}`}
+          aria-label={`Analyze: ${clean || "word"}`}
         >
           {part}
         </button>

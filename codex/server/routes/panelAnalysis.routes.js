@@ -152,7 +152,7 @@ export async function panelAnalysisRoutes(fastify, _opts) {
           }
         }
 
-        const data = panelAnalysisService.analyzePanels(parsed.data.text);
+        const data = await panelAnalysisService.analyzePanels(parsed.data.text);
         const responsePayload = {
           source: 'server-analysis',
           data,

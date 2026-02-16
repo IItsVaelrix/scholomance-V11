@@ -41,10 +41,10 @@ describe('Heuristics Integration', () => {
     expect(result.diagnostics[0].metadata.words.length).toBeGreaterThan(1);
   });
 
-  it('Scoring Engine runs correctly with mock doc', () => {
+  it('Scoring Engine runs correctly with mock doc', async () => {
     const engine = createScoringEngine([phonemeDensityHeuristic]);
-    const score = engine.calculateScore(mockDoc);
-    
+    const score = await engine.calculateScore(mockDoc);
+
     expect(score.totalScore).toBeGreaterThan(0);
     expect(score.traces[0].heuristic).toBe('phoneme_density');
   });

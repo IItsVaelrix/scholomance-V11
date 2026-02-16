@@ -19,7 +19,7 @@ export const SCHOOLS = {
     unlockXP: 0,      // Available immediately (Level 1)
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
-    vowelAffinities: ["AO", "IH", "OW"],
+    vowelAffinities: ["AO", "OW", "A"],
     glyph: "♩",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -37,7 +37,7 @@ export const SCHOOLS = {
     unlockXP: 250, // Level ~3
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
-    vowelAffinities: ["AY", "IY", "UW"],
+    vowelAffinities: ["IY", "IH"],
     glyph: "◬",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -55,7 +55,7 @@ export const SCHOOLS = {
     unlockXP: 1500, // Level ~10
     description: "The space between spaces, where entropy reigns",
     tracks: ["void"],
-    vowelAffinities: ["UH", "ER"],
+    vowelAffinities: ["U", "UR"],
     glyph: "∅",
     atmosphere: {
       auroraIntensity: 0.2,
@@ -73,7 +73,7 @@ export const SCHOOLS = {
     unlockXP: 8000, // Level ~20 (End of Neophyte)
     description: "The transmutation of meaning through spoken word",
     tracks: ["alchemy"],
-    vowelAffinities: ["EY", "A", "OH"],
+    vowelAffinities: ["EY", "AY", "AW", "OY"],
     glyph: "⚗",
     atmosphere: {
       auroraIntensity: 1.2,
@@ -91,7 +91,7 @@ export const SCHOOLS = {
     unlockXP: 25000, // Level ~30 (Early Adept)
     description: "Focusing raw will into reality-altering force",
     tracks: ["will"],
-    vowelAffinities: ["AE", "AW", "EH"],
+    vowelAffinities: ["AE", "A"],
     glyph: "⚡",
     atmosphere: {
       auroraIntensity: 1.1,

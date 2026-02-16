@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useAuth } from "../../hooks/useAuth";
-import { useProgression } from "../../hooks/useProgression";
+import { useProgression } from "../../hooks/useProgression.jsx";
 import { SCHOOLS, getSchoolBadgeClass } from "../../data/schools";
 import { getTierForLevel } from "../../lib/progressionUtils";
 import "./ProfilePage.css";

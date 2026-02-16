@@ -6,57 +6,56 @@
  * pick a "skin" that changes how Truesight colors look while
  * keeping the vowel-family analysis logic identical.
  *
- * 12 Core Vowel Families:
- * 1. IY - High front (machine, green, gene)
- * 2. IH - Near-high front (obelisk, continent) + ER
+ * 11 Core Vowel Families:
+ * 1. IY - High front (machine, blue, gene)
+ * 2. IH - Near-high front (obelisk, continent)
  * 3. EY - Mid front (bait, day)
  * 4. AE - Low front (bat, dragon) + EH
- * 5. A - Low back (obvious, monument) + AA, AX, AW
- * 6. AO - Mid back rounded (water, slaughter) - DISTINCT
- * 7. OW - Mid-high back (soul, cold, boulder) + OH
- * 8. UW - High back (boot, true) + OO
- * 9. OY - Diphthong /ɔɪ/ (oil, boil, gargoyle)
- * 10. UR - Near-close near-back rounded (pure, cure, allure)
- * 11. AY - Diphthong /aɪ/ (like, time, fly)
- * 12. UH - STRUT/FOOT (but, thumb, book, full) - NEW CORE FAMILY (SHORT U)
+ * 5. AY - Wide diphthong (like, time)
+ * 6. AW - Wide diphthong (mouth, loud)
+ * 7. A - Low back (obvious, monument) + AA
+ * 8. AO - Mid back rounded (water, slaughter) - DISTINCT
+ * 9. OW - Mid-high back (soul, cold, boulder) + OY
+ * 10. U - High/Mid back/central (boot, foot, strut, schwa) - GREEN CORE FAMILY
+ * 11. UR - Rhotic mid (nurse, bird)
  *
  * The default skin uses the original rainbow VOWEL_COLORS.
  * Light-mode variants use darker/saturated colors for contrast on white.
  */
 
-// Original rainbow palette (the default Truesight colors) - 12 families
+// Original rainbow palette (the default Truesight colors)
 export const DEFAULT_VOWEL_COLORS = {
-  IY: "#60a5fa",   // bright blue
-  IH: "#818cf8",   // indigo
-  EY: "#3b82f6",   // blue
-  AE: "#f472b6",   // pink
+  IY: "#3b82f6",   // bright blue (FLEECE)
+  IH: "#06b6d4",   // cyan (KIT)
+  EY: "#a78bfa",   // violet (FACE)
+  AE: "#f472b6",   // pink (TRAP)
+  AY: "#22d3ee",   // bright cyan (PRICE/I)
+  AW: "#ef4444",   // red
   A:  "#fb7185",   // rose
   AO: "#fbbf24",   // amber
   OW: "#facc15",   // yellow
   OY: "#d946ef",   // magenta
   UR: "#10b981",   // emerald
-  AY: "#f97316",   // orange
-  UH: "#84cc16",   // lime (NEW)
-  UW: "#4ade80",   // green
+  U:  "#4ade80",   // green
 };
 
 // Light-mode default
 const DEFAULT_LIGHT_COLORS = {
-  IY: "#2563eb",
-  IH: "#4f46e5",
-  EY: "#1d4ed8",
+  IY: "#1d4ed8",
+  IH: "#0891b2",
+  EY: "#7c3aed",
   AE: "#db2777",
+  AY: "#0e7490",
+  AW: "#dc2626",
   A:  "#e11d48",
   AO: "#d97706",
   OW: "#ca8a04",
   OY: "#a21caf",
   UR: "#059669",
-  AY: "#c2410c",
-  UH: "#4d7c0f",
-  UW: "#16a34a",
+  U:  "#16a34a",
 };
 
-// Sonic: purples and violets - 12 families
+// Sonic: purples and violets
 const SONIC_COLORS = {
   IY: "#ede9fe",
   IH: "#ddd6fe",
@@ -68,8 +67,7 @@ const SONIC_COLORS = {
   OY: "#4c1d95",
   UR: "#2e1065",
   AY: "#4c1d95",
-  UH: "#a78bfa",
-  UW: "#9333ea",
+  U:  "#9333ea",
 };
 
 const SONIC_LIGHT_COLORS = {
@@ -83,11 +81,10 @@ const SONIC_LIGHT_COLORS = {
   OY: "#2e1065",
   UR: "#1e1b4b",
   AY: "#3b0764",
-  UH: "#6d28d9",
-  UW: "#7e22ce",
+  U:  "#7e22ce",
 };
 
-// Psychic: cyans and teals - 12 families
+// Psychic: cyans and teals
 const PSYCHIC_COLORS = {
   IY: "#ecfeff",
   IH: "#cffafe",
@@ -99,8 +96,7 @@ const PSYCHIC_COLORS = {
   OY: "#155e75",
   UR: "#164e63",
   AY: "#0891b2",
-  UH: "#22d3ee",
-  UW: "#14b8a6",
+  U:  "#14b8a6",
 };
 
 const PSYCHIC_LIGHT_COLORS = {
@@ -114,11 +110,10 @@ const PSYCHIC_LIGHT_COLORS = {
   OY: "#042f2e",
   UR: "#083344",
   AY: "#164e63",
-  UH: "#0891b2",
-  UW: "#0d9488",
+  U:  "#0d9488",
 };
 
-// Void: grays and silvers - 12 families
+// Void: grays and silvers
 const VOID_COLORS = {
   IY: "#fafafa",
   IH: "#e4e4e7",
@@ -130,8 +125,7 @@ const VOID_COLORS = {
   OY: "#18181b",
   UR: "#09090b",
   AY: "#3f3f46",
-  UH: "#a1a1aa",
-  UW: "#a3a3a3",
+  U:  "#a3a3a3",
 };
 
 const VOID_LIGHT_COLORS = {
@@ -145,24 +139,23 @@ const VOID_LIGHT_COLORS = {
   OY: "#000000",
   UR: "#000000",
   AY: "#18181b",
-  UH: "#3f3f46",
-  UW: "#525252",
+  U:  "#525252",
 };
 
-// Alchemy: magentas and pinks - 12 families
+// Alchemy: magentas and pinks
 const ALCHEMY_COLORS = {
   IY: "#fdf4ff",
   IH: "#fae8ff",
   EY: "#f5d0fe",
   AE: "#d946ef",
+  AY: "#c026d3",
+  AW: "#a21caf",
   A:  "#c026d3",
   AO: "#a21caf",
   OW: "#86198f",
   OY: "#701a75",
   UR: "#4a044e",
-  AY: "#a21caf",
-  UH: "#f5d0fe",
-  UW: "#e879f9",
+  U:  "#e879f9",
 };
 
 const ALCHEMY_LIGHT_COLORS = {
@@ -170,17 +163,17 @@ const ALCHEMY_LIGHT_COLORS = {
   IH: "#86198f",
   EY: "#701a75",
   AE: "#86198f",
+  AY: "#701a75",
+  AW: "#581c87",
   A:  "#701a75",
   AO: "#581c87",
   OW: "#4a044e",
   OY: "#2e0030",
   UR: "#2e0030",
-  AY: "#581c87",
-  UH: "#701a75",
-  UW: "#a21caf",
+  U:  "#a21caf",
 };
 
-// Will: oranges and ambers - 12 families
+// Will: oranges and ambers
 const WILL_COLORS = {
   IY: "#fff7ed",
   IH: "#ffedd5",
@@ -192,8 +185,7 @@ const WILL_COLORS = {
   OY: "#9a3412",
   UR: "#7c2d12",
   AY: "#ea580c",
-  UH: "#fdba74",
-  UW: "#fbbf24",
+  U:  "#fbbf24",
 };
 
 const WILL_LIGHT_COLORS = {
@@ -207,8 +199,7 @@ const WILL_LIGHT_COLORS = {
   OY: "#431407",
   UR: "#451a03",
   AY: "#78350f",
-  UH: "#9a3412",
-  UW: "#b45309",
+  U:  "#b45309",
 };
 
 /**

@@ -1,28 +1,40 @@
 import { describe, expect, it } from "vitest";
-import { TRUESIGHT_SCENARIOS, COLOR_CODEX_SCENARIOS } from "./fixtures/panelAnalysis.scenarios.js";
-import { expectColoredWords, expectWordsShareClusterColor, expectWordOpacityAbove } from "./tools/truesight.assertions.js";
-import { renderTruesightEditor } from "./tools/truesight.renderHarness.jsx";
-import { buildColorMap } from "../../src/lib/colorCodex.js";
-import { DEFAULT_VOWEL_COLORS } from "../../src/data/schoolPalettes.js";
+import { TRUESIGHT_SCENARIOS, COLOR_CODEX_SCENARIOS } from "../fixtures/panelAnalysis.scenarios.js";
+import { expectColoredWords, expectWordsShareClusterColor, expectWordOpacityAbove } from "../tools/truesight.assertions.js";
+import { renderTruesightEditor } from "../tools/truesight.renderHarness.jsx";
+import { buildColorMap } from "../../../src/lib/colorCodex.js";
+import { DEFAULT_VOWEL_COLORS } from "../../../src/data/schoolPalettes.js";
 
 describe("Truesight color-coding QA", () => {
   it("colors all non-stop words with a valid vowelFamily", () => {
     const scenario = TRUESIGHT_SCENARIOS.stopWordExclusion;
-    const { container } = renderTruesightEditor(scenario);
+    const { container } = renderTruesightEditor({
+      ...scenario,
+      analysisMode: 'vowel',
+      analyzedWordsByCharStart: scenario.analyzedWordsByCharStart || new Map()
+    });
 
     expectColoredWords(container, scenario.expectedColoredWords);
   });
 
   it("promotes same-family peers only when the family comes from an excluded stop-word endpoint", () => {
     const scenario = TRUESIGHT_SCENARIOS.stopWordPromotion;
-    const { container } = renderTruesightEditor(scenario);
+    const { container } = renderTruesightEditor({
+      ...scenario,
+      analysisMode: 'rhyme',
+      analyzedWordsByCharStart: scenario.analyzedWordsByCharStart || new Map()
+    });
 
     expectColoredWords(container, scenario.expectedColoredWords);
   });
 
   it("resolves connection family metadata via charStart fallback when connection refs omit word/family", () => {
     const scenario = TRUESIGHT_SCENARIOS.charStartFallback;
-    const { container } = renderTruesightEditor(scenario);
+    const { container } = renderTruesightEditor({
+      ...scenario,
+      analysisMode: 'rhyme',
+      analyzedWordsByCharStart: scenario.analyzedWordsByCharStart || new Map()
+    });
 
     expectColoredWords(container, scenario.expectedColoredWords);
   });

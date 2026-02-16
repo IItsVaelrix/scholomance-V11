@@ -35,6 +35,7 @@ export const Phonotactics = {
     // 2-Consonant rules (Simplified)
     if (stripped.length === 2) {
       const [c1, c2] = stripped;
+      if (c1 === 'S' && ['P', 'T', 'K', 'M', 'N', 'W', 'Y', 'L'].includes(c2)) return { valid: true };
       if (c1 === 'HH' && !['Y', 'W'].includes(c2)) return { valid: false, reason: 'HH can only be followed by Y or W in onset' };
     }
 

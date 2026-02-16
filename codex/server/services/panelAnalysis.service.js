@@ -11,6 +11,7 @@ import { meterRegularityHeuristic } from '../../core/heuristics/meter_regularity
 import { phonemeDensityHeuristic } from '../../core/heuristics/phoneme_density.js';
 import { rhymeQualityHeuristic } from '../../core/heuristics/rhyme_quality.js';
 import { vocabularyRichnessHeuristic } from '../../core/heuristics/vocabulary_richness.js';
+import { phoneticHackingHeuristic } from '../../core/heuristics/phonetic_hacking.js';
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
 import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detector.js';
 import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literaryDevices.detector.js';
@@ -25,6 +26,7 @@ const SCORE_HEURISTICS = [
   meterRegularityHeuristic,
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,
+  phoneticHackingHeuristic,
 ];
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
@@ -204,7 +206,7 @@ export function createPanelAnalysisService(options = {}) {
 
     try {
       const analyzedDoc = analyzeText(text);
-      const scoreData = scoreEngine.calculateScore(analyzedDoc);
+      const scoreData = await scoreEngine.calculateScore(analyzedDoc);
       const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
 
       const deepAnalysis = await deepRhymeEngine.analyzeDocument(

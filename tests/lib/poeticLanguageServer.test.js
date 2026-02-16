@@ -1,0 +1,143 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+import { PoeticLanguageServer } from '../../src/lib/poeticLanguageServer.js';
+
+// Mock PhonemeEngine with known word analyses
+const mockPhonemeEngine = {
+  WORD_CACHE: new Map(),
+  analyzeWord(word) {
+    const upper = String(word).toUpperCase();
+    const dict = {
+      NIGHT: { vowelFamily: 'AY', rhymeKey: 'AY-T', syllableCount: 1, coda: 'T', phonemes: ['N', 'AY1', 'T'] },
+      LIGHT: { vowelFamily: 'AY', rhymeKey: 'AY-T', syllableCount: 1, coda: 'T', phonemes: ['L', 'AY1', 'T'] },
+      FIGHT: { vowelFamily: 'AY', rhymeKey: 'AY-T', syllableCount: 1, coda: 'T', phonemes: ['F', 'AY1', 'T'] },
+      SIGHT: { vowelFamily: 'AY', rhymeKey: 'AY-T', syllableCount: 1, coda: 'T', phonemes: ['S', 'AY1', 'T'] },
+      TIME:  { vowelFamily: 'AY', rhymeKey: 'AY-M', syllableCount: 1, coda: 'M', phonemes: ['T', 'AY1', 'M'] },
+      FIRE:  { vowelFamily: 'AY', rhymeKey: 'AY-R', syllableCount: 1, coda: 'R', phonemes: ['F', 'AY1', 'R'] },
+      FACE:  { vowelFamily: 'EY', rhymeKey: 'EY-S', syllableCount: 1, coda: 'S', phonemes: ['F', 'EY1', 'S'] },
+      BASE:  { vowelFamily: 'EY', rhymeKey: 'EY-S', syllableCount: 1, coda: 'S', phonemes: ['B', 'EY1', 'S'] },
+      DARK:  { vowelFamily: 'A', rhymeKey: 'A-K', syllableCount: 1, coda: 'K', phonemes: ['D', 'AA1', 'R', 'K'] },
+      SOUL:  { vowelFamily: 'IY', rhymeKey: 'IY-L', syllableCount: 1, coda: 'L', phonemes: ['S', 'IY1', 'L'] },
+      INTO:  { vowelFamily: 'IH', rhymeKey: 'IH-open', syllableCount: 2, coda: null, phonemes: ['IH1', 'N', 'T', 'UW0'] },
+      THE:   { vowelFamily: 'AE', rhymeKey: 'AE-open', syllableCount: 1, coda: null, phonemes: ['DH', 'AH0'] },
+      VOID:  { vowelFamily: 'OY', rhymeKey: 'OY-D', syllableCount: 1, coda: 'D', phonemes: ['V', 'OY1', 'D'] },
+    };
+    return dict[upper] || null;
+  },
+  checkCodaMutation(a, b) {
+    const groups = [['M', 'NG', 'N'], ['S', 'Z', 'SH', 'ZH'], ['T', 'D'], ['P', 'B'], ['K', 'G']];
+    for (const g of groups) { if (g.includes(a) && g.includes(b)) return true; }
+    return false;
+  },
+};
+
+// Mock Trie
+class MockTrie {
+  predict(prefix, limit = 5) {
+    const words = ['light', 'lime', 'like', 'fire', 'fight', 'face', 'dark', 'night', 'soul'];
+    return words.filter(w => w.startsWith(prefix.toLowerCase())).slice(0, limit);
+  }
+  predictNext(word, limit = 5) {
+    const bigrams = { 'the': ['night', 'void', 'dark', 'soul'], 'into': ['the'] };
+    return (bigrams[word.toLowerCase()] || []).slice(0, limit);
+  }
+}
+
+describe('PoeticLanguageServer', () => {
+  let pls;
+
+  beforeAll(() => {
+    pls = new PoeticLanguageServer({
+      phonemeEngine: mockPhonemeEngine,
+      trie: new MockTrie(),
+    });
+    pls.buildIndex([
+      'night', 'light', 'fight', 'sight', 'time', 'fire',
+      'face', 'base', 'dark', 'soul', 'into', 'the', 'void',
+    ]);
+  });
+
+  it('returns completions with scores and badges', () => {
+    const results = pls.getCompletions({
+      prefix: 'li',
+      prevWord: null,
+      prevLineEndWord: 'night',
+      currentLineWords: ['into', 'the'],
+    });
+
+    expect(results.length).toBeGreaterThan(0);
+    for (const r of results) {
+      expect(r).toHaveProperty('token');
+      expect(r).toHaveProperty('score');
+      expect(r).toHaveProperty('scores');
+      expect(r).toHaveProperty('badges');
+      expect(r).toHaveProperty('ghostLine');
+    }
+  });
+
+  it('prioritizes rhyming candidates', () => {
+    const results = pls.getCompletions({
+      prefix: '',
+      prevWord: 'the',
+      prevLineEndWord: 'night', // rhyme target: AY-T
+      currentLineWords: [],
+    });
+
+    // Words that rhyme with "night" (light, fight, sight) should score higher
+    const rhymeCandidates = results.filter(r => r.badges.includes('RHYME'));
+    expect(rhymeCandidates.length).toBeGreaterThan(0);
+  });
+
+  it('generates correct ghost lines', () => {
+    const results = pls.getCompletions({
+      prefix: 'li',
+      prevWord: null,
+      prevLineEndWord: 'night',
+      currentLineWords: ['into', 'the'],
+    });
+
+    for (const r of results) {
+      expect(r.ghostLine).toMatch(/^into the .+/);
+    }
+  });
+
+  it('returns empty when not ready', () => {
+    const unready = new PoeticLanguageServer({
+      phonemeEngine: mockPhonemeEngine,
+      trie: new MockTrie(),
+    });
+    const results = unready.getCompletions({ prefix: 'li', prevWord: null, prevLineEndWord: null, currentLineWords: [] });
+    expect(results).toHaveLength(0);
+  });
+
+  it('allows runtime weight adjustment', () => {
+    pls.setWeights({ rhyme: 0.9, prefix: 0.1, meter: 0, color: 0 });
+
+    const results = pls.getCompletions({
+      prefix: '',
+      prevWord: 'the',
+      prevLineEndWord: 'night',
+      currentLineWords: [],
+    });
+
+    // With rhyme weight at 0.9, rhyming words should dominate
+    if (results.length > 1) {
+      const topRhymes = results.slice(0, 3).filter(r => r.scores.rhyme > 0);
+      expect(topRhymes.length).toBeGreaterThan(0);
+    }
+
+    // Restore defaults
+    pls.setWeights({ rhyme: 0.35, prefix: 0.20, meter: 0.25, color: 0.20 });
+  });
+
+  it('completes in under 50ms', () => {
+    const start = performance.now();
+    pls.getCompletions({
+      prefix: 'li',
+      prevWord: null,
+      prevLineEndWord: 'night',
+      currentLineWords: ['into', 'the'],
+    });
+    const elapsed = performance.now() - start;
+    expect(elapsed).toBeLessThan(50);
+  });
+});

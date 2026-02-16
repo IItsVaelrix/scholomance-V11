@@ -54,19 +54,19 @@ export const ScholomanceDictionaryAPI = {
 
   async lookup(word) {
     if (!BASE_URL || !word) return null;
-    const url = buildUrl(`${BASE_URL}/api/lexicon/lookup/${encodeURIComponent(word)}`);
+    const url = buildUrl(`${BASE_URL}/lookup/${encodeURIComponent(word)}`);
     const payload = await fetchJson(url);
     return payload;
   },
 
   /**
    * Performs bulk lookup of rhyme families for a set of words.
-   * @param {string[]} words 
+   * @param {string[]} words
    * @returns {Promise<Record<string, string>>} word (upper) -> rhyme family
    */
   async lookupBatch(words) {
     if (!BASE_URL || !words?.length) return {};
-    const url = buildUrl(`${BASE_URL}/api/lexicon/lookup-batch`);
+    const url = buildUrl(`${BASE_URL}/lookup-batch`);
     const payload = await fetchJson(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -78,7 +78,7 @@ export const ScholomanceDictionaryAPI = {
 
   async search(query, { limit = 20 } = {}) {
     if (!BASE_URL || !query) return [];
-    const url = buildUrl(`${BASE_URL}/api/lexicon/search`, { q: query, limit });
+    const url = buildUrl(`${BASE_URL}/search`, { q: query, limit });
     const payload = await fetchJson(url);
     return payload.results || [];
   }

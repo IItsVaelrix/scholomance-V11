@@ -12,9 +12,9 @@ describe('Alphabet Phonetic Mapping', () => {
     expect(result.vowelFamily).toBe('IY');
   });
 
-  it('should identify AY (EY) family for standalone "I"', () => {
+  it('should identify AY family for standalone "I"', () => {
     const result = PhonemeEngine.analyzeWord('I');
-    expect(result.vowelFamily).toBe('EY');
+    expect(result.vowelFamily).toBe('AY');
   });
 
   it('should identify OW family for standalone "O"', () => {
@@ -39,10 +39,12 @@ describe('Alphabet Phonetic Mapping', () => {
     const match1 = PhonemeEngine.scoreMultiSyllableMatch(cat, bat);
     expect(match1.score).toBeGreaterThan(0.60);
 
-    // Vowel match only (assonance): 0.57 < 0.60 (Should be deactivated per user request)
+    // Vowel match only (assonance): Deactivated per CODA_MIN_SCORE
     const cat2 = PhonemeEngine.analyzeDeep('cat');
     const map = PhonemeEngine.analyzeDeep('map');
+    
     const match2 = PhonemeEngine.scoreMultiSyllableMatch(cat2, map);
+    
     expect(match2.score).toBe(0);
     expect(match2.type).toBe('none');
   });

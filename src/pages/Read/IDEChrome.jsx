@@ -47,11 +47,11 @@ export function TopBar({ title, onOpenSearch, showMinimap, onToggleMinimap, isEd
   );
 }
 
-export function StatusBar({ line, col, language, syllableCount }) {
+export function StatusBar({ line, col, language, syllableCount, analysisError }) {
   return (
     <div className="ide-statusbar">
       <div className="ide-statusbar-left">
-        <span className="status-item">Ready</span>
+        <span className="status-item">{analysisError ? "Analysis Offline" : "Ready"}</span>
         {syllableCount !== undefined && (
           <span className="status-item syllable-status">
             Syllables: <span className="syllable-count-value">{syllableCount}</span>

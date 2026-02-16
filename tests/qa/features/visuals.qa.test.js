@@ -6,15 +6,15 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { SCHOOLS } from "../../src/data/schools";
-import { LIBRARY } from "../../src/data/library";
+import { SCHOOLS } from "../../../src/data/schools";
+import { LIBRARY } from "../../../src/data/library";
 import {
   getPlayableSchoolIds,
   getSchoolAudioConfig,
-} from "../../src/lib/ambient/schoolAudio.config";
+} from "../../../src/lib/ambient/schoolAudio.config";
 import {
   AmbientPlayerService,
-} from "../../src/lib/ambient/ambientPlayer.service";
+} from "../../../src/lib/ambient/ambientPlayer.service";
 
 // ─── Helpers ───────────────────────────────────────────────
 

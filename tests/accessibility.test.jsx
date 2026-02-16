@@ -129,12 +129,12 @@ describe("Accessibility Suite", () => {
 
   describe("ScrollEditor", () => {
     it("should have no axe violations", async () => {
-      const { container } = render(<ScrollEditor onSave={() => {}} isEditable={true} />);
+      const { container } = renderWithThemeAndRouter(<ScrollEditor onSave={() => {}} isEditable={true} />);
       expect(await axe(container)).toHaveNoViolations();
     });
 
     it("should expose labeled fields", () => {
-      render(<ScrollEditor onSave={() => {}} isEditable={true} />);
+      renderWithThemeAndRouter(<ScrollEditor onSave={() => {}} isEditable={true} />);
       expect(screen.getByLabelText(/scroll title/i)).toBeInTheDocument();
       expect(screen.getByLabelText(/scroll content/i)).toBeInTheDocument();
     });

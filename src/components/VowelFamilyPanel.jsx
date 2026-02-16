@@ -117,7 +117,14 @@ export default function VowelFamilyPanel({
                   {family.id}
                 </span>
                 <span className="vowel-family-school">
-                  {family.schoolGlyph} {family.schoolName}
+                  {family.schoolGlyph ? (
+                    <span className="vowel-family-school-glyph" aria-hidden="true">
+                      {family.schoolGlyph}
+                    </span>
+                  ) : null}
+                  <span className="vowel-family-school-name" title={family.schoolName}>
+                    {family.schoolName}
+                  </span>
                 </span>
               </div>
               <div className="vowel-family-right">

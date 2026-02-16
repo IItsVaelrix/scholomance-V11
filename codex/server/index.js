@@ -18,6 +18,7 @@ import multipart from '@fastify/multipart';
 import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { z } from 'zod';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import { fileURLToPath } from 'url';
 import { existsSync, mkdirSync, readdirSync, createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
@@ -177,7 +178,7 @@ const scrollBodySchema = z.object({
 });
 
 function toFastifySchema(zodSchema) {
-    const schema = z.toJSONSchema(zodSchema, { target: 'draft-7' });
+    const schema = zodToJsonSchema(zodSchema, { target: 'draft-7' });
     if (schema && typeof schema === 'object' && '$schema' in schema) {
         delete schema.$schema;
     }

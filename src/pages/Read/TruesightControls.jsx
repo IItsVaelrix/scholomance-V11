@@ -21,6 +21,8 @@ export default function TruesightControls({
   onModeChange,
   isAnalyzing = false,
   disabled = false,
+  isPredictive = false,
+  onTogglePredictive = () => {},
 }) {
   return (
     <div className="truesight-controls">
@@ -34,6 +36,18 @@ export default function TruesightControls({
       >
         <span aria-hidden="true">&#x1F441;</span>
         Truesight
+      </button>
+
+      <button
+        type="button"
+        className={`toolbar-btn toolbar-btn--predictive ${isPredictive ? 'toolbar-btn--active' : ''}`}
+        onClick={onTogglePredictive}
+        disabled={disabled}
+        aria-pressed={isPredictive}
+        title="Toggle Weighted Ritual Prediction"
+      >
+        <span aria-hidden="true">&#x2728;</span>
+        Predict
       </button>
 
       {isTruesight && (
@@ -86,4 +100,6 @@ TruesightControls.propTypes = {
   onModeChange: PropTypes.func.isRequired,
   isAnalyzing: PropTypes.bool,
   disabled: PropTypes.bool,
+  isPredictive: PropTypes.bool,
+  onTogglePredictive: PropTypes.func,
 };

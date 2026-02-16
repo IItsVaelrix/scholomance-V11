@@ -67,6 +67,8 @@ function scoreVocabularyRichness(doc) {
     return {
       heuristic: 'vocabulary_richness',
       rawScore: 0,
+      weight: 0.10,
+      contribution: 0,
       explanation: 'No words found.',
       diagnostics: []
     };
@@ -80,6 +82,8 @@ function scoreVocabularyRichness(doc) {
     return {
       heuristic: 'vocabulary_richness',
       rawScore: 0,
+      weight: 0.10,
+      contribution: 0,
       explanation: 'No suitable words found.',
       diagnostics: []
     };

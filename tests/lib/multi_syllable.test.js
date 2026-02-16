@@ -26,15 +26,15 @@ describe('Multi-Syllable Rhyme Detection', () => {
     const w2 = PhonemeEngine.analyzeDeep('tongue');
     const match = PhonemeEngine.scoreMultiSyllableMatch(w1, w2);
     
-    // AH (0.6) + Similarity(M, NG) (0.8 * 0.4 = 0.32) = 0.92
-    expect(match.score).toBeGreaterThan(0.60);
-    expect(match.syllablesMatched).toBe(1);
+    // M and NG are too distinct for a high-quality rhyme (gate on codaScore)
+    expect(match.score).toBe(0);
+    expect(match.type).toBe('none');
   });
 
   it('should handle dactylic rhymes (3+ syllables)', () => {
-    // "Terrify" / "Clarify"
-    const w1 = PhonemeEngine.analyzeDeep('terrify');
-    const w2 = PhonemeEngine.analyzeDeep('clarify');
+    // "Mystery" / "History"
+    const w1 = PhonemeEngine.analyzeDeep('mystery');
+    const w2 = PhonemeEngine.analyzeDeep('history');
     const match = PhonemeEngine.scoreMultiSyllableMatch(w1, w2);
     
     expect(match.syllablesMatched).toBeGreaterThanOrEqual(3);

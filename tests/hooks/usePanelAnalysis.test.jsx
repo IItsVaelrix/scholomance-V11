@@ -115,8 +115,14 @@ describe('usePanelAnalysis hook', () => {
     expect(result.current.analysis?.allConnections?.[0]?.syntax?.gate).toBe('allow_weak');
   });
 
-  it('returns an error when server analysis fails', async () => {
-    global.fetch = vi.fn().mockRejectedValue(new Error('server unavailable'));
+  it('falls back to client-side analysis when server fails', async () => {
+    // Mock fetch: reject the panel analysis call, allow other fetches
+    global.fetch = vi.fn((url) => {
+      if (typeof url === 'string' && url.includes('/api/analysis/panels')) {
+        return Promise.reject(new Error('server unavailable'));
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
 
     const { result } = renderHook(() => usePanelAnalysis());
 
@@ -124,16 +130,21 @@ describe('usePanelAnalysis hook', () => {
       result.current.analyzeDocument('Flame and name');
     });
 
+    // Advance past the debounce timer
     await act(async () => {
-      vi.advanceTimersByTime(500);
-      await Promise.resolve();
-      await Promise.resolve();
+      vi.advanceTimersByTime(600);
     });
 
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(result.current.source).toBe(null);
-    expect(result.current.error).toBe('server unavailable');
-    expect(result.current.analysis).toBe(null);
-    expect(result.current.scoreData).toBe(null);
+    // Flush multiple microtask ticks for the async fallback chain
+    for (let i = 0; i < 10; i++) {
+      await act(async () => {
+        await Promise.resolve();
+      });
+    }
+
+    // Should show the fallback warning
+    expect(result.current.error).toBe('Server unavailable \u2014 using local analysis');
+    // Source should be 'client' from fallback
+    expect(result.current.source).toBe('client');
   });
 });

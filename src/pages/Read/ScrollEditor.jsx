@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "../../hooks/useTheme.jsx";
+import { useColorCodex } from "../../hooks/useColorCodex.js";
+import IntelliSense from "../../components/IntelliSense.jsx";
 import Gutter from "./Gutter.jsx";
 import Minimap from "./Minimap.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
@@ -97,14 +100,43 @@ const VOWEL_COLORS = {
   AA: "#fb7185",   // Rose - same as A
   AO: "#fbbf24",   // Amber - THOUGHT (mid back rounded)
   OW: "#facc15",   // Yellow - GOAT (mid back diphthong)
-  UH: "#a3e635",   // Lime - FOOT (near-high back)
-  UW: "#4ade80",   // Green - GOOSE (high back)
-  AH: "#2dd4bf",   // Teal - STRUT (mid central)
-  ER: "#22d3ee",   // Cyan - NURSE (r-colored)
+  U: "#4ade80",    // Green - BOOT/FOOT/STRUT (consolidated U)
+  AH: "#2dd4bf",   // Teal - STRUT (mid central - fallback)
+  ER: "#22d3ee",   // Cyan - NURSE (r-colored, pre-normalization fallback)
+  UR: "#22d3ee",   // Cyan - NURSE (normalized rhotic mid)
   AY: "#f97316",   // Orange - PRICE (diphthong)
   AW: "#ef4444",   // Red - MOUTH (diphthong)
   OY: "#ec4899",   // Magenta - CHOICE (diphthong)
 };
+
+// Compute cursor pixel position in a textarea (monospace font)
+let _cachedCharWidth = null;
+function getCursorCoordsFromTextarea(textarea) {
+  if (!textarea) return { x: 0, y: 0 };
+  const style = window.getComputedStyle(textarea);
+  const lineHeight = parseFloat(style.lineHeight) || DEFAULT_LINE_HEIGHT;
+  const rect = textarea.getBoundingClientRect();
+  const paddingLeft = parseFloat(style.paddingLeft) || 0;
+  const paddingTop = parseFloat(style.paddingTop) || 0;
+
+  if (!_cachedCharWidth) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.font = `${style.fontSize} ${style.fontFamily}`;
+    _cachedCharWidth = ctx.measureText('m').width;
+  }
+
+  const pos = textarea.selectionStart;
+  const text = textarea.value.substring(0, pos);
+  const lines = text.split('\n');
+  const lineNum = lines.length - 1;
+  const colNum = lines[lines.length - 1].length;
+
+  return {
+    x: rect.left + paddingLeft + colNum * _cachedCharWidth,
+    y: rect.top + paddingTop + (lineNum + 1) * lineHeight - textarea.scrollTop,
+  };
+}
 
 const ScrollEditor = forwardRef(function ScrollEditor({
   initialTitle = "",
@@ -114,6 +146,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   isEditable = true,
   disabled = false,
   isTruesight = false,
+  isPredictive = false,
+  predict,
+  getCompletions,
+  checkSpelling,
+  getSpellingSuggestions,
+  predictorReady = false,
   onContentChange,
   analyzedWords = new Map(),
   analyzedWordsByIdentity = new Map(),
@@ -123,9 +161,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   highlightedLines = [],
   vowelColors = null,
   colorMap = null,
+  syntaxLayer = null,
+  analysisMode = 'none',
   theme = 'dark',
   onWordActivate,
   onCursorChange,
+  onScrollChange,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -133,8 +174,172 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_HEIGHT);
   const [scrollTop, setScrollTop] = useState(0);
   const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
+  const [intellisenseSuggestions, setIntellisenseSuggestions] = useState([]);
+  const [intellisenseIndex, setIntellisenseIndex] = useState(0);
+  const [intellisensePos, setIntellisensePos] = useState({ x: 0, y: 0 });
+  const [cursorVersion, setCursorVersion] = useState(0);
   const textareaRef = useRef(null);
   const truesightOverlayRef = useRef(null);
+
+  // IntelliSense: PLS-powered completions with rhyme, meter, color awareness
+  useEffect(() => {
+    if (!isPredictive || !predictorReady) {
+      setIntellisenseSuggestions(prev => prev.length === 0 ? prev : []);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const pos = textarea.selectionStart;
+      const textBefore = content.substring(0, pos);
+      const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
+      const isAfterSpace = pos > 0 && content.charAt(pos - 1) === ' ';
+
+      let prefix = "";
+      let prevWord = null;
+
+      if (lastWordMatch && lastWordMatch[1].length >= 1) {
+        prefix = lastWordMatch[1];
+      } else if (isAfterSpace) {
+        const words = textBefore.match(/\b(\w+)\b/g);
+        if (words?.length > 0) prevWord = words[words.length - 1];
+      }
+
+      // If neither typing nor after space, nothing to suggest
+      if (!prefix && !prevWord) {
+        setIntellisenseSuggestions([]);
+        return;
+      }
+
+      // Build PLS context from cursor state
+      const lines = textBefore.split('\n');
+      const currentLineText = lines[lines.length - 1] || '';
+      const currentLineWords = (currentLineText.match(/[a-zA-Z']+/g) || [])
+        .map(w => w.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, ''))
+        .filter(Boolean);
+      // Remove the prefix (in-progress word) from current line words
+      if (prefix && currentLineWords.length > 0) {
+        const lastCLW = currentLineWords[currentLineWords.length - 1];
+        if (lastCLW.toLowerCase() === prefix.toLowerCase()) currentLineWords.pop();
+      }
+
+      let prevLineEndWord = null;
+      for (let i = lines.length - 2; i >= 0; i--) {
+        const lineText = lines[i].trim();
+        if (!lineText) continue;
+        const lineWords = lineText.match(/[a-zA-Z']+/g);
+        if (lineWords?.length > 0) {
+          prevLineEndWord = lineWords[lineWords.length - 1];
+          break;
+        }
+      }
+
+      // Gather prior line syllable counts for meter inference
+      const priorLineSyllableCounts = [];
+      if (lineSyllableCounts?.length > 0) {
+        const currentLineIndex = lines.length - 1;
+        for (let i = Math.max(0, currentLineIndex - 4); i < currentLineIndex; i++) {
+          if (lineSyllableCounts[i]) priorLineSyllableCounts.push(lineSyllableCounts[i]);
+        }
+      }
+
+      const plsContext = {
+        prefix,
+        prevWord,
+        prevLineEndWord,
+        currentLineWords,
+        targetSyllableCount: null,
+        priorLineSyllableCounts,
+      };
+
+      // Collect results: PLS completions + spellcheck corrections
+      const finalResults = [];
+      const seenTokens = new Set();
+
+      // 1. Spelling corrections (highest priority)
+      if (prefix && checkSpelling && !checkSpelling(prefix)) {
+        (getSpellingSuggestions?.(prefix, null, 3) || []).forEach(f => {
+          if (!f || seenTokens.has(f)) return;
+          seenTokens.add(f);
+          finalResults.push({
+            token: f,
+            type: 'correction',
+            score: 10,
+            isRhyme: false,
+            badges: [],
+            ghostLine: null,
+          });
+        });
+      }
+
+      // 2. PLS completions (rhyme, meter, color-aware)
+      if (getCompletions) {
+        const plsResults = getCompletions(plsContext, { limit: 10 });
+        for (const r of plsResults) {
+          if (seenTokens.has(r.token)) continue;
+          seenTokens.add(r.token);
+          finalResults.push({
+            token: r.token,
+            type: 'prediction',
+            score: r.score,
+            isRhyme: r.badges.includes('RHYME'),
+            badges: r.badges,
+            ghostLine: r.ghostLine,
+            scores: r.scores,
+          });
+        }
+      } else {
+        // Fallback to basic predict if PLS not available
+        const basicResults = prefix
+          ? (predict?.(prefix, null, 10) || [])
+          : (predict?.(null, prevWord, 10) || []);
+        for (const p of basicResults) {
+          if (seenTokens.has(p)) continue;
+          seenTokens.add(p);
+          finalResults.push({ token: p, type: 'prediction', score: 5, isRhyme: false, badges: [], ghostLine: null });
+        }
+      }
+
+      const sliced = finalResults.slice(0, 7);
+      setIntellisenseSuggestions(sliced);
+      setIntellisenseIndex(0);
+      if (sliced.length > 0) {
+        setIntellisensePos(getCursorCoordsFromTextarea(textarea));
+      }
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts]);
+
+  // Accept an IntelliSense suggestion: replace partial word and insert
+  const handleAcceptSuggestion = useCallback((token) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const pos = textarea.selectionStart;
+    const textBefore = content.substring(0, pos);
+    const textAfter = content.substring(pos);
+    const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
+
+    let newContent, newCursorPos;
+    if (lastWordMatch) {
+      const before = content.substring(0, lastWordMatch.index);
+      newContent = before + token + ' ' + textAfter;
+      newCursorPos = lastWordMatch.index + token.length + 1;
+    } else {
+      newContent = textBefore + token + ' ' + textAfter;
+      newCursorPos = pos + token.length + 1;
+    }
+
+    setContent(newContent);
+    onContentChange?.(newContent);
+    setIntellisenseSuggestions([]);
+
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }, [content, onContentChange]);
+
   const showSyllableCounter = isEditable || isTruesight;
 
   const BUFFER = 10;
@@ -169,18 +374,59 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const paddingTop = visibleRange.start * lineHeightPx;
   const paddingBottom = Math.max(0, (overlayLines.length - visibleRange.end) * lineHeightPx);
 
-  // Pre-compute Set for O(1) multi-syllable word lookups (Fix 1)
-  const multiSyllableCharStarts = useMemo(() => {
-    const set = new Set();
-    if (!activeConnections) return set;
-    for (const conn of activeConnections) {
-      if (conn.syllablesMatched >= 2) {
-        set.add(conn.wordA.charStart);
-        set.add(conn.wordB.charStart);
+  const { theme: effectiveTheme } = useTheme();
+  const activeTheme = theme || effectiveTheme;
+
+  const allowLegacyWordFallback = useMemo(() => (
+    analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
+  ), [analyzedWordsByIdentity, analyzedWordsByCharStart]);
+
+  const derivedAnalyzedWordsByCharStart = useMemo(() => {
+    const derived = new Map(analyzedWordsByCharStart);
+
+    for (const { lineIndex, tokens } of overlayLines) {
+      for (const { token, start, wordIndex } of tokens) {
+        if (!WORD_TOKEN_REGEX.test(token) || derived.has(start)) continue;
+        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${start}`;
+        const nw = normalizeWordToken(token);
+        const fromIdentity = analyzedWordsByIdentity.get(identityKey);
+        if (fromIdentity) {
+          derived.set(start, { ...fromIdentity, charStart: start, normalizedWord: fromIdentity.normalizedWord || nw });
+          continue;
+        }
+        if (!allowLegacyWordFallback) continue;
+        const fromWord = analyzedWords.get(nw);
+        if (fromWord) {
+          derived.set(start, { ...fromWord, charStart: start, normalizedWord: fromWord.normalizedWord || nw });
+        }
       }
     }
-    return set;
-  }, [activeConnections]);
+
+    return derived;
+  }, [
+    analyzedWords,
+    analyzedWordsByCharStart,
+    analyzedWordsByIdentity,
+    allowLegacyWordFallback,
+    overlayLines,
+  ]);
+
+  const analysisSources = useMemo(() => ({
+    analyzedWords,
+    analyzedWordsByCharStart: derivedAnalyzedWordsByCharStart,
+    analyzedWordsByIdentity,
+  }), [analyzedWords, derivedAnalyzedWordsByCharStart, analyzedWordsByIdentity]);
+
+  // Decoupled color logic via useColorCodex hook
+  const { colorMap: hookColorMap, shouldColorWord: shouldColorWordHook } = useColorCodex(
+    analysisSources, 
+    activeConnections,
+    vowelColors || VOWEL_COLORS,
+    syntaxLayer, 
+    { theme: activeTheme, analysisMode }
+  );
+
+  const activeColorMap = colorMap || hookColorMap;
 
   const normalizedWordByCharStart = useMemo(() => {
     const map = new Map();
@@ -193,93 +439,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     return map;
   }, [overlayLines]);
 
-  const allowLegacyWordFallback = useMemo(() => (
-    analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
-  ), [analyzedWordsByIdentity, analyzedWordsByCharStart]);
-
   // Build color activation context from active connections.
   // 1) Color direct connected words.
-  // 2) If a stop-word endpoint is excluded, allow family substitution only when that
-  //    family has no non-stop connected representative.
-  const connectionColorContext = useMemo(() => {
-    const connectedTokenCharStarts = new Set();
-    const stopWordFamilies = new Set();
-    const nonStopWordFamilies = new Set();
-
-    if (!Array.isArray(activeConnections) || activeConnections.length === 0) {
-      return {
-        connectedTokenCharStarts,
-        substitutionFamilies: new Set(),
-      };
-    }
-
-    const resolveNormalizedWord = (wordRef) => {
-      if (!wordRef || typeof wordRef !== "object") return "";
-      if (Number.isInteger(wordRef.charStart)) {
-        const normalizedByOffset = normalizedWordByCharStart.get(wordRef.charStart);
-        if (normalizedByOffset) {
-          return normalizedByOffset;
-        }
-      }
-      return normalizeWordToken(wordRef.word);
-    };
-
-    const resolveWordFamily = (wordRef, normalizedWord) => {
-      if (!wordRef || typeof wordRef !== "object") return "";
-
-      const directFamily = normalizeVowelFamily(wordRef.vowelFamily);
-      if (directFamily) return directFamily;
-
-      if (Number.isInteger(wordRef.charStart)) {
-        const byOffsetFamily = normalizeVowelFamily(analyzedWordsByCharStart.get(wordRef.charStart)?.vowelFamily);
-        if (byOffsetFamily) return byOffsetFamily;
-      }
-
-      if (allowLegacyWordFallback) {
-        const analyzedFamily = normalizeVowelFamily(analyzedWords.get(normalizedWord)?.vowelFamily);
-        if (analyzedFamily) return analyzedFamily;
-      }
-
-      return "";
-    };
-
-    const registerWordRef = (wordRef) => {
-      if (!wordRef || typeof wordRef !== "object") return;
-
-      if (Number.isInteger(wordRef.charStart)) {
-        connectedTokenCharStarts.add(wordRef.charStart);
-      }
-
-      const normalizedWord = resolveNormalizedWord(wordRef);
-      const family = resolveWordFamily(wordRef, normalizedWord);
-      if (!family) return;
-
-      if (STOP_WORDS.has(normalizedWord)) {
-        stopWordFamilies.add(family);
-        return;
-      }
-
-      nonStopWordFamilies.add(family);
-    };
-
-    for (const conn of activeConnections) {
-      registerWordRef(conn?.wordA);
-      registerWordRef(conn?.wordB);
-    }
-
-    const substitutionFamilies = new Set();
-    for (const family of stopWordFamilies) {
-      if (!nonStopWordFamilies.has(family)) {
-        substitutionFamilies.add(family);
-      }
-    }
-
-    return {
-      connectedTokenCharStarts,
-      substitutionFamilies,
-    };
-  }, [activeConnections, allowLegacyWordFallback, analyzedWords, analyzedWordsByCharStart, normalizedWordByCharStart]);
-
   // Pre-compute Set for O(1) highlighted line lookups (Fix 1)
   const highlightedLinesSet = useMemo(() => new Set(highlightedLines || []), [highlightedLines]);
 
@@ -350,7 +511,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
   useEffect(() => {
     const textarea = textareaRef.current;
-    if (!textarea) return undefined;
+    if (!textarea || typeof ResizeObserver === 'undefined') return undefined;
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -408,12 +569,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
     const top = textarea.scrollTop;
     setScrollTop(top);
+    onScrollChange?.(top);
 
     if (truesightOverlayRef.current) {
       truesightOverlayRef.current.scrollTop = top;
       truesightOverlayRef.current.scrollLeft = textarea.scrollLeft;
     }
-  }, []);
+  }, [onScrollChange]);
 
   const handleOverlayScroll = useCallback(() => {
     if (truesightOverlayRef.current && textareaRef.current) {
@@ -421,8 +583,9 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       textareaRef.current.scrollTop = top;
       textareaRef.current.scrollLeft = truesightOverlayRef.current.scrollLeft;
       setScrollTop(top);
+      onScrollChange?.(top);
     }
-  }, []);
+  }, [onScrollChange]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
@@ -465,12 +628,40 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     save: handleSave,
     jumpToLine,
     scrollTo,
+    replaceContent(newContent) {
+      setContent(newContent);
+      onContentChange?.(newContent);
+    },
     get clientHeight() { return textareaRef.current?.clientHeight || 0; },
     get scrollHeight() { return textareaRef.current?.scrollHeight || 0; },
-  }), [applyFormat, handleSave, jumpToLine, scrollTo]);
+  }), [applyFormat, handleSave, jumpToLine, scrollTo, onContentChange]);
 
   const handleKeyDown = useCallback(
     (e) => {
+      // IntelliSense navigation
+      if (intellisenseSuggestions.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setIntellisenseIndex(i => (i + 1) % intellisenseSuggestions.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setIntellisenseIndex(i => (i - 1 + intellisenseSuggestions.length) % intellisenseSuggestions.length);
+          return;
+        }
+        if (e.key === 'Tab' || e.key === 'Enter') {
+          e.preventDefault();
+          handleAcceptSuggestion(intellisenseSuggestions[intellisenseIndex].token);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setIntellisenseSuggestions([]);
+          return;
+        }
+      }
+
       if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         handleSave();
@@ -479,7 +670,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         e.preventDefault();
         onCancel();
       }
-    }, [handleSave, onCancel]);
+    }, [handleSave, onCancel, intellisenseSuggestions, intellisenseIndex, handleAcceptSuggestion]);
 
   const handleContentChange = useCallback((event) => {
     const nextValue = event.target.value;
@@ -488,18 +679,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       return;
     }
     setContent(nextValue);
+    setCursorVersion(v => v + 1);
     handleCursorChange(event);
   }, []);
 
   const handleCursorChange = useCallback((event) => {
-    if (!onCursorChange) return;
     const textarea = event.target;
     const pos = textarea.selectionStart;
     const textBefore = textarea.value.substring(0, pos);
     const lines = textBefore.split('\n');
     const line = lines.length;
     const col = lines[lines.length - 1].length + 1;
-    onCursorChange({ line, col });
+    onCursorChange?.({ line, col, offset: pos });
+    setCursorVersion(v => v + 1);
   }, [onCursorChange]);
 
   return (
@@ -574,6 +766,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             onKeyDown={isEditable ? handleKeyDown : undefined}
             onKeyUp={handleCursorChange}
             onClick={handleCursorChange}
+            onBlur={() => setIntellisenseSuggestions([])}
             onScroll={handleScroll}
             disabled={disabled || isSaving}
             readOnly={!isEditable}
@@ -614,7 +807,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const analysis = isWord
                           ? (
                             analyzedWordsByIdentity.get(identityKey) ||
-                            analyzedWordsByCharStart.get(charStart) ||
+                            derivedAnalyzedWordsByCharStart.get(charStart) ||
                             (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
                           )
                           : null;
@@ -624,17 +817,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         }
 
                         const isStopWord = STOP_WORDS.has(clean);
-
                         const wordVowelFamily = normalizeVowelFamily(analysis.vowelFamily);
-                        const isDirectConnectionWord = connectionColorContext.connectedTokenCharStarts.has(charStart);
-                        const isFamilySubstituteWord = (
-                          !isDirectConnectionWord &&
-                          Boolean(wordVowelFamily) &&
-                          connectionColorContext.substitutionFamilies.has(wordVowelFamily)
-                        );
-                        // Truesight activation should only occur for active rhyme context:
-                        // direct connection endpoints and explicit stop-word family substitutions.
-                        const shouldColorWord = !isStopWord && (isDirectConnectionWord || isFamilySubstituteWord);
+                        
+                        const shouldColorWord = shouldColorWordHook(charStart, clean, wordVowelFamily);
+
                         const wordPayload = {
                           word: token,
                           normalizedWord: clean,
@@ -651,8 +837,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         }
 
                         const activeColors = vowelColors || VOWEL_COLORS;
-                        const fallbackColor = theme === 'light' ? "#1a1a2e" : "#f8f9ff";
-                        const codexEntry = colorMap?.get(charStart) ?? null;
+                        const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
+                        const codexEntry = activeColorMap?.get(charStart) ?? null;
                         const color = shouldColorWord
                           ? (codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
                           : undefined;
@@ -661,24 +847,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           : undefined;
 
                         // O(1) lookup for multi-syllable rhyme (Fix 1 + ColorCodex)
-                        const isMultiSyllable = shouldColorWord && (codexEntry?.isMultiSyllable || multiSyllableCharStarts.has(charStart));
+                        const isMultiSyllable = shouldColorWord && codexEntry?.isMultiSyllable;
 
                         // O(1) lookup for highlighted line (Fix 1)
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
-
-                        if (!onWordActivate) {
-                          return (
-                            <span
-                              key={start}
-                              className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
-                              style={{ color, opacity: wordOpacity }}
-                              data-char-start={charStart}
-                              data-syllables={isMultiSyllable ? (Number(analysis.syllableCount) || undefined) : undefined}
-                            >
-                              {token}
-                            </span>
-                          );
-                        }
 
                         if (!onWordActivate) {
                           return (
@@ -722,6 +894,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         </div>
       </div>
 
+      <AnimatePresence>
+        {isPredictive && intellisenseSuggestions.length > 0 && (
+          <IntelliSense
+            suggestions={intellisenseSuggestions}
+            selectedIndex={intellisenseIndex}
+            position={intellisensePos}
+            onAccept={handleAcceptSuggestion}
+            onHover={setIntellisenseIndex}
+            ghostLine={intellisenseSuggestions[intellisenseIndex]?.ghostLine || null}
+            badges={intellisenseSuggestions[intellisenseIndex]?.badges || []}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 });
