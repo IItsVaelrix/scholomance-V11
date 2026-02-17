@@ -1,14 +1,15 @@
 import React from 'react';
 import { ANALYSIS_MODES } from './TruesightControls.jsx';
+import { useIdeSkin } from '../../hooks/useIdeSkin.jsx';
 import './IDE.css';
 
-export default function ToolsSidebar({ 
-  isTruesight, 
-  onToggleTruesight, 
+export default function ToolsSidebar({
+  isTruesight,
+  onToggleTruesight,
   isPredictive,
   onTogglePredictive,
-  analysisMode, 
-  onModeChange, 
+  analysisMode,
+  onModeChange,
   isAnalyzing,
   showScorePanel,
   onToggleScorePanel,
@@ -16,8 +17,23 @@ export default function ToolsSidebar({
   onSchoolChange,
   schoolList
 }) {
+  const { skin, setSkin } = useIdeSkin();
+
   return (
     <div className="tools-sidebar">
+      <div className="sidebar-section">
+        <h3 className="sidebar-section-title">IDE Skin</h3>
+        <select
+          className="school-dropdown-sidebar"
+          value={skin}
+          onChange={(e) => setSkin(e.target.value)}
+          aria-label="Select IDE skin"
+        >
+          <option value="default">Scholomance</option>
+          <option value="jetbrains">JetBrains / IntelliJ</option>
+        </select>
+      </div>
+
       <div className="sidebar-section">
         <h3 className="sidebar-section-title">Visual Skin</h3>
         <select

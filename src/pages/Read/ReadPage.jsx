@@ -32,6 +32,7 @@ import SearchPanel from "./SearchPanel.jsx";
 import Minimap from "./Minimap.jsx";
 import FloatingPanel from "../../components/shared/FloatingPanel.jsx";
 import "./IDE.css";
+import "./jetbrains-skin.css";
 
 const SCHOOL_GLYPHS = {
   DEFAULT: "\uD83C\uDF08",

@@ -1,3 +1,4 @@
+import { useIdeSkin } from '../../hooks/useIdeSkin.jsx';
 import './IDE.css';
 
 export function TopBar({ title, onOpenSearch, showMinimap, onToggleMinimap, isEditable, activeScrollId, onEdit, progression }) {
@@ -48,6 +49,8 @@ export function TopBar({ title, onOpenSearch, showMinimap, onToggleMinimap, isEd
 }
 
 export function StatusBar({ line, col, language, syllableCount, analysisError }) {
+  const { skin } = useIdeSkin();
+
   return (
     <div className="ide-statusbar">
       <div className="ide-statusbar-left">
@@ -62,6 +65,7 @@ export function StatusBar({ line, col, language, syllableCount, analysisError })
         <span className="status-item">{`Ln ${line}, Col ${col}`}</span>
         <span className="status-item">UTF-8</span>
         <span className="status-item">{language}</span>
+        <span className="status-item">{skin === 'jetbrains' ? 'JetBrains UI' : 'Scholomance'}</span>
       </div>
     </div>
   );

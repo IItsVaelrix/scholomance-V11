@@ -1,0 +1,794 @@
+/* ============================================
+   JetBrains New UI Skin
+   Scoped entirely under [data-ide-skin="jetbrains"].
+   Zero impact when attribute is absent or "default".
+   ============================================ */
+
+/* ─── 1. Design Token Overrides (Dark) ─── */
+
+[data-ide-skin="jetbrains"] {
+  --bg-void: #1E1F22;
+  --bg-deep: #1E1F22;
+  --bg-surface: #2B2D30;
+  --bg-elevated: #2B2D30;
+
+  --text-primary: #BCBEC4;
+  --text-secondary: #A8AAAF;
+  --text-tertiary: #808389;
+  --text-muted: #6F737A;
+
+  --border-subtle: #313335;
+  --border-soft: #393B40;
+  --border-bold: #474A50;
+  --border-glow: #565960;
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-floating: 0 6px 16px rgba(0, 0, 0, 0.35);
+  --shadow-depth-1: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-depth-2: 0 2px 6px rgba(0, 0, 0, 0.25);
+  --shadow-depth-3: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-depth-4: 0 6px 18px rgba(0, 0, 0, 0.35);
+
+  --shadow-glow-sm: none;
+  --shadow-glow-md: none;
+  --shadow-glow-lg: none;
+  --inner-light: none;
+  --inner-light-strong: none;
+
+  --gradient-void: linear-gradient(180deg, #2B2D30, #1E1F22);
+  --gradient-primary: linear-gradient(135deg, #3574F0, #548AF7);
+  --gradient-secondary: linear-gradient(135deg, #3574F0, #6B9EF7);
+}
+
+/* ─── 2. Design Token Overrides (Light + JetBrains) ─── */
+
+[data-ide-skin="jetbrains"][data-theme="light"] {
+  --bg-void: #F7F8FA;
+  --bg-deep: #F7F8FA;
+  --bg-surface: #EBEDF0;
+  --bg-elevated: #FFFFFF;
+
+  --text-primary: #1E1F22;
+  --text-secondary: #4E5157;
+  --text-tertiary: #6F737A;
+  --text-muted: #9DA0A8;
+
+  --border-subtle: #D4D4D8;
+  --border-soft: #C8C8CC;
+  --border-bold: #B0B0B6;
+  --border-glow: #A0A0A8;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 6px 18px rgba(0, 0, 0, 0.12);
+  --shadow-elevated: 0 4px 10px rgba(0, 0, 0, 0.08);
+  --shadow-floating: 0 6px 14px rgba(0, 0, 0, 0.1);
+  --shadow-depth-1: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-depth-2: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-depth-3: 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-depth-4: 0 6px 12px rgba(0, 0, 0, 0.1);
+
+  --shadow-glow-sm: none;
+  --shadow-glow-md: none;
+  --shadow-glow-lg: none;
+  --inner-light: none;
+  --inner-light-strong: none;
+
+  --gradient-void: linear-gradient(180deg, #EBEDF0, #F7F8FA);
+}
+
+/* ─── 3. Body Effects Suppression ─── */
+
+[data-ide-skin="jetbrains"] body {
+  background: #1E1F22 !important;
+  background-image: none !important;
+  background-attachment: initial !important;
+}
+
+[data-ide-skin="jetbrains"] body::before {
+  display: none !important;
+}
+
+[data-ide-skin="jetbrains"] .aurora-background,
+[data-ide-skin="jetbrains"] .vignette,
+[data-ide-skin="jetbrains"] .scanlines {
+  display: none !important;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] body {
+  background: #F7F8FA !important;
+}
+
+/* ─── 4. IDE Chrome — Layout Wrapper ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper {
+  --border-color: #393B40;
+  --read-accent: #3574F0;
+  --read-text-strong: #BCBEC4;
+  --read-text: #A8AAAF;
+  --read-text-muted: #808389;
+  --read-text-faint: #6F737A;
+  background: #1E1F22;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper {
+  --border-color: #D4D4D8;
+  --read-accent: #3574F0;
+  --read-text-strong: #1E1F22;
+  --read-text: #4E5157;
+  --read-text-muted: #6F737A;
+  --read-text-faint: #9DA0A8;
+  background: #F7F8FA;
+}
+
+/* ─── 5. TopBar — Solid, no glass morphism ─── */
+
+[data-ide-skin="jetbrains"] .ide-topbar {
+  background: #2B2D30 !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-topbar {
+  background: #FFFFFF !important;
+  border-bottom-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"] .topbar-progression {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+}
+
+[data-ide-skin="jetbrains"] .progression-fill-mini {
+  background: #3574F0;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .topbar-progression {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* ─── 6. StatusBar — Solid background ─── */
+
+[data-ide-skin="jetbrains"] .ide-statusbar {
+  background: #2B2D30;
+  border-top-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-statusbar {
+  background: #F7F8FA;
+  border-top-color: #D4D4D8;
+}
+
+/* ─── 7. Sidebar — Solid backgrounds, bottom-underline active tab ─── */
+
+[data-ide-skin="jetbrains"] .ide-sidebar {
+  background: #2B2D30;
+  border-right-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-sidebar {
+  background: #FFFFFF;
+}
+
+[data-ide-skin="jetbrains"] .sidebar-tabs {
+  background: #1E1F22;
+  border-right-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .sidebar-tabs {
+  background: #F0F1F3;
+  border-right-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"] .sidebar-tab {
+  border-left: 2px solid transparent;
+}
+
+[data-ide-skin="jetbrains"] .sidebar-tab:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-ide-skin="jetbrains"] .sidebar-tab.active {
+  color: #3574F0;
+  background: rgba(53, 116, 240, 0.08);
+  border-left-color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .sidebar-tab:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .sidebar-tab.active {
+  color: #3574F0;
+  background: rgba(53, 116, 240, 0.08);
+  border-left-color: #3574F0;
+}
+
+/* ─── 8. Sidebar Tool Buttons ─── */
+
+[data-ide-skin="jetbrains"] .sidebar-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+[data-ide-skin="jetbrains"] .sidebar-tool-btn.active {
+  background: rgba(53, 116, 240, 0.12);
+  border-color: rgba(53, 116, 240, 0.3);
+  color: #548AF7;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .sidebar-tool-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .sidebar-tool-btn.active {
+  background: rgba(53, 116, 240, 0.08);
+  border-color: rgba(53, 116, 240, 0.2);
+  color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"] .status-dot.on {
+  background: #3574F0;
+  box-shadow: 0 0 6px rgba(53, 116, 240, 0.5);
+}
+
+/* ─── 9. Icon Buttons ─── */
+
+[data-ide-skin="jetbrains"] .ide-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-ide-skin="jetbrains"] .ide-icon-btn.active {
+  color: #3574F0;
+  background: rgba(53, 116, 240, 0.1);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-icon-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+/* ─── 10. Search Input ─── */
+
+[data-ide-skin="jetbrains"] .search-input {
+  background: #1E1F22;
+  border-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .search-input:focus {
+  border-color: #3574F0;
+  background: #1E1F22;
+  box-shadow: 0 0 0 1px #3574F0;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .search-input {
+  background: #FFFFFF;
+  border-color: #C8C8CC;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .search-input:focus {
+  border-color: #3574F0;
+  background: #FFFFFF;
+  box-shadow: 0 0 0 1px #3574F0;
+}
+
+[data-ide-skin="jetbrains"] .search-result-item:hover {
+  background: rgba(53, 116, 240, 0.08);
+}
+
+/* ─── 11. Scroll List ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .scroll-item {
+  border-radius: 4px;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .scroll-item:hover {
+  background: rgba(53, 116, 240, 0.08);
+  border-color: transparent;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .scroll-item--active {
+  background: rgba(53, 116, 240, 0.15);
+  border-color: #3574F0;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .scroll-item:hover {
+  background: rgba(53, 116, 240, 0.06);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .scroll-item--active {
+  background: rgba(53, 116, 240, 0.1);
+  border-color: #3574F0;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .scroll-count {
+  border-color: rgba(53, 116, 240, 0.45);
+  background: rgba(53, 116, 240, 0.15);
+  color: #A6C8FF;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .scroll-count {
+  color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .new-scroll-btn {
+  background: #3574F0;
+  border-radius: 6px;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .new-scroll-btn:hover {
+  background: #548AF7;
+}
+
+/* ─── 12. Editor Area ─── */
+
+[data-ide-skin="jetbrains"] .editor-gutter {
+  background: #2B2D30;
+  border-right-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .editor-gutter {
+  background: #EBEDF0;
+  border-right-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-title-input {
+  border-bottom-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-title-input:focus {
+  border-bottom-color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .editor-title-input {
+  border-bottom-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .editor-title-input:focus {
+  border-bottom-color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea {
+  caret-color: #BCBEC4;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea.truesight-transparent {
+  caret-color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea::selection {
+  background: #214283;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea.truesight-transparent::selection {
+  background: rgba(53, 116, 240, 0.2);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .editor-textarea::selection {
+  background: #A6D2FF;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .editor-textarea.truesight-transparent::selection {
+  background: rgba(53, 116, 240, 0.15);
+}
+
+/* ─── 13. Document Toolbar — Solid, no blur ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .document-toolbar {
+  background: #2B2D30;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .document-toolbar {
+  background: #FFFFFF;
+  border-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .toolbar-btn:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: #474A50;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .toolbar-btn--active,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn--active {
+  background: rgba(53, 116, 240, 0.2);
+  border-color: #3574F0;
+  color: #BCBEC4;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .toolbar-btn--save {
+  border-color: #3C793C;
+  background: #2E5F2E;
+  color: #C5E4C5;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .toolbar-btn--save:hover {
+  background: #3C793C;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .toolbar-btn--save {
+  border-color: #55A855;
+  background: #E8F5E9;
+  color: #1B5E20;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .toolbar-btn--save:hover {
+  background: #C8E6C9;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn--scheme {
+  border-color: rgba(53, 116, 240, 0.3);
+  background: rgba(53, 116, 240, 0.1);
+  color: #A6C8FF;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn--scheme:hover {
+  border-color: rgba(53, 116, 240, 0.5);
+  background: rgba(53, 116, 240, 0.18);
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn--scheme.mode-btn--active {
+  border-color: #3574F0;
+  background: rgba(53, 116, 240, 0.3);
+  color: #FFFFFF;
+  box-shadow: none;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .mode-btn-scheme-glyph {
+  border-color: rgba(53, 116, 240, 0.4);
+  background: rgba(53, 116, 240, 0.15);
+  color: #A6C8FF;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .analyzing-indicator {
+  border-color: rgba(255, 167, 38, 0.4);
+  background: rgba(255, 167, 38, 0.1);
+  color: #FFA726;
+}
+
+/* ─── 14. Truesight Overlay ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .truesight-line--highlighted {
+  background: rgba(53, 116, 240, 0.13);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .grimoire-word:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .truesight-word-token:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-conn-btn--highlighted {
+  border-color: rgba(53, 116, 240, 0.4);
+  background: rgba(53, 116, 240, 0.14);
+}
+
+/* ─── 15. Analysis Panels — Solid backgrounds ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-scheme-panel,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-diagram-panel,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .vowel-family-panel {
+  background: #2B2D30;
+  border-color: #393B40;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  border-radius: 8px;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .rhyme-scheme-panel,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .rhyme-diagram-panel,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .vowel-family-panel {
+  background: #FFFFFF;
+  border-color: #D4D4D8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-group-btn,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-conn-btn {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-group-btn:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-conn-btn:hover {
+  background: rgba(53, 116, 240, 0.08);
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .pattern-breakdown-card,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .stat-item,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .emotion-display,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .device-item,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .vowel-family-row {
+  border-color: #393B40;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .pattern-breakdown-card,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .stat-item,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .emotion-display,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .device-item,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .vowel-family-row {
+  border-color: #D4D4D8;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* ─── 16. Floating Panels — Solid, no blur ─── */
+
+[data-ide-skin="jetbrains"] .floating-panel {
+  background: #2B2D30;
+  border-color: #393B40;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-ide-skin="jetbrains"] .panel-header {
+  background: #313335;
+  border-bottom-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .floating-panel {
+  background: #FFFFFF;
+  border-color: #D4D4D8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .panel-header {
+  background: #F0F1F3;
+  border-bottom-color: #D4D4D8;
+}
+
+[data-ide-skin="jetbrains"] .minimap-floating-panel {
+  backdrop-filter: none;
+}
+
+[data-ide-skin="jetbrains"] .minimap-floating-panel .panel-content {
+  background: #1E1F22;
+}
+
+/* ─── 17. Minimap ─── */
+
+[data-ide-skin="jetbrains"] .minimap-thumb {
+  background: rgba(53, 116, 240, 0.2);
+  border-color: rgba(53, 116, 240, 0.4);
+}
+
+/* ─── 18. IntelliSense — Solid, no blur ─── */
+
+[data-ide-skin="jetbrains"] .intellisense {
+  background: #2B2D30;
+  border-color: #393B40;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+[data-ide-skin="jetbrains"] .intellisense-item:hover,
+[data-ide-skin="jetbrains"] .intellisense-item--active {
+  background: rgba(53, 116, 240, 0.15);
+}
+
+[data-ide-skin="jetbrains"] .intellisense-item--active {
+  background: rgba(53, 116, 240, 0.2);
+  outline-color: #3574F0;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .intellisense {
+  background: #FFFFFF;
+  border-color: #D4D4D8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .intellisense-item:hover,
+[data-ide-skin="jetbrains"][data-theme="light"] .intellisense-item--active {
+  background: rgba(53, 116, 240, 0.08);
+}
+
+[data-ide-skin="jetbrains"] .intellisense-ghost {
+  border-bottom-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .intellisense-ghost-text {
+  color: #808389;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .intellisense-ghost-text {
+  color: #6F737A;
+}
+
+/* ─── 19. Toasts — Solid ─── */
+
+[data-ide-skin="jetbrains"] .toast-item {
+  background: #2B2D30;
+  border-color: #393B40;
+  backdrop-filter: none;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .toast-item {
+  background: #FFFFFF;
+  border-color: #D4D4D8;
+}
+
+/* ─── 20. Dropdown Options ─── */
+
+[data-ide-skin="jetbrains"] .school-dropdown-sidebar option,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .school-dropdown option {
+  background: #2B2D30;
+  color: #BCBEC4;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .school-dropdown-sidebar option,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .school-dropdown option {
+  background: #FFFFFF;
+  color: #1E1F22;
+}
+
+[data-ide-skin="jetbrains"] .school-dropdown-sidebar {
+  background: #1E1F22;
+  border-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .school-dropdown-sidebar {
+  background: #FFFFFF;
+  border-color: #C8C8CC;
+}
+
+/* ─── 21. Scrollbars — Wider, more visible ─── */
+
+[data-ide-skin="jetbrains"] ::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+[data-ide-skin="jetbrains"] ::-webkit-scrollbar-track {
+  background: #1E1F22;
+}
+
+[data-ide-skin="jetbrains"] ::-webkit-scrollbar-thumb {
+  background: #4A4D52;
+  border-radius: 5px;
+  border: 2px solid #1E1F22;
+}
+
+[data-ide-skin="jetbrains"] ::-webkit-scrollbar-thumb:hover {
+  background: #5C5F66;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] ::-webkit-scrollbar-track {
+  background: #F7F8FA;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: #C0C2C7;
+  border-color: #F7F8FA;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: #A8AAAF;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea::-webkit-scrollbar,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-content::-webkit-scrollbar,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .search-results::-webkit-scrollbar,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-tools::-webkit-scrollbar,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-connections-list::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea::-webkit-scrollbar-thumb,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-content::-webkit-scrollbar-thumb,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .search-results::-webkit-scrollbar-thumb,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-tools::-webkit-scrollbar-thumb,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-connections-list::-webkit-scrollbar-thumb {
+  background: #4A4D52;
+  border-radius: 5px;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .editor-textarea::-webkit-scrollbar-thumb:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-content::-webkit-scrollbar-thumb:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .search-results::-webkit-scrollbar-thumb:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .sidebar-tools::-webkit-scrollbar-thumb:hover,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .rhyme-connections-list::-webkit-scrollbar-thumb:hover {
+  background: #5C5F66;
+}
+
+/* ─── 22. Spellcheck Panel ─── */
+
+[data-ide-skin="jetbrains"] .btn-tiny {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .btn-tiny:hover {
+  background: rgba(53, 116, 240, 0.1);
+  border-color: #474A50;
+}
+
+/* ─── 23. Focus Ring ─── */
+
+[data-ide-skin="jetbrains"] {
+  --focus-ring: 0 0 0 2px #3574F0;
+}
+
+/* ─── 24. Main Content Area ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .ide-main-content {
+  background: #1E1F22;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .ide-main-content {
+  background: #F7F8FA !important;
+}
+
+/* ─── 25. Summary Headers ─── */
+
+[data-ide-skin="jetbrains"] .scheme-embedded-header,
+[data-ide-skin="jetbrains"] .vowel-family-stats-summary,
+[data-ide-skin="jetbrains"] .score-embedded-summary {
+  border-bottom-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .diagram-header {
+  border-bottom-color: #393B40;
+}
+
+/* ─── 26. Syllable Counter ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .syllable-counter {
+  border-right-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"] .syllable-count-value {
+  color: #3574F0;
+}
+
+/* ─── 27. Markdown Rendered Headers ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .markdown-rendered h1,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .markdown-rendered h2,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .markdown-rendered h3,
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .markdown-rendered h4 {
+  color: #548AF7;
+}
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .markdown-rendered code {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .markdown-rendered h1,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .markdown-rendered h2,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .markdown-rendered h3,
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .markdown-rendered h4 {
+  color: #3574F0;
+}
+
+/* ─── 28. Resize Handle ─── */
+
+[data-ide-skin="jetbrains"] .react-resizable-handle-se {
+  background: linear-gradient(135deg, transparent 50%, rgba(255, 255, 255, 0.15) 50%);
+}
+
+/* ─── 29. Vowel Family Empty State ─── */
+
+[data-ide-skin="jetbrains"] .ide-layout-wrapper .vowel-family-empty {
+  border-color: #393B40;
+}
+
+[data-ide-skin="jetbrains"][data-theme="light"] .ide-layout-wrapper .vowel-family-empty {
+  border-color: #D4D4D8;
+}
