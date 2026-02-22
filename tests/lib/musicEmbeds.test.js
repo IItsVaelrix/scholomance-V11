@@ -10,6 +10,7 @@ describe("musicEmbeds", () => {
   it("detects provider by URL", () => {
     expect(getMusicProvider("https://suno.com/song/12345678-1234-1234-1234-123456789abc")).toBe("suno");
     expect(getMusicProvider("https://example.com/track")).toBe("unknown");
+    expect(getMusicProvider("/audio/1.mp3")).toBe("direct");
   });
 
   it("converts suno song URLs to embed URLs", () => {

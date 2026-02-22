@@ -3,7 +3,12 @@ const SUNO_HOSTS = new Set(["suno.com", "www.suno.com"]);
 function parseUrl(rawUrl) {
   if (!rawUrl || typeof rawUrl !== "string") return null;
   try {
-    return new URL(rawUrl);
+    return new URL(
+      rawUrl,
+      typeof window !== "undefined" && window.location?.origin
+        ? window.location.origin
+        : "http://localhost"
+    );
   } catch {
     return null;
   }

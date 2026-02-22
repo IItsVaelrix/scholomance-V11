@@ -1,11 +1,64 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PhonemeEngine } from '../../src/lib/phoneme.engine';
+import fs from 'node:fs';
+import path from 'node:path';
+
+function getCorpusBaselineWords(limit = 24) {
+  const corpusPath = path.join(process.cwd(), 'public', 'corpus.json');
+  const raw = JSON.parse(fs.readFileSync(corpusPath, 'utf8'));
+  const words = [];
+  const seen = new Set();
+
+  for (const token of raw) {
+    const normalized = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
+    if (normalized.length < 2 || seen.has(normalized)) continue;
+    seen.add(normalized);
+    words.push(normalized.toLowerCase());
+    if (words.length >= limit) break;
+  }
+
+  return words;
+}
+
+function projectAnalyzeWordContract(word) {
+  const analysis = PhonemeEngine.analyzeWord(word);
+  return {
+    word: String(word).toUpperCase(),
+    vowelFamily: analysis?.vowelFamily || null,
+    coda: analysis?.coda || null,
+    rhymeKey: analysis?.rhymeKey || null,
+    syllableCount: analysis?.syllableCount || null,
+    phonemes: Array.isArray(analysis?.phonemes) ? analysis.phonemes : [],
+  };
+}
+
+function projectAnalyzeDeepContract(word) {
+  const analysis = PhonemeEngine.analyzeDeep(word);
+  return {
+    word: analysis?.word || String(word).toUpperCase(),
+    rhymeKey: analysis?.rhymeKey || null,
+    syllableCount: analysis?.syllableCount || null,
+    stressPattern: analysis?.stressPattern || '',
+    extendedRhymeKeys: Array.isArray(analysis?.extendedRhymeKeys) ? analysis.extendedRhymeKeys : [],
+    syllables: Array.isArray(analysis?.syllables)
+      ? analysis.syllables.map((syllable) => ({
+          index: syllable.index,
+          vowel: syllable.vowel,
+          vowelFamily: syllable.vowelFamily,
+          onset: syllable.onset,
+          coda: syllable.coda,
+          stress: syllable.stress,
+        }))
+      : [],
+  };
+}
 
 describe('PhonemeEngine', () => {
 
   beforeEach(() => {
     // Reset cache before each test
     PhonemeEngine.WORD_CACHE.clear();
+    PhonemeEngine.AUTHORITY_CACHE.clear();
   });
 
   it('should analyze a common word and return valid structure', () => {
@@ -157,6 +210,20 @@ describe('PhonemeEngine', () => {
       expect(suit).toBeTruthy();
       expect(match.syllablesMatched).toBeGreaterThan(0);
       expect(match.score).toBeGreaterThanOrEqual(0.65);
+    });
+  });
+
+  describe('Regression Contract (Corpus Sample)', () => {
+    const baselineWords = getCorpusBaselineWords(24);
+
+    it('keeps analyzeWord output stable for a deterministic corpus sample', () => {
+      const baseline = baselineWords.map((word) => projectAnalyzeWordContract(word));
+      expect({ words: baselineWords, baseline }).toMatchSnapshot();
+    });
+
+    it('keeps analyzeDeep output stable for a deterministic corpus sample', () => {
+      const baseline = baselineWords.map((word) => projectAnalyzeDeepContract(word));
+      expect({ words: baselineWords, baseline }).toMatchSnapshot();
     });
   });
 });

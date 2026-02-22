@@ -44,6 +44,7 @@ import { Syllabifier } from "./syllabifier.js";
 import { Phonotactics } from "./phonotactics.js";
 import { PhoneticSimilarity } from "./phoneticSimilarity.js";
 import { ScholomanceDictionaryAPI } from "./scholomanceDictionary.api.js";
+import { applyPhonologicalProcesses as applyOrderedPhonologicalProcesses } from "./phonologicalProcesses.js";
 
 const VOWEL_FAMILY_TO_SCHOOL = {
   A: "SONIC",
@@ -254,18 +255,8 @@ export const PhonemeEngine = {
   guessVowelFamily(word) { return this.analyzeWord(word)?.vowelFamily || 'A'; },
   extractCoda(word) { return this.analyzeWord(word)?.coda || null; },
 
-  applyPhonologicalProcesses(phonemes) {
-    const processed = [...phonemes];
-    for (let i = 0; i < processed.length; i++) {
-      const p = processed[i];
-      const next = processed[i + 1];
-      if (p === 'N' && next) {
-        const baseNext = next.replace(/[0-9]/g, '');
-        if (['P', 'B', 'M'].includes(baseNext)) processed[i] = 'M';
-      }
-      if (processed[i] === 'M' && processed[i+1] === 'B' && !processed[i+2]) processed.splice(i+1, 1);
-    }
-    return processed;
+  applyPhonologicalProcesses(phonemes, options = undefined) {
+    return applyOrderedPhonologicalProcesses(phonemes, options);
   },
 
   splitToPhonemes(word) {

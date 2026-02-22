@@ -75,6 +75,35 @@ function calculatePhonemeDistance(source, target) {
   return matrix[target.length][source.length];
 }
 
+function projectGoldenWordContract(word) {
+  const analyzeWord = PhonemeEngine.analyzeWord(word);
+  const analyzeDeep = PhonemeEngine.analyzeDeep(word);
+  return {
+    analyzeWord: {
+      vowelFamily: analyzeWord?.vowelFamily || null,
+      coda: analyzeWord?.coda || null,
+      rhymeKey: analyzeWord?.rhymeKey || null,
+      syllableCount: analyzeWord?.syllableCount || null,
+      phonemes: Array.isArray(analyzeWord?.phonemes) ? analyzeWord.phonemes : [],
+    },
+    analyzeDeep: {
+      rhymeKey: analyzeDeep?.rhymeKey || null,
+      syllableCount: analyzeDeep?.syllableCount || null,
+      stressPattern: analyzeDeep?.stressPattern || "",
+      extendedRhymeKeys: Array.isArray(analyzeDeep?.extendedRhymeKeys) ? analyzeDeep.extendedRhymeKeys : [],
+      syllables: Array.isArray(analyzeDeep?.syllables)
+        ? analyzeDeep.syllables.map((syllable) => ({
+            vowel: syllable.vowel,
+            vowelFamily: syllable.vowelFamily,
+            onset: syllable.onset,
+            coda: syllable.coda,
+            stress: syllable.stress,
+          }))
+        : [],
+    },
+  };
+}
+
 describe("CODEx Phoneme Engine Accuracy (QA)", () => {
   beforeAll(async () => {
     // Initialize the engine and its dictionaries
@@ -108,5 +137,13 @@ describe("CODEx Phoneme Engine Accuracy (QA)", () => {
 
     // Set a realistic threshold. For a system relying on APIs, even 5-10% might be a good start.
     expect(phonemeErrorRate).toBeLessThan(10.0);
+  });
+
+  test("Golden set analysis contract snapshot remains stable", () => {
+    const contract = {};
+    for (const word of Object.keys(goldenSet)) {
+      contract[word] = projectGoldenWordContract(word);
+    }
+    expect(contract).toMatchSnapshot();
   });
 });

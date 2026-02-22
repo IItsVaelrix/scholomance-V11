@@ -1,0 +1,293 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CODEx Phoneme Engine Accuracy (QA) > Golden set analysis contract snapshot remains stable 1`] = `
+{
+  "alliteration": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "U-N",
+        "EY-open/U-N",
+        "UR-open/EY-open/U-N",
+        "IH-open/UR-open/EY-open/U-N",
+      ],
+      "rhymeKey": "U-N",
+      "stressPattern": "01010",
+      "syllableCount": 5,
+      "syllables": [
+        {
+          "coda": "",
+          "onset": "",
+          "stress": 0,
+          "vowel": "AH0",
+          "vowelFamily": "U",
+        },
+        {
+          "coda": "",
+          "onset": "L",
+          "stress": 2,
+          "vowel": "IH2",
+          "vowelFamily": "IH",
+        },
+        {
+          "coda": "",
+          "onset": "T",
+          "stress": 0,
+          "vowel": "ER0",
+          "vowelFamily": "UR",
+        },
+        {
+          "coda": "",
+          "onset": "",
+          "stress": 1,
+          "vowel": "EY1",
+          "vowelFamily": "EY",
+        },
+        {
+          "coda": "N",
+          "onset": "SH",
+          "stress": 0,
+          "vowel": "AH0",
+          "vowelFamily": "U",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": "N",
+      "phonemes": [
+        "AH0",
+        "L",
+        "IH2",
+        "T",
+        "ER0",
+        "EY1",
+        "SH",
+        "AH0",
+        "N",
+      ],
+      "rhymeKey": "U-N",
+      "syllableCount": 5,
+      "vowelFamily": "EY",
+    },
+  },
+  "error": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "UR-open",
+        "AE-open/UR-open",
+      ],
+      "rhymeKey": "UR-open",
+      "stressPattern": "10",
+      "syllableCount": 2,
+      "syllables": [
+        {
+          "coda": "",
+          "onset": "",
+          "stress": 1,
+          "vowel": "EH1",
+          "vowelFamily": "AE",
+        },
+        {
+          "coda": "",
+          "onset": "R",
+          "stress": 0,
+          "vowel": "ER0",
+          "vowelFamily": "UR",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": null,
+      "phonemes": [
+        "EH1",
+        "R",
+        "ER0",
+      ],
+      "rhymeKey": "UR-open",
+      "syllableCount": 2,
+      "vowelFamily": "AE",
+    },
+  },
+  "phoneme": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "IY-M",
+        "OW-open/IY-M",
+      ],
+      "rhymeKey": "IY-M",
+      "stressPattern": "11",
+      "syllableCount": 2,
+      "syllables": [
+        {
+          "coda": "",
+          "onset": "F",
+          "stress": 1,
+          "vowel": "OW1",
+          "vowelFamily": "OW",
+        },
+        {
+          "coda": "M",
+          "onset": "N",
+          "stress": 2,
+          "vowel": "IY2",
+          "vowelFamily": "IY",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": "M",
+      "phonemes": [
+        "F",
+        "OW1",
+        "N",
+        "IY2",
+        "M",
+      ],
+      "rhymeKey": "IY-M",
+      "syllableCount": 2,
+      "vowelFamily": "OW",
+    },
+  },
+  "rate": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "EY-T",
+      ],
+      "rhymeKey": "EY-T",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "T",
+          "onset": "R",
+          "stress": 1,
+          "vowel": "EY1",
+          "vowelFamily": "EY",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": "T",
+      "phonemes": [
+        "R",
+        "EY1",
+        "T",
+      ],
+      "rhymeKey": "EY-T",
+      "syllableCount": 1,
+      "vowelFamily": "EY",
+    },
+  },
+  "scholomance": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "AE-NS",
+        "U-open/AE-NS",
+        "OW-open/U-open/AE-NS",
+      ],
+      "rhymeKey": "AE-NS",
+      "stressPattern": "101",
+      "syllableCount": 3,
+      "syllables": [
+        {
+          "coda": "",
+          "onset": "SK",
+          "stress": 1,
+          "vowel": "OW1",
+          "vowelFamily": "OW",
+        },
+        {
+          "coda": "",
+          "onset": "L",
+          "stress": 0,
+          "vowel": "AH0",
+          "vowelFamily": "U",
+        },
+        {
+          "coda": "NS",
+          "onset": "M",
+          "stress": 2,
+          "vowel": "AE2",
+          "vowelFamily": "AE",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": "NS",
+      "phonemes": [
+        "S",
+        "K",
+        "OW1",
+        "L",
+        "AH0",
+        "M",
+        "AE2",
+        "N",
+        "S",
+      ],
+      "rhymeKey": "AE-NS",
+      "syllableCount": 3,
+      "vowelFamily": "OW",
+    },
+  },
+  "through": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "U-open",
+      ],
+      "rhymeKey": "U-open",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "",
+          "onset": "THR",
+          "stress": 1,
+          "vowel": "UW1",
+          "vowelFamily": "U",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": null,
+      "phonemes": [
+        "TH",
+        "R",
+        "UW1",
+      ],
+      "rhymeKey": "U-open",
+      "syllableCount": 1,
+      "vowelFamily": "U",
+    },
+  },
+  "tough": {
+    "analyzeDeep": {
+      "extendedRhymeKeys": [
+        "U-F",
+      ],
+      "rhymeKey": "U-F",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "F",
+          "onset": "T",
+          "stress": 1,
+          "vowel": "AH1",
+          "vowelFamily": "U",
+        },
+      ],
+    },
+    "analyzeWord": {
+      "coda": "F",
+      "phonemes": [
+        "T",
+        "AH1",
+        "F",
+      ],
+      "rhymeKey": "U-F",
+      "syllableCount": 1,
+      "vowelFamily": "U",
+    },
+  },
+}
+`;
