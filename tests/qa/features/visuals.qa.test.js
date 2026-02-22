@@ -41,11 +41,11 @@ function createMockController() {
 
 // ─── THEORY 1: Backend returns empty unlockedSchools ───────
 describe("Theory 1: Backend returns empty unlockedSchools []", () => {
-  it("getPlayableSchoolIds([]) returns empty — orb renders null", () => {
+  it("getPlayableSchoolIds([]) still returns playable stations", () => {
     const result = getPlayableSchoolIds([]);
-    expect(result).toEqual([]);
-    // VERDICT: If the API returns { unlockedSchools: [] }, the orb
-    // will get an empty playableSchools array and return null.
+    expect(result.length).toBeGreaterThan(0);
+    expect(result).toContain("SONIC");
+    // VERDICT: Ambient playback is always available even with empty progression.
   });
 
   it("SONIC is playable when included in unlockedSchools", () => {
@@ -275,7 +275,7 @@ describe("Theory 10: Race condition between subscribe and setPlayableSchools use
 
 // ─── SUMMARY ───────────────────────────────────────────────
 describe("SUMMARY: Root cause chain", () => {
-  it("reproduces the full bug: DB '[]' → API [] → spread kills default → orb null", () => {
+  it("legacy bug chain no longer breaks playback when unlockedSchools is []", () => {
     // Step 1: Database creates user with unlockedSchools = '[]'
     const dbRow = { userId: 1, xp: 0, unlockedSchools: "[]" };
     dbRow.unlockedSchools = JSON.parse(dbRow.unlockedSchools);
@@ -289,13 +289,13 @@ describe("SUMMARY: Root cause chain", () => {
     const merged = { ...defaultProgression, ...apiResponse };
     expect(merged.unlockedSchools).toEqual([]); // BUG!
 
-    // Step 4: AmbientOrb receives [] → getPlayableSchoolIds([]) → []
+    // Step 4: AmbientOrb receives [] but fallback still provides playable stations
     const playable = getPlayableSchoolIds(merged.unlockedSchools);
-    expect(playable).toEqual([]);
+    expect(playable.length).toBeGreaterThan(0);
+    expect(playable).toContain("SONIC");
 
-    // Step 5: Orb's guard `if (!playableSchools.length) return null` fires
-    expect(playable.length === 0).toBe(true);
-    // The orb is invisible. QED.
+    // Step 5: Orb guard is bypassed because we always have playable stations.
+    expect(playable.length === 0).toBe(false);
   });
 
   it("confirms the fix resolves the issue end-to-end", () => {

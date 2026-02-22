@@ -36,12 +36,10 @@ export function getSchoolAudioConfig(schoolId) {
   return SCHOOL_AUDIO_CONFIG[schoolId] || null;
 }
 
-export function getPlayableSchoolIds(unlockedSchools = []) {
-  if (!Array.isArray(unlockedSchools)) return [];
-  return unlockedSchools.filter((schoolId) => {
-    const config = getSchoolAudioConfig(schoolId);
-    return Boolean(config?.trackUrl);
-  });
+export function getPlayableSchoolIds(_unlockedSchools = []) {
+  return Object.values(SCHOOL_AUDIO_CONFIG)
+    .filter((config) => Boolean(config?.trackUrl))
+    .map((config) => config.schoolId);
 }
 
 export function getDefaultSchoolId(playableSchoolIds = []) {
@@ -50,4 +48,3 @@ export function getDefaultSchoolId(playableSchoolIds = []) {
   }
   return playableSchoolIds[0];
 }
-

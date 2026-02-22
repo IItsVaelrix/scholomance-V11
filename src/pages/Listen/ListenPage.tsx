@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import { motion } from "framer-motion";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools.js";
 import { useAmbientPlayer } from "../../hooks/useAmbientPlayer";
-import { useProgression } from "../../hooks/useProgression.jsx";
 import { getSchoolAudioConfig } from "../../lib/ambient/schoolAudio.config.js";
 import {
   normalizeAdminToken,
@@ -22,10 +21,6 @@ function getProviderLabel(trackUrl: string | null | undefined) {
   return "External stream";
 }
 
-function formatXp(value: number) {
-  return new Intl.NumberFormat("en-US").format(Math.max(0, Math.floor(value)));
-}
-
 export default function ListenPage() {
   const [isTrackSwitchLocked, setIsTrackSwitchLocked] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,8 +29,7 @@ export default function ListenPage() {
   const trackSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const adminToken = normalizeAdminToken(adminTokenInput);
-
-  const { progression, checkUnlocked } = useProgression();
+  const allSchoolIds = useMemo(() => Object.keys(SCHOOLS), []);
   const {
     status,
     currentSchoolId,
@@ -56,7 +50,7 @@ export default function ListenPage() {
     toggleAutoplayAmbient,
     toggleCyclingEnabled,
     unlockAudio,
-  } = useAmbientPlayer(progression.unlockedSchools, {
+  } = useAmbientPlayer(allSchoolIds, {
     adminToken,
   });
 
@@ -69,13 +63,13 @@ export default function ListenPage() {
           return {
             ...school,
             color: generateSchoolColor(school.id),
-            unlocked: checkUnlocked(school.id),
+            unlocked: true,
             trackUrl: config.trackUrl,
           };
         })
         .filter(Boolean)
         .sort((a: any, b: any) => a.unlockXP - b.unlockXP),
-    [checkUnlocked]
+    []
   );
 
   const currentStation = useMemo(() => {
@@ -83,7 +77,6 @@ export default function ListenPage() {
     return (
       stations.find((station: any) => station.id === currentSchoolId) ||
       dynamicSchools.find((school: any) => school.id === currentSchoolId) ||
-      stations.find((station: any) => station.unlocked) ||
       stations[0] ||
       dynamicSchools[0]
     );
@@ -122,8 +115,8 @@ export default function ListenPage() {
     }, TRACK_SWITCH_DELAY_MS);
   }, []);
 
-  const handleTuneStation = async (stationId: string, isUnlocked = true) => {
-    if (!isUnlocked || !canSwitchTracks) return;
+  const handleTuneStation = async (stationId: string) => {
+    if (!canSwitchTracks) return;
     lockTrackSwitching();
     await unlockAudio();
     await tuneToSchool(stationId);
@@ -258,32 +251,27 @@ export default function ListenPage() {
           <aside className="listen-station-panel glass" aria-label="Available stations">
             <div className="listen-panel-heading">
               <h2>Stations</h2>
-              <span>{stations.filter((station: any) => !station.unlocked).length} locked</span>
+              <span>{stations.length} live</span>
             </div>
             <ul className="listen-station-list">
               {stations.map((station: any) => {
                 const isActive = station.id === currentSchoolId;
-                const xpRemaining = Math.max(0, station.unlockXP - progression.xp);
                 const stationProviderLabel = getProviderLabel(station.trackUrl);
                 return (
                   <li key={station.id}>
                     <button
                       type="button"
-                      className={`listen-station-btn ${isActive ? "is-active" : ""} ${
-                        station.unlocked ? "" : "is-locked"
-                      }`}
+                      className={`listen-station-btn ${isActive ? "is-active" : ""}`}
                       onClick={() => {
-                        void handleTuneStation(station.id, station.unlocked);
+                        void handleTuneStation(station.id);
                       }}
-                      disabled={!station.unlocked || !canSwitchTracks}
+                      disabled={!canSwitchTracks}
                       style={{ "--station-color": station.color } as CSSProperties}
                     >
                       <span className="listen-station-dot" aria-hidden="true" />
                       <span className="listen-station-meta">
                         <span className="listen-station-name">{station.name}</span>
-                        <span className="listen-station-sub">
-                          {station.unlocked ? stationProviderLabel : `${formatXp(xpRemaining)} XP required`}
-                        </span>
+                        <span className="listen-station-sub">{stationProviderLabel}</span>
                       </span>
                       <span className="listen-station-glyph" aria-hidden="true">
                         {station.glyph || "*"}
@@ -391,7 +379,7 @@ export default function ListenPage() {
           <aside className="listen-control-panel glass" aria-label="Playback settings">
             <div className="listen-panel-heading">
               <h2>Control</h2>
-              <span>{playableSchools.length} unlocked</span>
+              <span>{playableSchools.length} available</span>
             </div>
 
             <label className="listen-slider-field" htmlFor="listen-volume">
@@ -428,7 +416,7 @@ export default function ListenPage() {
               aria-pressed={cyclingEnabled}
             >
               <span>Cycle Mode</span>
-              <strong>{cyclingEnabled ? "On" : "Locked"}</strong>
+              <strong>{cyclingEnabled ? "On" : "Off"}</strong>
             </button>
           </aside>
         </div>

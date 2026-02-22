@@ -341,26 +341,19 @@ export default function ReadPage() {
         return;
       }
       
-      // Award XP only for new scrolls
-      if (!isUpdate) {
-        // Use the total score from the scoring engine for exponential scaling
-        const totalPower = scoreData?.totalScore || 0;
-        
-        // XP curve: (Power ^ 1.6)
-        // If power is 100, XP is 1584. If power is 50, XP is 527.
-        // We add a small base to ensure even very simple scrolls give something.
-        const baseXP = 25;
-        const powerXP = Math.round(Math.pow(totalPower, 1.6));
-        const xpAwarded = baseXP + powerXP;
-        
-        const source = totalPower > 70 ? "legendary_submission" : 
-                      totalPower > 40 ? "expert_submission" : "basic_submission";
+      // Award XP for every save, including updates.
+      // Keep the same power-scaled formula so rewards remain consistent.
+      const totalPower = scoreData?.totalScore || 0;
+      const baseXP = 25;
+      const powerXP = Math.round(Math.pow(totalPower, 1.6));
+      const xpAwarded = baseXP + powerXP;
+      const source = totalPower > 70 ? "legendary_submission"
+        : totalPower > 40 ? "expert_submission"
+          : "basic_submission";
+      const actionLabel = isUpdate ? "Scroll Updated" : "Scroll Saved";
 
-        addXP(xpAwarded, source, savedScroll.id);
-        addToast(`Scroll Saved! +${xpAwarded} XP`, "success");
-      } else {
-        addToast("Scroll Updated!", "success");
-      }
+      addXP(xpAwarded, source);
+      addToast(`${actionLabel}! +${xpAwarded} XP`, "success");
 
       setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
