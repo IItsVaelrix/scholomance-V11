@@ -5,6 +5,8 @@ export type AudioAdminErrorReason = "missing_admin_token" | "invalid_admin_token
 export interface AudioFilePayload {
   name: string;
   url: string;
+  size: number | null;
+  uploadedAt: string | null;
 }
 
 export interface UploadAudioResponse {
@@ -48,6 +50,25 @@ export async function uploadAudioFile(file: File, adminToken?: string | null): P
     method: "POST",
     headers: buildAudioAdminHeaders(adminToken),
     body: formData,
+  });
+}
+
+export async function deleteAudioFile(filename: string, adminToken?: string | null): Promise<Response> {
+  return fetch(`/api/audio-files/${encodeURIComponent(filename)}`, {
+    method: "DELETE",
+    headers: buildAudioAdminHeaders(adminToken),
+  });
+}
+
+export async function renameAudioFile(
+  filename: string,
+  newName: string,
+  adminToken?: string | null
+): Promise<Response> {
+  return fetch(`/api/audio-files/${encodeURIComponent(filename)}`, {
+    method: "PATCH",
+    headers: buildAudioAdminHeaders(adminToken, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ name: newName }),
   });
 }
 

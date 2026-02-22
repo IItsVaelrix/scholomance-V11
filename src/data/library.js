@@ -35,12 +35,6 @@ export const LIBRARY = {
   },
 };
 
-// Meditation tracks — separate from school music
-export const MEDITATION_TRACKS = [
-  { id: "meditation-1", title: "Stillness" },
-  { id: "meditation-2", title: "Inner Temple" },
-  { id: "meditation-3", title: "Deep Focus" },
-];
 
 export const LINKS = [
   { id: "watch", path: "/watch", label: "Watch" },

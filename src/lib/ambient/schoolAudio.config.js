@@ -24,9 +24,6 @@ export const SCHOOL_AUDIO_CONFIG = Object.freeze(
       orbSkinKey: school.id.toLowerCase(),
       color: generateSchoolColor(school.id),
       trackUrl,
-      dialSfxUrl: null,
-      noiseBedUrl: null,
-      moodTags: [],
     };
     return acc;
   }, {})

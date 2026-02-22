@@ -20,7 +20,7 @@ import crypto from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { fileURLToPath } from 'url';
-import { existsSync, mkdirSync, readdirSync, createWriteStream } from 'fs';
+import { existsSync, mkdirSync, readdirSync, createWriteStream, unlinkSync, renameSync, statSync } from 'fs';
 import { pipeline } from 'stream/promises';
 import path from 'path';
 import { requireAuth } from './auth-pre-handler.js';
@@ -506,6 +506,25 @@ fastify.delete('/api/scrolls/:id', {
     }
 });
 
+// Audio filename helpers
+const AUDIO_EXT_RE = /\.(mp3|wav|ogg|m4a)$/i;
+
+function sanitizeAudioFilename(raw) {
+    return raw.replace(/[^a-z0-9.-]/gi, '_').toLowerCase();
+}
+
+function isValidAudioFilename(name) {
+    if (!name || typeof name !== 'string') return false;
+    if (!AUDIO_EXT_RE.test(name)) return false;
+    // Block path traversal
+    if (name.includes('..') || name.includes('/') || name.includes('\\')) return false;
+    return true;
+}
+
+function resolveAudioFilePath(filename) {
+    return path.join(AUDIO_UPLOAD_PATH, filename);
+}
+
 // Upload and Audio List Routes
 fastify.get('/api/audio-files', async (request, reply) => {
     const authorization = authorizeAudioRouteRequest(request);
@@ -514,10 +533,19 @@ fastify.get('/api/audio-files', async (request, reply) => {
     }
     try {
         const files = readdirSync(AUDIO_UPLOAD_PATH);
-        return files.filter(f => /\.(mp3|wav|ogg|m4a)$/i.test(f)).map(f => ({
-            name: f,
-            url: `/audio/${f}`
-        }));
+        return files.filter(f => AUDIO_EXT_RE.test(f)).map(f => {
+            const filePath = resolveAudioFilePath(f);
+            let size = null;
+            let uploadedAt = null;
+            try {
+                const stats = statSync(filePath);
+                size = stats.size;
+                uploadedAt = stats.mtime.toISOString();
+            } catch {
+                // File may have been removed between readdir and stat
+            }
+            return { name: f, url: `/audio/${f}`, size, uploadedAt };
+        });
     } catch (e) {
         return [];
     }
@@ -535,12 +563,16 @@ fastify.post('/api/upload', async (request, reply) => {
             fastify.opsMetrics.increment('uploadFailures');
             return reply.status(400).send({ message: 'No file' });
         }
-        if (!/\.(mp3|wav|ogg|m4a)$/i.test(data.filename)) {
+        if (!AUDIO_EXT_RE.test(data.filename)) {
             fastify.opsMetrics.increment('uploadFailures');
             return reply.status(400).send({ message: 'Invalid type' });
         }
-        const safeFilename = data.filename.replace(/[^a-z0-9.-]/gi, '_').toLowerCase();
-        const targetPath = path.join(AUDIO_UPLOAD_PATH, safeFilename);
+        const safeFilename = sanitizeAudioFilename(data.filename);
+        const targetPath = resolveAudioFilePath(safeFilename);
+        if (existsSync(targetPath)) {
+            fastify.opsMetrics.increment('uploadFailures');
+            return reply.status(409).send({ message: 'File already exists', filename: safeFilename });
+        }
         await pipeline(data.file, createWriteStream(targetPath));
         return { message: 'Uploaded', filename: safeFilename, url: `/audio/${safeFilename}` };
     } catch (error) {
@@ -550,6 +582,62 @@ fastify.post('/api/upload', async (request, reply) => {
         }
         fastify.log.error({ err: error }, '[UPLOAD] Failed to store uploaded file.');
         return reply.status(500).send({ message: 'Upload failed' });
+    }
+});
+
+fastify.delete('/api/audio-files/:filename', async (request, reply) => {
+    const authorization = authorizeAudioRouteRequest(request);
+    if (!authorization.authorized) {
+        return reply.status(401).send(buildAudioUnauthorizedPayload(authorization.reason));
+    }
+    const { filename } = request.params;
+    if (!isValidAudioFilename(filename)) {
+        return reply.status(400).send({ message: 'Invalid filename' });
+    }
+    const targetPath = resolveAudioFilePath(filename);
+    if (!existsSync(targetPath)) {
+        return reply.status(404).send({ message: 'File not found' });
+    }
+    try {
+        unlinkSync(targetPath);
+        return { message: 'Deleted', filename };
+    } catch (error) {
+        fastify.log.error({ err: error }, '[AUDIO] Failed to delete file.');
+        return reply.status(500).send({ message: 'Delete failed' });
+    }
+});
+
+fastify.patch('/api/audio-files/:filename', async (request, reply) => {
+    const authorization = authorizeAudioRouteRequest(request);
+    if (!authorization.authorized) {
+        return reply.status(401).send(buildAudioUnauthorizedPayload(authorization.reason));
+    }
+    const { filename } = request.params;
+    if (!isValidAudioFilename(filename)) {
+        return reply.status(400).send({ message: 'Invalid filename' });
+    }
+    const newName = request.body?.name;
+    if (!newName || typeof newName !== 'string') {
+        return reply.status(400).send({ message: 'Missing new name' });
+    }
+    const safeNewName = sanitizeAudioFilename(newName);
+    if (!isValidAudioFilename(safeNewName)) {
+        return reply.status(400).send({ message: 'Invalid new filename' });
+    }
+    const sourcePath = resolveAudioFilePath(filename);
+    if (!existsSync(sourcePath)) {
+        return reply.status(404).send({ message: 'File not found' });
+    }
+    const destPath = resolveAudioFilePath(safeNewName);
+    if (existsSync(destPath)) {
+        return reply.status(409).send({ message: 'Target filename already exists', filename: safeNewName });
+    }
+    try {
+        renameSync(sourcePath, destPath);
+        return { message: 'Renamed', oldFilename: filename, filename: safeNewName, url: `/audio/${safeNewName}` };
+    } catch (error) {
+        fastify.log.error({ err: error }, '[AUDIO] Failed to rename file.');
+        return reply.status(500).send({ message: 'Rename failed' });
     }
 });
 
