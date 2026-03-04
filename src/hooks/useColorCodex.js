@@ -137,7 +137,7 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
     }
 
     return { connectedTokenCharStarts, substitutionFamilies, directNonStopFamilies };
-  }, [activeConnections, wordAnalyses, analysisSources]);
+  }, [activeConnections, analysisSources]);
 
   const shouldColorWord = useCallback((charStart, normalizedWord, vowelFamily) => {
     const isStopWord = STOP_WORDS.has(normalizedWord);

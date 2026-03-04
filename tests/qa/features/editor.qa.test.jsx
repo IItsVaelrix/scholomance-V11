@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import { ThemeProvider } from "../../../src/hooks/useTheme.jsx";
 import ScrollEditor from "../../../src/pages/Read/ScrollEditor.jsx";
 import IntelliSense from "../../../src/components/IntelliSense.jsx";

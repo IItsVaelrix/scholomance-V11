@@ -1,4 +1,3 @@
-import React from 'react';
 import { ANALYSIS_MODES } from './TruesightControls.jsx';
 import './IDE.css';
 

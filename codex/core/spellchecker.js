@@ -37,7 +37,7 @@ export class Spellchecker {
    * @param {string} word 
    * @param {string} contextPrevWord - Optional previous word for Bigram context
    */
-  suggest(word, limit = 5, contextPrevWord = null) {
+  suggest(word, limit = 5, _contextPrevWord = null) {
     if (!word) return [];
     const target = word.toLowerCase();
     const suggestions = [];

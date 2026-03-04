@@ -3,7 +3,7 @@
  * Implements rule-based validation for English phoneme sequences.
  */
 
-import { ARPABET_VOWELS, ARPABET_CONSONANTS, SONORITY_HIERARCHY } from './phoneme.constants.js';
+import { SONORITY_HIERARCHY } from './phoneme.constants.js';
 
 /**
  * Validates a sequence of phonemes against English phonotactic constraints.

@@ -4,7 +4,6 @@ import { useTheme } from "../../hooks/useTheme.jsx";
 import { useColorCodex } from "../../hooks/useColorCodex.js";
 import IntelliSense from "../../components/IntelliSense.jsx";
 import Gutter from "./Gutter.jsx";
-import Minimap from "./Minimap.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
@@ -347,8 +346,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     });
   }, [content, onContentChange]);
 
-  const showSyllableCounter = isEditable || isTruesight;
-
   const BUFFER = 10;
 
   const overlayLines = useMemo(() => {
@@ -434,17 +431,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   );
 
   const activeColorMap = colorMap || hookColorMap;
-
-  const normalizedWordByCharStart = useMemo(() => {
-    const map = new Map();
-    for (const { tokens } of overlayLines) {
-      for (const { token, start } of tokens) {
-        if (!WORD_TOKEN_REGEX.test(token)) continue;
-        map.set(start, normalizeWordToken(token));
-      }
-    }
-    return map;
-  }, [overlayLines]);
 
   // Build color activation context from active connections.
   // 1) Color direct connected words.
@@ -699,7 +685,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     setContent(nextValue);
     setCursorVersion(v => v + 1);
     handleCursorChange(event);
-  }, []);
+  }, [handleCursorChange]);
 
   const handleCursorChange = useCallback((event) => {
     const textarea = event.target;

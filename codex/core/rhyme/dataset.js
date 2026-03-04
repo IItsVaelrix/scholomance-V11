@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const SONG_HEADER_REGEX = /^\s*(\d+)\s*[\.\)]\s+(.+?)\s*$/;
+const SONG_HEADER_REGEX = /^\s*(\d+)\s*[.)]\s+(.+?)\s*$/;
 const SECTION_MARKER_REGEX = /^\s*\[(.+?)\]\s*$/;
 
 function normalizeWhitespace(value) {

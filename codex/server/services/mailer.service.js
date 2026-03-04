@@ -6,7 +6,7 @@ export class ConsoleMailerService extends MailerAdapter {
     this.logger = logger || console;
   }
 
-  async send({ to, subject, text, html }) {
+  async send({ to, subject, text, html: _html }) {
     this.logger.info('--- MOCK EMAIL SEND START ---');
     this.logger.info(`To: ${to}`);
     this.logger.info(`Subject: ${subject}`);

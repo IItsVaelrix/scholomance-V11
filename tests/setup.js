@@ -9,12 +9,11 @@ const motionHandler = {
   get(_target, prop) {
     if (!motionComponentCache[prop]) {
       const Comp = React.forwardRef(function MotionStub(props, ref) {
-        const {
-          initial, animate, exit, transition, variants, whileHover,
-          whileTap, whileFocus, whileInView, whileDrag, layout, layoutId,
-          onAnimationStart, onAnimationComplete, drag, dragConstraints,
-          dragElastic, dragMomentum, ...rest
-        } = props;
+        const { initial: _i, animate: _a, exit: _e, transition: _t, variants: _v,
+          whileHover: _wh, whileTap: _wt, whileFocus: _wf, whileInView: _wiv,
+          whileDrag: _wd, layout: _l, layoutId: _lid, onAnimationStart: _oas,
+          onAnimationComplete: _oac, drag: _d, dragConstraints: _dc,
+          dragElastic: _de, dragMomentum: _dm, ...rest } = props;
         return React.createElement(prop, { ...rest, ref });
       });
       Comp.displayName = `motion.${String(prop)}`;
@@ -69,7 +68,7 @@ if (typeof document !== 'undefined') {
 }
 
 // Robust Fetch Mock
-const originalFetch = global.fetch;
+const _originalFetch = global.fetch;
 global.fetch = vi.fn().mockImplementation((url) => {
   const href = String(url);
   

@@ -17,20 +17,7 @@ const env = (typeof import.meta !== 'undefined' && import.meta.env)
 const RAW_BASE_URL = env.VITE_SCHOLOMANCE_DICT_API_URL;
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
 
-const DEFAULT_INCLUDE = ["definition", "synonyms", "rhymes", "lore"];
 const DEFAULT_TIMEOUT_MS = 5000;
-
-const LookupPayloadSchema = z.object({
-  definition: z.object({
-    text: z.string().optional(),
-    partOfSpeech: z.string().optional(),
-    source: z.string().optional()
-  }).optional(),
-  synonyms: z.array(z.string()).optional(),
-  antonyms: z.array(z.string()).optional(),
-  rhymes: z.array(z.string()).optional(),
-  rhymeFamily: z.string().nullable().optional(),
-}).passthrough();
 
 const BatchLookupSchema = z.object({
   families: z.record(z.string())

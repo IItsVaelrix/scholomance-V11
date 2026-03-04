@@ -36,7 +36,6 @@ export default function ListenPage() {
     togglePlayPause,
     toggleAutoplayAmbient,
     toggleCyclingEnabled,
-    unlockAudio,
   } = useAmbientPlayer(allSchoolIds);
 
   const stations = useMemo(

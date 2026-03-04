@@ -8,7 +8,7 @@ function normalizeLineText(value) {
     .trim();
 }
 
-const SONG_HEADER_REGEX = /^\s*(\d+)\s*[\.\)]\s+(.+?)\s*$/;
+const SONG_HEADER_REGEX = /^\s*(\d+)\s*[.)]\s+(.+?)\s*$/;
 
 function inferTitleFromHeader(line) {
   return String(line || "").match(SONG_HEADER_REGEX);

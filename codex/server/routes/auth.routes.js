@@ -46,7 +46,7 @@ export async function authRoutes(fastify, _opts) {
     
     // CAPTCHA Route
     fastify.get('/captcha', {
-        handler: async (request, reply) => {
+        handler: async (request, _reply) => {
             const challenge = captchaService.generateChallenge();
             // Store solution in session using primitives
             request.session.captchaId = challenge.id;
@@ -86,7 +86,7 @@ export async function authRoutes(fastify, _opts) {
             const hashedPassword = await bcrypt.hash(password, 12);
             const verificationToken = crypto.randomBytes(32).toString('hex');
             
-            const user = persistence.users.createUser(username, email, hashedPassword, verificationToken);
+            persistence.users.createUser(username, email, hashedPassword, verificationToken);
 
             // 4. Send Verification Email
             const verifyLink = `${process.env.VITE_API_BASE_URL || 'http://localhost:3000'}/auth/verify-email?token=${verificationToken}`;

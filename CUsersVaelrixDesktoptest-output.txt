@@ -1,0 +1,499 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mC:/Users/Vaelrix/Desktop/scholomance-v10-main-main[39m
+
+[90mstdout[2m | tests/accessibility.test.jsx[2m > [22m[2mAccessibility Suite[2m > [22m[2mshould have no accessibility violations in App shell
+[22m[39m[CODEx] Local dictionary adapter enabled
+[CODEx] Free Dictionary adapter added for definitions
+[CODEx] Datamuse adapter added for rhymes/fallback
+Initializing CODEx runtime pipelines...
+  - Word lookup pipeline initialized with 3 adapter(s)
+  - Combat submit pipeline initialized
+CODEx runtime pipelines initialized.
+
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mshould have no accessibility violations in App shell[33m 2749[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mGrimoireScroll should remain keyboard accessible[33m 733[2mms[22m[39m
+ [31m×[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mScrollEditor[2m > [22mshould have no axe violations[32m 105[2mms[22m[39m
+[31m   → useTheme must be used within ThemeProvider[39m
+ [31m×[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mScrollEditor[2m > [22mshould expose labeled fields[32m 9[2mms[22m[39m
+[31m   → useTheme must be used within ThemeProvider[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mNavigation[2m > [22mshould have no axe violations[33m 892[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mNavigation[2m > [22mshould expose a primary navigation landmark[32m 282[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mNavigation[2m > [22mshould mark the active route with aria-current[33m 339[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mNavigation[2m > [22mshould hide collab nav link for non-admin users[32m 166[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mNavigation[2m > [22mshould show collab nav link for admin users[33m 335[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mListenPage[2m > [22mshould have no axe violations[33m 1735[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mListenPage[2m > [22mshould include a polite live region for announcements[32m 116[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mFloatingPanel[2m > [22mshould expose dialog semantics[32m 267[2mms[22m[39m
+ [32m✓[39m tests/accessibility.test.jsx[2m > [22mAccessibility Suite[2m > [22mFloatingPanel[2m > [22mshould dismiss on Escape when onClose is provided[32m 164[2mms[22m[39m
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration
+[22m[39m[DB:user] Connected. version=5, journal=wal, foreign_keys=1, busy_timeout=5000
+
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration
+[22m[39m[DB:collab] Connected. version=6, journal=wal, foreign_keys=1, busy_timeout=5000
+
+{"level":30,"time":1771250842996,"pid":10140,"hostname":"LX16","reqId":"req-1","req":{"method":"GET","url":"/api/nonexistent","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+ [32m✓[39m tests/server/index.notfound.test.js[2m > [22m[Server] index route integration[2m > [22mreturns JSON 404 for unknown API routes[33m 917[2mms[22m[39m
+{"level":30,"time":1771250843804,"pid":10140,"hostname":"LX16","reqId":"req-1","res":{"statusCode":404},"responseTime":15.638199999928474,"msg":"request completed"}
+{"level":30,"time":1771250843809,"pid":10140,"hostname":"LX16","reqId":"req-2","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250843814,"pid":10140,"hostname":"LX16","reqId":"req-2","res":{"statusCode":200},"responseTime":4.7720999997109175,"msg":"request completed"}
+{"level":30,"time":1771250843815,"pid":10140,"hostname":"LX16","reqId":"req-3","req":{"method":"POST","url":"/auth/register","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration[2m > [22m[2msupports auth, progression, and scroll routes end-to-end
+[22m[39m--- MOCK EMAIL SEND START ---
+To: p3_76b0810ae498@test.local
+Subject: Verify your Scholomance Account
+Text: Welcome to the Scholomance. Please verify your email by visiting: http://localhost:3000/auth/verify-email?token=fd9b038aea8b2b5b957ced8865b7b659b53ce0fce2d4f432e0a497609ed07c8b
+--- MOCK EMAIL SEND END ---
+
+{"level":30,"time":1771250845276,"pid":10140,"hostname":"LX16","reqId":"req-3","res":{"statusCode":201},"responseTime":1460.8448000010103,"msg":"request completed"}
+{"level":30,"time":1771250845357,"pid":10140,"hostname":"LX16","reqId":"req-4","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250845359,"pid":10140,"hostname":"LX16","reqId":"req-4","res":{"statusCode":200},"responseTime":1.7243999987840652,"msg":"request completed"}
+{"level":30,"time":1771250845360,"pid":10140,"hostname":"LX16","reqId":"req-5","req":{"method":"POST","url":"/auth/login","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846541,"pid":10140,"hostname":"LX16","reqId":"req-5","res":{"statusCode":200},"responseTime":1180.515000000596,"msg":"request completed"}
+{"level":30,"time":1771250846542,"pid":10140,"hostname":"LX16","reqId":"req-6","req":{"method":"GET","url":"/auth/me","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846544,"pid":10140,"hostname":"LX16","reqId":"req-6","res":{"statusCode":200},"responseTime":1.912499999627471,"msg":"request completed"}
+{"level":30,"time":1771250846545,"pid":10140,"hostname":"LX16","reqId":"req-7","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846546,"pid":10140,"hostname":"LX16","reqId":"req-7","res":{"statusCode":200},"responseTime":1.2326999995857477,"msg":"request completed"}
+{"level":30,"time":1771250846628,"pid":10140,"hostname":"LX16","reqId":"req-8","req":{"method":"POST","url":"/api/progression","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846633,"pid":10140,"hostname":"LX16","reqId":"req-8","res":{"statusCode":200},"responseTime":4.9447999987751245,"msg":"request completed"}
+{"level":30,"time":1771250846634,"pid":10140,"hostname":"LX16","reqId":"req-9","req":{"method":"GET","url":"/api/progression","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846635,"pid":10140,"hostname":"LX16","reqId":"req-9","res":{"statusCode":200},"responseTime":1.256300000473857,"msg":"request completed"}
+{"level":30,"time":1771250846636,"pid":10140,"hostname":"LX16","reqId":"req-a","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846638,"pid":10140,"hostname":"LX16","reqId":"req-a","res":{"statusCode":200},"responseTime":1.4834000002592802,"msg":"request completed"}
+{"level":30,"time":1771250846639,"pid":10140,"hostname":"LX16","reqId":"req-b","req":{"method":"POST","url":"/api/scrolls/phase3-scroll-1771250846636","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+ [32m✓[39m tests/server/index.notfound.test.js[2m > [22m[Server] index route integration[2m > [22msupports auth, progression, and scroll routes end-to-end[33m 2846[2mms[22m[39m
+{"level":30,"time":1771250846642,"pid":10140,"hostname":"LX16","reqId":"req-b","res":{"statusCode":200},"responseTime":3.66300000064075,"msg":"request completed"}
+{"level":30,"time":1771250846643,"pid":10140,"hostname":"LX16","reqId":"req-c","req":{"method":"GET","url":"/api/scrolls","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846645,"pid":10140,"hostname":"LX16","reqId":"req-c","res":{"statusCode":200},"responseTime":1.8285000007599592,"msg":"request completed"}
+{"level":30,"time":1771250846646,"pid":10140,"hostname":"LX16","reqId":"req-d","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846647,"pid":10140,"hostname":"LX16","reqId":"req-d","res":{"statusCode":200},"responseTime":1.0190999992191792,"msg":"request completed"}
+{"level":30,"time":1771250846647,"pid":10140,"hostname":"LX16","reqId":"req-e","req":{"method":"DELETE","url":"/api/scrolls/phase3-scroll-1771250846636","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846650,"pid":10140,"hostname":"LX16","reqId":"req-e","res":{"statusCode":200},"responseTime":2.3922000005841255,"msg":"request completed"}
+{"level":30,"time":1771250846650,"pid":10140,"hostname":"LX16","reqId":"req-f","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846651,"pid":10140,"hostname":"LX16","reqId":"req-f","res":{"statusCode":200},"responseTime":0.9359999988228083,"msg":"request completed"}
+{"level":30,"time":1771250846652,"pid":10140,"hostname":"LX16","reqId":"req-g","req":{"method":"DELETE","url":"/api/progression","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846653,"pid":10140,"hostname":"LX16","reqId":"req-g","res":{"statusCode":200},"responseTime":1.419700000435114,"msg":"request completed"}
+{"level":30,"time":1771250846655,"pid":10140,"hostname":"LX16","reqId":"req-h","req":{"method":"GET","url":"/collab/status","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846738,"pid":10140,"hostname":"LX16","reqId":"req-h","res":{"statusCode":401},"responseTime":82.7593000009656,"msg":"request completed"}
+{"level":30,"time":1771250846738,"pid":10140,"hostname":"LX16","reqId":"req-i","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250846740,"pid":10140,"hostname":"LX16","reqId":"req-i","res":{"statusCode":200},"responseTime":1.1234999988228083,"msg":"request completed"}
+{"level":30,"time":1771250846740,"pid":10140,"hostname":"LX16","reqId":"req-j","req":{"method":"POST","url":"/auth/register","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration[2m > [22m[2menforces collab auth and allows authenticated collab status access
+[22m[39m--- MOCK EMAIL SEND START ---
+To: p3_4fdb1b6d0b15@test.local
+Subject: Verify your Scholomance Account
+Text: Welcome to the Scholomance. Please verify your email by visiting: http://localhost:3000/auth/verify-email?token=d988a27a42ac7e3b68af7ddf5d59f28f683e74c5fd8dfeff9fddff063fa6e973
+--- MOCK EMAIL SEND END ---
+
+{"level":30,"time":1771250848070,"pid":10140,"hostname":"LX16","reqId":"req-j","res":{"statusCode":201},"responseTime":1329.9824000000954,"msg":"request completed"}
+{"level":30,"time":1771250848071,"pid":10140,"hostname":"LX16","reqId":"req-k","req":{"method":"GET","url":"/auth/csrf-token","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250848072,"pid":10140,"hostname":"LX16","reqId":"req-k","res":{"statusCode":200},"responseTime":0.9182999990880489,"msg":"request completed"}
+{"level":30,"time":1771250848072,"pid":10140,"hostname":"LX16","reqId":"req-l","req":{"method":"POST","url":"/auth/login","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849310,"pid":10140,"hostname":"LX16","reqId":"req-l","res":{"statusCode":200},"responseTime":1237.3105999995023,"msg":"request completed"}
+ [32m✓[39m tests/server/index.notfound.test.js[2m > [22m[Server] index route integration[2m > [22menforces collab auth and allows authenticated collab status access[33m 2660[2mms[22m[39m
+{"level":30,"time":1771250849310,"pid":10140,"hostname":"LX16","reqId":"req-m","req":{"method":"GET","url":"/collab/status","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849314,"pid":10140,"hostname":"LX16","reqId":"req-m","res":{"statusCode":200},"responseTime":3.3098999988287687,"msg":"request completed"}
+{"level":30,"time":1771250849316,"pid":10140,"hostname":"LX16","reqId":"req-n","req":{"method":"POST","url":"/api/upload","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849318,"pid":10140,"hostname":"LX16","reqId":"req-n","res":{"statusCode":400},"responseTime":2.071899998933077,"msg":"request completed"}
+{"level":30,"time":1771250849319,"pid":10140,"hostname":"LX16","reqId":"req-o","req":{"method":"POST","url":"/api/upload","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849406,"pid":10140,"hostname":"LX16","reqId":"req-o","res":{"statusCode":200},"responseTime":87.35969999991357,"msg":"request completed"}
+ [32m✓[39m tests/server/index.notfound.test.js[2m > [22m[Server] index route integration[2m > [22msupports upload routes and tracks upload failures[32m 94[2mms[22m[39m
+ [32m✓[39m tests/server/index.notfound.test.js[2m > [22m[Server] index route integration[2m > [22mexposes live/ready health and metrics with word-lookup counters[32m 99[2mms[22m[39m
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration
+[22m[39m[DB:user] Connection closed.
+
+[90mstdout[2m | tests/server/index.notfound.test.js[2m > [22m[2m[Server] index route integration
+[22m[39m[DB:collab] Connection closed.
+
+{"level":30,"time":1771250849407,"pid":10140,"hostname":"LX16","reqId":"req-p","req":{"method":"GET","url":"/api/audio-files","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849409,"pid":10140,"hostname":"LX16","reqId":"req-p","res":{"statusCode":200},"responseTime":1.5937999989837408,"msg":"request completed"}
+{"level":30,"time":1771250849410,"pid":10140,"hostname":"LX16","reqId":"req-q","req":{"method":"GET","url":"/health/live","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849411,"pid":10140,"hostname":"LX16","reqId":"req-q","res":{"statusCode":200},"responseTime":0.9265000000596046,"msg":"request completed"}
+{"level":30,"time":1771250849412,"pid":10140,"hostname":"LX16","reqId":"req-r","req":{"method":"GET","url":"/health/ready","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849415,"pid":10140,"hostname":"LX16","reqId":"req-r","res":{"statusCode":200},"responseTime":2.6226000003516674,"msg":"request completed"}
+{"level":30,"time":1771250849500,"pid":10140,"hostname":"LX16","reqId":"req-s","req":{"method":"GET","url":"/api/word-lookup/arcana","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849504,"pid":10140,"hostname":"LX16","reqId":"req-s","res":{"statusCode":200},"responseTime":3.47550000064075,"msg":"request completed"}
+{"level":30,"time":1771250849504,"pid":10140,"hostname":"LX16","reqId":"req-t","req":{"method":"GET","url":"/metrics","host":"localhost:80","remoteAddress":"127.0.0.1"},"msg":"incoming request"}
+{"level":30,"time":1771250849506,"pid":10140,"hostname":"LX16","reqId":"req-t","res":{"statusCode":200},"responseTime":1.2564000003039837,"msg":"request completed"}
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould display the Chamber of Echoes without URL admin params
+[22m[39mNot logged in, using default progression.
+
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould disable upload until an admin token is entered
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould display the Chamber of Echoes without URL admin params[33m 602[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould fetch and display dynamic audio files in the Archive section
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould disable upload until an admin token is entered[33m 2403[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould send x-audio-admin-token header when uploading and refresh archive
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould fetch and display dynamic audio files in the Archive section[33m 992[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould send x-audio-admin-token header when fetching audio files after token entry
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould send x-audio-admin-token header when uploading and refresh archive[33m 432[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould handle upload failure gracefully
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould send x-audio-admin-token header when fetching audio files after token entry[32m 179[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould show reason-aware error for invalid token
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould handle upload failure gracefully[33m 359[2mms[22m[39m
+[90mstdout[2m | tests/qa/audioManagement.test.jsx[2m > [22m[2mAudio Management QA Suite[2m > [22m[2mshould handle 429 Rate Limit during upload
+[22m[39mNot logged in, using default progression.
+
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould show reason-aware error for invalid token[33m 518[2mms[22m[39m
+ [32m✓[39m tests/qa/audioManagement.test.jsx[2m > [22mAudio Management QA Suite[2m > [22mshould handle 429 Rate Limit during upload[33m 397[2mms[22m[39m
+ [32m✓[39m tests/qa/panelAnalysisBackend.qa.test.jsx[2m > [22mPanel analysis backend QA[2m > [22mprocesses a successful backend response with shared QA fixtures[32m 137[2mms[22m[39m
+ [31m×[39m tests/qa/panelAnalysisBackend.qa.test.jsx[2m > [22mPanel analysis backend QA[2m > [22msurfaces backend failures with shared fetch-mock helper[32m 30[2mms[22m[39m
+[31m   → expected "vi.fn()" to be called 1 times, but got 3 times[39m
+ [32m✓[39m tests/qa/panelAnalysisBackend.qa.test.jsx[2m > [22mPanel analysis backend QA[2m > [22mdebounces rapid requests and sends only the latest payload[32m 87[2mms[22m[39m
+[90mstdout[2m | tests/collab/collab.persistence.test.js
+[22m[39m[DB:collab] Connected. version=6, journal=wal, foreign_keys=1, busy_timeout=5000
+
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22magents[2m > [22mshould register a new agent[32m 3[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22magents[2m > [22mshould upsert on re-register[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22magents[2m > [22mshould get all agents[32m 2[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22magents[2m > [22mshould handle heartbeat[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22magents[2m > [22mshould return null for heartbeat of unknown agent[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould create a task[32m 3[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould get task by id[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould update task[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould filter tasks by status[32m 2[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould paginate task listings with limit/offset[32m 2[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould set completed_at when marking done[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtasks[2m > [22mshould delete a task[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould acquire a lock[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould detect lock conflict from different agent[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould allow same agent to re-lock[32m 86[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould check lock status[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould release a lock[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mfile locks[2m > [22mshould not release a lock owned by another agent[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtask assignment transactions[2m > [22mshould assign and lock all files in one operation[32m 3[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mtask assignment transactions[2m > [22mshould not leak partial locks when one file conflicts[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/collab/collab.persistence.test.js
+[22m[39m[DB:collab] Connection closed.
+
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mpipeline runs[2m > [22mshould create a pipeline run[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mpipeline runs[2m > [22mshould advance pipeline to next stage[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mpipeline runs[2m > [22mshould advance pipeline to completion[32m 8[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mpipeline runs[2m > [22mshould fail a pipeline[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mactivity[2m > [22mshould log activity[32m 2[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mactivity[2m > [22mshould filter activity by agent[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.persistence.test.js[2m > [22mactivity[2m > [22mshould paginate activity with offset[32m 1[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mreturns unified panel analysis payload[33m 2294[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mcaches repeated requests in-memory[32m 141[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mrejects invalid body payload[32m 11[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mreturns empty panel payload for empty text[32m 89[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mhandles very long text payloads within max limit[33m 2202[2mms[22m[39m
+ [32m✓[39m tests/server/panelAnalysis.routes.test.js[2m > [22m[Server] panelAnalysis.routes[2m > [22mincludes syntax summary and connection syntax metadata when enabled[32m 228[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.routes.test.js[2m > [22m[Server] wordLookup.routes[2m > [22muses Scholomance local lookup and reports scholomance-local source[33m 1898[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.routes.test.js[2m > [22m[Server] wordLookup.routes[2m > [22mfalls back to external APIs when local lookup misses[32m 13[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.routes.test.js[2m > [22m[Server] wordLookup.routes[2m > [22mreturns local data even without definition text when synonyms exist[32m 8[2mms[22m[39m
+ [32m✓[39m tests/server/collab.routes.query.test.js[2m > [22m[Server] collab query validation + pagination[2m > [22mvalidates and forwards task list pagination[33m 2049[2mms[22m[39m
+ [32m✓[39m tests/server/collab.routes.query.test.js[2m > [22m[Server] collab query validation + pagination[2m > [22mreturns 400 for invalid task query values[32m 20[2mms[22m[39m
+ [32m✓[39m tests/server/collab.routes.query.test.js[2m > [22m[Server] collab query validation + pagination[2m > [22mvalidates and forwards pipelines query pagination[32m 16[2mms[22m[39m
+ [32m✓[39m tests/server/collab.routes.query.test.js[2m > [22m[Server] collab query validation + pagination[2m > [22mreturns 400 for invalid activity pagination[32m 90[2mms[22m[39m
+ [32m✓[39m tests/server/collab.routes.query.test.js[2m > [22m[Server] collab query validation + pagination[2m > [22mvalidates and forwards activity query filters[32m 115[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mstores and retrieves a value[32m 5[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mreturns null for missing key[32m 1[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mreturns null for expired entry[32m 13[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mdeletes an entry[32m 74[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mclears all entries[32m 1[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIn-memory (synchronous API)[2m > [22mevicts oldest entry when exceeding max size[32m 125[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIndexedDB persistence[2m > [22mpersists entries and hydrates on restart[33m 1184[2mms[22m[39m
+[90mstdout[2m | tests/runtime/cache.test.js[2m > [22m[2m[Runtime] Cache with IndexedDB persistence[2m > [22m[2mIndexedDB persistence[2m > [22m[2mhydrates valid entries and prunes expired ones
+[22m[39m[Cache] Hydrated 1 entries from IndexedDB
+
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIndexedDB persistence[2m > [22mhydrates valid entries and prunes expired ones[33m 394[2mms[22m[39m
+ [32m✓[39m tests/runtime/cache.test.js[2m > [22m[Runtime] Cache with IndexedDB persistence[2m > [22mIndexedDB persistence[2m > [22mhydrateFromStorage returns 0 when no entries exist[32m 142[2mms[22m[39m
+ [32m✓[39m tests/hooks/usePanelAnalysis.featureFlag.test.jsx[2m > [22musePanelAnalysis feature flags[2m > [22muses client-side fallback when VITE_USE_SERVER_PANEL_ANALYSIS=false[33m 692[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mEvent Flow[2m > [22memits result for valid word lookup[32m 21[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mEvent Flow[2m > [22memits error for empty word[32m 2[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mEvent Flow[2m > [22memits error for word not found[32m 2[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mCaching[2m > [22mclearWordLookupCache() clears lookup cache entries[32m 5[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mCaching[2m > [22mreturns cached result on second lookup[32m 5[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mAdapter Fallback Chain[2m > [22mtries next adapter when first fails[32m 5[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mAdapter Fallback Chain[2m > [22mskips unavailable adapters[32m 4[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mrequestWordLookup()[2m > [22mreturns LexicalEntry for valid word[32m 93[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mrequestWordLookup()[2m > [22mrejects for word not found[32m 5[2mms[22m[39m
+ [32m✓[39m tests/runtime/wordLookupPipeline.test.js[2m > [22m[Runtime] WordLookupPipeline[2m > [22mrequestWordLookup()[2m > [22mtimes out after specified duration[32m 180[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould initialize with default values[33m 822[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould add XP and update progression[32m 8[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould not add XP for duplicate unique IDs[32m 8[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould unlock schools when XP threshold is met[32m 8[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould check if a school is unlocked[32m 91[2mms[22m[39m
+ [32m✓[39m tests/hooks/useProgression.test.jsx[2m > [22museProgression Hook[2m > [22mshould reset progression[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mqueues a school selected during tuning and resolves to the queued target[32m 44[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mretunes the active school without reloading the track[32m 104[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mplays immediately on first play without waiting for tune timers[32m 10[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mplays dial static only once per service lifecycle[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mloads and persists ambient settings[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mignores stale async tuning completions when a newer school selection arrives[32m 99[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mAmbientPlayerService[2m > [22mresumes AudioContext on visibility and user interaction events[32m 8[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mPercussive Pulse Detection[2m > [22mboosts level on percussive waveform peaks[32m 92[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mPercussive Pulse Detection[2m > [22mlimits pulse frequency with cooldown between detected hits[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mPercussive Pulse Detection[2m > [22mdecays pulse energy after the peak window[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/ambientPlayer.service.test.js[2m > [22mPercussive Pulse Detection[2m > [22mhandles missing waveform frames without crashing[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mcalls onClose when close button is clicked[33m 371[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mdoes not render close button when onClose is not provided[32m 22[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mclose button stops pointer event propagation (does not start drag)[32m 196[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mclose button has higher z-index than resize handles (CSS contract)[32m 15[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mcloses panel on Escape key[32m 13[2mms[22m[39m
+ [32m✓[39m tests/qa/floatingPanelClose.qa.test.jsx[2m > [22mFloatingPanel close button[2m > [22mrenders title text correctly[32m 138[2mms[22m[39m
+ [32m✓[39m tests/hooks/usePanelAnalysis.test.jsx[2m > [22musePanelAnalysis hook[2m > [22muses backend panel-analysis endpoint by default[32m 44[2mms[22m[39m
+ [32m✓[39m tests/hooks/usePanelAnalysis.test.jsx[2m > [22musePanelAnalysis hook[2m > [22mfalls back to client-side analysis when server fails[32m 178[2mms[22m[39m
+ [32m✓[39m tests/hooks/useWordLookup.test.jsx[2m > [22museWordLookup hook[2m > [22muses backend word-lookup route by default[32m 37[2mms[22m[39m
+ [32m✓[39m tests/hooks/useWordLookup.test.jsx[2m > [22museWordLookup hook[2m > [22mrejects empty words without making a request[32m 99[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.schemas.test.js[2m > [22mcollab pipeline schemas[2m > [22maccepts ui_feature as a valid pipeline type[32m 4[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.schemas.test.js[2m > [22mcollab pipeline schemas[2m > [22mrejects unknown pipeline types[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.schemas.test.js[2m > [22mcollab pipeline schemas[2m > [22mcoerces and validates task list query pagination[32m 81[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.schemas.test.js[2m > [22mcollab pipeline schemas[2m > [22mrejects task list query with excessive limit[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.schemas.test.js[2m > [22mcollab pipeline schemas[2m > [22mrejects activity query with negative offset[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mkeeps full scan for 2 same-scheme line endings[32m 12[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mavoids quadratic scans when same scheme repeats more than twice[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mtreats cross-line assonance as Truesight connection when score is above 0.5[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mkeeps assonance at 0.5 or lower below Truesight threshold[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mdoes not count repeated lexical endings as rhyme connections[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mdetects stressed-vowel assonance even when terminal rhyme does not match[32m 6[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22msuppresses internal pairs where both words are non-terminal function words[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mallows weakened line-end function pairs and emits gate metadata[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mdrops weak stem-echo internal pairs below threshold after syntax multiplier[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22mkeeps function-content pairs when phonetic affinity is strong[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/deepRhyme.engine.test.js[2m > [22mDeepRhymeEngine duplicate-scheme scanning[2m > [22maligns IN-cluster words into shared end-rhyme connectivity[32m 125[2mms[22m[39m
+ [32m✓[39m tests/core/rhyme_pipeline.test.js[2m > [22mRhyme training pipeline[2m > [22mbuilds supervised pairs with motif tags and style vectors[32m 11[2mms[22m[39m
+ [32m✓[39m tests/core/rhyme_pipeline.test.js[2m > [22mRhyme training pipeline[2m > [22mpredicts the next rhyme key from context with useful accuracy[32m 22[2mms[22m[39m
+ [32m✓[39m tests/core/rhyme_pipeline.test.js[2m > [22mRhyme training pipeline[2m > [22mfalls back to common cadence keys when context has no direct signal[32m 3[2mms[22m[39m
+ [32m✓[39m tests/core/rhyme_pipeline.test.js[2m > [22mRhyme training pipeline[2m > [22mgenerates lines that satisfy strict rhyme validation for a fixed target[32m 7[2mms[22m[39m
+ [32m✓[39m tests/core/rhyme_pipeline.test.js[2m > [22mRhyme training pipeline[2m > [22mproduces deterministic validation scores for the same input[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/reference.engine.test.js[2m > [22mReferenceEngine[2m > [22mfetches canonical server lookup route[32m 92[2mms[22m[39m
+ [32m✓[39m tests/lib/reference.engine.test.js[2m > [22mReferenceEngine[2m > [22mreturns cached result for repeated lookups[32m 82[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mreturns completions with scores and badges[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mprioritizes rhyming candidates[32m 94[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mgenerates correct ghost lines[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mreturns empty when not ready[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mallows runtime weight adjustment[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/poeticLanguageServer.test.js[2m > [22mPoeticLanguageServer[2m > [22mcompletes in under 50ms[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 1: Backend returns empty unlockedSchools [][2m > [22mgetPlayableSchoolIds([]) returns empty — orb renders null[32m 3[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 1: Backend returns empty unlockedSchools [][2m > [22mSONIC is playable when included in unlockedSchools[32m 2[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 2: SONIC school track data is missing or broken[2m > [22mSONIC school exists in SCHOOLS[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 2: SONIC school track data is missing or broken[2m > [22mSONIC school has a tracks array with at least one entry[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 2: SONIC school track data is missing or broken[2m > [22mSONIC's first track key exists in LIBRARY[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 2: SONIC school track data is missing or broken[2m > [22mSONIC's library entry has a resolvable audio URL (sc/suno/url)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 2: SONIC school track data is missing or broken[2m > [22mSCHOOL_AUDIO_CONFIG for SONIC has a non-null trackUrl[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 3: AmbientPlayerService starts with null schoolId, orb sees no currentSchool[2m > [22mfresh service (no localStorage) has schoolId: null before setPlayableSchools[32m 2[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 3: AmbientPlayerService starts with null schoolId, orb sees no currentSchool[2m > [22mafter setPlayableSchools(['SONIC']), schoolId becomes 'SONIC'[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 4: Persisted settings reference a non-playable school[2m > [22mservice falls back to default school if persisted schoolId is not in playable list[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 5: API response overwrites default progression, dropping SONIC[2m > [22mspread merge with empty unlockedSchools kills the default[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 5: API response overwrites default progression, dropping SONIC[2m > [22mspread merge with undefined unlockedSchools preserves default[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 5: API response overwrites default progression, dropping SONIC[2m > [22mthe defensive fix correctly guards against empty server data[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 6: Database creates new user progression with empty unlockedSchools[2m > [22msimulated old DB default: '[]' parses to empty array[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 6: Database creates new user progression with empty unlockedSchools[2m > [22mfixed DB default: '["SONIC"]' parses correctly[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 7: CSS stacking or overflow hides the orb[2m > [22m.ambient-orb base CSS has z-index: 900 (very high)[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 8: GlobalFixedControls rendered outside ProgressionProvider[2m > [22min App.jsx, GlobalFixedControls is inside ProgressionProvider tree[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 9: SONIC is filtered out by getPlayableSchoolIds[2m > [22mSONIC passes the trackUrl check in getPlayableSchoolIds[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 9: SONIC is filtered out by getPlayableSchoolIds[2m > [22mall schools with tracks in LIBRARY are considered playable[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 10: Race condition between subscribe and setPlayableSchools useEffects[2m > [22mservice.subscribe fires listener immediately with current state[32m 5[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mTheory 10: Race condition between subscribe and setPlayableSchools useEffects[2m > [22msetPlayableSchools triggers listener with updated schoolId[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mSUMMARY: Root cause chain[2m > [22mreproduces the full bug: DB '[]' → API [] → spread kills default → orb null[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/orbVisibility.diagnostic.test.js[2m > [22mSUMMARY: Root cause chain[2m > [22mconfirms the fix resolves the issue end-to-end[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mlookup()[2m > [22mreturns null for empty word[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mlookup()[2m > [22mreturns null for null word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mlookup()[2m > [22mreturns normalized LexicalEntry for valid word[32m 4[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mlookup()[2m > [22mreturns null when word not found[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mlookup()[2m > [22mreturns null on network error[32m 11[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22msynonyms()[2m > [22mreturns empty array for empty word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22msynonyms()[2m > [22mreturns array of synonyms for valid word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22msynonyms()[2m > [22mreturns empty array on error[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mrhymes()[2m > [22mreturns empty array for empty word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mrhymes()[2m > [22mreturns array of rhyming words[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mrelated()[2m > [22mreturns empty array for empty word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22mrelated()[2m > [22mreturns grouped related words[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/datamuse.adapter.test.js[2m > [22m[Services] DatamuseAdapter[2m > [22misAvailable()[2m > [22malways returns true (no auth required)[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/ranker.test.js[2m > [22mRanker[2m > [22mranks by weighted final score[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/ranker.test.js[2m > [22mRanker[2m > [22mgenerates ghost lines from context[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/ranker.test.js[2m > [22mRanker[2m > [22mrespects limit parameter[32m 24[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/ranker.test.js[2m > [22mRanker[2m > [22mtie-breaks by badge count then alphabetical[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/ranker.test.js[2m > [22mRanker[2m > [22mincludes per-provider score breakdown[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mshould analyze a common word and return valid structure[32m 6[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mshould analyze another common word "world"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mshould use cache for subsequent analyses of the same word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mshould use fallback analysis for a made-up word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mshould handle words ending in consonants[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mFallback Logic[2m > [22mshould guess vowel family correctly from full words[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mFallback Logic[2m > [22mkeeps long-A cluster words in EY family[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mFallback Logic[2m > [22mshould map fallback vowel family A to SONIC school[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mFallback Logic[2m > [22mshould extract coda correctly[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mFallback Logic[2m > [22mshould split to ARPAbet-compatible phonemes[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22maligns IN-cluster words to a shared stressed family[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22maligns stressed U-sound cluster words to one family[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22midentifies distinct U family for boot and foot[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22mshould return syllable breakdown for analyzeDeep[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22mshould generate extended rhyme keys[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22mshould score multi-syllable matches[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/phoneme.engine.test.js[2m > [22mPhonemeEngine[2m > [22mDeep Analysis[2m > [22mshould recognize boot and suit as a strong rhyme[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22misAvailable()[2m > [22mreturns true when API is enabled[32m 6[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22misAvailable()[2m > [22mreturns false when API is disabled[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22misAvailable()[2m > [22mreturns false when API is null[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mreturns null when API is not available[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mreturns null for empty word[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mreturns null when API returns null[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mnormalizes API response to LexicalEntry[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mhandles API response without definition[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mlookup()[2m > [22mhandles API errors gracefully[32m 10[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22msynonyms()[2m > [22mreturns empty array when unavailable[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22msynonyms()[2m > [22mreturns synonyms from API response[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22msynonyms()[2m > [22mreturns empty array when no synonyms in response[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mrhymes()[2m > [22mreturns rhymes from API response[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mrelated()[2m > [22mreturns synonyms as similar relation[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/local.adapter.test.js[2m > [22m[Services] LocalDictionaryAdapter[2m > [22mrelated()[2m > [22mreturns empty array when no synonyms[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mreturns an empty map for empty input[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22massigns base vowel family color to unclustered words[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mgives unclustered words base opacity[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mclusters connected words and assigns canonical cluster color[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mselects canonical family by majority vote[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mhandles transitive clustering via union-find[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mmaps connection score to opacity gradient[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22msets isMultiSyllable flag for connections with syllablesMatched >= 2[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mdoes not set isMultiSyllable for single-syllable matches[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mrecords bestScore and rhymeType from highest-scoring connection[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mapplies syntax gate multiplier to opacity[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mdoes not cluster connections below the minimum score threshold[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22muses alphabetical tiebreaker for canonical family stability[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mhandles words with no vowel family gracefully[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/colorCodex.test.js[2m > [22mbuildColorMap[2m > [22mperforms within 10ms for 500 words and 200 connections[32m 4[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mPIPELINE_DEFINITIONS[2m > [22mshould define code_review_test pipeline with 3 stages[32m 5[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mPIPELINE_DEFINITIONS[2m > [22mshould define schema_change pipeline with 3 stages[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mPIPELINE_DEFINITIONS[2m > [22mshould define bug_fix pipeline with diagnose/fix/verify[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mPIPELINE_DEFINITIONS[2m > [22mall pipelines should have name and description[32m 2[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mOWNERSHIP_MAP[2m > [22mshould have ui, backend, and qa roles[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow UI role to access src/pages/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow UI role to access src/components/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow UI role to access CSS files anywhere[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould not allow UI role to access codex/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow backend role to access codex/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow backend role to access src/lib/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould allow QA role to access tests/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould not allow QA role to access src/pages/[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould normalize backslashes to forward slashes[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22misPathAllowedForRole[2m > [22mshould return false for unknown roles[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mgetRoleForPath[2m > [22mshould return ui for pages[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mgetRoleForPath[2m > [22mshould return backend for codex[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mgetRoleForPath[2m > [22mshould return qa for tests[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mgetRoleForPath[2m > [22mshould return null for unmatched paths[32m 0[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mvalidateFileOwnership[2m > [22mshould validate all files belong to the role[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mvalidateFileOwnership[2m > [22mshould detect ownership conflicts[32m 1[2mms[22m[39m
+ [32m✓[39m tests/collab/collab.pipelines.test.js[2m > [22mvalidateFileOwnership[2m > [22mshould return valid for empty file list[32m 0[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.service.test.js[2m > [22m[Server] WordLookupService[2m > [22mprefers Scholomance dictionary when available[32m 7[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.service.test.js[2m > [22m[Server] WordLookupService[2m > [22mfalls back to external APIs when local misses[32m 2[2mms[22m[39m
+ [32m✓[39m tests/server/wordLookup.service.test.js[2m > [22m[Server] WordLookupService[2m > [22mserves cache hits from redis before network[32m 2[2mms[22m[39m
+[90mstdout[2m | tests/qa/auth-security.test.js
+[22m[39m[DB:user] Connected. version=5, journal=wal, foreign_keys=1, busy_timeout=5000
+
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mCaptchaService[2m > [22mshould generate valid math challenges[32m 5[2mms[22m[39m
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mCaptchaService[2m > [22mshould validate correct solutions[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mCaptchaService[2m > [22mshould reject incorrect solutions[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mUser Persistence & Verification[2m > [22mshould create an unverified user[32m 161[2mms[22m[39m
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mUser Persistence & Verification[2m > [22mshould verify a user and clear the token[32m 1[2mms[22m[39m
+ [32m✓[39m tests/qa/auth-security.test.js[2m > [22mAuth & Security QA Suite[2m > [22mXP & Progression Logic[2m > [22mshould correctly calculate levels and tiers[32m 3[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mPredictive Text Logic (Trie-based N-gram)[2m > [22mpredicts words by prefix[32m 4[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mPredictive Text Logic (Trie-based N-gram)[2m > [22mpredicts next word based on context (Bigram)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mPredictive Text Logic (Trie-based N-gram)[2m > [22mreturns empty for unknown prefixes[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mPredictive Text Logic (Trie-based N-gram)[2m > [22mexecutes predictions in under 50ms[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mSpellchecker Logic (Levenshtein-based)[2m > [22mcorrectly identifies valid words[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mSpellchecker Logic (Levenshtein-based)[2m > [22midentifies misspelled words[32m 0[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mSpellchecker Logic (Levenshtein-based)[2m > [22mprovides corrections for misspelled words[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mSpellchecker Logic (Levenshtein-based)[2m > [22mrespects the edit distance threshold (limit 2)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/predictor.test.js[2m > [22mSpellchecker Logic (Levenshtein-based)[2m > [22mdisambiguates sound-alike words (e.g., bruise vs brooze)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/analysis.pipeline.test.js[2m > [22mAnalysis Pipeline[2m > [22manalyzes a simple sentence[32m 7[2mms[22m[39m
+ [32m✓[39m tests/core/analysis.pipeline.test.js[2m > [22mAnalysis Pipeline[2m > [22mhandles multiple lines[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/analysis.pipeline.test.js[2m > [22mAnalysis Pipeline[2m > [22mbuilds algorithmic parsing signals[32m 3[2mms[22m[39m
+ [32m✓[39m tests/core/analysis.pipeline.test.js[2m > [22mAnalysis Pipeline[2m > [22mhandles empty input[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould identify EY family for standalone "A"[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould identify IY family for standalone "B"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould identify AY family for standalone "I"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould identify OW family for standalone "O"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould recognize digraph PH as F[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould recognize digraph TH[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/alphabet_phonetic.test.js[2m > [22mAlphabet Phonetic Mapping[2m > [22mshould only activate rhyme for score > 0.60[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/literaryDevices.test.js[2m > [22mLiterary Device Detection[2m > [22mdetects similes using "like"[32m 7[2mms[22m[39m
+ [32m✓[39m tests/lib/literaryDevices.test.js[2m > [22mLiterary Device Detection[2m > [22mdetects similes using "as"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/literaryDevices.test.js[2m > [22mLiterary Device Detection[2m > [22mdetects basic metaphors[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/literaryDevices.test.js[2m > [22mLiterary Device Detection[2m > [22mhandles mixed literary devices[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mmarks itself as built[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mreturns exact rhyme key matches[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mreturns vowel family matches[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mtracks frequency from duplicate corpus entries[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mfilters by prefix[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mreturns empty for unknown rhyme key[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/pls/rhymeIndex.test.js[2m > [22mRhymeIndex[2m > [22mreturns empty for unknown vowel family[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mPhonotactics[2m > [22mshould validate valid onsets[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mPhonotactics[2m > [22mshould reject invalid onsets[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mPhonotactics[2m > [22mshould validate 3-consonant onset rules[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mSyllabifier[2m > [22mshould split simple words correctly[32m 4[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mSyllabifier[2m > [22mshould apply Maximal Onset Principle[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/syllabifier.test.js[2m > [22mSyllabifier[2m > [22mshould respect SSP when splitting[32m 1[2mms[22m[39m
+ [32m✓[39m tests/server/observability.metrics.test.js[2m > [22mobservability metrics[2m > [22mincludes panel analysis metrics in snapshot defaults[32m 4[2mms[22m[39m
+ [32m✓[39m tests/server/observability.metrics.test.js[2m > [22mobservability metrics[2m > [22mrecords panel analysis cache and duration signals[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/ur_family.test.js[2m > [22mUR Vowel Family (New Core Family)[2m > [22mshould identify UR family for "pure"[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/ur_family.test.js[2m > [22mUR Vowel Family (New Core Family)[2m > [22mshould identify UR family for "cure"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/ur_family.test.js[2m > [22mUR Vowel Family (New Core Family)[2m > [22mshould identify UR family for "allure"[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/ur_family.test.js[2m > [22mUR Vowel Family (New Core Family)[2m > [22mshould identify UR family for "procure"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/ur_family.test.js[2m > [22mUR Vowel Family (New Core Family)[2m > [22mshould recognize rhymes within the UR family[32m 2[2mms[22m[39m
+ [32m✓[39m tests/server/notFound.utils.test.js[2m > [22m[Server] notFound utils[2m > [22mdetects api/auth/collab paths as API routes[32m 3[2mms[22m[39m
+ [32m✓[39m tests/server/notFound.utils.test.js[2m > [22m[Server] notFound utils[2m > [22mdoes not classify frontend routes as API routes[32m 1[2mms[22m[39m
+ [32m✓[39m tests/server/notFound.utils.test.js[2m > [22m[Server] notFound utils[2m > [22mstrips querystring from urls safely[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/multi_syllable.test.js[2m > [22mMulti-Syllable Rhyme Detection[2m > [22mshould identify multi-syllable match for "nation" and "station"[32m 6[2mms[22m[39m
+ [32m✓[39m tests/lib/multi_syllable.test.js[2m > [22mMulti-Syllable Rhyme Detection[2m > [22mshould identify perfect rhyme for "cat" and "bat"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/multi_syllable.test.js[2m > [22mMulti-Syllable Rhyme Detection[2m > [22mshould recognize near-rhyme via PhoneticSimilarity (M vs NG)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/multi_syllable.test.js[2m > [22mMulti-Syllable Rhyme Detection[2m > [22mshould handle dactylic rhymes (3+ syllables)[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/heuristics.test.js[2m > [22mHeuristics Integration[2m > [22mPhoneme Density detects high density words[32m 4[2mms[22m[39m
+ [32m✓[39m tests/core/heuristics.test.js[2m > [22mHeuristics Integration[2m > [22mMeter Regularity checks syllable consistency[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/heuristics.test.js[2m > [22mHeuristics Integration[2m > [22mAlliteration Density detects alliteration[32m 2[2mms[22m[39m
+ [32m✓[39m tests/core/heuristics.test.js[2m > [22mHeuristics Integration[2m > [22mScoring Engine runs correctly with mock doc[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould identify OY family for "oil"[32m 5[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould identify OY family for "boil"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould identify OY family for "gargoyle"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould identify OY family for "royal"[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould identify OY family for "disloyal"[32m 0[2mms[22m[39m
+ [32m✓[39m tests/lib/oy_family.test.js[2m > [22mOY Vowel Family (New Core Family)[2m > [22mshould recognize rhymes within the OY family[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/syntax.layer.test.js[2m > [22msyntax.layer[2m > [22mclassifies function/content roles with line-role and stress-role tags[32m 6[2mms[22m[39m
+ [32m✓[39m tests/lib/syntax.layer.test.js[2m > [22msyntax.layer[2m > [22mbuilds identity-keyed syntax layer and summary counts[32m 2[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22mauthorizes all audio requests outside production[32m 4[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22mrejects production requests without admin token header[32m 1[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22mrejects production requests with invalid admin token header[32m 1[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22maccepts production requests with matching admin token header[32m 0[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22mdoes not accept a user session without token in production[32m 0[2mms[22m[39m
+ [32m✓[39m tests/server/audioAuth.test.js[2m > [22m[Server] audioAuth helpers[2m > [22mbuilds stable unauthorized payloads with reason[32m 1[2mms[22m[39m
+[90mstdout[2m | tests/qa/phoneme.accuracy.test.js[2m > [22m[2mCODEx Phoneme Engine Accuracy (QA)[2m > [22m[2mPhoneme Error Rate (PER) should be below a target threshold
+[22m[39m
+--- Phoneme Accuracy Report ---
+Total Words Tested: 7
+Total Phonemes in Golden Set: 35
+Total Errors (Substitutions/Deletions/Insertions): 0
+Phoneme Error Rate (PER): 0.00%
+
+ [32m✓[39m tests/qa/phoneme.accuracy.test.js[2m > [22mCODEx Phoneme Engine Accuracy (QA)[2m > [22mPhoneme Error Rate (PER) should be below a target threshold[32m 7[2mms[22m[39m
+ [32m✓[39m tests/lib/musicEmbeds.test.js[2m > [22mmusicEmbeds[2m > [22mdetects provider by URL[32m 3[2mms[22m[39m
+ [32m✓[39m tests/lib/musicEmbeds.test.js[2m > [22mmusicEmbeds[2m > [22mconverts suno song URLs to embed URLs[32m 2[2mms[22m[39m
+ [32m✓[39m tests/lib/musicEmbeds.test.js[2m > [22mmusicEmbeds[2m > [22mreturns null source for unsupported providers[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/index.test.js[2m > [22madapter registry[2m > [22mbuilds a Datamuse fallback chain without local API[32m 4[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/index.test.js[2m > [22madapter registry[2m > [22madds local adapter first when scholomance API is enabled[32m 1[2mms[22m[39m
+ [32m✓[39m tests/lib/adapters/index.test.js[2m > [22madapter registry[2m > [22mskips local adapter when scholomance API is disabled[32m 1[2mms[22m[39m
+ [32m✓[39m tests/hooks/useCODExPipeline.flags.test.js[2m > [22mparseBooleanEnvFlag[2m > [22mreturns default when flag is missing[32m 3[2mms[22m[39m
+ [32m✓[39m tests/hooks/useCODExPipeline.flags.test.js[2m > [22mparseBooleanEnvFlag[2m > [22mparses true-like values[32m 1[2mms[22m[39m
+ [32m✓[39m tests/hooks/useCODExPipeline.flags.test.js[2m > [22mparseBooleanEnvFlag[2m > [22mparses false-like values[32m 1[2mms[22m[39m
+ [32m✓[39m tests/hooks/useCODExPipeline.flags.test.js[2m > [22mparseBooleanEnvFlag[2m > [22mfalls back to default for unknown values[32m 0[2mms[22m[39m
+ [32m✓[39m tests/core/judiciary.test.js[2m > [22mDemocracy Engine (Judiciary)[2m > [22mreaches consensus based on layer weights[32m 3[2mms[22m[39m
+ [32m✓[39m tests/core/judiciary.test.js[2m > [22mDemocracy Engine (Judiciary)[2m > [22mbreaks ties using Phoneme Engine priority[32m 1[2mms[22m[39m
+ [32m✓[39m tests/core/judiciary.test.js[2m > [22mDemocracy Engine (Judiciary)[2m > [22mrejects choices that do not meet consensus thresholds[32m 0[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mrenders nothing when suggestions are empty[32m 125[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mrenders all suggestion items[33m 400[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mmarks the selected item with --active class[32m 114[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mmarks rhyme items with --rhyme class and rhyme tag[32m 104[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mmarks correction items with --correction class and fix tag[32m 9[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mcalls onAccept with token on mouseDown[32m 117[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mcalls onHover with index on mouseEnter[32m 175[2mms[22m[39m
+ [32m✓[39m tests/qa/intellisense.qa.test.jsx[2m > [22mIntelliSense component[2m > [22mpositions at the given coordinates via fixed positioning[32m 14[2mms[22m[39m

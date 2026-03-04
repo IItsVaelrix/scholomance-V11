@@ -31,7 +31,6 @@
  * @property {string} stressPattern - Binary stress pattern (e.g., "0101").
  */
 
-import { z } from "zod";
 import { CmuPhonemeEngine } from "./cmu.phoneme.engine.js";
 import { normalizeVowelFamily } from "./vowelFamily.js";
 import {
@@ -41,7 +40,6 @@ import {
   DIGRAPH_MAP
 } from "./phoneme.constants.js";
 import { Syllabifier } from "./syllabifier.js";
-import { Phonotactics } from "./phonotactics.js";
 import { PhoneticSimilarity } from "./phoneticSimilarity.js";
 import { ScholomanceDictionaryAPI } from "./scholomanceDictionary.api.js";
 import { applyPhonologicalProcesses as applyOrderedPhonologicalProcesses } from "./phonologicalProcesses.js";
@@ -104,10 +102,6 @@ const WORD_PHONEME_OVERRIDES = Object.freeze({
   HISTORY: ["HH", "IH1", "S", "T", "ER0", "IY0"],
 });
 
-const PhonemeDictSchema = z.object({
-  vowel_families: z.array(z.unknown())
-}).passthrough();
-const PhonemeRulesSchema = z.record(z.unknown());
 
 /**
  * Phoneme Analysis Engine for Scholomance CODEx.
@@ -139,7 +133,7 @@ export const PhonemeEngine = {
           // Server-side: Use fs to read from public folder
           const fs = await import("fs");
           const path = await import("path");
-          const publicPath = path.join(process.cwd(), "public");
+          const publicPath = path.join(globalThis.process.cwd(), "public");
           
           dictRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "phoneme_dictionary_v2.json"), "utf8"));
           rulesRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "rhyme_matching_rules_v2.json"), "utf8"));
@@ -186,7 +180,7 @@ export const PhonemeEngine = {
         for (const [word, family] of Object.entries(families)) {
             this.AUTHORITY_CACHE.set(word.toUpperCase(), family);
         }
-    } catch (e) {}
+    } catch (_e) { /* noop — authority lookup is best-effort */ }
   },
 
   analyzeWord(word) {

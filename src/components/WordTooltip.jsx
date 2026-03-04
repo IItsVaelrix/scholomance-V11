@@ -1,6 +1,6 @@
 import { useRef, useLayoutEffect, useEffect, useState, useId } from "react";
 import PropTypes from "prop-types";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
@@ -153,7 +153,6 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
     const localCore = analysis?.core || null;
     const rhymeContext = analysis?.rhyme || null;
-    const syntaxGate = analysis?.syntax || null;
 
     const word = String(wordData?.word || analysis?.token?.word || "Unknown");
     const definition = wordData?.definition || null;
@@ -179,8 +178,6 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     const syllables = wordData?.syllableCount || localCore?.syllableCount || 1;
 
     const rhymeLinks = Array.isArray(rhymeContext?.links) ? rhymeContext.links.slice(0, 6) : [];
-    const gateReasons = Array.isArray(rhymeContext?.gateReasons) ? rhymeContext.gateReasons.slice(0, 6) : [];
-    const syntaxReasons = Array.isArray(syntaxGate?.reasons) ? syntaxGate.reasons.slice(0, 6) : [];
 
     return (
       <div className={`word-card word-card--${rarity}`}>
@@ -209,7 +206,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
               </span>
             </div>
 
-            <div className="card-text-box" tabIndex="0">
+            <div className="card-text-box" role="region" aria-label="Word definitions">
               {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
               
               {ipa && <p className="card-insight-line">IPA: {ipa}</p>}

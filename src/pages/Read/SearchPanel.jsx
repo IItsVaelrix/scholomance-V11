@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import './IDE.css';
 
 export default function SearchPanel({ content, onJumpToLine }) {

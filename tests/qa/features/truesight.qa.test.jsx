@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRUESIGHT_SCENARIOS, COLOR_CODEX_SCENARIOS } from "../fixtures/panelAnalysis.scenarios.js";
-import { expectColoredWords, expectWordsShareClusterColor, expectWordOpacityAbove } from "../tools/truesight.assertions.js";
+import { expectColoredWords, expectWordsShareClusterColor } from "../tools/truesight.assertions.js";
 import { renderTruesightEditor } from "../tools/truesight.renderHarness.jsx";
 import { buildColorMap } from "../../../src/lib/colorCodex.js";
 import { DEFAULT_VOWEL_COLORS } from "../../../src/data/schoolPalettes.js";

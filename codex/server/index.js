@@ -15,7 +15,6 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
-import bcrypt from 'bcrypt';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -151,17 +150,6 @@ const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
     existsSync(FRONTEND_INDEX_PATH);
-
-const loginBodySchema = z.object({
-    username: z.string(),
-    password: z.string(),
-});
-
-const registerBodySchema = z.object({
-    username: z.string().min(3).max(20),
-    email: z.string().email(),
-    password: z.string().min(8),
-});
 
 const progressionBodySchema = z.object({
     xp: z.number().int().min(0),

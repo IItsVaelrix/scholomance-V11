@@ -429,7 +429,7 @@ export function usePanelAnalysis() {
         }
       }
     }, ANALYSIS_DEBOUNCE_MS);
-  }, [applyResultIfCurrent, resetAnalysisState]);
+  }, [applyResultIfCurrent, resetAnalysisState, analysis]);
 
   const highlightRhymeGroup = useCallback((groupLabel) => {
     if (!analysis) return;

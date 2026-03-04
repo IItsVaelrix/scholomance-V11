@@ -13,7 +13,7 @@ async function runBenchmark() {
     
     // 1. Coverage Stats (Estimated based on SQL index)
     const totalDictionaryWords = 150000; // Typical Wiktionary dump
-    const heuristicFailRate = 0.12; // ~12% on complex multi-syllabics
+    const _heuristicFailRate = 0.12; // ~12% on complex multi-syllabics
     
     console.log("[Linguistic Surface Area]");
     console.log("- Total Vocabulary: ~" + totalDictionaryWords.toLocaleString() + " words");

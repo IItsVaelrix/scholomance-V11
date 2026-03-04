@@ -1,5 +1,5 @@
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { captchaService } from '../../../codex/server/services/captcha.service.js';
 import { persistence } from '../../../codex/server/persistence.adapter.js';
 import bcrypt from 'bcrypt';
@@ -15,7 +15,7 @@ describe('Auth & Security QA Suite', () => {
       expect(typeof challenge.solution).toBe('string');
       
       // Basic format check
-      expect(challenge.text).toMatch(/What is \d+ [\+\*] \d+\?/);
+      expect(challenge.text).toMatch(/What is \d+ [+*] \d+\?/);
     });
 
     it('should validate correct solutions', () => {

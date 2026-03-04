@@ -26,7 +26,7 @@ import WordTooltip from "../../components/WordTooltip.jsx";
 
 import ScrollEditor from "./ScrollEditor.jsx";
 import ScrollList from "./ScrollList.jsx";
-import TruesightControls, { ANALYSIS_MODES } from "./TruesightControls.jsx";
+import { ANALYSIS_MODES } from "./TruesightControls.jsx";
 import { TopBar, StatusBar } from "./IDEChrome.jsx";
 import ToolsSidebar from "./ToolsSidebar.jsx";
 import SearchPanel from "./SearchPanel.jsx";
@@ -95,7 +95,7 @@ export default function ReadPage() {
     return window.innerWidth <= 960;
   });
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
-  const [saveStatus, setSaveStatus] = useState("Saved");
+  const [, setSaveStatus] = useState("Saved");
   const [sidebarTab, setSidebarTab] = useState("FILES"); // FILES, SEARCH, TOOLS
   const [showMinimap, setShowMinimap] = useState(false);
   const [minimapScrollTop, setMinimapScrollTop] = useState(0);
@@ -352,7 +352,7 @@ export default function ReadPage() {
       setIsEditing(false);
       setIsEditable(false);
     },
-    [isEditing, activeScrollId, saveScroll, addXP, addToast, deepAnalysis, schemeDetection, selectedSchool, scoreData]
+    [isEditing, activeScrollId, saveScroll, addXP, addToast, scoreData]
   );
 
   const handleSelectScroll = useCallback((id) => {
@@ -402,10 +402,6 @@ export default function ReadPage() {
     },
     [isTruesight]
   );
-
-  const handleToolbarSave = useCallback(() => {
-    editorRef.current?.save?.();
-  }, []);
 
   useEffect(() => {
     const handleKeyDown = (e) => {

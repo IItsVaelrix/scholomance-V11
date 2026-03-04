@@ -45,7 +45,7 @@ describe("FloatingPanel close button", () => {
     });
 
     // stopPropagation should prevent header's pointerDown handler from firing
-    const stopSpy = vi.spyOn(pointerDownEvent, "stopPropagation");
+    vi.spyOn(pointerDownEvent, "stopPropagation");
     closeBtn.dispatchEvent(pointerDownEvent);
 
     // The React synthetic event handler calls stopPropagation,

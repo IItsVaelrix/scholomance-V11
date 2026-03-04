@@ -24,7 +24,18 @@
       "Bash(npm run start:*)",
       "Bash(findstr:*)",
       "Bash(git status:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(printf:*)",
+      "Bash(xargs -0 git restore --staged --)",
+      "Bash(git commit:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git stash:*)",
+      "Bash(git stash pop:*)",
+      "Bash(python scripts/build_scholomance_dict.py:*)",
+      "Bash(python -m json.tool:*)",
+      "Bash(taskkill:*)",
+      "Bash(npm run lint)"
     ]
   }
 }
