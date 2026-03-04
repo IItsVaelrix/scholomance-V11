@@ -355,11 +355,12 @@ fastify.register(helmet, {
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.googleapis.com", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:"],
       frameSrc: ["'self'", "https://www.youtube.com", "https://suno.com", "https://www.suno.com"],
       connectSrc: ["'self'", "https://api.datamuse.com", "https://api.dictionaryapi.dev"],
-      mediaSrc: ["'self'", "https://audiocdn001.suno.ai", "https://cdn1.suno.ai", "blob:"],
+      mediaSrc: ["'self'", "https://audiocdn001.suno.ai", "https://cdn1.suno.ai", "blob:", "data:"],
     },
   },
 });
