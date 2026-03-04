@@ -676,19 +676,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       }
     }, [handleSave, onCancel, intellisenseSuggestions, intellisenseIndex, handleAcceptSuggestion]);
 
-  const handleContentChange = useCallback((event) => {
-    const nextValue = event.target.value;
-    if (nextValue.length > MAX_CONTENT_LENGTH) {
-      setContent(nextValue.slice(0, MAX_CONTENT_LENGTH));
-      return;
-    }
-    setContent(nextValue);
-    setCursorVersion(v => v + 1);
-    handleCursorChange(event);
-  }, [handleCursorChange]);
-
-  const handleCursorChange = useCallback((event) => {
-    const textarea = event.target;
+  const emitCursorChange = useCallback((textarea) => {
     const pos = textarea.selectionStart;
     const textBefore = textarea.value.substring(0, pos);
     const lines = textBefore.split('\n');
@@ -697,6 +685,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     onCursorChange?.({ line, col, offset: pos });
     setCursorVersion(v => v + 1);
   }, [onCursorChange]);
+
+  const handleCursorChange = useCallback((event) => {
+    emitCursorChange(event.target);
+  }, [emitCursorChange]);
+
+  const handleContentChange = useCallback((event) => {
+    const nextValue = event.target.value;
+    if (nextValue.length > MAX_CONTENT_LENGTH) {
+      setContent(nextValue.slice(0, MAX_CONTENT_LENGTH));
+      return;
+    }
+    setContent(nextValue);
+    setCursorVersion(v => v + 1);
+    emitCursorChange(event.target);
+  }, [emitCursorChange]);
 
   return (
     <motion.div
