@@ -98,3 +98,7 @@ tmp-*.png
 
 # Windows odd file occasionally created in this workspace
 nul
+
+# Large data files (keep local only, use LFS if needed)
+english-wordnet-2025.xml
+*test-output.txt
