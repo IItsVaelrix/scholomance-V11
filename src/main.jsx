@@ -1,6 +1,7 @@
 import React, { lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import "./lib/zod.config.js";
 import App from "./App.jsx";
 import "./index.css";
 import ErrorBoundary from "./components/shared/ErrorBoundary";
