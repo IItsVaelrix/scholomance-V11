@@ -263,10 +263,6 @@ export default function ReadPage() {
     );
   }, [deepAnalysis, activeVowelColors, theme, analysisMode]);
 
-  // Batch color commits — colors lock in and only update every 15 new words.
-  // Deletions commit immediately so stale colors never linger.
-  const WORD_BATCH_SIZE = 15;
-  const lastCommittedWordCountRef = useRef(0);
   const [committedColors, setCommittedColors] = useState({
     analyzedWords: new Map(),
     analyzedWordsByIdentity: new Map(),
@@ -274,16 +270,8 @@ export default function ReadPage() {
     colorMap: null,
   });
   useEffect(() => {
-    const newCount = deepAnalysis?.wordAnalyses?.length ?? 0;
-    if (newCount === 0) return;
-    const lastCount = lastCommittedWordCountRef.current;
-    const isFirstLoad = lastCount === 0;
-    const wordsDeleted = newCount < lastCount;
-    const batchComplete = newCount - lastCount >= WORD_BATCH_SIZE;
-    if (isFirstLoad || wordsDeleted || batchComplete) {
-      lastCommittedWordCountRef.current = newCount;
-      setCommittedColors({ analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap });
-    }
+    if (!deepAnalysis?.wordAnalyses?.length) return;
+    setCommittedColors({ analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap });
   }, [deepAnalysis, analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap]);
 
   const vowelFamilyAnalytics = useMemo(() => {
