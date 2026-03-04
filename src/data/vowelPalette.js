@@ -1,39 +1,31 @@
 import { SCHOOLS } from "./schools.js";
 
-// Vowel palette derived from the IPA vowel space (11 Core Families):
+// Vowel palette derived from the IPA vowel space (8 Core Families):
 // - Front/back placement maps to hue (cool -> warm).
 // - Close/open height maps to lightness (bright -> deep).
 // - Optimized for visual distinction and phonetic accuracy.
 //
-// 11 Core Families:
-// 1. IY - High front (machine, blue)
-// 2. IH - Near-high front (obelisk, continent)
-// 3. EY - Mid front (bait, day)
+// 8 Core Families:
+// 1. IY - High front (machine, green, gene)
+// 2. IH - Near-high front (obelisk, continent) + ER
+// 3. EY - Mid front (bait, day) + AY
 // 4. AE - Low front (bat, dragon) + EH
-// 5. AY - Wide diphthong (like, time) - DISTINCT
-// 6. AW - Wide diphthong (mouth, loud) - DISTINCT
-// 7. A  - Low back (obvious, monument) + AA
-// 8. AO - Mid back rounded (water, slaughter) - DISTINCT
-// 9. OW - Mid-high back (soul, cold, boulder) + OY
-// 10. U - High back/central (boot, true, foot, strut, schwa) - GREEN
-// 11. UR - Rhotic mid (nurse, bird)
+// 5. A  - Low back (obvious, monument) + AA, AH, AX, AW
+// 6. AO - Mid back rounded (water, slaughter) - DISTINCT
+// 7. OW - Mid-high back (soul, cold, boulder) + OH, OY
+// 8. UW - High back (boot, true) + OO, YOO, YUW, UH
 const VOWEL_POSITIONS = {
   // Front vowels (cool hues)
   IY: { front: 0.0, open: 0.05 },   // close front - brightest blue
-  IH: { front: 0.05, open: 0.15 },  // near-close front - I sound
-  EY: { front: 0.15, open: 0.4 },   // close-mid front
-  AE: { front: 0.22, open: 0.7 },   // near-open front - includes EH
-
-  // Central / Diphthongs
-  AY: { front: 0.1, open: 0.75 },   // Wide front-central - I sound (Cyan)
-  AW: { front: 0.65, open: 0.8 },   // Wide back-central
-  U:  { front: 0.45, open: 0.1 },   // High back/central - DISTINCT GREEN (boot, foot, strut, schwa)
+  IH: { front: 0.1, open: 0.2 },    // near-close front - I sound + ER
+  EY: { front: 0.18, open: 0.45 },  // close-mid front + AY
+  AE: { front: 0.25, open: 0.75 },  // near-open front - includes EH
 
   // Back vowels (warm hues)
-  A:  { front: 1.0, open: 0.95 },    // open back - deepest warm - includes AA
+  A:  { front: 1.0, open: 0.95 },    // open back - deepest warm - includes AA, AH, AX, AW
   AO: { front: 0.85, open: 0.6 },   // open-mid back rounded - DISTINCT (water, slaughter)
-  OW: { front: 0.92, open: 0.25 },  // close-mid back - includes OY
-  UR: { front: 0.7, open: 0.5 },    // Rhotic mid
+  OW: { front: 0.92, open: 0.25 },  // close-mid back - includes OH, OY
+  UW: { front: 0.5, open: 0.1 },    // High back - includes OO, YOO, YUW, UH
 };
 
 const PALETTE_CONFIG = {

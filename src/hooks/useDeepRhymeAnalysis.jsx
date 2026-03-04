@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme } from "../lib/rhymeScheme.detector.js";
+import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
@@ -7,19 +8,7 @@ const MAX_CACHE_ENTRIES = 50;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
-const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
-const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
-const USE_SERVER_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_ANALYSIS, true);
-
-function parseBooleanFlag(rawValue, defaultValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
+const USE_SERVER_ANALYSIS = parseBooleanEnvFlag(import.meta.env.VITE_USE_SERVER_ANALYSIS, true);
 
 function getPanelAnalysisEndpoint() {
   return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";

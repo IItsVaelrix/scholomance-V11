@@ -220,23 +220,10 @@ describe("Theory 9: SONIC is filtered out by getPlayableSchoolIds", () => {
     expect(playable).toContain("SONIC");
   });
 
-  it("all schools with tracks in LIBRARY are considered playable", () => {
-    const allSchoolIds = Object.keys(SCHOOLS);
-    const withTracks = allSchoolIds.filter(
-      (id) => SCHOOLS[id].tracks?.length > 0
-    );
-    const playable = getPlayableSchoolIds(withTracks);
-    // Every school that has tracks listed should be playable
-    // (assuming its track key exists in LIBRARY with a valid URL)
-    for (const schoolId of withTracks) {
-      const trackKey = SCHOOLS[schoolId].tracks[0];
-      if (LIBRARY[trackKey]) {
-        const url = LIBRARY[trackKey].sc || LIBRARY[trackKey].suno || LIBRARY[trackKey].url;
-        if (url) {
-          expect(playable).toContain(schoolId);
-        }
-      }
-    }
+  it("built-in radio surface is SONIC-only", () => {
+    const playable = getPlayableSchoolIds(Object.keys(SCHOOLS));
+    expect(playable).toContain("SONIC");
+    expect(playable).toHaveLength(1);
   });
 });
 

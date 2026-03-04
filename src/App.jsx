@@ -1,36 +1,12 @@
-import { Suspense, useEffect, useRef } from "react";
+import { Suspense, useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Navigation from "./components/Navigation/Navigation.jsx";
 import AtmosphereSync from "./components/AtmosphereSync.jsx";
 import { SongProvider } from "./hooks/useCurrentSong.jsx";
-import { useAmbientPlayer } from "./hooks/useAmbientPlayer";
-import { ProgressionProvider, useProgression } from "./hooks/useProgression.jsx";
 import { CODExProvider } from "./hooks/useCODExPipeline.jsx";
 import { AuthProvider } from "./hooks/useAuth.jsx";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion.js";
-
-function AmbientWatchSync({ isWatchRoute }) {
-  const { progression } = useProgression();
-  const { isPlaying, isTuning, isPaused, pause, play } = useAmbientPlayer(progression.unlockedSchools);
-  const shouldResumeAfterWatchRef = useRef(false);
-
-  useEffect(() => {
-    if (isWatchRoute) {
-      if (isPlaying || isTuning) {
-        shouldResumeAfterWatchRef.current = true;
-        pause();
-      }
-      return;
-    }
-
-    if (shouldResumeAfterWatchRef.current && isPaused) {
-      shouldResumeAfterWatchRef.current = false;
-      play();
-    }
-  }, [isWatchRoute, isPlaying, isTuning, isPaused, pause, play]);
-  return null;
-}
 
 const fullMotionVariants = {
   initial: { opacity: 0, y: 20 },
@@ -47,8 +23,6 @@ const reducedMotionVariants = {
 export default function App() {
   const location = useLocation();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const isWatchRoute = location.pathname === "/" || location.pathname.startsWith("/watch");
-
   const shouldReduceMotion = prefersReducedMotion;
   const pageVariants = shouldReduceMotion ? reducedMotionVariants : fullMotionVariants;
 
@@ -76,7 +50,6 @@ export default function App() {
               Skip to main content
             </a>
             <Navigation />
-            <AmbientWatchSync isWatchRoute={isWatchRoute} />
             <AnimatePresence mode="wait">
               <motion.main
                 key={location.pathname}

@@ -2,31 +2,20 @@ import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
 import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
+import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 
 const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
   .replace(/\/+$/, "");
-const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
-const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
-const USE_SERVER_PANEL_ANALYSIS = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
+const USE_SERVER_PANEL_ANALYSIS = parseBooleanEnvFlag(import.meta.env.VITE_USE_SERVER_PANEL_ANALYSIS, true);
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
   totalWords: 0,
   uniqueWords: 0,
 });
-
-function parseBooleanFlag(rawValue, defaultValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
 
 function getPanelAnalysisEndpoint() {
   return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";
@@ -211,6 +200,42 @@ function buildVowelSummaryFromAnalysis(analysis) {
 
 async function runClientSideAnalysis(text) {
   const analysis = await clientEngine.analyzeDocument(text);
+
+  // Flatten lines[].words[] into wordAnalyses for the normalization pipeline.
+  // The DeepRhymeEngine returns word data nested inside lines, but the panel
+  // payload expects a flat wordAnalyses array with vowelFamily/syllableCount
+  // lifted from each word's `analysis` sub-object.
+  const wordAnalyses = [];
+  const lineSyllableCounts = [];
+  if (Array.isArray(analysis.lines)) {
+    for (const line of analysis.lines) {
+      lineSyllableCounts.push(Number(line.syllableTotal) || 0);
+      if (!Array.isArray(line.words)) continue;
+      for (const w of line.words) {
+        const a = w.analysis;
+        const st = w.syntaxToken;
+        wordAnalyses.push({
+          word: w.word,
+          normalizedWord: (w.word || "").toUpperCase(),
+          lineIndex: w.lineIndex,
+          wordIndex: w.wordIndex,
+          charStart: w.charStart,
+          charEnd: w.charEnd,
+          vowelFamily: a?.vowelFamily || null,
+          syllableCount: a?.syllableCount || 0,
+          rhymeKey: a?.rhymeKey || null,
+          stressPattern: a?.stressPattern || "",
+          role: st?.role || "content",
+          lineRole: st?.lineRole || "line_mid",
+          stressRole: st?.stressRole || "unknown",
+          rhymePolicy: st?.rhymePolicy || "allow",
+        });
+      }
+    }
+  }
+  analysis.wordAnalyses = wordAnalyses;
+  analysis.lineSyllableCounts = lineSyllableCounts;
+
   const scheme = detectScheme(analysis.schemePattern, analysis.rhymeGroups);
   const meter = analyzeMeter(analysis.lines);
   const vowelSummary = buildVowelSummaryFromAnalysis(analysis);

@@ -51,8 +51,12 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
 
   const colorMap = useMemo(() => {
     if (wordAnalyses.length === 0 || !palette) return new Map();
-    return buildColorMap(wordAnalyses, activeConnections, palette, { theme });
-  }, [wordAnalyses, activeConnections, palette, theme]);
+    return buildColorMap(wordAnalyses, activeConnections, palette, {
+      theme,
+      analysisMode,
+      syntaxLayer,
+    });
+  }, [wordAnalyses, activeConnections, palette, theme, analysisMode, syntaxLayer]);
 
   const colorContext = useMemo(() => {
     const connectedTokenCharStarts = new Set();
@@ -137,10 +141,13 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
 
   const shouldColorWord = useCallback((charStart, normalizedWord, vowelFamily) => {
     const isStopWord = STOP_WORDS.has(normalizedWord);
+    const codexEntry = Number.isInteger(charStart) ? colorMap.get(charStart) : null;
+    const passesGhostFloor = !codexEntry || codexEntry.isAnchor || Number(codexEntry.salience) >= 0.15;
     
     // Explicit VOWEL mode: Color all content words
     if (analysisMode === 'vowel') {
-      return !isStopWord;
+      if (isStopWord) return false;
+      return passesGhostFloor;
     }
 
     // Explicit RHYME mode or DEFAULT (if connections exist)
@@ -162,11 +169,13 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
       // This prevents coloring all EH words when "echo" (non-stop) already represents EH.
       if (isPeer && colorContext.directNonStopFamilies.has(family)) return false;
 
-      return isPeer;
+      if (!isPeer) return false;
+
+      return passesGhostFloor;
     }
 
     return false;
-  }, [colorContext, analysisMode, activeConnections, syntaxLayer]);
+  }, [colorContext, analysisMode, activeConnections, syntaxLayer, colorMap]);
 
   return { colorMap, shouldColorWord };
 }

@@ -13,9 +13,10 @@ import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
-import { SCHOOLS } from "../../data/schools.js";
+import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
+import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 
 import RhymeSchemePanel from "../../components/RhymeSchemePanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
@@ -41,45 +42,16 @@ const SCHOOL_GLYPHS = {
   ALCHEMY: "\u2697",
   WILL: "\u26A1",
 };
-const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
-  A: "SONIC",
-  AA: "SONIC",
-  AE: "SONIC",
-  U: "VOID",
-  AO: "VOID",
-  AW: "VOID",
-  OW: "VOID",
-  AY: "ALCHEMY",
-  EY: "ALCHEMY",
-  OY: "ALCHEMY",
-  EH: "WILL",
-  ER: "WILL",
-  UR: "WILL",
-  IH: "PSYCHIC",
-  IY: "PSYCHIC",
-});
-const TRUE_VALUES = new Set(["1", "true", "on", "yes"]);
-const FALSE_VALUES = new Set(["0", "false", "off", "no"]);
 const TOOLTIP_WIDTH = 390;
 const TOOLTIP_HEIGHT = 510;
 const TOOLTIP_MARGIN = 12;
 const TOOLTIP_OFFSET_X = 14;
 const TOOLTIP_OFFSET_Y = -8;
 
-const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanFlag(
+const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanEnvFlag(
   import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER,
   false
 );
-
-function parseBooleanFlag(rawValue, defaultValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === "") {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
 
 function clampTooltipPosition(position) {
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
@@ -213,6 +185,11 @@ export default function ReadPage() {
         vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
         syllableCount: Number(profile?.syllableCount) || 0,
         rhymeKey: profile?.rhymeKey || null,
+        stressPattern: String(profile?.stressPattern || ""),
+        role: String(profile?.role || ""),
+        lineRole: String(profile?.lineRole || ""),
+        stressRole: String(profile?.stressRole || ""),
+        rhymePolicy: String(profile?.rhymePolicy || ""),
       });
     }
     return map;
@@ -237,6 +214,11 @@ export default function ReadPage() {
         vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
         syllableCount: Number(profile?.syllableCount) || 0,
         rhymeKey: profile?.rhymeKey || null,
+        stressPattern: String(profile?.stressPattern || ""),
+        role: String(profile?.role || ""),
+        lineRole: String(profile?.lineRole || ""),
+        stressRole: String(profile?.stressRole || ""),
+        rhymePolicy: String(profile?.rhymePolicy || ""),
       });
     }
     return map;
@@ -257,6 +239,11 @@ export default function ReadPage() {
         vowelFamily: normalizeVowelFamily(profile?.vowelFamily) || null,
         syllableCount: Number(profile?.syllableCount) || 0,
         rhymeKey: profile?.rhymeKey || null,
+        stressPattern: String(profile?.stressPattern || ""),
+        role: String(profile?.role || ""),
+        lineRole: String(profile?.lineRole || ""),
+        stressRole: String(profile?.stressRole || ""),
+        rhymePolicy: String(profile?.rhymePolicy || ""),
       });
     }
     return map;
@@ -268,9 +255,13 @@ export default function ReadPage() {
       deepAnalysis.wordAnalyses,
       deepAnalysis.allConnections,
       activeVowelColors,
-      { theme }
+      {
+        theme,
+        analysisMode,
+        syntaxLayer: deepAnalysis?.syntaxSummary || null,
+      }
     );
-  }, [deepAnalysis, activeVowelColors, theme]);
+  }, [deepAnalysis, activeVowelColors, theme, analysisMode]);
 
   const vowelFamilyAnalytics = useMemo(() => {
     if (!isTruesight || analysisMode !== ANALYSIS_MODES.VOWEL) {
@@ -798,7 +789,7 @@ export default function ReadPage() {
                     highlightedLines={highlightedLines}
                     vowelColors={activeVowelColors}
                     colorMap={colorMap}
-                    syntaxLayer={deepAnalysis?.syntaxLayer}
+                    syntaxLayer={deepAnalysis?.syntaxSummary}
                     analysisMode={analysisMode}
                     theme={theme}
                     onWordActivate={handleWordActivate}

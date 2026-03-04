@@ -18,15 +18,15 @@ import { normalizeVowelFamily } from "./vowelFamily.js";
  */
 
 const DEFAULT_WEIGHT_CONFIG = {
-  // Base weights for each family (manual overrides)
   baseWeights: {
-    'U': 0.82,   // Further reduce weight of the heavily-indexed green family
-    'IY': 1.15,  // Boost rare sharp sounds
-    'AY': 1.1,   // Boost 'I' hook sounds
-    'IH': 1.05,
-    'OW': 1.0,
-    'AE': 0.88,  // Reduce pink dominance
-    'A': 0.9,    // Slightly reduce common rose/warm tones
+    'UW': 0.82,  // High back (boot/true) - Green
+    'IY': 1.15,  // High front (machine/green) - Blue
+    'EY': 1.1,   // Mid front (bait/day) + AY (I) - Violet/Cyan
+    'IH': 1.05,  // Near-high front (obelisk/continent) - Cyan
+    'OW': 1.0,   // Mid-high back (soul/cold) - Yellow
+    'AO': 1.0,   // Mid back rounded (water/slaughter) - Amber
+    'AE': 0.88,  // Low front (bat/dragon) - Pink
+    'A': 0.9,    // Low back (obvious/monument) - Rose/Warm
   },
   // Global sensitivity for dynamic adjustment
   dynamicSensitivity: 0.25,

@@ -1,83 +1,118 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { z } from "zod";
 import { SCHOOLS } from "../data/schools";
 import {
   AMBIENT_PLAYER_STATES,
   getAmbientPlayerService,
 } from "../lib/ambient/ambientPlayer.service";
 import { getPlayableSchoolIds, getSchoolAudioConfig } from "../lib/ambient/schoolAudio.config";
-import { fetchAudioFiles, normalizeAdminToken, type AudioFilePayload } from "../lib/audioAdminApi";
 
-const AudioFileSchema = z.object({
-  name: z.string(),
-  url: z.string(),
-});
-const AudioFileListSchema = z.array(AudioFileSchema);
+const ORB_VISIBILITY_STORAGE_KEY = "scholomance.ambient.orb.visible.v1";
+const AMBIENT_PLAYER_CONTAINER_ID = "scholomance-ambient-player";
 
-type AmbientPlayerOptions = {
-  adminToken?: string | null;
-};
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
+}
 
-type DynamicSchool = {
-  id: string;
-  name: string;
-  trackUrl: string;
-  paletteKey: "void";
-  orbSkinKey: "void";
-  isDynamic: true;
-};
+function readOrbVisibilityPreference() {
+  if (typeof window === "undefined") return true;
+  try {
+    const raw = window.localStorage.getItem(ORB_VISIBILITY_STORAGE_KEY);
+    if (raw === null) return true;
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "boolean" ? parsed : true;
+  } catch {
+    return true;
+  }
+}
 
-export function useAmbientPlayer(unlockedSchools: string[] = [], options: AmbientPlayerOptions = {}): any {
+function writeOrbVisibilityPreference(visible: boolean) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(ORB_VISIBILITY_STORAGE_KEY, JSON.stringify(Boolean(visible)));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function ensureAmbientPlayerContainer() {
+  if (typeof document === "undefined") return null;
+  const existing = document.getElementById(AMBIENT_PLAYER_CONTAINER_ID);
+  if (existing) return existing;
+  const container = document.createElement("div");
+  container.id = AMBIENT_PLAYER_CONTAINER_ID;
+  container.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;";
+  container.setAttribute("aria-hidden", "true");
+  document.body.appendChild(container);
+  return container;
+}
+
+export function useAmbientPlayer(unlockedSchools: string[] = []): any {
   const service = useMemo(() => getAmbientPlayerService(), []);
   const [state, setState] = useState<Record<string, any>>(() => service.getState());
-  const [dynamicSchools, setDynamicSchools] = useState<DynamicSchool[]>([]);
-  const adminToken = normalizeAdminToken(options.adminToken);
-
-  const fetchDynamicSchools = useCallback(async () => {
-    try {
-      const res = await fetchAudioFiles(adminToken);
-      if (res.ok) {
-        const rawData = await res.json();
-        const parsed = AudioFileListSchema.safeParse(rawData);
-        if (!parsed.success) {
-          console.error("Invalid audio files payload", parsed.error);
-          return;
-        }
-
-        const files: AudioFilePayload[] = parsed.data;
-        const schools: DynamicSchool[] = files.map((file) => ({
-          id: `dynamic-${file.name}`,
-          name: file.name.split(".")[0].replace(/_/g, " "),
-          trackUrl: file.url,
-          paletteKey: "void",
-          orbSkinKey: "void",
-          isDynamic: true,
-        }));
-        setDynamicSchools(schools);
-        service.setDynamicSchools(schools);
-        return;
-      }
-
-      if (res.status === 401) {
-        setDynamicSchools([]);
-        service.setDynamicSchools([]);
-      }
-    } catch (error) {
-      console.error("Failed to fetch dynamic schools:", error);
-    }
-  }, [adminToken, service]);
-
-  useEffect(() => {
-    void fetchDynamicSchools();
-  }, [fetchDynamicSchools]);
+  const [signalLevel, setSignalLevel] = useState(0);
+  const [orbVisible, setOrbVisibleState] = useState(() => readOrbVisibilityPreference());
 
   const playableSchools = useMemo(() => {
-    const base = getPlayableSchoolIds(unlockedSchools);
-    const dynamicIds = dynamicSchools.map((school) => school.id);
-    return [...base, ...dynamicIds];
-  }, [unlockedSchools, dynamicSchools]);
+    return getPlayableSchoolIds(unlockedSchools);
+  }, [unlockedSchools]);
 
   useEffect(() => service.subscribe(setState), [service]);
+
+  useEffect(() => {
+    service.setContainer?.(ensureAmbientPlayerContainer());
+  }, [service]);
+
+  const isSignalActive =
+    state.isPlaying || state.status === AMBIENT_PLAYER_STATES.TUNING;
+
+  useEffect(() => {
+    if (!isSignalActive) {
+      setSignalLevel(0);
+      return;
+    }
+
+    let rafId: number | null = null;
+    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    const schedule = (callback: FrameRequestCallback) => {
+      if (typeof requestAnimationFrame === "function") {
+        rafId = requestAnimationFrame(callback);
+        return;
+      }
+      fallbackTimerId = setTimeout(() => callback(Date.now()), 16);
+    };
+
+    const cancel = () => {
+      if (rafId !== null && typeof cancelAnimationFrame === "function") {
+        cancelAnimationFrame(rafId);
+      }
+      if (fallbackTimerId !== null) {
+        clearTimeout(fallbackTimerId);
+      }
+    };
+
+    const tick: FrameRequestCallback = () => {
+      if (cancelled) return;
+      const sampledLevel = service.getSignalLevel?.() ?? null;
+      const nextLevel = Number.isFinite(sampledLevel) ? clamp01(sampledLevel as number) : 0;
+      setSignalLevel((previousLevel) =>
+        Math.abs(nextLevel - previousLevel) < 0.01 ? previousLevel : nextLevel
+      );
+      schedule(tick);
+    };
+
+    schedule(tick);
+    return () => {
+      cancelled = true;
+      cancel();
+    };
+  }, [service, isSignalActive]);
+
+  // Upload/archive stations were removed; clear any stale dynamic schools from prior sessions.
+  useEffect(() => {
+    service.setDynamicSchools([]);
+  }, [service]);
 
   useEffect(() => {
     service.setPlayableSchools(playableSchools);
@@ -90,7 +125,7 @@ export function useAmbientPlayer(unlockedSchools: string[] = [], options: Ambien
 
   const findSchool = (id: string | null) => {
     if (!id) return null;
-    return schoolMap[id] || dynamicSchools.find((school) => school.id === id) || null;
+    return schoolMap[id] || null;
   };
 
   const currentSchool = findSchool(currentSchoolId);
@@ -99,8 +134,11 @@ export function useAmbientPlayer(unlockedSchools: string[] = [], options: Ambien
   const currentSchoolConfig = currentSchoolId
     ? schoolMap[currentSchoolId]
       ? getSchoolAudioConfig(currentSchoolId)
-      : dynamicSchools.find((school) => school.id === currentSchoolId) || null
+      : null
     : null;
+
+  const paletteKey = currentSchoolConfig?.paletteKey || null;
+  const orbSkinKey = currentSchoolConfig?.orbSkinKey || null;
 
   const tuneToSchool = useCallback(
     async (schoolId: string) => {
@@ -163,16 +201,19 @@ export function useAmbientPlayer(unlockedSchools: string[] = [], options: Ambien
     service.toggleCyclingEnabled();
   }, [service]);
 
-  const setOrbVisibility = useCallback(
-    (visible: boolean) => {
-      service.setOrbVisibility(visible);
-    },
-    [service]
-  );
+  const setOrbVisibility = useCallback((visible: boolean) => {
+    const nextVisible = Boolean(visible);
+    setOrbVisibleState(nextVisible);
+    writeOrbVisibilityPreference(nextVisible);
+  }, []);
 
   const toggleOrbVisibility = useCallback(() => {
-    service.toggleOrbVisibility();
-  }, [service]);
+    setOrbVisibleState((previousValue) => {
+      const nextValue = !previousValue;
+      writeOrbVisibilityPreference(nextValue);
+      return nextValue;
+    });
+  }, []);
 
   const unlockAudio = useCallback(async () => {
     await service.unlockAudio();
@@ -185,9 +226,10 @@ export function useAmbientPlayer(unlockedSchools: string[] = [], options: Ambien
     currentSchool,
     queuedSchool,
     currentSchoolConfig,
+    paletteKey,
+    orbSkinKey,
     playableSchools,
-    dynamicSchools,
-    refreshDynamicSchools: fetchDynamicSchools,
+    signalLevel,
     isTuning: state.status === AMBIENT_PLAYER_STATES.TUNING,
     isPlaying: state.status === AMBIENT_PLAYER_STATES.PLAYING,
     isPaused: state.status === AMBIENT_PLAYER_STATES.PAUSED,
@@ -203,7 +245,7 @@ export function useAmbientPlayer(unlockedSchools: string[] = [], options: Ambien
     toggleAutoplayAmbient,
     setCyclingEnabled,
     toggleCyclingEnabled,
-    orbVisible: state.orbVisible,
+    orbVisible,
     setOrbVisibility,
     toggleOrbVisibility,
     unlockAudio,

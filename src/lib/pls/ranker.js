@@ -3,23 +3,26 @@
  */
 
 const DEFAULT_WEIGHTS = {
-  rhyme: 0.35,
-  meter: 0.25,
-  color: 0.20,
-  prefix: 0.20,
+  rhyme: 0.30,
+  meter: 0.20,
+  color: 0.15,
+  prefix: 0.15,
+  synonym: 0.10,
+  validity: 0.10,
 };
 
 const BADGE_THRESHOLDS = {
   rhyme: 0.7,
   meter: 0.8,
   color: 1.0,
+  synonym: 0.5,
 };
 
 /**
  * Merge and rank candidates from generator and scorer providers.
  *
- * @param {object} generatorResults - { rhyme: ProviderResult[], prefix: ProviderResult[] }
- * @param {object} scorerResults - { meter: ScoredResult[], color: ScoredResult[] }
+ * @param {object} generatorResults - { rhyme: ProviderResult[], prefix: ProviderResult[], synonym?: ProviderResult[] }
+ * @param {object} scorerResults - { meter: ScoredResult[], color: ScoredResult[], validity?: ScoredResult[] }
  * @param {object} [weights] - Override default weights
  * @param {object} [context] - PLSContext for ghost-line generation
  * @param {number} [limit=10] - Max results to return
@@ -35,7 +38,7 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
     if (!candidateMap.has(token)) {
       candidateMap.set(token, {
         token,
-        scores: { rhyme: 0, meter: 0, color: 0, prefix: 0 },
+        scores: { rhyme: 0, meter: 0, color: 0, prefix: 0, synonym: 0, validity: 0 },
         badges: [],
       });
     }
@@ -48,6 +51,11 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
       const entry = ensureEntry(r.token);
       entry.scores[providerName] = r.score;
       if (r.badge && !entry.badges.includes(r.badge)) entry.badges.push(r.badge);
+      const threshold = BADGE_THRESHOLDS[providerName];
+      if (!r.badge && threshold && r.score >= threshold) {
+        const badgeName = providerName.toUpperCase();
+        if (!entry.badges.includes(badgeName)) entry.badges.push(badgeName);
+      }
     }
   }
 
@@ -76,7 +84,9 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
       w.rhyme * entry.scores.rhyme +
       w.meter * entry.scores.meter +
       w.color * entry.scores.color +
-      w.prefix * entry.scores.prefix;
+      w.prefix * entry.scores.prefix +
+      w.synonym * entry.scores.synonym +
+      w.validity * entry.scores.validity;
 
     const ghostLine = currentLineText
       ? `${currentLineText} ${entry.token}`

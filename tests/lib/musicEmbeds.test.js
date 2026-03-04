@@ -9,6 +9,10 @@ import {
 describe("musicEmbeds", () => {
   it("detects provider by URL", () => {
     expect(getMusicProvider("https://suno.com/song/12345678-1234-1234-1234-123456789abc")).toBe("suno");
+    expect(getMusicProvider("https://www.suno.ai/song/12345678-1234-1234-1234-123456789abc")).toBe(
+      "suno"
+    );
+    expect(getMusicProvider("https://www.youtube.com/watch?v=9_QmbwbY0tc")).toBe("unknown");
     expect(getMusicProvider("https://example.com/track")).toBe("unknown");
     expect(getMusicProvider("/audio/1.mp3")).toBe("direct");
   });
@@ -22,6 +26,15 @@ describe("musicEmbeds", () => {
     expect(embedUrl).toBe("https://suno.com/embed/12345678-1234-1234-1234-123456789abc?autoplay=1");
     expect(audioUrl).toBe("https://cdn1.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
     expect(config.audioUrl).toBe("https://cdn1.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
+  });
+
+  it("normalizes profile-style Suno links that contain a UUID", () => {
+    const profileUrl = "https://www.suno.ai/@arcane/song/12345678-1234-1234-1234-123456789abc";
+    const embedUrl = getSunoEmbedUrl(profileUrl);
+    const audioUrl = getSunoAudioUrl(profileUrl);
+
+    expect(embedUrl).toBe("https://suno.com/embed/12345678-1234-1234-1234-123456789abc");
+    expect(audioUrl).toBe("https://cdn1.suno.ai/12345678-1234-1234-1234-123456789abc.mp3");
   });
 
   it("returns null source for unsupported providers", () => {

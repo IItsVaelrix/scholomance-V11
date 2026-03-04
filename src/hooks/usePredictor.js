@@ -4,6 +4,7 @@ import { Spellchecker } from '../../codex/core/spellchecker.js';
 import { judiciary } from '../../codex/core/judiciary.js';
 import { PhonemeEngine } from '../lib/phoneme.engine.js';
 import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
+import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
 
 /**
  * Enhanced Hook for managing robust predictive text, spellchecking,
@@ -70,6 +71,7 @@ export function usePredictor() {
           phonemeEngine: PhonemeEngine,
           trie: model,
           spellchecker,
+          dictionaryAPI: ScholomanceDictionaryAPI.isEnabled() ? ScholomanceDictionaryAPI : null,
         });
         pls.buildIndex(words);
         plsRef.current = pls;
@@ -105,9 +107,9 @@ export function usePredictor() {
    * PLS-powered completions with rhyme, meter, color, and ghost-line support.
    * @param {import('../lib/poeticLanguageServer.js').PLSContext} context
    * @param {object} [options]
-   * @returns {import('../lib/poeticLanguageServer.js').ScoredCandidate[]}
+   * @returns {Promise<import('../lib/poeticLanguageServer.js').ScoredCandidate[]>}
    */
-  const getCompletions = useCallback((context, options) => {
+  const getCompletions = useCallback(async (context, options) => {
     if (!isReady || !plsRef.current) return [];
     return plsRef.current.getCompletions(context, options);
   }, [isReady]);

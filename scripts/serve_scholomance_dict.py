@@ -102,6 +102,16 @@ def batch_lookup_families(conn: sqlite3.Connection, words: List[str]) -> Dict[st
     ).fetchall()
     return {row["word_lower"].upper(): row["rhyme_family"] for row in rows}
 
+def batch_validate_words(conn: sqlite3.Connection, words: List[str]) -> List[str]:
+    normalized = sorted({word.strip().lower() for word in words if isinstance(word, str) and word.strip()})
+    if not normalized: return []
+    placeholders = ', '.join('?' for _ in normalized)
+    rows = conn.execute(
+        f"SELECT DISTINCT headword_lower FROM entry WHERE headword_lower IN ({placeholders})",
+        normalized
+    ).fetchall()
+    return [row["headword_lower"] for row in rows]
+
 def lookup_synonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> List[str]:
     rows = conn.execute(
         """
@@ -130,9 +140,9 @@ def lookup_antonyms(conn: sqlite3.Connection, word: str, limit: int = 20) -> Lis
         """
         SELECT l2.lemma AS lemma
         FROM wordnet_lemma l1
-        JOIN wordnet_rel r ON l1.synset_id = r.source_synset_id
+        JOIN wordnet_rel r ON l1.synset_id = r.synset_id
         JOIN wordnet_lemma l2 ON r.target_synset_id = l2.synset_id
-        WHERE l1.lemma_lower = ? AND r.rel_type = 'antonym'
+        WHERE l1.lemma_lower = ? AND r.rel = 'antonym'
         LIMIT ?
         """,
         (word.lower(), limit + 10),
@@ -200,6 +210,22 @@ class DictionaryHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         parsed = urlparse(self.path)
+        if parsed.path == "/api/lexicon/validate-batch":
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length).decode('utf-8')
+            try:
+                data = json.loads(body)
+                words = data.get("words", [])
+                if not isinstance(words, list):
+                    self.send_json(400, {"error": "words must be a list"})
+                    return
+                with self.lock:
+                    valid = batch_validate_words(self.conn, words)
+                self.send_json(200, {"valid": valid})
+            except json.JSONDecodeError:
+                self.send_json(400, {"error": "Invalid JSON"})
+            return
+
         if parsed.path == "/api/lexicon/lookup-batch":
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')

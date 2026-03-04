@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
-import { SCHOOLS } from "../data/schools.js";
+import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
 import "./WordTooltip.css";
 
@@ -22,14 +22,6 @@ const SCHOOL_ICONS = {
   Necromancy: "\uD83D\uDC80",
   Transmutation: "\u2697\uFE0F",
 };
-
-const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
-  A: "SONIC", AA: "SONIC", AE: "SONIC", AH: "SONIC",
-  AO: "VOID", AW: "VOID", OW: "VOID", UW: "VOID",
-  AY: "ALCHEMY", EY: "ALCHEMY", OY: "ALCHEMY",
-  EH: "WILL", ER: "WILL", UH: "WILL",
-  IH: "PSYCHIC", IY: "PSYCHIC",
-});
 
 function getSchoolNameFromVowelFamily(vowelFamily) {
   const normalized = normalizeVowelFamily(vowelFamily);

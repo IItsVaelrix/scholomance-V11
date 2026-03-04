@@ -8,6 +8,36 @@
  * This leaves room for 8 schools (current 5 + 3 future)
  */
 
+/**
+ * Canonical mapping from ARPAbet vowel family to school of magic.
+ * This is the single source of truth — all consumers should import from here.
+ */
+export const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
+  // Core 8 mappings
+  IY: 'PSYCHIC',
+  IH: 'SONIC',
+  EY: 'ALCHEMY',
+  AE: 'WILL',
+  A:  'WILL',
+  AO: 'SONIC',
+  OW: 'ALCHEMY',
+  UW: 'VOID',
+
+  // ARPAbet Aliases
+  AA: 'WILL',    // -> A
+  AH: 'WILL',    // -> A
+  AX: 'WILL',    // -> A
+  AW: 'WILL',    // -> A
+  EH: 'WILL',    // -> AE
+  AY: 'PSYCHIC', // -> EY (Psychic affinity)
+  OY: 'ALCHEMY', // -> OW
+  OH: 'ALCHEMY', // -> OW
+  UH: 'VOID',    // -> UW
+  OO: 'VOID',    // -> UW
+  ER: 'SONIC',   // -> IH
+  UR: 'SONIC',   // -> IH
+});
+
 export const SCHOOLS = {
   // === INITIAL 5 SCHOOLS ===
   SONIC: {
@@ -19,7 +49,7 @@ export const SCHOOLS = {
     unlockXP: 0,      // Available immediately (Level 1)
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
-    vowelAffinities: ["AO", "OW", "A"],
+    vowelAffinities: ["AO", "IH", "OW"],
     glyph: "♩",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -37,7 +67,7 @@ export const SCHOOLS = {
     unlockXP: 250, // Level ~3
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
-    vowelAffinities: ["IY", "IH"],
+    vowelAffinities: ["EY", "IY", "UW"],
     glyph: "◬",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -55,7 +85,7 @@ export const SCHOOLS = {
     unlockXP: 1500, // Level ~10
     description: "The space between spaces, where entropy reigns",
     tracks: ["void"],
-    vowelAffinities: ["U", "UR"],
+    vowelAffinities: ["UW", "IH"],
     glyph: "∅",
     atmosphere: {
       auroraIntensity: 0.2,
@@ -73,7 +103,7 @@ export const SCHOOLS = {
     unlockXP: 8000, // Level ~20 (End of Neophyte)
     description: "The transmutation of meaning through spoken word",
     tracks: ["alchemy"],
-    vowelAffinities: ["EY", "AY", "AW", "OY"],
+    vowelAffinities: ["EY", "A", "OW"],
     glyph: "⚗",
     atmosphere: {
       auroraIntensity: 1.2,

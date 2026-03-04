@@ -8,6 +8,7 @@ import Minimap from "./Minimap.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
+import { DEFAULT_VOWEL_COLORS } from "../../data/schoolPalettes.js";
 
 const MAX_CONTENT_LENGTH = 50000;
 const CONTENT_DEBOUNCE_MS = 300;
@@ -89,25 +90,6 @@ const STOP_WORDS = new Set([
   "ABOUT", "JUST", "VERY", "TOO", "ALSO",
 ]);
 
-// Vowel family color mapping for Truesight (ARPAbet codes from CMU engine)
-const VOWEL_COLORS = {
-  IY: "#60a5fa",   // Blue - FLEECE (high front)
-  IH: "#818cf8",   // Indigo - KIT (near-high front)
-  EY: "#a78bfa",   // Violet - FACE (mid front diphthong)
-  EH: "#c084fc",   // Purple - DRESS (mid front lax)
-  AE: "#f472b6",   // Pink - TRAP (low front)
-  A: "#fb7185",    // Rose - PALM/LOT (low back, merged)
-  AA: "#fb7185",   // Rose - same as A
-  AO: "#fbbf24",   // Amber - THOUGHT (mid back rounded)
-  OW: "#facc15",   // Yellow - GOAT (mid back diphthong)
-  U: "#4ade80",    // Green - BOOT/FOOT/STRUT (consolidated U)
-  AH: "#2dd4bf",   // Teal - STRUT (mid central - fallback)
-  ER: "#22d3ee",   // Cyan - NURSE (r-colored, pre-normalization fallback)
-  UR: "#22d3ee",   // Cyan - NURSE (normalized rhotic mid)
-  AY: "#f97316",   // Orange - PRICE (diphthong)
-  AW: "#ef4444",   // Red - MOUTH (diphthong)
-  OY: "#ec4899",   // Magenta - CHOICE (diphthong)
-};
 
 // Compute cursor pixel position in a textarea (monospace font)
 let _cachedCharWidth = null;
@@ -187,128 +169,153 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       setIntellisenseSuggestions(prev => prev.length === 0 ? prev : []);
       return;
     }
-    const frame = requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
+    let cancelled = false;
 
-      const pos = textarea.selectionStart;
-      const textBefore = content.substring(0, pos);
-      const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
-      const isAfterSpace = pos > 0 && content.charAt(pos - 1) === ' ';
+    const addBasicPredictions = (prefix, prevWord, seenTokens, finalResults) => {
+      const basicResults = prefix
+        ? (predict?.(prefix, null, 10) || [])
+        : (predict?.(null, prevWord, 10) || []);
 
-      let prefix = "";
-      let prevWord = null;
-
-      if (lastWordMatch && lastWordMatch[1].length >= 1) {
-        prefix = lastWordMatch[1];
-      } else if (isAfterSpace) {
-        const words = textBefore.match(/\b(\w+)\b/g);
-        if (words?.length > 0) prevWord = words[words.length - 1];
-      }
-
-      // If neither typing nor after space, nothing to suggest
-      if (!prefix && !prevWord) {
-        setIntellisenseSuggestions([]);
-        return;
-      }
-
-      // Build PLS context from cursor state
-      const lines = textBefore.split('\n');
-      const currentLineText = lines[lines.length - 1] || '';
-      const currentLineWords = (currentLineText.match(/[a-zA-Z']+/g) || [])
-        .map(w => w.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, ''))
-        .filter(Boolean);
-      // Remove the prefix (in-progress word) from current line words
-      if (prefix && currentLineWords.length > 0) {
-        const lastCLW = currentLineWords[currentLineWords.length - 1];
-        if (lastCLW.toLowerCase() === prefix.toLowerCase()) currentLineWords.pop();
-      }
-
-      let prevLineEndWord = null;
-      for (let i = lines.length - 2; i >= 0; i--) {
-        const lineText = lines[i].trim();
-        if (!lineText) continue;
-        const lineWords = lineText.match(/[a-zA-Z']+/g);
-        if (lineWords?.length > 0) {
-          prevLineEndWord = lineWords[lineWords.length - 1];
-          break;
-        }
-      }
-
-      // Gather prior line syllable counts for meter inference
-      const priorLineSyllableCounts = [];
-      if (lineSyllableCounts?.length > 0) {
-        const currentLineIndex = lines.length - 1;
-        for (let i = Math.max(0, currentLineIndex - 4); i < currentLineIndex; i++) {
-          if (lineSyllableCounts[i]) priorLineSyllableCounts.push(lineSyllableCounts[i]);
-        }
-      }
-
-      const plsContext = {
-        prefix,
-        prevWord,
-        prevLineEndWord,
-        currentLineWords,
-        targetSyllableCount: null,
-        priorLineSyllableCounts,
-      };
-
-      // Collect results: PLS completions + spellcheck corrections
-      const finalResults = [];
-      const seenTokens = new Set();
-
-      // 1. Spelling corrections (highest priority)
-      if (prefix && checkSpelling && !checkSpelling(prefix)) {
-        (getSpellingSuggestions?.(prefix, null, 3) || []).forEach(f => {
-          if (!f || seenTokens.has(f)) return;
-          seenTokens.add(f);
-          finalResults.push({
-            token: f,
-            type: 'correction',
-            score: 10,
-            isRhyme: false,
-            badges: [],
-            ghostLine: null,
-          });
+      for (const token of basicResults) {
+        if (!token || seenTokens.has(token)) continue;
+        seenTokens.add(token);
+        finalResults.push({
+          token,
+          type: 'prediction',
+          score: 5,
+          isRhyme: false,
+          badges: [],
+          ghostLine: null,
         });
       }
+    };
 
-      // 2. PLS completions (rhyme, meter, color-aware)
-      if (getCompletions) {
-        const plsResults = getCompletions(plsContext, { limit: 10 });
-        for (const r of plsResults) {
-          if (seenTokens.has(r.token)) continue;
-          seenTokens.add(r.token);
-          finalResults.push({
-            token: r.token,
-            type: 'prediction',
-            score: r.score,
-            isRhyme: r.badges.includes('RHYME'),
-            badges: r.badges,
-            ghostLine: r.ghostLine,
-            scores: r.scores,
+    const frame = requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea || cancelled) return;
+
+      void (async () => {
+        const pos = textarea.selectionStart;
+        const textBefore = content.substring(0, pos);
+        const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
+        const isAfterSpace = pos > 0 && content.charAt(pos - 1) === ' ';
+
+        let prefix = '';
+        let prevWord = null;
+
+        if (lastWordMatch && lastWordMatch[1].length >= 1) {
+          prefix = lastWordMatch[1];
+        } else if (isAfterSpace) {
+          const words = textBefore.match(/\b(\w+)\b/g);
+          if (words?.length > 0) prevWord = words[words.length - 1];
+        }
+
+        // If neither typing nor after space, nothing to suggest
+        if (!prefix && !prevWord) {
+          if (!cancelled) setIntellisenseSuggestions([]);
+          return;
+        }
+
+        // Build PLS context from cursor state
+        const lines = textBefore.split('\n');
+        const currentLineText = lines[lines.length - 1] || '';
+        const currentLineWords = (currentLineText.match(/[a-zA-Z']+/g) || [])
+          .map(w => w.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, ''))
+          .filter(Boolean);
+        // Remove the prefix (in-progress word) from current line words
+        if (prefix && currentLineWords.length > 0) {
+          const lastCLW = currentLineWords[currentLineWords.length - 1];
+          if (lastCLW.toLowerCase() === prefix.toLowerCase()) currentLineWords.pop();
+        }
+
+        let prevLineEndWord = null;
+        for (let i = lines.length - 2; i >= 0; i--) {
+          const lineText = lines[i].trim();
+          if (!lineText) continue;
+          const lineWords = lineText.match(/[a-zA-Z']+/g);
+          if (lineWords?.length > 0) {
+            prevLineEndWord = lineWords[lineWords.length - 1];
+            break;
+          }
+        }
+
+        // Gather prior line syllable counts for meter inference
+        const priorLineSyllableCounts = [];
+        if (lineSyllableCounts?.length > 0) {
+          const currentLineIndex = lines.length - 1;
+          for (let i = Math.max(0, currentLineIndex - 4); i < currentLineIndex; i++) {
+            if (lineSyllableCounts[i]) priorLineSyllableCounts.push(lineSyllableCounts[i]);
+          }
+        }
+
+        const plsContext = {
+          prefix,
+          prevWord,
+          prevLineEndWord,
+          currentLineWords,
+          targetSyllableCount: null,
+          priorLineSyllableCounts,
+        };
+
+        // Collect results: PLS completions + spellcheck corrections
+        const finalResults = [];
+        const seenTokens = new Set();
+
+        // 1. Spelling corrections (highest priority)
+        if (prefix && checkSpelling && !checkSpelling(prefix)) {
+          (getSpellingSuggestions?.(prefix, null, 3) || []).forEach((suggestion) => {
+            if (!suggestion || seenTokens.has(suggestion)) return;
+            seenTokens.add(suggestion);
+            finalResults.push({
+              token: suggestion,
+              type: 'correction',
+              score: 10,
+              isRhyme: false,
+              badges: [],
+              ghostLine: null,
+            });
           });
         }
-      } else {
-        // Fallback to basic predict if PLS not available
-        const basicResults = prefix
-          ? (predict?.(prefix, null, 10) || [])
-          : (predict?.(null, prevWord, 10) || []);
-        for (const p of basicResults) {
-          if (seenTokens.has(p)) continue;
-          seenTokens.add(p);
-          finalResults.push({ token: p, type: 'prediction', score: 5, isRhyme: false, badges: [], ghostLine: null });
-        }
-      }
 
-      const sliced = finalResults.slice(0, 7);
-      setIntellisenseSuggestions(sliced);
-      setIntellisenseIndex(0);
-      if (sliced.length > 0) {
-        setIntellisensePos(getCursorCoordsFromTextarea(textarea));
-      }
+        // 2. PLS completions (rhyme, meter, color-aware)
+        if (getCompletions) {
+          try {
+            const plsResults = await getCompletions(plsContext, { limit: 10 });
+            for (const result of (Array.isArray(plsResults) ? plsResults : [])) {
+              if (!result?.token || seenTokens.has(result.token)) continue;
+              const badges = Array.isArray(result.badges) ? result.badges : [];
+              seenTokens.add(result.token);
+              finalResults.push({
+                token: result.token,
+                type: 'prediction',
+                score: result.score,
+                isRhyme: badges.includes('RHYME'),
+                badges,
+                ghostLine: result.ghostLine,
+                scores: result.scores,
+              });
+            }
+          } catch (_error) {
+            addBasicPredictions(prefix, prevWord, seenTokens, finalResults);
+          }
+        } else {
+          // Fallback to basic predict if PLS not available
+          addBasicPredictions(prefix, prevWord, seenTokens, finalResults);
+        }
+
+        if (cancelled) return;
+        const sliced = finalResults.slice(0, 7);
+        setIntellisenseSuggestions(sliced);
+        setIntellisenseIndex(0);
+        if (sliced.length > 0) {
+          setIntellisensePos(getCursorCoordsFromTextarea(textarea));
+        }
+      })();
     });
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
   }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts]);
 
   // Accept an IntelliSense suggestion: replace partial word and insert
@@ -421,7 +428,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const { colorMap: hookColorMap, shouldColorWord: shouldColorWordHook } = useColorCodex(
     analysisSources, 
     activeConnections,
-    vowelColors || VOWEL_COLORS,
+    vowelColors || DEFAULT_VOWEL_COLORS,
     syntaxLayer, 
     { theme: activeTheme, analysisMode }
   );
@@ -513,10 +520,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const textarea = textareaRef.current;
     if (!textarea || typeof ResizeObserver === 'undefined') return undefined;
 
+    const measureLineHeight = () => {
+      const computed = window.getComputedStyle(textarea);
+      const lh = parseFloat(computed.lineHeight);
+      if (lh && Number.isFinite(lh) && lh > 0) {
+        setLineHeightPx(lh);
+      }
+    };
+
+    measureLineHeight();
+
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setEditorHeight(entry.contentRect.height);
       }
+      measureLineHeight();
     });
 
     ro.observe(textarea);
@@ -754,7 +772,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             ref={textareaRef}
             className={`editor-textarea ${isTruesight ? "truesight-transparent" : ""} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""}`}
             style={{
-              opacity: isTruesight ? 0 : 1,
               zIndex: isTruesight ? 1 : 10,
               pointerEvents: (!isEditable && isTruesight) ? 'none' : 'auto',
             }}
@@ -836,7 +853,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           return <span key={start}>{token}</span>;
                         }
 
-                        const activeColors = vowelColors || VOWEL_COLORS;
+                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
                         const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
                         const codexEntry = activeColorMap?.get(charStart) ?? null;
                         const color = shouldColorWord

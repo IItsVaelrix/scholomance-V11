@@ -13,8 +13,10 @@
 import { RhymeIndex } from './pls/rhymeIndex.js';
 import { rhymeProvider } from './pls/providers/rhymeProvider.js';
 import { prefixProvider } from './pls/providers/prefixProvider.js';
+import { synonymProvider } from './pls/providers/synonymProvider.js';
 import { meterProvider } from './pls/providers/meterProvider.js';
 import { colorProvider } from './pls/providers/colorProvider.js';
+import { validityProvider } from './pls/providers/validityProvider.js';
 import { rankCandidates, DEFAULT_WEIGHTS } from './pls/ranker.js';
 
 /**
@@ -31,7 +33,7 @@ import { rankCandidates, DEFAULT_WEIGHTS } from './pls/ranker.js';
  * @typedef {object} ScoredCandidate
  * @property {string} token - The word
  * @property {number} score - Final combined score (0-1)
- * @property {object} scores - Per-provider raw scores { rhyme, meter, color, prefix }
+ * @property {object} scores - Per-provider raw scores { rhyme, meter, color, prefix, synonym, validity }
  * @property {string[]} badges - E.g., ["RHYME", "METER", "COLOR"]
  * @property {string} ghostLine - Completed line preview text
  */
@@ -42,11 +44,13 @@ export class PoeticLanguageServer {
    * @param {object} opts.phonemeEngine - PhonemeEngine instance
    * @param {object} opts.trie - TriePredictor instance
    * @param {object} [opts.spellchecker] - Spellchecker instance (optional)
-   */
-  constructor({ phonemeEngine, trie, spellchecker = null }) {
+   * @param {object|null} [opts.dictionaryAPI] - Scholomance dictionary API (optional)
+  */
+  constructor({ phonemeEngine, trie, spellchecker = null, dictionaryAPI = null }) {
     this.phonemeEngine = phonemeEngine;
     this.trie = trie;
     this.spellchecker = spellchecker;
+    this.dictionaryAPI = dictionaryAPI;
     this.rhymeIndex = new RhymeIndex();
     this.weights = { ...DEFAULT_WEIGHTS };
     this.ready = false;
@@ -68,9 +72,9 @@ export class PoeticLanguageServer {
    * @param {object} [options]
    * @param {number} [options.limit=10]
    * @param {object} [options.weights] - Override provider weights
-   * @returns {ScoredCandidate[]}
+   * @returns {Promise<ScoredCandidate[]>}
    */
-  getCompletions(context, options = {}) {
+  async getCompletions(context, options = {}) {
     if (!this.ready) return [];
 
     const { limit = 10, weights } = options;
@@ -81,12 +85,22 @@ export class PoeticLanguageServer {
       trie: this.trie,
       spellchecker: this.spellchecker,
       rhymeIndex: this.rhymeIndex,
+      dictionaryAPI: this.dictionaryAPI,
     };
 
     // Phase 1: Generators produce candidate pools
+    const [rhymeResults, prefixResults, synonymResults] = await Promise.all([
+      rhymeProvider(context, engines),
+      Promise.resolve(prefixProvider(context, engines)),
+      this.dictionaryAPI
+        ? synonymProvider(context, engines)
+        : Promise.resolve([]),
+    ]);
+
     const generatorResults = {
-      rhyme: rhymeProvider(context, engines),
-      prefix: prefixProvider(context, engines),
+      rhyme: rhymeResults,
+      prefix: prefixResults,
+      synonym: synonymResults,
     };
 
     // Phase 2: Collect all unique candidates for scorers
@@ -102,9 +116,18 @@ export class PoeticLanguageServer {
     }
 
     // Phase 3: Scorers rank the combined candidate pool
+    const [meterResults, colorResults, validityResults] = await Promise.all([
+      Promise.resolve(meterProvider(context, engines, allCandidates)),
+      Promise.resolve(colorProvider(context, engines, allCandidates)),
+      this.dictionaryAPI
+        ? validityProvider(context, engines, allCandidates)
+        : Promise.resolve(allCandidates),
+    ]);
+
     const scorerResults = {
-      meter: meterProvider(context, engines, allCandidates),
-      color: colorProvider(context, engines, allCandidates),
+      meter: meterResults,
+      color: colorResults,
+      validity: validityResults,
     };
 
     // Phase 4: Rank and return

@@ -44,25 +44,27 @@ describe("buildColorMap", () => {
   });
 
   it("assigns base vowel family color to unclustered words", () => {
-    const words = [makeWord(0, "AY"), makeWord(10, "IY")];
+    const words = [makeWord(0, "EY"), makeWord(10, "IY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
-    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.AY);
+    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.EY);
     expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.IY);
     expect(map.get(0).groupId).toBeNull();
     expect(map.get(0).rhymeType).toBeNull();
   });
 
-  it("gives unclustered words base opacity", () => {
-    const words = [makeWord(0, "AY")];
+  it("ghosts unclustered words with reduced opacity", () => {
+    const words = [makeWord(0, "EY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
-    // 0.45 * 1.1 (AY weight boost) = 0.495
-    expect(map.get(0).opacity).toBeCloseTo(0.495, 2);
+    expect(map.get(0).isGhost).toBe(true);
+    expect(map.get(0).isAnchor).toBe(false);
+    expect(map.get(0).opacity).toBeGreaterThan(0.12);
+    expect(map.get(0).opacity).toBeLessThan(0.35);
   });
 
   it("clusters connected words and assigns canonical cluster color", () => {
     // Two words with different vowel families connected by slant rhyme
-    const words = [makeWord(0, "AE"), makeWord(10, "EH")];
+    const words = [makeWord(0, "AE"), makeWord(10, "AE")];
     const connections = [makeConnection(0, 10, 0.70, "slant")];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
@@ -73,15 +75,15 @@ describe("buildColorMap", () => {
   });
 
   it("selects canonical family by majority vote", () => {
-    // 2 AY words + 1 IY word connected → AY should win
-    const words = [makeWord(0, "AY"), makeWord(10, "AY"), makeWord(20, "IY")];
+    // 2 EY words + 1 IY word connected → EY should win
+    const words = [makeWord(0, "EY"), makeWord(10, "EY"), makeWord(20, "IY")];
     const connections = [
       makeConnection(0, 10, 0.95, "perfect"),
       makeConnection(10, 20, 0.70, "slant"),
     ];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
-    // All three should share AY's color
+    // All three should share EY's color
     expect(map.get(0).color).toBe(map.get(10).color);
     expect(map.get(0).color).toBe(map.get(20).color);
   });
@@ -101,11 +103,11 @@ describe("buildColorMap", () => {
 
   it("maps connection score to opacity gradient", () => {
     const words = [
-      makeWord(0, "AY"),
+      makeWord(0, "EY"),
       makeWord(10, "IY"),
       makeWord(20, "AE"),
       makeWord(30, "OW"),
-      makeWord(40, "U"),
+      makeWord(40, "UW"),
     ];
     const connections = [
       makeConnection(0, 10, 0.95, "perfect"),  // high
@@ -117,12 +119,13 @@ describe("buildColorMap", () => {
     expect(map.get(0).opacity).toBeGreaterThan(map.get(20).opacity);
     // Slant rhyme words should have higher opacity than isolated words
     expect(map.get(20).opacity).toBeGreaterThan(map.get(40).opacity);
-    // Isolated word should be at base opacity * balanceWeight (0.45 * 0.82 for U family)
-    expect(map.get(40).opacity).toBeCloseTo(0.45 * 0.82, 2);
+    expect(map.get(40).isGhost).toBe(true);
+    expect(map.get(40).isAnchor).toBe(false);
+    expect(map.get(40).opacity).toBeLessThan(map.get(20).opacity);
   });
 
   it("sets isMultiSyllable flag for connections with syllablesMatched >= 2", () => {
-    const words = [makeWord(0, "AY", 2), makeWord(10, "AY", 2)];
+    const words = [makeWord(0, "EY", 2), makeWord(10, "EY", 2)];
     const connections = [makeConnection(0, 10, 0.85, "near", 2)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
@@ -131,7 +134,7 @@ describe("buildColorMap", () => {
   });
 
   it("does not set isMultiSyllable for single-syllable matches", () => {
-    const words = [makeWord(0, "AY"), makeWord(10, "AY")];
+    const words = [makeWord(0, "EY"), makeWord(10, "EY")];
     const connections = [makeConnection(0, 10, 0.90, "near", 1)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
@@ -139,7 +142,7 @@ describe("buildColorMap", () => {
   });
 
   it("records bestScore and rhymeType from highest-scoring connection", () => {
-    const words = [makeWord(0, "AY"), makeWord(10, "AY"), makeWord(20, "AY")];
+    const words = [makeWord(0, "EY"), makeWord(10, "EY"), makeWord(20, "EY")];
     const connections = [
       makeConnection(0, 10, 0.70, "slant"),
       makeConnection(0, 20, 0.95, "perfect"),
@@ -151,25 +154,25 @@ describe("buildColorMap", () => {
   });
 
   it("applies syntax gate multiplier to opacity", () => {
-    const words = [makeWord(0, "AY"), makeWord(10, "AY")];
+    const words = [makeWord(0, "EY"), makeWord(10, "EY")];
     // Syntax gate weakens to 0.85x
     const connections = [makeConnection(0, 10, 0.90, "near", 1, 0.85)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
-    const fullOpacity = (0.45 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for AY
+    const fullOpacity = (0.45 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for EY
     const gatedOpacity = fullOpacity * 0.85; // Clamp happens AFTER multiplier
     expect(map.get(0).opacity).toBeCloseTo(Math.min(1.0, Math.max(0.2, gatedOpacity)), 2);
   });
 
   it("does not cluster connections below the minimum score threshold", () => {
-    const words = [makeWord(0, "AE"), makeWord(10, "EH")];
+    const words = [makeWord(0, "AE"), makeWord(10, "AE")];
     const connections = [makeConnection(0, 10, 0.50, "consonance")]; // Below 0.60
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
     // Should NOT be clustered
     expect(map.get(0).groupId).toBeNull();
     expect(map.get(10).groupId).toBeNull();
-    // Colors should be different (each word's own family)
+    // Colors should be same (AE family)
     expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.AE);
     expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.AE);
   });
@@ -186,17 +189,17 @@ describe("buildColorMap", () => {
   });
 
   it("handles words with no vowel family gracefully", () => {
-    const words = [makeWord(0, null), makeWord(10, "AY")];
+    const words = [makeWord(0, null), makeWord(10, "EY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
     expect(map.has(0)).toBe(false); // No color for null family
-    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.AY);
+    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.EY);
   });
 
   it("performs within 10ms for 500 words and 200 connections", () => {
     const words = [];
     for (let i = 0; i < 500; i++) {
-      const families = ["AY", "IY", "AE", "EH", "OW", "UW"];
+      const families = ["EY", "IY", "AE", "AE", "OW", "UW"];
       words.push(makeWord(i * 10, families[i % families.length]));
     }
     const connections = [];

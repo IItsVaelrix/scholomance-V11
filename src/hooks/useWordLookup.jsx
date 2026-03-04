@@ -7,23 +7,12 @@
 import { useState, useCallback, useRef } from 'react';
 import { on, emit } from '../../codex/runtime/eventBus.js';
 import { EVENTS } from '../../codex/runtime/wordLookupPipeline.js';
+import { parseBooleanEnvFlag } from './useCODExPipeline.jsx';
 
 const LOOKUP_TIMEOUT_MS = 10000;
-const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes']);
-const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
 
-function parseBooleanFlag(rawValue, defaultValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === '') {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
-
-const USE_SERVER_WORD_LOOKUP = parseBooleanFlag(import.meta.env.VITE_USE_SERVER_WORD_LOOKUP, true);
-const ENABLE_LOCAL_WORD_LOOKUP_FALLBACK = parseBooleanFlag(
+const USE_SERVER_WORD_LOOKUP = parseBooleanEnvFlag(import.meta.env.VITE_USE_SERVER_WORD_LOOKUP, true);
+const ENABLE_LOCAL_WORD_LOOKUP_FALLBACK = parseBooleanEnvFlag(
   import.meta.env.VITE_ENABLE_LOCAL_WORD_LOOKUP_FALLBACK,
   false,
 );

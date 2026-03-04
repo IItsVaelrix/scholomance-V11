@@ -7,9 +7,22 @@ import {
 } from "../../src/lib/ambient/ambientPlayer.service";
 
 const createdServices = [];
+const TEST_TRACK_URLS = Object.freeze({
+  SONIC: "https://suno.com/song/236e9f87-4d38-43da-a98a-b39447256d21",
+  PSYCHIC: "https://suno.com/song/12345678-1234-1234-1234-123456789abc",
+  VOID: "https://suno.com/song/abcdefab-cdef-cdef-cdef-abcdefabcdef",
+});
 
 function createService(options) {
   const service = new AmbientPlayerService(options);
+  service.setDynamicSchools(
+    Object.entries(TEST_TRACK_URLS).map(([id, trackUrl]) => ({
+      id,
+      trackUrl,
+      paletteKey: id.toLowerCase(),
+      orbSkinKey: id.toLowerCase(),
+    }))
+  );
   createdServices.push(service);
   return service;
 }
@@ -159,6 +172,64 @@ describe("AmbientPlayerService", () => {
     expect(controllerFactory).toHaveBeenCalledTimes(1);
     expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
   });
+it("converts tuning into pause when toggled mid-tune", async () => {
+  const controllerFactory = vi.fn(async ({ schoolId }) => {
+    const controller = createMockController(0);
+    controller.schoolId = schoolId;
+    controller.loadPromise = Promise.resolve();
+    return controller;
+  });
+
+  const service = createService({
+    controllerFactory,
+    storage: createMemoryStorage(),
+    tuningDurationMs: 5000,
+    fadeOutMs: 0,
+    fadeInMs: 0,
+    dialSfxPlayer: vi.fn(),
+  });
+
+  service.setPlayableSchools(["SONIC"]);
+  await service.setSchool("SONIC");
+  expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.TUNING);
+
+  await service.togglePlayPause();
+  // No need to run timers, it should pause immediately.
+
+  expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PAUSED);
+  expect(service.getState().isPlaying).toBe(false);
+});
+
+
+  it("exits tuning with an error when controller playback hangs", async () => {
+    const controllerFactory = vi.fn(async ({ schoolId }) => {
+      const controller = createMockController(0);
+      controller.schoolId = schoolId;
+      controller.loadPromise = Promise.resolve();
+      controller.play = vi.fn(() => new Promise(() => {}));
+      return controller;
+    });
+
+    const service = createService({
+      controllerFactory,
+      storage: createMemoryStorage(),
+      tuningDurationMs: 10,
+      tuningCompletionTimeoutMs: 30,
+      fadeOutMs: 0,
+      fadeInMs: 0,
+      dialSfxPlayer: vi.fn(),
+    });
+
+    service.setPlayableSchools(["SONIC"]);
+    await service.setSchool("SONIC");
+    await vi.advanceTimersByTimeAsync(15);
+    await vi.advanceTimersByTimeAsync(40);
+    await Promise.resolve();
+
+    const state = service.getState();
+    expect(state.status).toBe(AMBIENT_PLAYER_STATES.ERROR);
+    expect(state.error).toMatch(/tuning timed out/i);
+  });
 
   it("plays dial static only once per service lifecycle", async () => {
     const controllerFactory = vi.fn(async ({ schoolId }) => {
@@ -258,11 +329,13 @@ describe("AmbientPlayerService", () => {
     expect(psychicLoad).toBeDefined();
 
     sonicLoad.resolve();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
     await Promise.resolve();
 
     psychicLoad.resolve();
-    await vi.runAllTimersAsync();
+    await vi.advanceTimersByTimeAsync(0);
+    await Promise.resolve();
     await Promise.resolve();
 
     expect(controllerFactory).toHaveBeenCalledTimes(2);
@@ -272,7 +345,7 @@ describe("AmbientPlayerService", () => {
     expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
   });
 
-  it("resumes AudioContext on visibility and user interaction events", async () => {
+  it("resumes AudioContext only on user interaction events", async () => {
     const mockContext = {
       state: "suspended",
       resume: vi.fn(async () => {
@@ -301,18 +374,18 @@ describe("AmbientPlayerService", () => {
 
       document.dispatchEvent(new Event("visibilitychange"));
       await Promise.resolve();
-      expect(mockContext.resume).toHaveBeenCalledTimes(1);
+      expect(mockContext.resume).toHaveBeenCalledTimes(0);
 
       mockContext.state = "suspended";
       window.dispatchEvent(new Event("pointerdown"));
       await Promise.resolve();
-      expect(mockContext.resume).toHaveBeenCalledTimes(2);
+      expect(mockContext.resume).toHaveBeenCalledTimes(1);
 
       service.destroy();
       mockContext.state = "suspended";
       window.dispatchEvent(new Event("pointerdown"));
       await Promise.resolve();
-      expect(mockContext.resume).toHaveBeenCalledTimes(2);
+      expect(mockContext.resume).toHaveBeenCalledTimes(1);
     } finally {
       window.AudioContext = originalAudioContext;
       window.webkitAudioContext = originalWebkitAudioContext;

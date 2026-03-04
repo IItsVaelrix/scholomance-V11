@@ -2,16 +2,13 @@
 """
 build_scholomance_dict.py
 
-Build a large offline dictionary SQLite DB with FTS5.
-
-Sources (open):
-- Kaikki/Wiktextract JSONL extracted from Wiktionary (Wiktionary license applies)
-- Open English WordNet (OEWN) release XML
-- Optional SCOWL-derived wordlist for lexicon gating
+Build an offline dictionary SQLite DB with FTS5 from lean, open sources:
+- CMU Pronouncing Dictionary (phonemes, rhyme families)
+- Open English WordNet (OEWN) XML (definitions, synonyms, semantic relations)
+- Datamuse API is used at runtime (no build-time dependency)
 
 Output:
-- SQLite database with entry tables + FTS for fast search
-- Optional JSONL export of Kaikki entries
+- SQLite database with entry tables, WordNet tables, rhyme index, and FTS
 """
 
 from __future__ import annotations
@@ -19,48 +16,41 @@ from __future__ import annotations
 import argparse
 import gzip
 import io
+import json
 import os
+import re
 import sqlite3
 import sys
 import time
 import xml.etree.ElementTree as ET
-from typing import Iterable, Optional
-
-import orjson
-import requests
-from tqdm import tqdm
+from typing import Optional
 
 DEFAULT_DB_PATH = "scholomance_dict.sqlite"
-DEFAULT_DATA_DIR = "dict_data"
-DEFAULT_LANG = "English"
-SCHEMA_VERSION = "1"
+DEFAULT_CMU_PATH = os.path.join("node_modules", "cmudict", "lib", "cmu", "cmudict.0.7a")
+SCHEMA_VERSION = "2"
+
+# ARPAbet vowels (match src/lib/phoneme.constants.js)
+ARPABET_VOWELS = {
+    "AA", "AE", "AH", "AO", "AW", "AY",
+    "EH", "ER", "EY", "IH", "IY", "OW",
+    "OY", "UH", "UW",
+}
+
+# Map ARPAbet vowels to base families (match src/lib/phoneme.constants.js VOWEL_TO_BASE_FAMILY)
+VOWEL_TO_FAMILY = {
+    "AA": "A",  "AH": "U",  "AW": "AW", "AE": "AE",
+    "EH": "AE", "AO": "AO", "OW": "OW", "OY": "OY",
+    "UW": "U",  "UH": "U",  "IY": "IY", "IH": "IH",
+    "ER": "UR", "EY": "EY", "AY": "AY",
+}
+
+WORD_VARIANT_RE = re.compile(r"\(\d+\)$")
 
 
-def download_file(url: str, out_path: str, chunk_size: int = 1024 * 1024) -> None:
-    os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("Content-Length") or 0)
-        with open(out_path, "wb") as f, tqdm(
-            total=total,
-            unit="B",
-            unit_scale=True,
-            desc=f"Downloading {os.path.basename(out_path)}",
-        ) as pbar:
-            for chunk in r.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-                    pbar.update(len(chunk))
-
-
-def open_maybe_gzip(path: str) -> io.BufferedReader | gzip.GzipFile:
+def open_maybe_gzip(path: str):
     if path.endswith(".gz"):
         return gzip.open(path, "rb")
     return open(path, "rb")
-
-
-def normalize_headword(word: str) -> str:
-    return word.strip()
 
 
 def init_db(db_path: str, overwrite: bool) -> sqlite3.Connection:
@@ -98,7 +88,6 @@ def init_db(db_path: str, overwrite: bool) -> sqlite3.Connection:
         CREATE INDEX IF NOT EXISTS idx_entry_headword_lower ON entry(headword_lower);
         CREATE INDEX IF NOT EXISTS idx_entry_lang_pos ON entry(lang, pos);
 
-        -- Contentless FTS: we insert rows manually with the same rowid as entry.id
         CREATE VIRTUAL TABLE IF NOT EXISTS entry_fts USING fts5(
             headword,
             content,
@@ -149,186 +138,181 @@ def init_db(db_path: str, overwrite: bool) -> sqlite3.Connection:
         );
 
         CREATE INDEX IF NOT EXISTS idx_lexicon_word_lower ON lexicon(word_lower);
+
+        CREATE TABLE IF NOT EXISTS rhyme_index (
+            word_id INTEGER PRIMARY KEY,
+            word_lower TEXT NOT NULL,
+            rhyme_family TEXT NOT NULL,
+            coda TEXT,
+            rhyme_key TEXT NOT NULL,
+            FOREIGN KEY (word_id) REFERENCES entry(id)
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_rhyme_family ON rhyme_index(rhyme_family);
+        CREATE INDEX IF NOT EXISTS idx_rhyme_key ON rhyme_index(rhyme_key);
+        CREATE INDEX IF NOT EXISTS idx_rhyme_word ON rhyme_index(word_lower);
         """
     )
     return conn
 
 
-def extract_ipa(pronunciations) -> Optional[str]:
-    ipa_list: list[str] = []
-    if isinstance(pronunciations, dict):
-        for key in ("ipa", "ipa_us", "ipa_uk"):
-            value = pronunciations.get(key)
-            if isinstance(value, list):
-                ipa_list.extend([v for v in value if isinstance(v, str)])
-            elif isinstance(value, str):
-                ipa_list.append(value)
-    elif isinstance(pronunciations, list):
-        for item in pronunciations:
-            if isinstance(item, dict):
-                value = item.get("ipa")
-                if isinstance(value, list):
-                    ipa_list.extend([v for v in value if isinstance(v, str)])
-                elif isinstance(value, str):
-                    ipa_list.append(value)
-    if not ipa_list:
+# ---------------------------------------------------------------------------
+# CMU Dict ingestion
+# ---------------------------------------------------------------------------
+
+def strip_stress(phoneme: str) -> str:
+    """Remove stress digit from a phoneme: AH0 -> AH"""
+    return re.sub(r"[0-9]", "", phoneme)
+
+
+def find_stressed_vowel(phonemes: list[str]) -> Optional[str]:
+    """Find the primary-stressed vowel (marker 1), else secondary (2), else last vowel."""
+    for marker in ("1", "2"):
+        for ph in phonemes:
+            base = strip_stress(ph)
+            if base in ARPABET_VOWELS and ph.endswith(marker):
+                return base
+    # Fallback: last vowel
+    for ph in reversed(phonemes):
+        base = strip_stress(ph)
+        if base in ARPABET_VOWELS:
+            return base
+    return None
+
+
+def compute_coda(phonemes: list[str]) -> Optional[str]:
+    """Extract consonant cluster after the last vowel."""
+    last_vowel_idx = -1
+    for i, ph in enumerate(phonemes):
+        base = strip_stress(ph)
+        if base in ARPABET_VOWELS:
+            last_vowel_idx = i
+    if last_vowel_idx < 0:
         return None
-    deduped = []
-    seen = set()
-    for ipa in ipa_list:
-        ipa = ipa.strip()
-        if ipa and ipa not in seen:
-            seen.add(ipa)
-            deduped.append(ipa)
-    return "; ".join(deduped)[:1000]
+    coda_parts = [strip_stress(ph) for ph in phonemes[last_vowel_idx + 1:]]
+    return "".join(coda_parts) if coda_parts else None
 
 
-def extract_senses_text(senses: list[dict]) -> str:
-    parts: list[str] = []
-    for sense in senses:
-        glosses = sense.get("glosses") or []
-        if isinstance(glosses, list):
-            parts.extend([g for g in glosses if isinstance(g, str)])
-        examples = sense.get("examples") or []
-        if isinstance(examples, list):
-            for ex in examples:
-                if isinstance(ex, dict):
-                    t = ex.get("text")
-                    if isinstance(t, str):
-                        parts.append(t)
-                elif isinstance(ex, str):
-                    parts.append(ex)
-    return "\n".join(p.strip() for p in parts if isinstance(p, str) and p.strip())
+def phonemes_to_ipa_approx(phonemes: list[str]) -> str:
+    """Store the ARPAbet string as the 'ipa' field — it's what the app uses internally."""
+    return " ".join(phonemes)
 
 
-def iter_kaikki_jsonl(fp) -> Iterable[dict]:
-    for line in fp:
-        line = line.strip()
-        if not line:
-            continue
-        yield orjson.loads(line)
+def ingest_cmu_dict(conn: sqlite3.Connection, cmu_path: str) -> int:
+    """Parse CMU pronouncing dictionary and populate entry + rhyme_index tables."""
+    if not os.path.exists(cmu_path):
+        raise SystemExit(f"CMU dictionary not found: {cmu_path}\nRun 'npm install' first.")
 
-
-def ingest_kaikki(
-    conn: sqlite3.Connection,
-    jsonl_path: str,
-    source_url: str,
-    lang_filter: str,
-    export_jsonl_path: Optional[str],
-    max_entries: Optional[int],
-) -> int:
     cur = conn.cursor()
-    inserted = 0
-    entry_id = 1
-    batch_rows = []
+    seen_words: dict[str, int] = {}  # word -> entry_id (first variant only)
+    entry_rows = []
     fts_rows = []
-    export_fp = open(export_jsonl_path, "wb") if export_jsonl_path else None
+    rhyme_rows = []
+    entry_id = 1
+    inserted = 0
 
-    try:
-        with open_maybe_gzip(jsonl_path) as f:
-            for obj in tqdm(iter_kaikki_jsonl(f), desc="Ingesting Kaikki/Wiktionary JSONL"):
-                if max_entries is not None and inserted >= max_entries:
-                    break
+    with open(cmu_path, "r", encoding="utf-8", errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith(";"):
+                continue
 
-                lang = obj.get("lang") or obj.get("language") or ""
-                if lang_filter and lang != lang_filter:
-                    continue
+            # Format: WORD  PH1 PH2 PH3 (double-space separator)
+            split_idx = line.find("  ")
+            if split_idx <= 0:
+                continue
 
-                headword = normalize_headword(obj.get("word") or obj.get("title") or "")
-                if not headword:
-                    continue
+            raw_word = line[:split_idx].strip()
+            phones_raw = line[split_idx + 2:].strip()
+            if not raw_word or not phones_raw:
+                continue
 
-                pos = obj.get("pos")
-                ipa = extract_ipa(obj.get("pronunciations") or obj.get("pronunciation"))
+            # Strip variant suffix like (1), (2) — keep first variant only
+            word = WORD_VARIANT_RE.sub("", raw_word).strip()
+            if not word:
+                continue
 
-                ety = obj.get("etymology_text")
-                if isinstance(ety, list):
-                    ety = "\n".join([x for x in ety if isinstance(x, str)])
-                if not isinstance(ety, str):
-                    ety = None
+            # Skip if we already have this word (first variant wins)
+            word_upper = word.upper()
+            if word_upper in seen_words:
+                continue
 
-                senses = obj.get("senses") or []
-                if not isinstance(senses, list):
-                    senses = []
+            phonemes = phones_raw.split()
+            if not phonemes:
+                continue
 
-                senses_json = orjson.dumps(senses).decode("utf-8")
-                fts_content = extract_senses_text(senses)
+            # Compute rhyme data
+            stressed_vowel = find_stressed_vowel(phonemes)
+            vowel_family = VOWEL_TO_FAMILY.get(stressed_vowel, "A") if stressed_vowel else "A"
+            coda = compute_coda(phonemes)
+            rhyme_key = f"{vowel_family}-{coda or 'open'}"
+            ipa_field = phonemes_to_ipa_approx(phonemes)
 
-                batch_rows.append(
-                    (
-                        entry_id,
-                        headword,
-                        headword.casefold(),
-                        lang,
-                        pos,
-                        ipa,
-                        ety,
-                        senses_json,
-                        "kaikki_wiktionary",
-                        source_url,
-                    )
+            # Title-case the headword for display
+            headword = word.capitalize()
+            headword_lower = word.lower()
+
+            seen_words[word_upper] = entry_id
+
+            entry_rows.append((
+                entry_id, headword, headword_lower, "English",
+                None,  # pos — will be enriched from WordNet later
+                ipa_field,
+                None,  # etymology
+                "[]",  # senses_json — will be enriched from WordNet later
+                "cmudict",
+                "https://github.com/cmusphinx/cmudict",
+            ))
+            fts_rows.append((entry_id, headword, ""))
+            rhyme_rows.append((entry_id, headword_lower, vowel_family, coda or "", rhyme_key))
+
+            entry_id += 1
+            inserted += 1
+
+            if len(entry_rows) >= 5000:
+                cur.executemany(
+                    """INSERT INTO entry(id, headword, headword_lower, lang, pos, ipa,
+                       etymology, senses_json, source, source_url)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    entry_rows,
                 )
-                fts_rows.append((entry_id, headword, fts_content))
+                cur.executemany(
+                    "INSERT INTO entry_fts(rowid, headword, content) VALUES (?, ?, ?)",
+                    fts_rows,
+                )
+                cur.executemany(
+                    "INSERT OR REPLACE INTO rhyme_index(word_id, word_lower, rhyme_family, coda, rhyme_key) VALUES (?, ?, ?, ?, ?)",
+                    rhyme_rows,
+                )
+                conn.commit()
+                entry_rows.clear()
+                fts_rows.clear()
+                rhyme_rows.clear()
 
-                if export_fp:
-                    export_fp.write(
-                        orjson.dumps(
-                            {
-                                "headword": headword,
-                                "lang": lang,
-                                "pos": pos,
-                                "ipa": ipa,
-                                "etymology": ety,
-                                "senses": senses,
-                                "source": "kaikki_wiktionary",
-                                "source_url": source_url,
-                            }
-                        )
-                        + b"\n"
-                    )
+    # Flush remaining
+    if entry_rows:
+        cur.executemany(
+            """INSERT INTO entry(id, headword, headword_lower, lang, pos, ipa,
+               etymology, senses_json, source, source_url)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            entry_rows,
+        )
+        cur.executemany(
+            "INSERT INTO entry_fts(rowid, headword, content) VALUES (?, ?, ?)",
+            fts_rows,
+        )
+        cur.executemany(
+            "INSERT OR REPLACE INTO rhyme_index(word_id, word_lower, rhyme_family, coda, rhyme_key) VALUES (?, ?, ?, ?, ?)",
+            rhyme_rows,
+        )
+        conn.commit()
 
-                inserted += 1
-                entry_id += 1
+    return inserted
 
-                if len(batch_rows) >= 5000:
-                    cur.executemany(
-                        """
-                        INSERT INTO entry(
-                            id, headword, headword_lower, lang, pos, ipa, etymology,
-                            senses_json, source, source_url
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                        batch_rows,
-                    )
-                    cur.executemany(
-                        "INSERT INTO entry_fts(rowid, headword, content) VALUES (?, ?, ?)",
-                        fts_rows,
-                    )
-                    conn.commit()
-                    batch_rows.clear()
-                    fts_rows.clear()
 
-        if batch_rows:
-            cur.executemany(
-                """
-                INSERT INTO entry(
-                    id, headword, headword_lower, lang, pos, ipa, etymology,
-                    senses_json, source, source_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                batch_rows,
-            )
-            cur.executemany(
-                "INSERT INTO entry_fts(rowid, headword, content) VALUES (?, ?, ?)",
-                fts_rows,
-            )
-            conn.commit()
-
-        return inserted
-    finally:
-        if export_fp:
-            export_fp.close()
-
+# ---------------------------------------------------------------------------
+# OEWN XML ingestion (kept from original, minimal changes)
+# ---------------------------------------------------------------------------
 
 def strip_ns(tag: str) -> str:
     return tag.split("}", 1)[-1] if "}" in tag else tag
@@ -348,7 +332,6 @@ def ingest_oewn_xml(
     conn: sqlite3.Connection,
     xml_path: str,
     source_url: str,
-    max_entries: Optional[int],
 ) -> tuple[int, int, int]:
     cur = conn.cursor()
     syn_rows = []
@@ -360,7 +343,7 @@ def ingest_oewn_xml(
 
     with open_maybe_gzip(xml_path) as f:
         context = ET.iterparse(f, events=("end",))
-        for _, elem in tqdm(context, desc="Ingesting OEWN XML"):
+        for _, elem in context:
             tag = strip_ns(elem.tag)
 
             if tag == "Synset":
@@ -387,44 +370,28 @@ def ingest_oewn_xml(
                         if rel and target:
                             rel_rows.append((syn_id, rel, target, "oewn", source_url))
 
-                syn_rows.append(
-                    (
-                        syn_id,
-                        pos,
-                        lexname,
-                        definition,
-                        orjson.dumps(examples).decode("utf-8"),
-                        "oewn",
-                        source_url,
-                    )
-                )
+                syn_rows.append((
+                    syn_id, pos, lexname, definition,
+                    json.dumps(examples), "oewn", source_url,
+                ))
                 syn_count += 1
 
                 if len(syn_rows) >= 5000:
                     cur.executemany(
-                        """
-                        INSERT INTO wordnet_synset(
-                            id, pos, lexname, definition, examples_json, source, source_url
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
+                        """INSERT INTO wordnet_synset(id, pos, lexname, definition, examples_json, source, source_url)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
                         syn_rows,
                     )
                     syn_rows.clear()
 
                 if len(rel_rows) >= 10000:
                     cur.executemany(
-                        """
-                        INSERT INTO wordnet_rel(
-                            synset_id, rel, target_synset_id, source, source_url
-                        ) VALUES (?, ?, ?, ?, ?)
-                        """,
+                        """INSERT INTO wordnet_rel(synset_id, rel, target_synset_id, source, source_url)
+                           VALUES (?, ?, ?, ?, ?)""",
                         rel_rows,
                     )
                     rel_count += len(rel_rows)
                     rel_rows.clear()
-
-                if max_entries is not None and syn_count >= max_entries:
-                    break
 
                 elem.clear()
 
@@ -464,11 +431,8 @@ def ingest_oewn_xml(
 
                 if len(lemma_rows) >= 10000:
                     cur.executemany(
-                        """
-                        INSERT INTO wordnet_lemma(
-                            lemma, lemma_lower, synset_id, sense_rank, pos, source, source_url
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """,
+                        """INSERT INTO wordnet_lemma(lemma, lemma_lower, synset_id, sense_rank, pos, source, source_url)
+                           VALUES (?, ?, ?, ?, ?, ?, ?)""",
                         lemma_rows,
                     )
                     lemma_count += len(lemma_rows)
@@ -476,32 +440,24 @@ def ingest_oewn_xml(
 
                 elem.clear()
 
+        # Flush remaining
         if syn_rows:
             cur.executemany(
-                """
-                INSERT INTO wordnet_synset(
-                    id, pos, lexname, definition, examples_json, source, source_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
+                """INSERT INTO wordnet_synset(id, pos, lexname, definition, examples_json, source, source_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 syn_rows,
             )
         if lemma_rows:
             cur.executemany(
-                """
-                INSERT INTO wordnet_lemma(
-                    lemma, lemma_lower, synset_id, sense_rank, pos, source, source_url
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
+                """INSERT INTO wordnet_lemma(lemma, lemma_lower, synset_id, sense_rank, pos, source, source_url)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 lemma_rows,
             )
             lemma_count += len(lemma_rows)
         if rel_rows:
             cur.executemany(
-                """
-                INSERT INTO wordnet_rel(
-                    synset_id, rel, target_synset_id, source, source_url
-                ) VALUES (?, ?, ?, ?, ?)
-                """,
+                """INSERT INTO wordnet_rel(synset_id, rel, target_synset_id, source, source_url)
+                   VALUES (?, ?, ?, ?, ?)""",
                 rel_rows,
             )
             rel_count += len(rel_rows)
@@ -511,129 +467,167 @@ def ingest_oewn_xml(
     return syn_count, lemma_count, rel_count
 
 
-def ingest_scowl_wordlist(
-    conn: sqlite3.Connection,
-    path: str,
-    source_url: str,
-    max_entries: Optional[int],
-) -> int:
+# ---------------------------------------------------------------------------
+# Post-processing: enrich CMU entries with WordNet definitions
+# ---------------------------------------------------------------------------
+
+def enrich_entries_from_wordnet(conn: sqlite3.Connection) -> int:
+    """
+    Cross-reference CMU entry headwords with WordNet lemmas.
+    For each match, populate senses_json with WordNet definitions and
+    set pos from WordNet data.
+    """
     cur = conn.cursor()
-    inserted = 0
-    batch = []
 
-    with open_maybe_gzip(path) as f:
-        for line in f:
-            if max_entries is not None and inserted >= max_entries:
-                break
-            if isinstance(line, bytes):
-                line = line.decode("utf-8", errors="ignore")
-            line = line.strip()
-            if not line or line.startswith("#") or line.startswith(";"):
-                continue
-            for token in line.split():
-                word = token.strip()
-                if not word:
-                    continue
-                batch.append((word, word.casefold(), "scowl", source_url))
-                inserted += 1
-                if len(batch) >= 10000:
-                    cur.executemany(
-                        "INSERT INTO lexicon(word, word_lower, source, source_url) VALUES (?, ?, ?, ?)",
-                        batch,
-                    )
-                    conn.commit()
-                    batch.clear()
+    # Build a map: lemma_lower -> [(definition, pos, examples_json, sense_rank)]
+    wn_rows = conn.execute(
+        """
+        SELECT l.lemma_lower, s.definition, l.pos, s.examples_json, l.sense_rank
+        FROM wordnet_lemma l
+        JOIN wordnet_synset s ON l.synset_id = s.id
+        WHERE s.definition IS NOT NULL
+        ORDER BY l.lemma_lower, l.sense_rank
+        """
+    ).fetchall()
 
-    if batch:
-        cur.executemany(
-            "INSERT INTO lexicon(word, word_lower, source, source_url) VALUES (?, ?, ?, ?)",
-            batch,
-        )
+    lemma_defs: dict[str, list[dict]] = {}
+    lemma_pos: dict[str, str] = {}
+    for lemma_lower, definition, pos, examples_json, rank in wn_rows:
+        if lemma_lower not in lemma_defs:
+            lemma_defs[lemma_lower] = []
+            if pos:
+                lemma_pos[lemma_lower] = pos
+        lemma_defs[lemma_lower].append({
+            "glosses": [definition] if definition else [],
+            "examples": json.loads(examples_json) if examples_json else [],
+        })
+
+    # Update entries that have matching WordNet data
+    entries = conn.execute("SELECT id, headword_lower FROM entry").fetchall()
+    update_rows = []
+    fts_updates = []
+    enriched = 0
+
+    for entry_id, hw_lower in entries:
+        defs = lemma_defs.get(hw_lower)
+        if not defs:
+            continue
+        senses_json = json.dumps(defs[:10])  # Cap at 10 senses
+        pos = lemma_pos.get(hw_lower)
+
+        # Build FTS content from definitions
+        fts_parts = []
+        for d in defs[:10]:
+            fts_parts.extend(d.get("glosses", []))
+            fts_parts.extend(d.get("examples", []))
+        fts_content = "\n".join(str(p) for p in fts_parts if p)
+
+        update_rows.append((senses_json, pos, entry_id))
+        fts_updates.append((entry_id, fts_content))
+        enriched += 1
+
+        if len(update_rows) >= 5000:
+            cur.executemany("UPDATE entry SET senses_json = ?, pos = ? WHERE id = ?", update_rows)
+            for fts_id, fts_text in fts_updates:
+                cur.execute("UPDATE entry_fts SET content = ? WHERE rowid = ?", (fts_text, fts_id))
+            conn.commit()
+            update_rows.clear()
+            fts_updates.clear()
+
+    if update_rows:
+        cur.executemany("UPDATE entry SET senses_json = ?, pos = ? WHERE id = ?", update_rows)
+        for fts_id, fts_text in fts_updates:
+            cur.execute("UPDATE entry_fts SET content = ? WHERE rowid = ?", (fts_text, fts_id))
         conn.commit()
 
-    return inserted
+    return enriched
 
+
+# ---------------------------------------------------------------------------
+# Lexicon population from CMU (for word-existence checks)
+# ---------------------------------------------------------------------------
+
+def populate_lexicon_from_entries(conn: sqlite3.Connection) -> int:
+    """Copy all CMU headwords into the lexicon table for word-validity lookups."""
+    conn.execute(
+        """
+        INSERT INTO lexicon(word, word_lower, source, source_url)
+        SELECT headword, headword_lower, 'cmudict', source_url
+        FROM entry
+        """
+    )
+    count = conn.execute("SELECT COUNT(*) FROM lexicon").fetchone()[0]
+    conn.commit()
+    return count
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="Build Scholomance offline dictionary SQLite DB.")
+    ap = argparse.ArgumentParser(description="Build Scholomance dictionary from CMU + OEWN.")
     ap.add_argument("--db", default=DEFAULT_DB_PATH, help="SQLite output path.")
-    ap.add_argument("--data_dir", default=DEFAULT_DATA_DIR, help="Download/cache directory.")
     ap.add_argument("--overwrite", action="store_true", help="Overwrite existing DB.")
-    ap.add_argument("--max_entries", type=int, default=None, help="Max entries per source (dev).")
-    ap.add_argument("--lang", default=DEFAULT_LANG, help="Language filter for Kaikki data.")
-
-    ap.add_argument("--kaikki_url", required=True, help="Direct URL to Kaikki/Wiktextract JSONL (.gz ok).")
-    ap.add_argument("--oewn_url", default=None, help="Optional OEWN XML (.gz ok) direct URL.")
-    ap.add_argument("--scowl_url", default=None, help="Optional SCOWL-derived wordlist URL (one word per line).")
-    ap.add_argument("--export_jsonl", default=None, help="Optional JSONL export path for Kaikki entries.")
+    ap.add_argument("--cmu_path", default=DEFAULT_CMU_PATH,
+                     help="Path to CMU pronouncing dictionary file.")
+    ap.add_argument("--oewn_path", required=True,
+                     help="Path to OEWN XML file (.xml or .xml.gz).")
 
     args = ap.parse_args()
-    os.makedirs(args.data_dir, exist_ok=True)
 
-    kaikki_path = os.path.join(args.data_dir, os.path.basename(args.kaikki_url))
-    if not os.path.exists(kaikki_path):
-        download_file(args.kaikki_url, kaikki_path)
+    if not os.path.exists(args.cmu_path):
+        print(f"CMU dict not found at: {args.cmu_path}")
+        print("Run 'npm install' to install the cmudict package first.")
+        sys.exit(1)
 
-    oewn_path = None
-    if args.oewn_url:
-        oewn_path = os.path.join(args.data_dir, os.path.basename(args.oewn_url))
-        if not os.path.exists(oewn_path):
-            download_file(args.oewn_url, oewn_path)
-
-    scowl_path = None
-    if args.scowl_url:
-        scowl_path = os.path.join(args.data_dir, os.path.basename(args.scowl_url))
-        if not os.path.exists(scowl_path):
-            download_file(args.scowl_url, scowl_path)
+    if not os.path.exists(args.oewn_path):
+        print(f"OEWN XML not found at: {args.oewn_path}")
+        sys.exit(1)
 
     conn = init_db(args.db, overwrite=args.overwrite)
     try:
-        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", ("schema_version", SCHEMA_VERSION))
-        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", ("built_at", str(int(time.time()))))
-        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", ("kaikki_url", args.kaikki_url))
-        if args.oewn_url:
-            conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", ("oewn_url", args.oewn_url))
-        if args.scowl_url:
-            conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)", ("scowl_url", args.scowl_url))
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
+                      ("schema_version", SCHEMA_VERSION))
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
+                      ("built_at", str(int(time.time()))))
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
+                      ("cmu_source", args.cmu_path))
+        conn.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?, ?)",
+                      ("oewn_source", args.oewn_path))
         conn.commit()
 
-        inserted = ingest_kaikki(
-            conn,
-            kaikki_path,
-            source_url=args.kaikki_url,
-            lang_filter=args.lang,
-            export_jsonl_path=args.export_jsonl,
-            max_entries=args.max_entries,
+        # Step 1: Ingest CMU pronouncing dictionary
+        print("Step 1/4: Ingesting CMU pronouncing dictionary...")
+        cmu_count = ingest_cmu_dict(conn, args.cmu_path)
+        print(f"  Inserted {cmu_count:,} CMU entries with phonemes + rhyme index.")
+
+        # Step 2: Ingest OEWN XML
+        print("Step 2/4: Ingesting Open English WordNet XML...")
+        syn_count, lemma_count, rel_count = ingest_oewn_xml(
+            conn, args.oewn_path, source_url="https://en-word.net/",
         )
-        print(f"Inserted {inserted} Kaikki/Wiktionary entries.")
+        print(f"  Inserted {syn_count:,} synsets, {lemma_count:,} lemmas, {rel_count:,} relations.")
 
-        if oewn_path:
-            syn_count, lemma_count, rel_count = ingest_oewn_xml(
-                conn,
-                oewn_path,
-                source_url=args.oewn_url,
-                max_entries=args.max_entries,
-            )
-            print(
-                "Inserted OEWN:",
-                f"{syn_count} synsets, {lemma_count} lemmas, {rel_count} relations.",
-            )
+        # Step 3: Cross-reference — enrich CMU entries with WordNet definitions
+        print("Step 3/4: Enriching entries with WordNet definitions...")
+        enriched = enrich_entries_from_wordnet(conn)
+        print(f"  Enriched {enriched:,} entries with definitions and POS tags.")
 
-        if scowl_path:
-            lex_count = ingest_scowl_wordlist(
-                conn,
-                scowl_path,
-                source_url=args.scowl_url,
-                max_entries=args.max_entries,
-            )
-            print(f"Inserted {lex_count} SCOWL lexicon words.")
+        # Step 4: Populate lexicon table
+        print("Step 4/4: Populating lexicon...")
+        lex_count = populate_lexicon_from_entries(conn)
+        print(f"  Lexicon: {lex_count:,} words.")
 
+        # Optimize FTS index
         conn.execute("INSERT INTO entry_fts(entry_fts) VALUES ('optimize');")
         conn.commit()
+
     finally:
         conn.close()
 
-    print(f"Done. Built: {args.db}")
+    size_mb = os.path.getsize(args.db) / (1024 * 1024)
+    print(f"\nDone. Built: {args.db} ({size_mb:.1f} MB)")
 
 
 if __name__ == "__main__":

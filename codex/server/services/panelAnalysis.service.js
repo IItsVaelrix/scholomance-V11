@@ -5,6 +5,7 @@
 
 import { analyzeText } from '../../core/analysis.pipeline.js';
 import { createScoringEngine } from '../../core/scoring.engine.js';
+import { PhonemeEngine } from '../../../src/lib/phoneme.engine.js';
 import { alliterationDensityHeuristic } from '../../core/heuristics/alliteration_density.js';
 import { literaryDeviceRichnessHeuristic } from '../../core/heuristics/literary_device_richness.js';
 import { meterRegularityHeuristic } from '../../core/heuristics/meter_regularity.js';
@@ -18,6 +19,7 @@ import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literary
 import { normalizeVowelFamily } from '../../../src/lib/vowelFamily.js';
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
+import { parseBooleanFlag } from '../utils/envFlags.js';
 
 const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
@@ -44,7 +46,7 @@ function getPrimaryStressedVowelFamily(analyzedWord) {
   return normalizeVowelFamily(stressed?.vowelFamily || fallback);
 }
 
-function buildAnalysisWordProfiles(analyzedDoc) {
+function buildAnalysisWordProfiles(analyzedDoc, syntaxLayer = null) {
   const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
   const profiles = [];
 
@@ -53,16 +55,30 @@ function buildAnalysisWordProfiles(analyzedDoc) {
     const words = Array.isArray(line?.words) ? line.words : [];
     for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
       const analyzedWord = words[wordIndex];
+      const charStart = Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1;
+      const syntaxIdentity = `${lineIndex}:${wordIndex}:${charStart}`;
+      const syntaxToken = syntaxLayer
+        ? (
+          syntaxLayer.tokenByIdentity?.get?.(syntaxIdentity) ||
+          syntaxLayer.tokenByCharStart?.get?.(charStart) ||
+          null
+        )
+        : null;
       profiles.push({
         word: String(analyzedWord?.text || ''),
         normalizedWord: String(analyzedWord?.normalized || '').toUpperCase(),
         lineIndex,
         wordIndex,
-        charStart: Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1,
+        charStart,
         charEnd: Number.isInteger(analyzedWord?.end) ? analyzedWord.end : -1,
         vowelFamily: getPrimaryStressedVowelFamily(analyzedWord) || null,
         syllableCount: Number(analyzedWord?.syllableCount) || 0,
         rhymeKey: analyzedWord?.deepPhonetics?.rhymeKey || analyzedWord?.phonetics?.rhymeKey || null,
+        stressPattern: String(analyzedWord?.deepPhonetics?.stressPattern || ''),
+        role: String(syntaxToken?.role || ''),
+        lineRole: String(syntaxToken?.lineRole || ''),
+        stressRole: String(syntaxToken?.stressRole || ''),
+        rhymePolicy: String(syntaxToken?.rhymePolicy || ''),
       });
     }
   }
@@ -75,24 +91,11 @@ function buildLineSyllableCounts(analyzedDoc) {
   return lines.map((line) => Number(line?.syllableCount) || 0);
 }
 
-const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes']);
-const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
-
-function parseBooleanFlag(rawValue, defaultValue) {
-  if (rawValue === undefined || rawValue === null || rawValue === '') {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
-
 function createScoreEngine() {
   const engine = createScoringEngine();
   SCORE_HEURISTICS.forEach((heuristicDef) => {
     engine.registerHeuristic({
-      heuristic: heuristicDef.name,
+      name: heuristicDef.name,
       scorer: heuristicDef.scorer,
       weight: heuristicDef.weight,
     });
@@ -154,7 +157,7 @@ function summarizeVowelFamilies(analyzedDoc) {
   };
 }
 
-function toMinimalAnalysisPayload(analysis, analyzedDoc) {
+function toMinimalAnalysisPayload(analysis, analyzedDoc, syntaxLayer = null) {
   if (!analysis || typeof analysis !== 'object') {
     return null;
   }
@@ -165,7 +168,7 @@ function toMinimalAnalysisPayload(analysis, analyzedDoc) {
     schemePattern: typeof analysis.schemePattern === 'string' ? analysis.schemePattern : '',
     rhymeGroups: toSerializableGroupEntries(analysis.rhymeGroups),
     syntaxSummary: analysis.syntaxSummary || null,
-    wordAnalyses: buildAnalysisWordProfiles(analyzedDoc),
+    wordAnalyses: buildAnalysisWordProfiles(analyzedDoc, syntaxLayer),
     lineSyllableCounts: buildLineSyllableCounts(analyzedDoc),
   };
 }
@@ -205,6 +208,9 @@ export function createPanelAnalysisService(options = {}) {
     }
 
     try {
+      const uniqueWords = [...new Set(text.match(/[A-Za-z]+(?:['-][A-Za-z]+)*/g) || [])];
+      await PhonemeEngine.ensureAuthorityBatch(uniqueWords);
+
       const analyzedDoc = analyzeText(text);
       const scoreData = await scoreEngine.calculateScore(analyzedDoc);
       const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
@@ -221,7 +227,7 @@ export function createPanelAnalysisService(options = {}) {
       const emotion = detectEmotion(text);
 
       return {
-        analysis: toMinimalAnalysisPayload(deepAnalysis, analyzedDoc),
+        analysis: toMinimalAnalysisPayload(deepAnalysis, analyzedDoc, syntaxLayer),
         scheme: scheme
           ? {
             ...scheme,

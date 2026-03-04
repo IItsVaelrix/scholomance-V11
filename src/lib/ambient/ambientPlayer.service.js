@@ -1,5 +1,9 @@
 import { getTrackEmbedConfig } from "../musicEmbeds";
-import { getDefaultSchoolId, getSchoolAudioConfig } from "./schoolAudio.config";
+import {
+  getDefaultSchoolId,
+  getRandomizedStationTrackUrl,
+  getSchoolAudioConfig,
+} from "./schoolAudio.config";
 
 const SETTINGS_STORAGE_KEY = "scholomance.ambient.settings.v1";
 
@@ -8,17 +12,16 @@ const DEFAULT_SETTINGS = Object.freeze({
   volume: 0.5,
   autoplayAmbient: false,
   cyclingEnabled: true,
-  orbVisible: true,
 });
 
 const DEFAULT_OPTIONS = Object.freeze({
-  tuningDurationMs: null,
+  tuningDurationMs: 1500,
   tuningDurationMinMs: 1500,
-  tuningDurationMaxMs: 3000,
+  tuningDurationMaxMs: 1500,
+  tuningCompletionTimeoutMs: 8000,
   fadeOutMs: 350,
   fadeInMs: 700,
   dialLockMs: 300,
-  signalPollMs: 90,
 });
 
 const DEFAULT_PROVIDER_CAPABILITIES = Object.freeze({
@@ -55,36 +58,6 @@ export const AMBIENT_PLAYER_EVENTS = Object.freeze({
 
 function canUseBrowser() {
   return typeof window !== "undefined" && typeof document !== "undefined";
-}
-
-function parseUrl(rawUrl) {
-  if (!rawUrl || typeof rawUrl !== "string") return null;
-  try {
-    return new URL(rawUrl);
-  } catch {
-    return null;
-  }
-}
-
-function extractYouTubeVideoId(rawUrl) {
-  const parsed = parseUrl(rawUrl);
-  if (!parsed) return null;
-  const host = parsed.hostname.toLowerCase();
-
-  if (host.includes("youtu.be")) {
-    const fromPath = parsed.pathname.split("/").filter(Boolean)[0];
-    return fromPath || null;
-  }
-
-  if (host.includes("youtube.com")) {
-    if (parsed.pathname.startsWith("/embed/")) {
-      const fromEmbed = parsed.pathname.split("/").filter(Boolean)[1];
-      return fromEmbed || null;
-    }
-    return parsed.searchParams.get("v") || null;
-  }
-
-  return null;
 }
 
 function clamp01(value) {
@@ -226,7 +199,6 @@ function readPersistedSettings(storage) {
     volume: clamp01(parsed.volume ?? DEFAULT_SETTINGS.volume),
     autoplayAmbient: Boolean(parsed.autoplayAmbient),
     cyclingEnabled: parsed.cyclingEnabled ?? DEFAULT_SETTINGS.cyclingEnabled,
-    orbVisible: parsed.orbVisible ?? DEFAULT_SETTINGS.orbVisible,
   };
 }
 
@@ -239,78 +211,6 @@ function createAudioContext() {
   } catch {
     return null;
   }
-}
-
-let youtubeIframeApiPromise = null;
-
-function loadYoutubeIframeApi() {
-  if (!canUseBrowser()) {
-    return Promise.reject(new Error("YouTube iframe API requires a browser environment"));
-  }
-
-  if (window.YT && typeof window.YT.Player === "function") {
-    return Promise.resolve(window.YT);
-  }
-
-  if (youtubeIframeApiPromise) {
-    return youtubeIframeApiPromise;
-  }
-
-  youtubeIframeApiPromise = new Promise((resolve, reject) => {
-    let settled = false;
-    let timeoutId = null;
-    const settle = (handler, value) => {
-      if (settled) return;
-      settled = true;
-      if (timeoutId) {
-        window.clearTimeout(timeoutId);
-      }
-      handler(value);
-    };
-
-    const previousReadyHandler = window.onYouTubeIframeAPIReady;
-    window.onYouTubeIframeAPIReady = () => {
-      if (typeof previousReadyHandler === "function") {
-        try {
-          previousReadyHandler();
-        } catch {
-          // Ignore other ready callback failures.
-        }
-      }
-      if (window.YT && typeof window.YT.Player === "function") {
-        settle(resolve, window.YT);
-        return;
-      }
-      settle(reject, new Error("YouTube iframe API loaded without Player constructor"));
-    };
-
-    const scriptSrc = "https://www.youtube.com/iframe_api";
-    const existingScript = document.querySelector(`script[src="${scriptSrc}"]`);
-    if (!existingScript) {
-      const script = document.createElement("script");
-      script.src = scriptSrc;
-      script.async = true;
-      script.onerror = () => {
-        settle(reject, new Error("Failed to load YouTube iframe API script"));
-      };
-      const host = document.head || document.body || document.documentElement;
-      host.appendChild(script);
-    }
-
-    if (window.YT && typeof window.YT.Player === "function") {
-      settle(resolve, window.YT);
-      return;
-    }
-
-    timeoutId = window.setTimeout(() => {
-      settle(reject, new Error("Timed out loading YouTube iframe API"));
-    }, 12000);
-  }).catch((error) => {
-    youtubeIframeApiPromise = null;
-    throw error;
-  });
-
-  return youtubeIframeApiPromise;
 }
 
 function createWhiteNoiseBuffer(audioContext, durationSec) {
@@ -413,153 +313,21 @@ async function createTrackController({
   if (!embed?.src && !embed?.audioUrl) {
     throw new Error("Unsupported track URL");
   }
-  const youtubeVideoId = embed.provider === "youtube" ? extractYouTubeVideoId(trackUrl) : null;
-
-  if (embed.provider === "youtube" && youtubeVideoId) {
-    let player = null;
-    let mountNode = null;
-    let currentVolume = clamp01(volume);
-    let destroyed = false;
-    const capabilities = createProviderCapabilities({
-      canAnalyze: false,
-      canSetVolumeSmooth: true,
-      supportsSeek: true,
-    });
-
-    const teardownPlayer = () => {
-      if (player) {
-        try {
-          player.destroy();
-        } catch {
-          // Ignore YouTube teardown failures.
-        }
-      }
-      player = null;
-      if (mountNode) {
-        mountNode.remove();
-        mountNode = null;
-      }
-    };
-
-    const loadPromise = loadYoutubeIframeApi()
-      .then((api) => {
-        if (destroyed) return;
-        return new Promise((resolve, reject) => {
-          let settled = false;
-          const settle = (handler, value) => {
-            if (settled) return;
-            settled = true;
-            handler(value);
-          };
-
-          mountNode = document.createElement("div");
-          mountNode.style.cssText =
-            "width:0;height:0;overflow:hidden;pointer-events:none;position:absolute;";
-          container.appendChild(mountNode);
-
-          player = new api.Player(mountNode, {
-          videoId: youtubeVideoId,
-          playerVars: {
-            autoplay: autoPlay ? 1 : 0,
-            controls: 0,
-            disablekb: 1,
-            enablejsapi: 1,
-            fs: 0,
-            iv_load_policy: 3,
-            loop: 1, // Loop works with playlist, otherwise requires manual restart
-            modestbranding: 1,
-            rel: 0,
-            showinfo: 0,
-            start: 0,
-            playsinline: 1,
-          },
-          events: {
-            onReady: (e) => {
-              if (destroyed) {
-                teardownPlayer();
-                settle(resolve);
-                return;
-              }
-              try {
-                e.target.setVolume(currentVolume * 100); // YT API uses 0-100
-              } catch {
-                // Ignore transient volume errors before player settles.
-              }
-              settle(resolve);
-            },
-            onStateChange: (e) => {
-              if (destroyed) return;
-              if (e.data === api.PlayerState.ENDED) {
-                // Manually loop if single video
-                try {
-                  e.target.seekTo(0);
-                  e.target.playVideo();
-                } catch {
-                  // Ignore loop restart failures.
-                }
-                onTrackEnded?.();
-              }
-            },
-            onError: () => {
-              settle(reject, new Error("YouTube player failed to initialize"));
-            },
-          }
-        });
-      });
-      })
-      .catch((error) => {
-        teardownPlayer();
-        throw error;
-      });
-
-    return {
-      provider: embed.provider,
-      capabilities,
-      schoolId: null,
-      loadPromise,
-      getVolume: () => currentVolume,
-      setVolume: (value) => {
-        currentVolume = clamp01(value);
-        if (!destroyed && player) {
-          try {
-            player.setVolume(currentVolume * 100);
-          } catch {
-            // Ignore early setVolume calls before player ready.
-          }
-        }
-      },
-      getSignalLevel: () => null,
-      play: async () => {
-        await loadPromise; // Ensure player is ready
-        if (destroyed) return;
-        player?.playVideo();
-      },
-      pause: async () => {
-        if (destroyed) return;
-        player?.pauseVideo();
-      },
-      destroy: () => {
-        if (destroyed) return;
-        destroyed = true;
-        teardownPlayer();
-      },
-    };
-  }
 
   if ((embed.provider === "suno" || embed.provider === "direct") && embed.audioUrl) {
-    const audio = document.createElement("audio");
-    audio.src = embed.audioUrl;
+    let audio = document.createElement("audio");
     audio.crossOrigin = "anonymous";
+    audio.src = embed.audioUrl;
     audio.preload = "auto";
     audio.loop = true;
     audio.style.cssText = "width:0;height:0;opacity:0;pointer-events:none;position:absolute;";
     audio.setAttribute("aria-hidden", "true");
     container.appendChild(audio);
 
-    const handleAudioError = (e) => {
-      console.error("Suno audio playback error:", e.target.error);
-    };
-    audio.addEventListener("error", handleAudioError);
+    const canUseSunoEmbedFallback = embed.provider === "suno" && Boolean(embed.src);
+    let directAudioFailed = false;
+    let fallbackIframe = null;
+    let usingSunoEmbedFallback = false;
 
     let analyser = null;
     let analyserData = null;
@@ -567,34 +335,25 @@ async function createTrackController({
     let outputGain = null;
     const pulseState = createPercussivePulseState();
 
-    if (audioContext && typeof audioContext.createMediaElementSource === "function") {
-      try {
-        mediaSource = audioContext.createMediaElementSource(audio);
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.82;
-        analyserData = new Uint8Array(analyser.fftSize);
-        outputGain = audioContext.createGain();
-        outputGain.gain.value = clamp01(volume);
-        mediaSource.connect(analyser);
-        analyser.connect(outputGain);
-        outputGain.connect(audioContext.destination);
-      } catch {
-        analyser = null;
-        analyserData = null;
-        try {
-          mediaSource?.disconnect();
-          outputGain?.disconnect();
-        } catch {
-          // Ignore cleanup failures.
-        }
-      }
-    }
+    const capabilities = createProviderCapabilities({
+      canAnalyze: false,
+      canSetVolumeSmooth: true,
+      supportsSeek: true,
+    });
 
-    const handleEnded = () => onTrackEnded?.();
-    if (typeof onTrackEnded === "function") {
-      audio.addEventListener("ended", handleEnded);
-    }
+    const disconnectGraph = () => {
+      try {
+        mediaSource?.disconnect();
+        analyser?.disconnect();
+        outputGain?.disconnect();
+      } catch {
+        // Ignore analyser graph teardown failures.
+      }
+      mediaSource = null;
+      analyser = null;
+      outputGain = null;
+      analyserData = null;
+    };
 
     let resolvedLoad = false;
     let loadTimeoutId = null;
@@ -607,6 +366,110 @@ async function createTrackController({
       }
       loadTimeoutId = null;
     };
+
+    const handleEnded = () => onTrackEnded?.();
+
+    let corsRetried = false;
+    const handleAudioError = (e) => {
+      if (!corsRetried && audio.hasAttribute("crossOrigin")) {
+        corsRetried = true;
+        
+        disconnectGraph();
+        audio.removeEventListener("error", handleAudioError);
+        audio.removeEventListener("canplaythrough", handleCanPlay);
+        if (typeof onTrackEnded === "function") {
+          audio.removeEventListener("ended", handleEnded);
+        }
+        audio.pause();
+        audio.removeAttribute("src");
+        try {
+          audio.load();
+        } catch {
+          // Ignore teardown load errors when retrying without CORS.
+        }
+        audio.remove();
+        
+        audio = document.createElement("audio");
+        audio.src = embed.audioUrl;
+        audio.preload = "auto";
+        audio.loop = true;
+        audio.style.cssText = "width:0;height:0;opacity:0;pointer-events:none;position:absolute;";
+        audio.setAttribute("aria-hidden", "true");
+        audio.volume = currentVolume;
+        container.appendChild(audio);
+        
+        audio.addEventListener("error", handleAudioError);
+        audio.addEventListener("canplaythrough", handleCanPlay);
+        if (typeof onTrackEnded === "function") {
+          audio.addEventListener("ended", handleEnded);
+        }
+        
+        capabilities.canAnalyze = false;
+        audio.load();
+        
+        return;
+      }
+      directAudioFailed = true;
+      console.error("Audio playback error:", e?.target?.error || e);
+    };
+    audio.addEventListener("error", handleAudioError);
+
+    const ensureSunoFallbackIframe = () => {
+      if (!canUseSunoEmbedFallback) return null;
+      if (fallbackIframe) return fallbackIframe;
+      const iframe = document.createElement("iframe");
+      iframe.allow = "autoplay";
+      iframe.style.cssText = "width:0;height:0;border:0;position:absolute;pointer-events:none;";
+      iframe.title = "Suno player";
+      container.appendChild(iframe);
+      fallbackIframe = iframe;
+      return fallbackIframe;
+    };
+
+    const setSunoEmbedAutoplay = (enabled) => {
+      const iframe = ensureSunoFallbackIframe();
+      if (!iframe) return;
+      try {
+        const url = new URL(embed.src);
+        if (enabled) {
+          url.searchParams.set("autoplay", "1");
+        } else {
+          url.searchParams.delete("autoplay");
+        }
+        iframe.src = url.toString();
+      } catch {
+        iframe.src = embed.src;
+      }
+    };
+
+    const stopSunoEmbedFallback = () => {
+      if (!fallbackIframe) return;
+      fallbackIframe.src = "about:blank";
+    };
+
+    let currentVolume = clamp01(volume);
+
+    if (audioContext && typeof audioContext.createMediaElementSource === "function") {
+      try {
+        mediaSource = audioContext.createMediaElementSource(audio);
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.82;
+        analyserData = new Uint8Array(analyser.fftSize);
+        outputGain = audioContext.createGain();
+        outputGain.gain.value = currentVolume;
+        mediaSource.connect(analyser);
+        analyser.connect(outputGain);
+        outputGain.connect(audioContext.destination);
+        capabilities.canAnalyze = true;
+      } catch {
+        disconnectGraph();
+      }
+    }
+
+    if (typeof onTrackEnded === "function") {
+      audio.addEventListener("ended", handleEnded);
+    }
 
     const loadPromise = new Promise((resolve) => {
       const resolveWhenReady = () => {
@@ -624,30 +487,31 @@ async function createTrackController({
       }
     });
 
-    let sunoVolume = clamp01(volume);
-    const capabilities = createProviderCapabilities({
-      canAnalyze: Boolean(analyser),
-      canSetVolumeSmooth: true,
-      supportsSeek: true,
-    });
     let destroyed = false;
 
-    const disconnectGraph = () => {
-      try {
-        mediaSource?.disconnect();
-        analyser?.disconnect();
-        outputGain?.disconnect();
-      } catch {
-        // Ignore analyser graph teardown failures.
+    const syncCapabilitiesForCurrentMode = () => {
+      if (usingSunoEmbedFallback) {
+        capabilities.canAnalyze = false;
+        capabilities.canSetVolumeSmooth = false;
+        capabilities.supportsSeek = false;
+        return;
       }
-      mediaSource = null;
-      analyser = null;
-      outputGain = null;
-      analyserData = null;
+      capabilities.canAnalyze = Boolean(analyser);
+      capabilities.canSetVolumeSmooth = true;
+      capabilities.supportsSeek = true;
+    };
+
+    const activateSunoEmbedFallback = () => {
+      if (!canUseSunoEmbedFallback) return false;
+      usingSunoEmbedFallback = true;
+      syncCapabilitiesForCurrentMode();
+      audio.pause();
+      setSunoEmbedAutoplay(true);
+      return true;
     };
 
     if (!outputGain) {
-      audio.volume = sunoVolume;
+      audio.volume = currentVolume;
     } else {
       audio.volume = 1;
     }
@@ -657,17 +521,23 @@ async function createTrackController({
       capabilities,
       schoolId: null,
       loadPromise,
-      getVolume: () => sunoVolume,
+      getVolume: () => currentVolume,
       setVolume: (value) => {
-        sunoVolume = clamp01(value);
+        currentVolume = clamp01(value);
         if (destroyed) return;
+        if (usingSunoEmbedFallback) {
+          return;
+        }
         if (outputGain) {
-          outputGain.gain.value = sunoVolume;
+          outputGain.gain.value = currentVolume;
         } else {
-          audio.volume = sunoVolume;
+          audio.volume = currentVolume;
         }
       },
       getSignalLevel: () => {
+        if (usingSunoEmbedFallback) {
+          return null;
+        }
         if (analyser && analyserData && typeof analyser.getByteTimeDomainData === "function") {
           analyser.getByteTimeDomainData(analyserData);
           return getPercussivePulseLevelFromWaveform(analyserData, pulseState, getNowMs());
@@ -677,6 +547,10 @@ async function createTrackController({
       play: async () => {
         await loadPromise;
         if (destroyed) return;
+        if (usingSunoEmbedFallback || directAudioFailed) {
+          activateSunoEmbedFallback();
+          return;
+        }
         if (audioContext && (audioContext.state === "suspended" || audioContext.state === "interrupted")) {
           try {
             await audioContext.resume();
@@ -685,20 +559,54 @@ async function createTrackController({
           }
         }
         try {
-          await audio.play();
+          const playAttempt = audio.play();
+          if (playAttempt && typeof playAttempt.then === "function") {
+            let playTimeoutId = null;
+            try {
+              await Promise.race([
+                playAttempt,
+                new Promise((_, reject) => {
+                  playTimeoutId = setTimeout(
+                    () => reject(new Error("Audio play timed out")),
+                    12000
+                  );
+                }),
+              ]);
+            } finally {
+              if (playTimeoutId !== null) {
+                clearTimeout(playTimeoutId);
+              }
+            }
+          }
+          if (usingSunoEmbedFallback) {
+            usingSunoEmbedFallback = false;
+            syncCapabilitiesForCurrentMode();
+            stopSunoEmbedFallback();
+          }
         } catch (err) {
+          directAudioFailed = true;
+          if (activateSunoEmbedFallback()) {
+            return;
+          }
           console.warn("Audio playback failed (user gesture?):", err);
           throw new Error("Audio playback blocked. Please interact with the page.");
         }
       },
       pause: async () => {
         if (destroyed) return;
+        if (usingSunoEmbedFallback) {
+          stopSunoEmbedFallback();
+          return;
+        }
         audio.pause();
       },
       destroy: () => {
         if (destroyed) return;
         destroyed = true;
         audio.pause();
+        stopSunoEmbedFallback();
+        fallbackIframe?.remove();
+        fallbackIframe = null;
         audio.removeEventListener("error", handleAudioError);
         audio.removeEventListener("canplaythrough", handleCanPlay);
         if (typeof onTrackEnded === "function") {
@@ -720,7 +628,7 @@ async function createTrackController({
     };
   }
 
-  // Suno embed fallback: avoid brittle direct-MP3 URLs while preserving play/pause controls.
+  // Suno embed fallback when direct audio URL cannot be derived.
   if (embed.provider === "suno" && embed.src) {
     const iframe = document.createElement("iframe");
     iframe.allow = "autoplay";
@@ -802,82 +710,102 @@ async function createTrackController({
   };
 }
 
-export class AmbientPlayerService {
-  constructor(options = {}) {
-    this.options = { ...DEFAULT_OPTIONS, ...options };
-    this.storage = getStorage(options.storage);
-    const persisted = readPersistedSettings(this.storage);
-    const schoolConfig = getSchoolAudioConfig(persisted.schoolId);
+function createAmbientPlayerService(options = {}) {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  const storage = getStorage(options.storage);
+  const persisted = readPersistedSettings(storage);
+  const schoolConfig = getSchoolAudioConfig(persisted.schoolId);
 
-    this.state = {
-      status: AMBIENT_PLAYER_STATES.IDLE,
-      schoolId: schoolConfig ? persisted.schoolId : null,
-      queuedSchoolId: null,
-      paletteKey: schoolConfig?.paletteKey || null,
-      orbSkinKey: schoolConfig?.orbSkinKey || null,
-      trackUrl: schoolConfig?.trackUrl || null,
-      isPlaying: false,
-      isLoading: false,
-      signalLevel: 0,
-      volume: persisted.volume,
-      autoplayAmbient: Boolean(persisted.autoplayAmbient),
-      cyclingEnabled: Boolean(persisted.cyclingEnabled),
-      orbVisible: Boolean(persisted.orbVisible),
-      audioUnlocked: false,
-      error: null,
-    };
+  let state = {
+    status: AMBIENT_PLAYER_STATES.IDLE,
+    schoolId: schoolConfig ? persisted.schoolId : null,
+    queuedSchoolId: null,
+    trackUrl: schoolConfig?.trackUrl || null,
+    isPlaying: false,
+    isLoading: false,
+    volume: persisted.volume,
+    autoplayAmbient: Boolean(persisted.autoplayAmbient),
+    cyclingEnabled: Boolean(persisted.cyclingEnabled),
+    audioUnlocked: false,
+    error: null,
+  };
 
-    this.listeners = new Set();
-    this.playableSchoolIds = [];
-    this.pendingTuneTimer = null;
-    this.pendingTuneSchoolId = null;
-    this.pendingTuneOperationId = null;
-    this.fadeOutPromise = Promise.resolve();
-    this.currentController = null;
-    this.currentTrackSchoolId = null;
-    this.container = null;
-    this.pendingTuneDurationMs = null;
-    this.signalMonitorTimer = null;
-    this.audioContextRef = { current: createAudioContext() };
-    this.dialLockUntilRef = { current: 0 };
-    this.controllerFactory = options.controllerFactory;
-    this.dialSfxPlayer = options.dialSfxPlayer || ((settings) => defaultDialSfxPlayer(this.audioContextRef, settings));
-    this.nowFn = options.nowFn || Date.now;
-    this.randomFn = typeof options.randomFn === "function" ? options.randomFn : Math.random;
-    this.dynamicSchools = [];
-    this.hasPlayedDialSfx = false;
-    this.tuneOperationId = 0;
-    this.activeTuneOperationId = 0;
-    this.contextRecoveryListenersAttached = false;
-    this._onVisibilityChange = this._handleVisibilityChange.bind(this);
-    this._onUserInteraction = this._handleUserInteraction.bind(this);
+  const listeners = new Set();
+  let playableSchoolIds = [];
+  let pendingTuneTimer = null;
+  let pendingTuneSchoolId = null;
+  let pendingTuneOperationId = null;
+  let fadeOutPromise = Promise.resolve();
+  let currentController = null;
+  let currentTrackSchoolId = null;
+  let container = options.container || null;
+  let pendingTuneDurationMs = null;
+  // Lazy-init AudioContext only after an explicit user gesture.
+  const audioContextRef = { current: null };
+  const dialLockUntilRef = { current: 0 };
+  const controllerFactory = options.controllerFactory;
+  const dialSfxPlayer = options.dialSfxPlayer || ((settings) => defaultDialSfxPlayer(audioContextRef, settings));
+  const nowFn = options.nowFn || Date.now;
+  const randomFn = typeof options.randomFn === "function" ? options.randomFn : Math.random;
+  let dynamicSchools = [];
+  const lastResolvedTrackUrlBySchool = new Map();
+  let hasPlayedDialSfx = false;
+  let tuneOperationId = 0;
+  let activeTuneOperationId = 0;
+  let contextRecoveryListenersAttached = false;
 
-    this._attachContextRecoveryListeners();
-  }
+  // ─── Internal helpers ──────────────────────────────────────────────────────
 
-  _getSchoolConfig(schoolId) {
-    const dynamic = this.dynamicSchools.find(s => s.id === schoolId);
+  function getSchoolConfig(schoolId) {
+    const dynamic = dynamicSchools.find((s) => s.id === schoolId);
     if (dynamic) return dynamic;
     return getSchoolAudioConfig(schoolId);
   }
 
-  setDynamicSchools(schools = []) {
-    this.dynamicSchools = Array.isArray(schools) ? schools : [];
-    this._emitState();
+  function resolveTrackUrlForSchool(schoolId, fallbackTrackUrl = null) {
+    if (!schoolId) return fallbackTrackUrl || null;
+    if (schoolId === "SONIC") {
+      const previousTrackUrl = lastResolvedTrackUrlBySchool.get(schoolId) || null;
+      const randomizedTrackUrl = getRandomizedStationTrackUrl(schoolId, { excludeUrl: previousTrackUrl });
+      const resolvedTrackUrl = randomizedTrackUrl || fallbackTrackUrl || null;
+      if (resolvedTrackUrl) {
+        lastResolvedTrackUrlBySchool.set(schoolId, resolvedTrackUrl);
+      }
+      return resolvedTrackUrl;
+    }
+    return fallbackTrackUrl || null;
   }
 
-  _ensureAudioContext() {
-    const current = this.audioContextRef.current;
+  function handleTrackEnded(schoolId) {
+    transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED);
+    if (schoolId !== "SONIC") {
+      return;
+    }
+    if (state.status !== AMBIENT_PLAYER_STATES.PLAYING) {
+      return;
+    }
+    void setSchool(schoolId, {
+      forceRetune: true,
+      skipTuning: true,
+      playDialSfx: false,
+    });
+  }
+
+  function ensureAudioContext() {
+    const current = audioContextRef.current;
     if (current && current.state !== "closed") {
       return current;
     }
-    this.audioContextRef.current = createAudioContext();
-    return this.audioContextRef.current;
+    audioContextRef.current = createAudioContext();
+    return audioContextRef.current;
   }
 
-  async ensureContextRunning() {
-    const context = this._ensureAudioContext();
+  async function ensureContextRunning({ createIfMissing = true } = {}) {
+    const context = createIfMissing ? ensureAudioContext() : audioContextRef.current;
     if (!context) {
+      return false;
+    }
+    if (context.state === "closed") {
       return false;
     }
     if (context.state === "running") {
@@ -887,7 +815,11 @@ export class AmbientPlayerService {
       return false;
     }
     try {
-      await context.resume();
+      // Add a 3-second timeout to context resume to prevent indefinite hanging.
+      await Promise.race([
+        context.resume(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Context resume timeout")), 3000)),
+      ]);
     } catch (err) {
       console.warn("Failed to resume AudioContext:", err);
       return false;
@@ -895,408 +827,130 @@ export class AmbientPlayerService {
     return context.state === "running";
   }
 
-  _handleVisibilityChange() {
-    if (!canUseBrowser()) return;
-    if (document.visibilityState === "visible") {
-      void this.ensureContextRunning();
-    }
+  function handleUserInteraction() {
+    void ensureContextRunning();
   }
 
-  _handleUserInteraction() {
-    void this.ensureContextRunning();
-  }
-
-  _attachContextRecoveryListeners() {
-    if (!canUseBrowser() || this.contextRecoveryListenersAttached) {
+  function attachContextRecoveryListeners() {
+    if (!canUseBrowser() || contextRecoveryListenersAttached) {
       return;
     }
-    document.addEventListener("visibilitychange", this._onVisibilityChange);
     CONTEXT_RECOVERY_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, this._onUserInteraction, { passive: true });
+      window.addEventListener(eventName, handleUserInteraction, { passive: true });
     });
-    this.contextRecoveryListenersAttached = true;
+    contextRecoveryListenersAttached = true;
   }
 
-  _detachContextRecoveryListeners() {
-    if (!canUseBrowser() || !this.contextRecoveryListenersAttached) {
+  function detachContextRecoveryListeners() {
+    if (!canUseBrowser() || !contextRecoveryListenersAttached) {
       return;
     }
-    document.removeEventListener("visibilitychange", this._onVisibilityChange);
     CONTEXT_RECOVERY_EVENTS.forEach((eventName) => {
-      window.removeEventListener(eventName, this._onUserInteraction);
+      window.removeEventListener(eventName, handleUserInteraction);
     });
-    this.contextRecoveryListenersAttached = false;
+    contextRecoveryListenersAttached = false;
   }
 
-  _nextTuneOperationId() {
-    this.tuneOperationId += 1;
-    this.activeTuneOperationId = this.tuneOperationId;
-    return this.activeTuneOperationId;
+  function nextTuneOperationId() {
+    tuneOperationId += 1;
+    activeTuneOperationId = tuneOperationId;
+    return activeTuneOperationId;
   }
 
-  _isTuneOperationCurrent(tuneOperationId) {
-    return Number.isFinite(tuneOperationId) && tuneOperationId === this.activeTuneOperationId;
+  function isTuneOperationCurrent(id) {
+    return Number.isFinite(id) && id === activeTuneOperationId;
   }
 
-  _isTuneOperationActive(tuneOperationId) {
-    return (
-      this.state.status === AMBIENT_PLAYER_STATES.TUNING &&
-      this._isTuneOperationCurrent(tuneOperationId)
-    );
+  function isTuneOperationActive(id) {
+    return state.status === AMBIENT_PLAYER_STATES.TUNING && isTuneOperationCurrent(id);
   }
 
-  _destroyController(controller) {
-    if (!controller || typeof controller.destroy !== "function") {
+  function destroyController(ctrl) {
+    if (!ctrl || typeof ctrl.destroy !== "function") {
       return;
     }
     try {
-      controller.destroy();
+      ctrl.destroy();
     } catch (err) {
       console.warn("Failed to destroy track controller:", err);
     }
   }
 
-  _getControllerCapabilities(controller = this.currentController) {
-    if (!controller || typeof controller !== "object") {
+  function getControllerCapabilities(ctrl = currentController) {
+    if (!ctrl || typeof ctrl !== "object") {
       return DEFAULT_PROVIDER_CAPABILITIES;
     }
-    return createProviderCapabilities(controller.capabilities || {});
+    return createProviderCapabilities(ctrl.capabilities || {});
   }
 
-  _computeSyntheticSignalLevel() {
-    const clock = this.nowFn() * 0.001;
+  function computeSyntheticSignalLevel() {
+    const clock = nowFn() * 0.001;
     const lfo = 0.24 + Math.abs(Math.sin(clock * 2.7)) * 0.44;
-    const shimmer = this.randomFn() * 0.22;
+    const shimmer = randomFn() * 0.22;
     return clamp01(lfo + shimmer);
   }
 
-  subscribe(listener) {
-    if (typeof listener !== "function") {
-      return () => {};
-    }
-    this.listeners.add(listener);
-    listener(this.getState());
-    if (this.listeners.size === 1 && (this.state.isPlaying || this.state.status === AMBIENT_PLAYER_STATES.TUNING)) {
-      this._startSignalMonitor();
-    }
-    return () => {
-      this.listeners.delete(listener);
-      if (this.listeners.size === 0) {
-        this._stopSignalMonitor({ resetSignal: false });
-      }
-    };
+  function emitState() {
+    const snapshot = getState();
+    listeners.forEach((listener) => listener(snapshot));
   }
 
-  getState() {
-    return { ...this.state };
+  function setState(patch) {
+    state = { ...state, ...patch };
+    emitState();
   }
 
-  setPlayableSchools(playableSchoolIds = []) {
-    this.playableSchoolIds = Array.isArray(playableSchoolIds) ? [...playableSchoolIds] : [];
-
-    if (this.playableSchoolIds.length === 0) {
-      this._clearTuneTimer();
-      this._nextTuneOperationId();
-      if (this.state.schoolId !== null) {
-        this._setState({ schoolId: null, paletteKey: null, orbSkinKey: null, trackUrl: null });
-        this._persistSettings();
-      }
-      if (this.currentController) {
-        this._destroyController(this.currentController);
-        this.currentController = null;
-        this.currentTrackSchoolId = null;
-      }
-      this._stopSignalMonitor({ resetSignal: true });
-      return;
-    }
-
-    if (!this.state.schoolId || !this.playableSchoolIds.includes(this.state.schoolId)) {
-      const fallbackSchoolId = getDefaultSchoolId(this.playableSchoolIds);
-      this._applySchoolSelection(fallbackSchoolId);
-      this._persistSettings();
-    }
-  }
-
-  async unlockAudio() {
-    await this.ensureContextRunning();
-    if (this.state.audioUnlocked) return true;
-
-    const silentAudio = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA==");
-    try {
-      const playPromise = silentAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {});
-      }
-    } catch {
-      // Ignore sync errors.
-    }
-
-    this._setState({ audioUnlocked: true });
-    if (
-      this.state.autoplayAmbient &&
-      this.state.status === AMBIENT_PLAYER_STATES.IDLE &&
-      this.state.schoolId
-    ) {
-      await this.play();
-    }
-    return true;
-  }
-
-  async setSchool(schoolId, options = {}) {
-    if (!schoolId || !this.playableSchoolIds.includes(schoolId)) {
-      this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "School is not playable" });
-      return false;
-    }
-
-    await this.unlockAudio();
-
-    const tuneOperationId = this._nextTuneOperationId();
-
-    if (this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
-      this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
-        schoolId,
-        queued: true,
-        tuneOperationId,
-      });
-      const queuedTuneDurationMs = this.pendingTuneDurationMs || this._resolveTuneDurationMs();
-      this.pendingTuneDurationMs = queuedTuneDurationMs;
-      this._startTuneTimer(queuedTuneDurationMs, tuneOperationId);
-      return true;
-    }
-
-    const isSameTrackActive = this.currentController && this.currentTrackSchoolId === schoolId;
-    const forceRetune = Boolean(options.forceRetune);
-    const skipTuning = Boolean(options.skipTuning);
-    const shouldPlayDialSfx = options.playDialSfx !== false;
-
-    this._transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
-      schoolId,
-      queued: false,
-      tuneOperationId,
-    });
-    if (skipTuning) {
-      this.pendingTuneDurationMs = null;
-      if (shouldPlayDialSfx) {
-        this._playDialSfx(420);
-      }
-    } else {
-      const tuneDurationMs = this._resolveTuneDurationMs();
-      this.pendingTuneDurationMs = tuneDurationMs;
-      this._startTuneTimer(tuneDurationMs, tuneOperationId);
-      if (shouldPlayDialSfx) {
-        this._playDialSfx(tuneDurationMs);
-      }
-    }
-    this._startSignalMonitor();
-
-    if (!isSameTrackActive || forceRetune) {
-      this.fadeOutPromise = this._fadeOutCurrentTrackIfNeeded();
-    } else {
-      this.fadeOutPromise = Promise.resolve();
-    }
-
-    this._persistSettings();
-    if (skipTuning) {
-      try {
-        await this._completeTuning(tuneOperationId);
-      } catch {
-        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Failed to complete tuning" });
-        return false;
-      }
-    }
-    return true;
-  }
-
-  async cycleSchool(direction = 1) {
-    if (this.playableSchoolIds.length === 0) return false;
-    if (!this.state.cyclingEnabled) {
-      return await this.setSchool(this.state.schoolId || this.playableSchoolIds[0], { forceRetune: true });
-    }
-    const currentSchoolId = this.state.schoolId || this.playableSchoolIds[0];
-    const currentIndex = this.playableSchoolIds.indexOf(currentSchoolId);
-    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
-    const nextIndex = (safeIndex + direction + this.playableSchoolIds.length) % this.playableSchoolIds.length;
-    const nextSchoolId = this.playableSchoolIds[nextIndex];
-    return await this.setSchool(nextSchoolId);
-  }
-
-  async play() {
-    await this.unlockAudio();
-
-    if (this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
-      return;
-    }
-
-    if (this.currentController) {
-      try {
-        await this.currentController.play();
-        this._transition(AMBIENT_PLAYER_EVENTS.PLAY);
-        this._startSignalMonitor();
-      } catch (err) {
-        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: err.message });
-      }
-      return;
-    }
-
-    const schoolId = this.state.schoolId || getDefaultSchoolId(this.playableSchoolIds);
-    if (!schoolId) return;
-    await this.setSchool(schoolId, { forceRetune: true, skipTuning: true, playDialSfx: true });
-  }
-
-  async pause() {
-    this._clearTuneTimer();
-    this._stopSignalMonitor({ resetSignal: true });
-    if (this.currentController) {
-      try {
-        await this.currentController.pause();
-      } catch (err) {
-        console.warn("Error pausing controller:", err);
-      }
-    }
-    this._transition(AMBIENT_PLAYER_EVENTS.PAUSE);
-  }
-
-  async togglePlayPause() {
-    if (this.state.status === AMBIENT_PLAYER_STATES.PLAYING || this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
-      await this.pause();
-      return;
-    }
-    await this.play();
-  }
-
-  setVolume(volume) {
-    const clamped = clamp01(volume);
-    this._setState({ volume: clamped });
-    if (this.currentController) {
-      this.currentController.setVolume(clamped);
-    }
-    this._persistSettings();
-  }
-
-  setAutoplayAmbient(enabled) {
-    const nextValue = Boolean(enabled);
-    this._setState({ autoplayAmbient: nextValue });
-    this._persistSettings();
-    if (
-      nextValue &&
-      this.state.audioUnlocked &&
-      this.state.status === AMBIENT_PLAYER_STATES.IDLE &&
-      this.state.schoolId
-    ) {
-      this.play();
-    }
-  }
-
-  toggleAutoplayAmbient() {
-    this.setAutoplayAmbient(!this.state.autoplayAmbient);
-  }
-
-  setCyclingEnabled(enabled) {
-    this._setState({ cyclingEnabled: Boolean(enabled) });
-    this._persistSettings();
-  }
-
-  toggleCyclingEnabled() {
-    this.setCyclingEnabled(!this.state.cyclingEnabled);
-  }
-
-  setOrbVisibility(visible) {
-    this._setState({ orbVisible: Boolean(visible) });
-    this._persistSettings();
-  }
-
-  toggleOrbVisibility() {
-    this.setOrbVisibility(!this.state.orbVisible);
-  }
-
-  destroy() {
-    this._clearTuneTimer();
-    this._stopSignalMonitor({ resetSignal: true });
-    if (this.currentController) {
-      this._destroyController(this.currentController);
-      this.currentController = null;
-      this.currentTrackSchoolId = null;
-    }
-    if (this.container) {
-      this.container.remove();
-      this.container = null;
-    }
-    this._detachContextRecoveryListeners();
-    this.pendingTuneOperationId = null;
-    this._nextTuneOperationId();
-    const context = this.audioContextRef.current;
-    if (context && typeof context.close === "function" && context.state !== "closed") {
-      context.close().catch(() => {});
-    }
-    this.audioContextRef.current = null;
-    this.listeners.clear();
-  }
-
-  _emitState() {
-    const snapshot = this.getState();
-    this.listeners.forEach((listener) => listener(snapshot));
-  }
-
-  _setState(patch) {
-    this.state = { ...this.state, ...patch };
-    this._emitState();
-  }
-
-  _persistSettings() {
-    if (!this.storage) return;
+  function persistSettings() {
+    if (!storage) return;
     const payload = {
-      schoolId: this.state.schoolId,
-      volume: this.state.volume,
-      autoplayAmbient: this.state.autoplayAmbient,
-      cyclingEnabled: this.state.cyclingEnabled,
-      orbVisible: this.state.orbVisible,
+      schoolId: state.schoolId,
+      volume: state.volume,
+      autoplayAmbient: state.autoplayAmbient,
+      cyclingEnabled: state.cyclingEnabled,
     };
     try {
-      this.storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
+      storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
     } catch {
       // Ignore storage errors.
     }
   }
 
-  _applySchoolSelection(schoolId) {
-    const config = this._getSchoolConfig(schoolId);
-    this._setState({
+  function applySchoolSelection(schoolId) {
+    const config = getSchoolConfig(schoolId);
+    setState({
       schoolId,
-      paletteKey: config?.paletteKey || null,
-      orbSkinKey: config?.orbSkinKey || null,
       trackUrl: config?.trackUrl || null,
     });
   }
 
-  _transition(event, payload = {}) {
+  function transition(event, payload = {}) {
     switch (event) {
       case AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL: {
-        const { schoolId, queued = false, tuneOperationId = this.activeTuneOperationId } = payload;
-        if (Number.isFinite(tuneOperationId)) {
-          this.activeTuneOperationId = tuneOperationId;
+        const { schoolId, queued = false, tuneOperationId: opId = activeTuneOperationId } = payload;
+        if (Number.isFinite(opId)) {
+          activeTuneOperationId = opId;
         }
-        this._applySchoolSelection(schoolId);
+        applySchoolSelection(schoolId);
         if (queued) {
-          this._setState({
+          setState({
             queuedSchoolId: schoolId,
             isLoading: true,
             error: null,
           });
           return;
         }
-        this.pendingTuneSchoolId = schoolId;
-        this._setState({
+        pendingTuneSchoolId = schoolId;
+        setState({
           status: AMBIENT_PLAYER_STATES.TUNING,
           isLoading: true,
           isPlaying: false,
-          signalLevel: Math.max(this.state.signalLevel, 0.32),
           queuedSchoolId: null,
           error: null,
         });
         return;
       }
       case AMBIENT_PLAYER_EVENTS.TUNE_COMPLETE: {
-        this._setState({
+        setState({
           status: AMBIENT_PLAYER_STATES.PLAYING,
           isLoading: false,
           isPlaying: true,
@@ -1306,7 +960,7 @@ export class AmbientPlayerService {
         return;
       }
       case AMBIENT_PLAYER_EVENTS.PLAY: {
-        this._setState({
+        setState({
           status: AMBIENT_PLAYER_STATES.PLAYING,
           isPlaying: true,
           isLoading: false,
@@ -1315,25 +969,22 @@ export class AmbientPlayerService {
         return;
       }
       case AMBIENT_PLAYER_EVENTS.PAUSE: {
-        this._setState({
+        setState({
           status: AMBIENT_PLAYER_STATES.PAUSED,
           isPlaying: false,
           isLoading: false,
-          signalLevel: 0,
         });
         return;
       }
       case AMBIENT_PLAYER_EVENTS.TRACK_ENDED: {
-        this._setState({ isPlaying: true });
+        setState({ isPlaying: true });
         return;
       }
       case AMBIENT_PLAYER_EVENTS.ERROR: {
-        this._stopSignalMonitor({ resetSignal: false });
-        this._setState({
+        setState({
           status: AMBIENT_PLAYER_STATES.ERROR,
           isPlaying: false,
           isLoading: false,
-          signalLevel: 0,
           error: payload.error || "Unable to play ambient track",
         });
         return;
@@ -1343,207 +994,244 @@ export class AmbientPlayerService {
     }
   }
 
-  _resolveTuneDurationMs() {
-    const fixedDurationMs = Number(this.options.tuningDurationMs);
+  function resolveTuneDurationMs() {
+    const fixedDurationMs = Number(opts.tuningDurationMs);
     if (Number.isFinite(fixedDurationMs) && fixedDurationMs > 0) {
       return toPositiveMs(fixedDurationMs, DEFAULT_OPTIONS.tuningDurationMinMs);
     }
 
-    const minMs = toPositiveMs(this.options.tuningDurationMinMs, DEFAULT_OPTIONS.tuningDurationMinMs);
-    const maxCandidate = toPositiveMs(this.options.tuningDurationMaxMs, DEFAULT_OPTIONS.tuningDurationMaxMs);
+    const minMs = toPositiveMs(opts.tuningDurationMinMs, DEFAULT_OPTIONS.tuningDurationMinMs);
+    const maxCandidate = toPositiveMs(opts.tuningDurationMaxMs, DEFAULT_OPTIONS.tuningDurationMaxMs);
     const maxMs = Math.max(minMs, maxCandidate);
-    const randomValue = clamp01(this.randomFn());
+    const randomValue = clamp01(randomFn());
     const nextDuration = minMs + (maxMs - minMs) * randomValue;
     return Math.round(nextDuration);
   }
 
-  _startTuneTimer(durationMs, tuneOperationId = this.activeTuneOperationId) {
-    if (this.pendingTuneTimer) {
-      clearTimeout(this.pendingTuneTimer);
-      this.pendingTuneTimer = null;
+  async function awaitWithTimeout(task, timeoutMs, timeoutMessage = "Operation timed out") {
+    const safeTimeoutMs = toPositiveMs(timeoutMs, DEFAULT_OPTIONS.tuningCompletionTimeoutMs);
+    let timeoutId = null;
+    try {
+      return await Promise.race([
+        Promise.resolve(task),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), safeTimeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+    }
+  }
+
+  function startTuneTimer(durationMs, id = activeTuneOperationId) {
+    if (pendingTuneTimer) {
+      clearTimeout(pendingTuneTimer);
+      pendingTuneTimer = null;
     }
     const tuneMs = toPositiveMs(durationMs, DEFAULT_OPTIONS.tuningDurationMinMs);
-    this.pendingTuneDurationMs = tuneMs;
-    this.pendingTuneOperationId = tuneOperationId;
-    this.pendingTuneTimer = setTimeout(async () => {
+    pendingTuneDurationMs = tuneMs;
+    pendingTuneOperationId = id;
+    pendingTuneTimer = setTimeout(async () => {
       try {
-        await this._completeTuning(tuneOperationId);
-      } catch {
-        if (this._isTuneOperationCurrent(tuneOperationId)) {
-          this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Failed to complete tuning" });
+        await awaitWithTimeout(
+          completeTuning(id),
+          opts.tuningCompletionTimeoutMs,
+          "Tuning timed out"
+        );
+      } catch (error) {
+        if (isTuneOperationCurrent(id)) {
+          clearTuneTimer();
+          nextTuneOperationId();
+          transition(AMBIENT_PLAYER_EVENTS.ERROR, {
+            error: error?.message || "Failed to complete tuning",
+          });
         }
       }
     }, tuneMs);
   }
 
-  _clearTuneTimer() {
-    if (this.pendingTuneTimer) {
-      clearTimeout(this.pendingTuneTimer);
-      this.pendingTuneTimer = null;
+  function clearTuneTimer() {
+    if (pendingTuneTimer) {
+      clearTimeout(pendingTuneTimer);
+      pendingTuneTimer = null;
     }
-    this.pendingTuneSchoolId = null;
-    this.pendingTuneOperationId = null;
-    this.pendingTuneDurationMs = null;
-    if (this.state.queuedSchoolId || this.state.isLoading) {
-      this._setState({ queuedSchoolId: null, isLoading: false });
+    pendingTuneSchoolId = null;
+    pendingTuneOperationId = null;
+    pendingTuneDurationMs = null;
+    if (state.queuedSchoolId || state.isLoading) {
+      setState({ queuedSchoolId: null, isLoading: false });
     }
   }
 
-  _playDialSfx(durationMs) {
-    if (this.hasPlayedDialSfx) {
+  function playDialSfx(durationMs) {
+    if (hasPlayedDialSfx) {
       return;
     }
-    this.hasPlayedDialSfx = true;
-    this.dialSfxPlayer({
-      lockUntilRef: this.dialLockUntilRef,
-      lockMs: this.options.dialLockMs,
-      nowFn: this.nowFn,
+    hasPlayedDialSfx = true;
+    dialSfxPlayer({
+      lockUntilRef: dialLockUntilRef,
+      lockMs: opts.dialLockMs,
+      nowFn,
       durationMs,
     });
   }
 
-  _computeSignalLevel() {
-    if (this.state.status === AMBIENT_PLAYER_STATES.TUNING) {
-      const clock = this.nowFn() * 0.001;
+  function computeSignalLevel() {
+    if (state.status === AMBIENT_PLAYER_STATES.TUNING) {
+      const clock = nowFn() * 0.001;
       const wobble = Math.abs(Math.sin(clock * 7.4)) * 0.32;
-      const staticBurst = this.randomFn() * 0.45;
+      const staticBurst = randomFn() * 0.45;
       return clamp01(0.22 + wobble + staticBurst);
     }
 
-    if (!this.state.isPlaying) {
+    if (!state.isPlaying) {
       return 0;
     }
 
-    const capabilities = this._getControllerCapabilities();
-    const sampledLevel = this.currentController?.getSignalLevel?.();
+    const capabilities = getControllerCapabilities();
+    const sampledLevel = currentController?.getSignalLevel?.();
     if (capabilities.canAnalyze && Number.isFinite(sampledLevel)) {
       return clamp01(sampledLevel);
     }
 
-    return this._computeSyntheticSignalLevel();
+    return computeSyntheticSignalLevel();
   }
 
-  _startSignalMonitor() {
-    if (!canUseBrowser() || this.signalMonitorTimer || this.listeners.size === 0) return;
-    const pollMs = toPositiveMs(this.options.signalPollMs, DEFAULT_OPTIONS.signalPollMs);
-    this.signalMonitorTimer = setInterval(() => {
-      const nextSignal = this._computeSignalLevel();
-      if (Math.abs(nextSignal - this.state.signalLevel) < 0.02) return;
-      this._setState({ signalLevel: nextSignal });
-    }, pollMs);
-  }
-
-  _stopSignalMonitor({ resetSignal = true } = {}) {
-    if (this.signalMonitorTimer) {
-      clearInterval(this.signalMonitorTimer);
-      this.signalMonitorTimer = null;
-    }
-    if (resetSignal && this.state.signalLevel !== 0) {
-      this._setState({ signalLevel: 0 });
-    }
-  }
-
-  async _completeTuning(tuneOperationId = this.activeTuneOperationId) {
-    if (!this._isTuneOperationCurrent(tuneOperationId)) {
+  async function completeTuning(id = activeTuneOperationId) {
+    if (!isTuneOperationCurrent(id)) {
+      // Stale operation — if we're stuck in TUNING with no pending timer,
+      // recover by forcing an error transition so the user isn't locked out.
+      if (state.status === AMBIENT_PLAYER_STATES.TUNING && !pendingTuneTimer) {
+        transition(AMBIENT_PLAYER_EVENTS.ERROR, {
+          error: "Tuning interrupted — tap play to retry",
+        });
+      }
       return;
     }
 
-    if (this.pendingTuneOperationId === tuneOperationId) {
-      this.pendingTuneTimer = null;
-      this.pendingTuneDurationMs = null;
-      this.pendingTuneOperationId = null;
+    if (pendingTuneOperationId === id) {
+      if (pendingTuneTimer) {
+        clearTimeout(pendingTuneTimer);
+      }
+      pendingTuneTimer = null;
+      pendingTuneDurationMs = null;
+      pendingTuneOperationId = null;
     }
 
-    const targetSchoolId = this.state.queuedSchoolId || this.pendingTuneSchoolId || this.state.schoolId;
+    const targetSchoolId = state.queuedSchoolId || pendingTuneSchoolId || state.schoolId;
     if (!targetSchoolId) {
-      if (this._isTuneOperationCurrent(tuneOperationId)) {
-        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "No school selected for tuning" });
+      if (isTuneOperationCurrent(id)) {
+        transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "No school selected for tuning" });
       }
       return;
     }
 
-    if (!this._isTuneOperationActive(tuneOperationId)) {
+    if (!isTuneOperationActive(id)) {
       return;
     }
 
-    const targetConfig = this._getSchoolConfig(targetSchoolId);
-    if (!targetConfig?.trackUrl) {
-      if (this._isTuneOperationCurrent(tuneOperationId)) {
-        this._transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Selected school has no track" });
+    const targetConfig = getSchoolConfig(targetSchoolId);
+    const targetTrackUrl = resolveTrackUrlForSchool(targetSchoolId, targetConfig?.trackUrl || null);
+    if (!targetTrackUrl) {
+      if (isTuneOperationCurrent(id)) {
+        transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "Selected school has no track" });
       }
       return;
     }
 
-    await this.fadeOutPromise;
+    // Add 5s timeout to fadeOutPromise to prevent hanging on a ghost track
+    try {
+      await Promise.race([
+        fadeOutPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Fade out timeout")), 5000)),
+      ]);
+    } catch (err) {
+      console.warn("completeTuning: fadeOutPromise timed out or failed", err);
+    }
 
-    if (!this._isTuneOperationActive(tuneOperationId)) {
+    if (!isTuneOperationActive(id)) {
       return;
     }
 
-    const isAlreadyLoaded = this.currentController && this.currentTrackSchoolId === targetSchoolId;
+    const isAlreadyLoaded =
+      currentController &&
+      currentTrackSchoolId === targetSchoolId &&
+      currentController.trackUrl === targetTrackUrl;
     if (!isAlreadyLoaded) {
-      await this._fadeOutCurrentTrackIfNeeded();
+      await fadeOutCurrentTrackIfNeeded();
 
-      if (!this._isTuneOperationActive(tuneOperationId)) {
+      if (!isTuneOperationActive(id)) {
         return;
       }
 
-      const didLoadTrack = await this._loadSchoolTrack(
-        targetSchoolId,
-        targetConfig.trackUrl,
-        tuneOperationId
-      );
-      if (!didLoadTrack || !this._isTuneOperationActive(tuneOperationId)) {
+      const didLoadTrack = await loadSchoolTrack(targetSchoolId, targetTrackUrl, id);
+      if (!didLoadTrack || !isTuneOperationActive(id)) {
         return;
       }
     } else {
       try {
-        await this.currentController.play();
+        await currentController.play();
       } catch (err) {
         console.warn("Failed to play existing controller:", err);
       }
-      if (!this._isTuneOperationActive(tuneOperationId)) {
+      if (!isTuneOperationActive(id)) {
         return;
       }
     }
 
-    if (this._isTuneOperationActive(tuneOperationId)) {
-      this.pendingTuneSchoolId = null;
-      this._transition(AMBIENT_PLAYER_EVENTS.TUNE_COMPLETE);
+    if (isTuneOperationActive(id)) {
+      pendingTuneSchoolId = null;
+      transition(AMBIENT_PLAYER_EVENTS.TUNE_COMPLETE);
     }
   }
 
-  async _fadeOutCurrentTrackIfNeeded() {
-    if (!this.currentController) return;
-    const controller = this.currentController;
-    await this._fadeControllerVolume(controller, 0, this.options.fadeOutMs);
+  async function fadeOutCurrentTrackIfNeeded() {
+    if (!currentController) return;
+    const ctrl = currentController;
+
     try {
-      await controller.pause();
+      await Promise.race([
+        fadeControllerVolume(ctrl, 0, opts.fadeOutMs),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Fade out timeout")), opts.fadeOutMs + 1000)
+        ),
+      ]);
+    } catch (err) {
+      console.warn("fadeOutCurrentTrackIfNeeded: fade failed", err);
+    }
+
+    try {
+      await ctrl.pause();
     } catch (err) {
       console.warn("Error pausing controller during fade out:", err);
     }
-    this._destroyController(controller);
-    if (this.currentController === controller) {
-      this.currentController = null;
-      this.currentTrackSchoolId = null;
+
+    destroyController(ctrl);
+    if (currentController === ctrl) {
+      currentController = null;
+      currentTrackSchoolId = null;
     }
   }
 
-  async _loadSchoolTrack(schoolId, trackUrl, tuneOperationId = this.activeTuneOperationId) {
-    const container = this._ensureContainer();
-    if (!container) {
-      throw new Error("Unable to initialize ambient container");
+  async function loadSchoolTrack(schoolId, trackUrl, id = activeTuneOperationId) {
+    if (!controllerFactory) {
+      if (!container || !container.isConnected) {
+        throw new Error("Ambient container is not mounted");
+      }
     }
 
-    const audioContext = this._ensureAudioContext();
+    const audioContext = ensureAudioContext();
 
-    const controller = this.controllerFactory
-      ? await this.controllerFactory({
+    const ctrl = controllerFactory
+      ? await controllerFactory({
           schoolId,
+          container,
           trackUrl,
           volume: 0,
           autoPlay: true,
-          onTrackEnded: () => this._transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED),
+          onTrackEnded: () => handleTrackEnded(schoolId),
           audioContext,
         })
       : await createTrackController({
@@ -1551,90 +1239,80 @@ export class AmbientPlayerService {
           trackUrl,
           volume: 0,
           autoPlay: true,
-          onTrackEnded: () => this._transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED),
+          onTrackEnded: () => handleTrackEnded(schoolId),
           audioContext,
         });
 
-    if (!this._isTuneOperationActive(tuneOperationId)) {
-      this._destroyController(controller);
+    if (!isTuneOperationActive(id)) {
+      destroyController(ctrl);
       return false;
     }
 
-    controller.schoolId = schoolId;
-    controller.setVolume(0);
-    this.currentController = controller;
-    this.currentTrackSchoolId = schoolId;
+    ctrl.schoolId = schoolId;
+    ctrl.trackUrl = trackUrl;
+    ctrl.setVolume(0);
+    currentController = ctrl;
+    currentTrackSchoolId = schoolId;
+    setState({ trackUrl });
 
-    if (controller.loadPromise) {
-      await controller.loadPromise;
+    if (ctrl.loadPromise) {
+      await ctrl.loadPromise;
     }
 
-    if (!this._isTuneOperationActive(tuneOperationId)) {
-      if (this.currentController === controller) {
-        this.currentController = null;
-        this.currentTrackSchoolId = null;
+    if (!isTuneOperationActive(id)) {
+      if (currentController === ctrl) {
+        currentController = null;
+        currentTrackSchoolId = null;
       }
-      this._destroyController(controller);
+      destroyController(ctrl);
       return false;
     }
 
     try {
-      await controller.play();
-      if (!this._isTuneOperationActive(tuneOperationId)) {
-        if (this.currentController === controller) {
-          this.currentController = null;
-          this.currentTrackSchoolId = null;
+      await ctrl.play();
+      if (!isTuneOperationActive(id)) {
+        if (currentController === ctrl) {
+          currentController = null;
+          currentTrackSchoolId = null;
         }
-        this._destroyController(controller);
+        destroyController(ctrl);
         return false;
       }
-      await this._fadeControllerVolume(controller, this.state.volume, this.options.fadeInMs);
-      if (!this._isTuneOperationActive(tuneOperationId)) {
-        if (this.currentController === controller) {
-          this.currentController = null;
-          this.currentTrackSchoolId = null;
+      await fadeControllerVolume(ctrl, state.volume, opts.fadeInMs);
+      if (!isTuneOperationActive(id)) {
+        if (currentController === ctrl) {
+          currentController = null;
+          currentTrackSchoolId = null;
         }
-        this._destroyController(controller);
+        destroyController(ctrl);
         return false;
       }
-      this._startSignalMonitor();
       return true;
     } catch (err) {
-      if (this.currentController === controller) {
-        this.currentController = null;
-        this.currentTrackSchoolId = null;
+      if (currentController === ctrl) {
+        currentController = null;
+        currentTrackSchoolId = null;
       }
-      this._destroyController(controller);
+      destroyController(ctrl);
       console.error("Failed to play track after loading:", err);
       throw err;
     }
   }
 
-  _ensureContainer() {
-    if (!canUseBrowser()) return null;
-    if (this.container) return this.container;
-    const container = document.createElement("div");
-    container.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none;";
-    container.setAttribute("aria-hidden", "true");
-    document.body.appendChild(container);
-    this.container = container;
-    return this.container;
-  }
-
-  _fadeControllerVolume(controller, targetVolume, durationMs) {
+  function fadeControllerVolume(ctrl, targetVolume, durationMs) {
     const target = clamp01(targetVolume);
-    if (!controller || durationMs <= 0) {
-      controller?.setVolume(target);
+    if (!ctrl || durationMs <= 0) {
+      ctrl?.setVolume(target);
       return Promise.resolve();
     }
 
-    const capabilities = this._getControllerCapabilities(controller);
+    const capabilities = getControllerCapabilities(ctrl);
     if (!capabilities.canSetVolumeSmooth) {
-      controller.setVolume(target);
+      ctrl.setVolume(target);
       return Promise.resolve();
     }
 
-    const from = clamp01(controller.getVolume ? controller.getVolume() : this.state.volume);
+    const from = clamp01(ctrl.getVolume ? ctrl.getVolume() : state.volume);
     const now =
       typeof performance !== "undefined" && typeof performance.now === "function"
         ? () => performance.now()
@@ -1646,11 +1324,11 @@ export class AmbientPlayerService {
     const startAt = now();
 
     return new Promise((resolve) => {
-      const tick = (now) => {
-        const elapsed = now - startAt;
+      const tick = (timestamp) => {
+        const elapsed = timestamp - startAt;
         const progress = Math.min(1, elapsed / durationMs);
         const nextVolume = from + (target - from) * progress;
-        controller.setVolume(nextVolume);
+        ctrl.setVolume(nextVolume);
         if (progress < 1) {
           frame(tick);
         } else {
@@ -1660,13 +1338,343 @@ export class AmbientPlayerService {
       frame(tick);
     });
   }
+
+  // ─── Public API ────────────────────────────────────────────────────────────
+
+  function subscribe(listener) {
+    if (typeof listener !== "function") {
+      return () => {};
+    }
+    listeners.add(listener);
+    listener(getState());
+    return () => {
+      listeners.delete(listener);
+    };
+  }
+
+  function getState() {
+    return { ...state };
+  }
+
+  function setContainer(cont) {
+    if (cont instanceof Element) {
+      container = cont;
+    } else if (cont === null || cont === undefined) {
+      container = null;
+    }
+  }
+
+  function getSignalLevel() {
+    return computeSignalLevel();
+  }
+
+  function setDynamicSchools(schools = []) {
+    dynamicSchools = Array.isArray(schools) ? schools : [];
+    emitState();
+  }
+
+  function setPlayableSchools(ids = []) {
+    playableSchoolIds = Array.isArray(ids) ? [...ids] : [];
+
+    if (playableSchoolIds.length === 0) {
+      clearTuneTimer();
+      nextTuneOperationId();
+      if (state.schoolId !== null) {
+        setState({ schoolId: null, trackUrl: null });
+        persistSettings();
+      }
+      if (currentController) {
+        destroyController(currentController);
+        currentController = null;
+        currentTrackSchoolId = null;
+      }
+      return;
+    }
+
+    if (!state.schoolId || !playableSchoolIds.includes(state.schoolId)) {
+      const fallbackSchoolId = getDefaultSchoolId(playableSchoolIds);
+      applySchoolSelection(fallbackSchoolId);
+      persistSettings();
+    }
+  }
+
+  async function unlockAudio() {
+    try {
+      await ensureContextRunning();
+    } catch (err) {
+      console.warn("unlockAudio: ensureContextRunning failed", err);
+    }
+
+    if (state.audioUnlocked) return true;
+
+    const silentAudio = new Audio(
+      "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQQAAAAAAA=="
+    );
+    try {
+      const playPromise = silentAudio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    } catch {
+      // Ignore sync errors.
+    }
+
+    setState({ audioUnlocked: true });
+    if (
+      state.autoplayAmbient &&
+      state.status === AMBIENT_PLAYER_STATES.IDLE &&
+      state.schoolId
+    ) {
+      // Don't await here to prevent potential mount-time blocking
+      void play();
+    }
+    return true;
+  }
+
+  async function setSchool(schoolId, schoolOptions = {}) {
+    if (!schoolId || !playableSchoolIds.includes(schoolId)) {
+      transition(AMBIENT_PLAYER_EVENTS.ERROR, { error: "School is not playable" });
+      return false;
+    }
+
+    await unlockAudio();
+
+    const opId = nextTuneOperationId();
+
+    if (state.status === AMBIENT_PLAYER_STATES.TUNING) {
+      transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
+        schoolId,
+        queued: true,
+        tuneOperationId: opId,
+      });
+      const queuedTuneDurationMs = pendingTuneDurationMs || resolveTuneDurationMs();
+      pendingTuneDurationMs = queuedTuneDurationMs;
+      startTuneTimer(queuedTuneDurationMs, opId);
+      return true;
+    }
+
+    const isSameTrackActive = currentController && currentTrackSchoolId === schoolId;
+    const forceRetune = Boolean(schoolOptions.forceRetune);
+    const skipTuning = Boolean(schoolOptions.skipTuning);
+    const shouldPlayDialSfx = schoolOptions.playDialSfx !== false;
+
+    transition(AMBIENT_PLAYER_EVENTS.SELECT_SCHOOL, {
+      schoolId,
+      queued: false,
+      tuneOperationId: opId,
+    });
+    if (skipTuning) {
+      pendingTuneDurationMs = null;
+      if (shouldPlayDialSfx) {
+        playDialSfx(420);
+      }
+    } else {
+      const tuneDurationMs = resolveTuneDurationMs();
+      pendingTuneDurationMs = tuneDurationMs;
+      startTuneTimer(tuneDurationMs, opId);
+      if (shouldPlayDialSfx) {
+        playDialSfx(tuneDurationMs);
+      }
+    }
+
+    if (!isSameTrackActive || forceRetune) {
+      fadeOutPromise = fadeOutCurrentTrackIfNeeded();
+    } else {
+      fadeOutPromise = Promise.resolve();
+    }
+
+    persistSettings();
+    if (skipTuning) {
+      try {
+        await awaitWithTimeout(
+          completeTuning(opId),
+          opts.tuningCompletionTimeoutMs,
+          "Tuning timed out"
+        );
+      } catch (err) {
+        if (isTuneOperationCurrent(opId)) {
+          transition(AMBIENT_PLAYER_EVENTS.ERROR, {
+            error: err?.message || "Failed to complete tuning",
+          });
+        }
+        return false;
+      }
+    }
+    return true;
+  }
+
+  async function cycleSchool(direction = 1) {
+    if (playableSchoolIds.length === 0) return false;
+    if (!state.cyclingEnabled) {
+      return await setSchool(state.schoolId || playableSchoolIds[0], { forceRetune: true });
+    }
+    const currentSchoolId = state.schoolId || playableSchoolIds[0];
+    const currentIndex = playableSchoolIds.indexOf(currentSchoolId);
+    const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+    const nextIndex = (safeIndex + direction + playableSchoolIds.length) % playableSchoolIds.length;
+    const nextSchoolId = playableSchoolIds[nextIndex];
+    return await setSchool(nextSchoolId);
+  }
+
+  async function play() {
+    await unlockAudio();
+
+    if (state.status === AMBIENT_PLAYER_STATES.TUNING) {
+      // If already tuning, just let it finish.
+      // Only interrupt if something is clearly wrong or we want to force re-tuning.
+      if (!pendingTuneTimer) {
+        clearTuneTimer();
+        nextTuneOperationId();
+        transition(AMBIENT_PLAYER_EVENTS.PAUSE);
+      } else {
+        return;
+      }
+    }
+
+    if (currentController) {
+      try {
+        await currentController.play();
+        transition(AMBIENT_PLAYER_EVENTS.PLAY);
+        return;
+      } catch (err) {
+        console.warn("Failed to play existing controller, will re-tune:", err);
+      }
+    }
+
+    const schoolId = state.schoolId || getDefaultSchoolId(playableSchoolIds);
+    if (!schoolId) return;
+
+    // Always start a fresh tuning if we don't have a working controller
+    await setSchool(schoolId, { forceRetune: true, skipTuning: true, playDialSfx: true });
+  }
+
+  async function pause() {
+    clearTuneTimer();
+    nextTuneOperationId(); // Invalidate any pending tuning operations
+    if (currentController) {
+      try {
+        await currentController.pause();
+      } catch (err) {
+        console.warn("Error pausing controller:", err);
+      }
+    }
+    transition(AMBIENT_PLAYER_EVENTS.PAUSE);
+  }
+
+  async function togglePlayPause() {
+    if (state.status === AMBIENT_PLAYER_STATES.PLAYING) {
+      await pause();
+      return;
+    }
+    // If we are tuning, a toggle should act as a "stop tuning" / pause.
+    if (state.status === AMBIENT_PLAYER_STATES.TUNING) {
+      await pause();
+      return;
+    }
+    await play();
+  }
+
+  function setVolume(volume) {
+    const clamped = clamp01(volume);
+    setState({ volume: clamped });
+    if (currentController) {
+      currentController.setVolume(clamped);
+    }
+    persistSettings();
+  }
+
+  function setAutoplayAmbient(enabled) {
+    const nextValue = Boolean(enabled);
+    setState({ autoplayAmbient: nextValue });
+    persistSettings();
+    if (
+      nextValue &&
+      state.audioUnlocked &&
+      state.status === AMBIENT_PLAYER_STATES.IDLE &&
+      state.schoolId
+    ) {
+      play();
+    }
+  }
+
+  function toggleAutoplayAmbient() {
+    setAutoplayAmbient(!state.autoplayAmbient);
+  }
+
+  function setCyclingEnabled(enabled) {
+    setState({ cyclingEnabled: Boolean(enabled) });
+    persistSettings();
+  }
+
+  function toggleCyclingEnabled() {
+    setCyclingEnabled(!state.cyclingEnabled);
+  }
+
+  function destroy() {
+    clearTuneTimer();
+    if (currentController) {
+      destroyController(currentController);
+      currentController = null;
+      currentTrackSchoolId = null;
+    }
+    container = null;
+    detachContextRecoveryListeners();
+    pendingTuneOperationId = null;
+    nextTuneOperationId();
+    const context = audioContextRef.current;
+    if (context && typeof context.close === "function" && context.state !== "closed") {
+      context.close().catch(() => {});
+    }
+    audioContextRef.current = null;
+    listeners.clear();
+  }
+
+  // Initialize
+  attachContextRecoveryListeners();
+
+  return {
+    subscribe,
+    getState,
+    setContainer,
+    getSignalLevel,
+    setDynamicSchools,
+    setPlayableSchools,
+    unlockAudio,
+    setSchool,
+    cycleSchool,
+    play,
+    pause,
+    togglePlayPause,
+    setVolume,
+    setAutoplayAmbient,
+    toggleAutoplayAmbient,
+    setCyclingEnabled,
+    toggleCyclingEnabled,
+    destroy,
+    ensureContextRunning,
+  };
+}
+
+// Compatibility shim: `new AmbientPlayerService(options)` still works because
+// a constructor that returns a non-null object overrides the `new` expression result.
+export function AmbientPlayerService(options = {}) {
+  return createAmbientPlayerService(options);
 }
 
 let ambientPlayerServiceInstance = null;
 
 export function getAmbientPlayerService() {
   if (!ambientPlayerServiceInstance) {
-    ambientPlayerServiceInstance = new AmbientPlayerService();
+    ambientPlayerServiceInstance = createAmbientPlayerService();
   }
   return ambientPlayerServiceInstance;
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (ambientPlayerServiceInstance) {
+      ambientPlayerServiceInstance.destroy();
+      ambientPlayerServiceInstance = null;
+    }
+  });
 }

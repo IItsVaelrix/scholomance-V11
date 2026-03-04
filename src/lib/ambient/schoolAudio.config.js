@@ -1,18 +1,9 @@
-import { LIBRARY } from "../../data/library";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
-
-function resolveTrackSource(track) {
-  if (!track || typeof track !== "object") return null;
-  if (track.suno) return track.suno;
-  if (track.yt) return `https://www.youtube.com/watch?v=${track.yt}`;
-  return track.url || null;
-}
+import { getDefaultSonicStationTrackUrl, pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
 
 function getPrimaryTrackUrl(schoolId) {
-  const school = SCHOOLS[schoolId];
-  if (!school?.tracks?.length) return null;
-  const firstTrackKey = school.tracks[0];
-  return resolveTrackSource(LIBRARY[firstTrackKey]);
+  if (schoolId !== "SONIC") return null;
+  return getDefaultSonicStationTrackUrl();
 }
 
 export const SCHOOL_AUDIO_CONFIG = Object.freeze(
@@ -31,6 +22,13 @@ export const SCHOOL_AUDIO_CONFIG = Object.freeze(
 
 export function getSchoolAudioConfig(schoolId) {
   return SCHOOL_AUDIO_CONFIG[schoolId] || null;
+}
+
+export function getRandomizedStationTrackUrl(schoolId, { excludeUrl = null } = {}) {
+  if (schoolId !== "SONIC") {
+    return getSchoolAudioConfig(schoolId)?.trackUrl || null;
+  }
+  return pickRandomSonicStationTrack({ excludeUrl }) || getDefaultSonicStationTrackUrl();
 }
 
 export function getPlayableSchoolIds(_unlockedSchools = []) {

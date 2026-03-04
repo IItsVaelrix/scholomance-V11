@@ -56,8 +56,8 @@ describe('PoeticLanguageServer', () => {
     ]);
   });
 
-  it('returns completions with scores and badges', () => {
-    const results = pls.getCompletions({
+  it('returns completions with scores and badges', async () => {
+    const results = await pls.getCompletions({
       prefix: 'li',
       prevWord: null,
       prevLineEndWord: 'night',
@@ -74,8 +74,8 @@ describe('PoeticLanguageServer', () => {
     }
   });
 
-  it('prioritizes rhyming candidates', () => {
-    const results = pls.getCompletions({
+  it('prioritizes rhyming candidates', async () => {
+    const results = await pls.getCompletions({
       prefix: '',
       prevWord: 'the',
       prevLineEndWord: 'night', // rhyme target: AY-T
@@ -87,8 +87,8 @@ describe('PoeticLanguageServer', () => {
     expect(rhymeCandidates.length).toBeGreaterThan(0);
   });
 
-  it('generates correct ghost lines', () => {
-    const results = pls.getCompletions({
+  it('generates correct ghost lines', async () => {
+    const results = await pls.getCompletions({
       prefix: 'li',
       prevWord: null,
       prevLineEndWord: 'night',
@@ -100,19 +100,19 @@ describe('PoeticLanguageServer', () => {
     }
   });
 
-  it('returns empty when not ready', () => {
+  it('returns empty when not ready', async () => {
     const unready = new PoeticLanguageServer({
       phonemeEngine: mockPhonemeEngine,
       trie: new MockTrie(),
     });
-    const results = unready.getCompletions({ prefix: 'li', prevWord: null, prevLineEndWord: null, currentLineWords: [] });
+    const results = await unready.getCompletions({ prefix: 'li', prevWord: null, prevLineEndWord: null, currentLineWords: [] });
     expect(results).toHaveLength(0);
   });
 
-  it('allows runtime weight adjustment', () => {
+  it('allows runtime weight adjustment', async () => {
     pls.setWeights({ rhyme: 0.9, prefix: 0.1, meter: 0, color: 0 });
 
-    const results = pls.getCompletions({
+    const results = await pls.getCompletions({
       prefix: '',
       prevWord: 'the',
       prevLineEndWord: 'night',
@@ -126,12 +126,12 @@ describe('PoeticLanguageServer', () => {
     }
 
     // Restore defaults
-    pls.setWeights({ rhyme: 0.35, prefix: 0.20, meter: 0.25, color: 0.20 });
+    pls.setWeights({ rhyme: 0.30, prefix: 0.15, meter: 0.20, color: 0.15, synonym: 0.10, validity: 0.10 });
   });
 
-  it('completes in under 50ms', () => {
+  it('completes in under 50ms', async () => {
     const start = performance.now();
-    pls.getCompletions({
+    await pls.getCompletions({
       prefix: 'li',
       prevWord: null,
       prevLineEndWord: 'night',
@@ -139,5 +139,50 @@ describe('PoeticLanguageServer', () => {
     });
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(50);
+  });
+
+  it('uses dictionary rhymes, synonyms, and validity scoring when API is wired', async () => {
+    const dictionaryAPI = {
+      async lookup(word) {
+        if (String(word).toLowerCase() === 'time') {
+          return {
+            rhymes: ['dime', 'sublime'],
+            synonyms: ['moment', 'era'],
+          };
+        }
+        return { rhymes: [], synonyms: [] };
+      },
+      async validateBatch(words) {
+        const known = new Set(['dime', 'moment', 'era', 'time']);
+        return words
+          .map((word) => String(word).toLowerCase())
+          .filter((word) => known.has(word));
+      },
+    };
+
+    const withDictionary = new PoeticLanguageServer({
+      phonemeEngine: mockPhonemeEngine,
+      trie: new MockTrie(),
+      dictionaryAPI,
+    });
+    withDictionary.buildIndex([
+      'night', 'light', 'fight', 'sight', 'time', 'fire',
+      'face', 'base', 'dark', 'soul', 'into', 'the', 'void',
+    ]);
+
+    const results = await withDictionary.getCompletions({
+      prefix: '',
+      prevWord: 'time',
+      prevLineEndWord: 'time',
+      currentLineWords: [],
+    }, { limit: 20 });
+
+    expect(results.some((candidate) => candidate.token === 'dime')).toBe(true);
+    expect(results.some((candidate) => candidate.badges.includes('SYNONYM'))).toBe(true);
+
+    const dime = results.find((candidate) => candidate.token === 'dime');
+    const sublime = results.find((candidate) => candidate.token === 'sublime');
+    expect(dime?.scores?.validity).toBe(1);
+    expect(sublime?.scores?.validity).toBe(0.2);
   });
 });

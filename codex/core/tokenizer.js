@@ -10,15 +10,7 @@
  * @see AI_Architecture_V2.md section 5.2
  */
 
-// This mapping is based on the thematic associations of vowel sounds.
-// It should be considered part of the core game logic.
-const VOWEL_FAMILY_TO_SCHOOL = {
-    'A': 'SONIC', 'AA': 'SONIC', 'AE': 'SONIC', 'AH': 'SONIC', // Open, frontal sounds
-    'AO': 'VOID',  'AW': 'VOID',  'OW': 'VOID',  'UW': 'VOID', // Deep, back sounds
-    'AY': 'ALCHEMY','EY': 'ALCHEMY','OY': 'ALCHEMY', // Diphthongs, transformative sounds
-    'EH': 'WILL',  'ER': 'WILL',  'UH': 'WILL', // Guttural, forceful sounds
-    'IH': 'PSYCHIC','IY': 'PSYCHIC', // High, sharp, piercing sounds
-};
+import { VOWEL_FAMILY_TO_SCHOOL } from '../../src/data/schools.js';
 
 /**
  * Maps a vowel family from a phoneme analysis to a School of Magic.

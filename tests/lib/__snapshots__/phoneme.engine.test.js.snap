@@ -155,9 +155,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AW-open",
+        "A-open",
       ],
-      "rhymeKey": "AW-open",
+      "rhymeKey": "A-open",
       "stressPattern": "1",
       "syllableCount": 1,
       "syllables": [
@@ -167,7 +167,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
           "onset": "FL",
           "stress": 1,
           "vowel": "AW1",
-          "vowelFamily": "AW",
+          "vowelFamily": "A",
         },
       ],
       "word": "FLOW",
@@ -203,7 +203,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     {
       "extendedRhymeKeys": [
         "AE-open",
-        "AW-open/AE-open",
+        "A-open/AE-open",
       ],
       "rhymeKey": "AE-open",
       "stressPattern": "10",
@@ -215,7 +215,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
           "onset": "Y",
           "stress": 1,
           "vowel": "AW1",
-          "vowelFamily": "AW",
+          "vowelFamily": "A",
         },
         {
           "coda": "",
@@ -333,9 +333,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AW-TH",
+        "A-TH",
       ],
-      "rhymeKey": "AW-TH",
+      "rhymeKey": "A-TH",
       "stressPattern": "1",
       "syllableCount": 1,
       "syllables": [
@@ -345,7 +345,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
           "onset": "GR",
           "stress": 1,
           "vowel": "AW1",
-          "vowelFamily": "AW",
+          "vowelFamily": "A",
         },
       ],
       "word": "GROWTH",
@@ -445,11 +445,11 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AY-open",
-        "AE-open/AY-open",
-        "A-T/AE-open/AY-open",
+        "EY-open",
+        "AE-open/EY-open",
+        "A-T/AE-open/EY-open",
       ],
-      "rhymeKey": "AY-open",
+      "rhymeKey": "EY-open",
       "stressPattern": "001",
       "syllableCount": 3,
       "syllables": [
@@ -475,7 +475,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
           "onset": "R",
           "stress": 1,
           "vowel": "AY1",
-          "vowelFamily": "AY",
+          "vowelFamily": "EY",
         },
       ],
       "word": "POTTERY",
@@ -613,11 +613,11 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AY-open",
-        "AE-open/AY-open",
-        "A-open/AE-open/AY-open",
+        "EY-open",
+        "AE-open/EY-open",
+        "A-open/AE-open/EY-open",
       ],
-      "rhymeKey": "AY-open",
+      "rhymeKey": "EY-open",
       "stressPattern": "001",
       "syllableCount": 3,
       "syllables": [
@@ -643,7 +643,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
           "onset": "TR",
           "stress": 1,
           "vowel": "AY1",
-          "vowelFamily": "AY",
+          "vowelFamily": "EY",
         },
       ],
       "word": "POETRY",
@@ -771,9 +771,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
         "L",
         "AW1",
       ],
-      "rhymeKey": "AW-open",
+      "rhymeKey": "A-open",
       "syllableCount": 1,
-      "vowelFamily": "AW",
+      "vowelFamily": "A",
       "word": "FLOW",
     },
     {
@@ -799,7 +799,7 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       ],
       "rhymeKey": "AE-open",
       "syllableCount": 2,
-      "vowelFamily": "AW",
+      "vowelFamily": "A",
       "word": "YOURE",
     },
     {
@@ -867,9 +867,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
         "AW1",
         "TH",
       ],
-      "rhymeKey": "AW-TH",
+      "rhymeKey": "A-TH",
       "syllableCount": 1,
-      "vowelFamily": "AW",
+      "vowelFamily": "A",
       "word": "GROWTH",
     },
     {
@@ -930,9 +930,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
         "R",
         "AY1",
       ],
-      "rhymeKey": "AY-open",
+      "rhymeKey": "EY-open",
       "syllableCount": 3,
-      "vowelFamily": "AY",
+      "vowelFamily": "EY",
       "word": "POTTERY",
     },
     {
@@ -1014,9 +1014,9 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
         "R",
         "AY1",
       ],
-      "rhymeKey": "AY-open",
+      "rhymeKey": "EY-open",
       "syllableCount": 3,
-      "vowelFamily": "AY",
+      "vowelFamily": "EY",
       "word": "POETRY",
     },
   ],

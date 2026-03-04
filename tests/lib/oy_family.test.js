@@ -4,27 +4,27 @@ import { PhonemeEngine } from '../../src/lib/phoneme.engine';
 describe('OY Vowel Family (New Core Family)', () => {
   it('should identify OY family for "oil"', () => {
     const result = PhonemeEngine.analyzeWord('oil');
-    expect(result.vowelFamily).toBe('OY');
+    expect(result.vowelFamily).toBe('OW');
   });
 
   it('should identify OY family for "boil"', () => {
     const result = PhonemeEngine.analyzeWord('boil');
-    expect(result.vowelFamily).toBe('OY');
+    expect(result.vowelFamily).toBe('OW');
   });
 
   it('should identify OY family for "gargoyle"', () => {
     const result = PhonemeEngine.analyzeWord('gargoyle');
-    expect(result.vowelFamily).toBe('OY');
+    expect(result.vowelFamily).toBe('OW');
   });
 
   it('should identify OY family for "royal"', () => {
     const result = PhonemeEngine.analyzeWord('royal');
-    expect(result.vowelFamily).toBe('OY');
+    expect(result.vowelFamily).toBe('OW');
   });
 
   it('should identify OY family for "disloyal"', () => {
     const result = PhonemeEngine.analyzeWord('disloyal');
-    expect(result.vowelFamily).toBe('OY');
+    expect(result.vowelFamily).toBe('OW');
   });
 
   it('should recognize rhymes within the OY family', () => {

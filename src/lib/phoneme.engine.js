@@ -34,32 +34,18 @@
 import { z } from "zod";
 import { CmuPhonemeEngine } from "./cmu.phoneme.engine.js";
 import { normalizeVowelFamily } from "./vowelFamily.js";
-import { 
-  ARPABET_VOWELS, 
-  VOWEL_TO_BASE_FAMILY, 
-  ALPHABET_PHONETIC_MAP, 
-  DIGRAPH_MAP 
+import {
+  ARPABET_VOWELS,
+  VOWEL_TO_BASE_FAMILY,
+  ALPHABET_PHONETIC_MAP,
+  DIGRAPH_MAP
 } from "./phoneme.constants.js";
 import { Syllabifier } from "./syllabifier.js";
 import { Phonotactics } from "./phonotactics.js";
 import { PhoneticSimilarity } from "./phoneticSimilarity.js";
 import { ScholomanceDictionaryAPI } from "./scholomanceDictionary.api.js";
 import { applyPhonologicalProcesses as applyOrderedPhonologicalProcesses } from "./phonologicalProcesses.js";
-
-const VOWEL_FAMILY_TO_SCHOOL = {
-  A: "SONIC",
-  AE: "SONIC",
-  U: "VOID",
-  AO: "VOID",
-  OW: "VOID",
-  OY: "VOID",
-  UR: "VOID",
-  UW: "VOID",
-  EY: "ALCHEMY",
-  AY: "ALCHEMY",
-  IH: "PSYCHIC",
-  IY: "PSYCHIC",
-};
+import { VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
 
 /**
  * Targeted pronunciation overrides for high-impact words.
@@ -133,7 +119,13 @@ export const PhonemeEngine = {
   AUTHORITY_CACHE: new Map(),
   _initPromise: null,
 
-  clearCache() { this.WORD_CACHE.clear(); this.AUTHORITY_CACHE.clear(); },
+  clearCache() {
+    this.WORD_CACHE.clear();
+    this.AUTHORITY_CACHE.clear();
+    if (typeof CmuPhonemeEngine.clearCache === "function") {
+      CmuPhonemeEngine.clearCache();
+    }
+  },
 
   async init() {
     if (this._initPromise) return this._initPromise;
@@ -163,6 +155,7 @@ export const PhonemeEngine = {
 
         this.DICT_V2 = dictRaw;
         this.RULES_V2 = rulesRaw;
+        await CmuPhonemeEngine.init();
         return this.DICT_V2?.vowel_families?.length || 14;
       } catch (err) { 
         if (typeof window === "undefined") {

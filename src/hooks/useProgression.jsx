@@ -80,15 +80,19 @@ function debounce(func, wait) {
 export function ProgressionProvider({ children }) {
   const [progression, setProgression] = useState(defaultProgression);
   const [isLoading, setIsLoading] = useState(true);
+  const canPersistRef = useRef(false);
 
   // Debounced function to save progression to the server
   const debouncedSave = useRef(debounce(async (newProgression) => {
+    if (!canPersistRef.current) {
+      return;
+    }
     try {
       const csrfToken = await getCsrfToken();
       if (!csrfToken) {
         throw new Error("Missing CSRF token");
       }
-      await fetch(getApiUrl('/api/progression'), {
+      const response = await fetch(getApiUrl('/api/progression'), {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -100,6 +104,9 @@ export function ProgressionProvider({ children }) {
           unlockedSchools: newProgression.unlockedSchools
         }),
       });
+      if (response.status === 401 || response.status === 403) {
+        canPersistRef.current = false;
+      }
     } catch (error) {
       console.error("Failed to save progression:", error);
     }
@@ -112,6 +119,7 @@ export function ProgressionProvider({ children }) {
       try {
         const response = await fetch(getApiUrl('/api/progression'), { credentials: 'include' });
         if (response.ok) {
+          canPersistRef.current = true;
           const data = await response.json();
           const parsed = ProgressionPayloadSchema.safeParse(data);
           if (!parsed.success) {
@@ -128,12 +136,15 @@ export function ProgressionProvider({ children }) {
             ...prev,
             ...serverData,
           }));
-        } else if (response.status === 401) {
+        } else if (response.status === 401 || response.status === 403) {
+          canPersistRef.current = false;
           console.log("Not logged in, using default progression.");
         } else {
-          console.error("Failed to fetch progression:", response.statusText);
+          canPersistRef.current = false;
+          console.error("Failed to fetch progression:", response.status, response.statusText);
         }
       } catch (error) {
+        canPersistRef.current = false;
         console.error("Error fetching progression:", error);
       } finally {
         setIsLoading(false);
@@ -145,7 +156,7 @@ export function ProgressionProvider({ children }) {
   // Persist changes to the server
   useEffect(() => {
     // Don't save the initial default state before loading from server
-    if (!isLoading) {
+    if (!isLoading && canPersistRef.current) {
       debouncedSave(progression);
     }
   }, [progression, isLoading, debouncedSave]);
@@ -205,6 +216,9 @@ export function ProgressionProvider({ children }) {
       ...prev,
       ...optimisticReset,
     }));
+    if (!canPersistRef.current) {
+      return;
+    }
     try {
       const csrfToken = await getCsrfToken();
       if (!csrfToken) {

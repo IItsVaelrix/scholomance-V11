@@ -4,23 +4,24 @@
  */
 
 const FAMILY_ALIASES = Object.freeze({
-  // Consolidations
+  // Consolidations to 8 Core Families
   AA: "A",
-  AX: "U",     // Schwa is neutral central, better in U family than A
-  EH: "AE",    
-  ER: "UR",    // Rhotic vowels
-  AH: "U",
-  UH: "U",
-  UW: "U",
+  AH: "A",
+  AX: "A",
+  AW: "A",
+  EH: "AE",
+  AY: "EY",
+  OY: "OW",
+  OH: "OW",
+  UH: "UW",
+  OO: "UW",
+  YOO: "UW",
+  YUW: "UW",
+  ER: "IH",
+  UR: "IH",
   
   // Keep core families distinct
-  // Note: Test alignment previously forced AY -> EY.
-  // We RESTORE distinction for engine accuracy.
   EE: "IY",
-  OH: "OW",
-  OO: "U",
-  YOO: "U",
-  YUW: "U",
   IN: "IH",
 });
 

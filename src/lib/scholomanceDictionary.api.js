@@ -4,9 +4,15 @@
 
 import { z } from "zod";
 
-const env = (typeof import.meta !== 'undefined' && import.meta.env) 
-  ? import.meta.env 
-  : (typeof process !== 'undefined' ? process.env : {});
+const env = (typeof import.meta !== 'undefined' && import.meta.env)
+  ? import.meta.env
+  : (
+    typeof globalThis !== 'undefined' &&
+    globalThis.process &&
+    globalThis.process.env
+      ? globalThis.process.env
+      : {}
+  );
 
 const RAW_BASE_URL = env.VITE_SCHOLOMANCE_DICT_API_URL;
 const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
@@ -28,6 +34,10 @@ const LookupPayloadSchema = z.object({
 
 const BatchLookupSchema = z.object({
   families: z.record(z.string())
+});
+
+const ValidateBatchSchema = z.object({
+  valid: z.array(z.string())
 });
 
 function buildUrl(base, params) {
@@ -68,12 +78,29 @@ export const ScholomanceDictionaryAPI = {
     if (!BASE_URL || !words?.length) return {};
     const url = buildUrl(`${BASE_URL}/lookup-batch`);
     const payload = await fetchJson(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ words })
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words })
     });
     const parsed = BatchLookupSchema.safeParse(payload);
     return parsed.success ? parsed.data.families : {};
+  },
+
+  /**
+   * Validates whether words exist in the dictionary lexicon.
+   * @param {string[]} words
+   * @returns {Promise<string[]>} lowercased valid words
+   */
+  async validateBatch(words) {
+    if (!BASE_URL || !words?.length) return [];
+    const url = buildUrl(`${BASE_URL}/validate-batch`);
+    const payload = await fetchJson(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ words })
+    });
+    const parsed = ValidateBatchSchema.safeParse(payload);
+    return parsed.success ? parsed.data.valid : [];
   },
 
   async search(query, { limit = 20 } = {}) {

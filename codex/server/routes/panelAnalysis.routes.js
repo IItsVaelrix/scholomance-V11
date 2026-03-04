@@ -6,12 +6,11 @@
 import { createHash } from 'crypto';
 import { z } from 'zod';
 import { createPanelAnalysisService } from '../services/panelAnalysis.service.js';
+import { parseBooleanEnv, parsePositiveIntegerEnv } from '../utils/envFlags.js';
 
 const MAX_TEXT_LENGTH = 500_000;
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_CACHE_MAX_SIZE = 1000;
-const TRUE_VALUES = new Set(['1', 'true', 'on', 'yes']);
-const FALSE_VALUES = new Set(['0', 'false', 'off', 'no']);
 const ENABLE_PANEL_ANALYSIS_CACHE = parseBooleanEnv('ENABLE_PANEL_ANALYSIS_CACHE', true);
 const ENABLE_PANEL_ANALYSIS_REDIS_CACHE = parseBooleanEnv('ENABLE_PANEL_ANALYSIS_REDIS_CACHE', true);
 const CACHE_TTL_MS = parsePositiveIntegerEnv('PANEL_ANALYSIS_CACHE_TTL_MS', DEFAULT_CACHE_TTL_MS);
@@ -22,29 +21,6 @@ const REDIS_CACHE_PREFIX = 'panel-analysis:';
 const panelAnalysisBodySchema = z.object({
   text: z.string().max(MAX_TEXT_LENGTH),
 });
-
-function parseBooleanEnv(name, defaultValue) {
-  const rawValue = process.env[name];
-  if (rawValue === undefined || rawValue === null || rawValue === '') {
-    return defaultValue;
-  }
-  const normalized = String(rawValue).trim().toLowerCase();
-  if (TRUE_VALUES.has(normalized)) return true;
-  if (FALSE_VALUES.has(normalized)) return false;
-  return defaultValue;
-}
-
-function parsePositiveIntegerEnv(name, defaultValue) {
-  const rawValue = process.env[name];
-  if (rawValue === undefined || rawValue === null || rawValue === '') {
-    return defaultValue;
-  }
-  const parsed = Number(rawValue);
-  if (Number.isInteger(parsed) && parsed > 0) {
-    return parsed;
-  }
-  return defaultValue;
-}
 
 function getCacheKey(text) {
   return createHash('sha256').update(String(text || '').trim()).digest('hex');

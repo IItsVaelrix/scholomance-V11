@@ -6,15 +6,16 @@ const ENABLE_DEV_AUTH =
     process.env.NODE_ENV === "development";
 
 export const requireAuth = async (request, reply) => {
-    if (request.session.user) {
+    const session = request.session;
+    if (session?.user) {
         return;
     }
 
     if (ENABLE_DEV_AUTH) {
         console.warn("[AUTH] Development auth bypass enabled - NOT FOR PRODUCTION");
         const devUser = persistence.users.findByUsername(DEV_GUEST_USERNAME);
-        if (devUser) {
-            request.session.user = {
+        if (devUser && session) {
+            session.user = {
                 id: devUser.id,
                 username: devUser.username,
                 email: devUser.email,
