@@ -502,7 +502,7 @@ a:focus-visible {
 .animate-spin { animation: spin 1s linear infinite; }
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-glow { transition: box-shadow var(--transition-base); }
-.animate-glow:hover { box-shadow: 0 0 30px var(--glow-color), 0 0 50px var(--glow-color); }
+.animate-glow:hover { box-shadow: 0 0 24px var(--glow-color); }
 
 /* === BACKGROUND SYSTEM === */
 
@@ -515,7 +515,10 @@ a:focus-visible {
   pointer-events: none;
   z-index: -1;
   filter: saturate(calc(var(--active-saturation) * (1 + var(--active-signal-level) * 0.3)));
-  transition: filter 1.5s ease;
+  /* filter changes instantly — no per-frame repaint during school transitions */
+  transition: filter 0s;
+  will-change: transform;
+  contain: layout style;
   /* Near layer — fastest breathing, lives on the element itself */
   background:
     radial-gradient(ellipse 80vw 60vh at 50% 80%,
@@ -557,8 +560,12 @@ a:focus-visible {
 .vignette {
   position: fixed;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(3, 3, 8, var(--active-vignette-strength)) 100%);
-  transition: background 1.5s ease;
+  /* Static gradient — opacity controls strength; opacity transition is compositor-only (no repaint) */
+  background: radial-gradient(ellipse at center, transparent 40%, #030308 100%);
+  opacity: var(--active-vignette-strength);
+  transition: opacity 1.5s ease;
+  will-change: opacity;
+  contain: paint;
   pointer-events: none;
   z-index: 999;
 }
@@ -567,14 +574,18 @@ a:focus-visible {
 .scanlines {
   position: fixed;
   inset: 0;
+  /* Static scanline pattern — opacity controls strength; opacity transition is compositor-only (no repaint) */
   background: repeating-linear-gradient(
     0deg,
     transparent 0px,
     transparent 2px,
-    rgba(0, 0, 0, var(--active-scanline-opacity)) 2px,
-    rgba(0, 0, 0, var(--active-scanline-opacity)) 4px
+    #000 2px,
+    #000 4px
   );
-  transition: background 1.5s ease;
+  opacity: var(--active-scanline-opacity);
+  transition: opacity 1.5s ease;
+  will-change: opacity;
+  contain: paint;
   pointer-events: none;
   z-index: 1000;
 }
@@ -775,7 +786,7 @@ h6 { font-size: var(--text-base); }
   transition: box-shadow var(--transition-base);
 }
 .btn-glow:hover {
-  box-shadow: 0 0 30px var(--glow-color), 0 0 50px var(--glow-color);
+  box-shadow: 0 0 24px var(--glow-color);
 }
 
 /* Icon Button */
@@ -1224,18 +1235,18 @@ h6 { font-size: var(--text-base); }
 
 /* === RHYME WORD STYLING === */
 /* Layered glow: tight crisp halo + soft ambient aura */
-.grimoire-word.rhyme-A  { color: var(--vowel-A);  text-shadow: 0 0 4px var(--vowel-A),  0 0 16px color-mix(in srgb, var(--vowel-A) 40%, transparent); }
-.grimoire-word.rhyme-AE { color: var(--vowel-AE); text-shadow: 0 0 4px var(--vowel-AE), 0 0 16px color-mix(in srgb, var(--vowel-AE) 40%, transparent); }
-.grimoire-word.rhyme-AO { color: var(--vowel-AO); text-shadow: 0 0 4px var(--vowel-AO), 0 0 16px color-mix(in srgb, var(--vowel-AO) 40%, transparent); }
-.grimoire-word.rhyme-AW { color: var(--vowel-AW); text-shadow: 0 0 4px var(--vowel-AW), 0 0 16px color-mix(in srgb, var(--vowel-AW) 40%, transparent); }
-.grimoire-word.rhyme-AY { color: var(--vowel-AY); text-shadow: 0 0 4px var(--vowel-AY), 0 0 16px color-mix(in srgb, var(--vowel-AY) 40%, transparent); }
-.grimoire-word.rhyme-EH { color: var(--vowel-EH); text-shadow: 0 0 4px var(--vowel-EH), 0 0 16px color-mix(in srgb, var(--vowel-EH) 40%, transparent); }
-.grimoire-word.rhyme-ER { color: var(--vowel-ER); text-shadow: 0 0 4px var(--vowel-ER), 0 0 16px color-mix(in srgb, var(--vowel-ER) 40%, transparent); }
-.grimoire-word.rhyme-EY { color: var(--vowel-EY); text-shadow: 0 0 4px var(--vowel-EY), 0 0 16px color-mix(in srgb, var(--vowel-EY) 40%, transparent); }
-.grimoire-word.rhyme-IH { color: var(--vowel-IH); text-shadow: 0 0 4px var(--vowel-IH), 0 0 16px color-mix(in srgb, var(--vowel-IH) 40%, transparent); }
-.grimoire-word.rhyme-IY { color: var(--vowel-IY); text-shadow: 0 0 4px var(--vowel-IY), 0 0 16px color-mix(in srgb, var(--vowel-IY) 40%, transparent); }
-.grimoire-word.rhyme-OH { color: var(--vowel-OH); text-shadow: 0 0 4px var(--vowel-OH), 0 0 16px color-mix(in srgb, var(--vowel-OH) 40%, transparent); }
-.grimoire-word.rhyme-OW { color: var(--vowel-OW); text-shadow: 0 0 4px var(--vowel-OW), 0 0 16px color-mix(in srgb, var(--vowel-OW) 40%, transparent); }
-.grimoire-word.rhyme-OY { color: var(--vowel-OY); text-shadow: 0 0 4px var(--vowel-OY), 0 0 16px color-mix(in srgb, var(--vowel-OY) 40%, transparent); }
-.grimoire-word.rhyme-UH { color: var(--vowel-UH); text-shadow: 0 0 4px var(--vowel-UH), 0 0 16px color-mix(in srgb, var(--vowel-UH) 40%, transparent); }
-.grimoire-word.rhyme-UW { color: var(--vowel-UW); text-shadow: 0 0 4px var(--vowel-UW), 0 0 16px color-mix(in srgb, var(--vowel-UW) 40%, transparent); }
+.grimoire-word.rhyme-A  { color: var(--vowel-A);  text-shadow: 0 0 3px var(--vowel-A),  0 0 8px color-mix(in srgb, var(--vowel-A) 40%, transparent); }
+.grimoire-word.rhyme-AE { color: var(--vowel-AE); text-shadow: 0 0 3px var(--vowel-AE), 0 0 8px color-mix(in srgb, var(--vowel-AE) 40%, transparent); }
+.grimoire-word.rhyme-AO { color: var(--vowel-AO); text-shadow: 0 0 3px var(--vowel-AO), 0 0 8px color-mix(in srgb, var(--vowel-AO) 40%, transparent); }
+.grimoire-word.rhyme-AW { color: var(--vowel-AW); text-shadow: 0 0 3px var(--vowel-AW), 0 0 8px color-mix(in srgb, var(--vowel-AW) 40%, transparent); }
+.grimoire-word.rhyme-AY { color: var(--vowel-AY); text-shadow: 0 0 3px var(--vowel-AY), 0 0 8px color-mix(in srgb, var(--vowel-AY) 40%, transparent); }
+.grimoire-word.rhyme-EH { color: var(--vowel-EH); text-shadow: 0 0 3px var(--vowel-EH), 0 0 8px color-mix(in srgb, var(--vowel-EH) 40%, transparent); }
+.grimoire-word.rhyme-ER { color: var(--vowel-ER); text-shadow: 0 0 3px var(--vowel-ER), 0 0 8px color-mix(in srgb, var(--vowel-ER) 40%, transparent); }
+.grimoire-word.rhyme-EY { color: var(--vowel-EY); text-shadow: 0 0 3px var(--vowel-EY), 0 0 8px color-mix(in srgb, var(--vowel-EY) 40%, transparent); }
+.grimoire-word.rhyme-IH { color: var(--vowel-IH); text-shadow: 0 0 3px var(--vowel-IH), 0 0 8px color-mix(in srgb, var(--vowel-IH) 40%, transparent); }
+.grimoire-word.rhyme-IY { color: var(--vowel-IY); text-shadow: 0 0 3px var(--vowel-IY), 0 0 8px color-mix(in srgb, var(--vowel-IY) 40%, transparent); }
+.grimoire-word.rhyme-OH { color: var(--vowel-OH); text-shadow: 0 0 3px var(--vowel-OH), 0 0 8px color-mix(in srgb, var(--vowel-OH) 40%, transparent); }
+.grimoire-word.rhyme-OW { color: var(--vowel-OW); text-shadow: 0 0 3px var(--vowel-OW), 0 0 8px color-mix(in srgb, var(--vowel-OW) 40%, transparent); }
+.grimoire-word.rhyme-OY { color: var(--vowel-OY); text-shadow: 0 0 3px var(--vowel-OY), 0 0 8px color-mix(in srgb, var(--vowel-OY) 40%, transparent); }
+.grimoire-word.rhyme-UH { color: var(--vowel-UH); text-shadow: 0 0 3px var(--vowel-UH), 0 0 8px color-mix(in srgb, var(--vowel-UH) 40%, transparent); }
+.grimoire-word.rhyme-UW { color: var(--vowel-UW); text-shadow: 0 0 3px var(--vowel-UW), 0 0 8px color-mix(in srgb, var(--vowel-UW) 40%, transparent); }
