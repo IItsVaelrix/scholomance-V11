@@ -4,7 +4,7 @@ import { normalizeVowelFamily } from "../lib/vowelFamily.js";
 import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 
-const ANALYSIS_DEBOUNCE_MS = 500;
+const ANALYSIS_DEBOUNCE_MS = 2500;
 const REQUEST_TIMEOUT_MS = 15000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
