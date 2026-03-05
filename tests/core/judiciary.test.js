@@ -12,17 +12,19 @@ describe('Democracy Engine (Judiciary)', () => {
       { word: 'night', layer: 'PHONEME', confidence: 1.0, isRhyme: true },
       { word: 'the', layer: 'SPELLCHECK', confidence: 1.0 }
     ];
-
-    const result = engine.vote(candidates, {
+    const syntaxContext = {
       role: 'function',
       lineRole: 'line_mid',
       stressRole: 'unstressed',
       rhymePolicy: 'suppress'
-    });
+    };
+
+    const result = engine.vote(candidates, syntaxContext);
+    const scores = engine.calculateAllScores(candidates, syntaxContext);
 
     expect(result.word).toBe('the');
-    expect(result.breakdown.night[0].score).toBeCloseTo(0.096, 4);
-    expect(result.breakdown.night[0].score).toBeLessThan(result.breakdown.the[0].score);
+    expect(scores.get('night')?.total).toBeCloseTo(0.096, 4);
+    expect(scores.get('night')?.total).toBeLessThan(scores.get('the')?.total);
   });
 
   it('boosts rhyme votes in terminal content slots and accepts SYNTAX endorsement', () => {
@@ -81,5 +83,47 @@ describe('Democracy Engine (Judiciary)', () => {
     expect(syntaxAware.word).toBe('abyss');
     const phonemeEntry = syntaxAware.breakdown.abyss.find((entry) => entry.layer === 'PHONEME');
     expect(phonemeEntry.score).toBeCloseTo(0.42, 2);
+  });
+
+  it('applies HHM token-stage weighting when present in syntax context', () => {
+    const engine = new JudiciaryEngine();
+    const candidates = [
+      { word: 'ember', layer: 'PHONEME', confidence: 1.0, isRhyme: true },
+      { word: 'stone', layer: 'SPELLCHECK', confidence: 1.0 },
+    ];
+    const baseContext = {
+      role: 'content',
+      lineRole: 'line_mid',
+      stressRole: 'unknown',
+      rhymePolicy: 'allow',
+    };
+    const hhmContext = {
+      ...baseContext,
+      hhm: {
+        tokenWeight: 1.0,
+        logicOrder: ['SYNTAX', 'PREDICTOR', 'SPELLCHECK', 'JUDICIARY', 'PHONEME', 'HEURISTICS', 'METER'],
+        stageWeights: {
+          SYNTAX: 0.05,
+          PREDICTOR: 0.05,
+          SPELLCHECK: 1.0,
+          JUDICIARY: 0.05,
+          PHONEME: 0.05,
+          HEURISTICS: 0.05,
+          METER: 0.05,
+        },
+      },
+    };
+
+    const baseline = engine.vote(candidates);
+    expect(baseline.word).toBe('ember');
+    const baselineScores = engine.calculateAllScores(candidates, baseContext);
+
+    const hhmWeighted = engine.vote(candidates, hhmContext);
+    const hhmScores = engine.calculateAllScores(candidates, hhmContext);
+
+    expect(hhmWeighted.word).toBe('stone');
+    expect(hhmWeighted.breakdown.stone[0].hhmStage).toBe('SPELLCHECK');
+    expect(hhmScores.get('stone')?.total).toBeGreaterThan(baselineScores.get('stone')?.total);
+    expect(hhmScores.get('ember')?.total).toBeLessThan(baselineScores.get('ember')?.total);
   });
 });

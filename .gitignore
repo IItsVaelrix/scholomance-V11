@@ -88,6 +88,8 @@ scholomance_user.sqlite
 scholomance_user.sqlite-shm
 scholomance_user.sqlite-wal
 scholomance_dict.sqlite
+scholomance_dict.sqlite-shm
+scholomance_dict.sqlite-wal
 scholomance_collab.sqlite
 scholomance_collab.sqlite-shm
 scholomance_collab.sqlite-wal

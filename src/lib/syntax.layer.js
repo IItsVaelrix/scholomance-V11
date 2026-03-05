@@ -1,4 +1,5 @@
 import { stemWord } from "../../codex/core/analysis.pipeline.js";
+import { buildHiddenHarkovSummary } from "./harkov.model.js";
 
 /**
  * Strict set of English function words (closed-class tokens).
@@ -157,15 +158,28 @@ export function buildSyntaxLayer(analyzedDoc) {
     }
   }
 
+  const hiddenHarkov = buildHiddenHarkovSummary(tokens, { stanzaSizeBars: 4 });
+  if (hiddenHarkov?.tokenStateByIdentity?.size) {
+    tokens.forEach((token) => {
+      const identityKey = `${token.lineNumber}:${token.wordIndex}:${token.charStart}`;
+      const hhmState = hiddenHarkov.tokenStateByIdentity.get(identityKey);
+      if (hhmState) {
+        token.hhm = hhmState;
+      }
+    });
+  }
+
   return {
     enabled: tokens.length > 0,
     tokens,
     tokenByIdentity,
     tokenByCharStart,
+    hhm: hiddenHarkov.summary,
     syntaxSummary: {
       enabled: tokens.length > 0,
       tokenCount: tokens.length,
       ...counts,
+      hhm: hiddenHarkov.summary,
       tokens,
     },
   };

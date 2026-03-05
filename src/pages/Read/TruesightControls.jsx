@@ -7,7 +7,7 @@ export const ANALYSIS_MODES = {
   NONE: 'none',
   VOWEL: 'vowel',
   RHYME: 'rhyme',
-  SCHEME: 'scheme',
+  ANALYZE: 'analyze',
 };
 
 /**
@@ -72,15 +72,15 @@ export default function TruesightControls({
           </button>
           <button
             type="button"
-            className={`mode-btn mode-btn--scheme ${analysisMode === ANALYSIS_MODES.SCHEME ? 'mode-btn--active' : ''}`}
-            onClick={() => onModeChange(ANALYSIS_MODES.SCHEME)}
-            aria-pressed={analysisMode === ANALYSIS_MODES.SCHEME}
-            title="Focus on rhyme scheme analysis"
+            className={`mode-btn mode-btn--analyze ${analysisMode === ANALYSIS_MODES.ANALYZE ? 'mode-btn--active' : ''}`}
+            onClick={() => onModeChange(ANALYSIS_MODES.ANALYZE)}
+            aria-pressed={analysisMode === ANALYSIS_MODES.ANALYZE}
+            title="Poetic and structural analysis"
           >
-            <span className="mode-btn-scheme-glyph" aria-hidden="true">
-              ABAB
+            <span className="mode-btn-analyze-glyph" aria-hidden="true">
+              &#x2736;
             </span>
-            <span>Scheme</span>
+            <span>Analyze</span>
           </button>
           {isAnalyzing && (
             <span className="analyzing-indicator" aria-live="polite">

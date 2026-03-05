@@ -65,14 +65,15 @@ export function CODExProvider({ children }) {
 
     // Create adapter chain (local-first strategy)
     const adapters = [];
+    const localDictionaryUrl = ScholomanceDictionaryAPI.getBaseUrl?.() || "";
 
     // 1. Local Scholomance Dictionary (primary)
     if (ScholomanceDictionaryAPI.isEnabled()) {
       const localAdapter = createLocalAdapter(ScholomanceDictionaryAPI);
       adapters.push(localAdapter);
-      console.log('[CODEx] Local dictionary adapter enabled');
+      console.log(`[CODEx] Local dictionary adapter enabled (${localDictionaryUrl})`);
     } else {
-      console.log('[CODEx] Local dictionary not configured, skipping');
+      console.log('[CODEx] Local dictionary not configured, skipping (set VITE_SCHOLOMANCE_DICT_API_URL or SCHOLOMANCE_DICT_API_URL)');
     }
 
     // 2. Free Dictionary API (definitions, synonyms, antonyms, IPA)

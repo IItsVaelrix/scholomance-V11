@@ -5,6 +5,8 @@
  * @see AI_Architecture_V2.md section 3.1, 5.2, and 8.3
  */
 
+import 'dotenv/config';
+
 import Fastify from 'fastify';
 import fastifyCookie from '@fastify/cookie';
 import fastifySession from '@fastify/session';
@@ -28,15 +30,20 @@ import { collabPersistence } from './collab/collab.persistence.js';
 import { collabRoutes } from './collab/collab.routes.js';
 import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
+import { lexiconRoutes } from './routes/lexicon.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
 import { PhonemeEngine } from '../../src/lib/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
-
-import 'dotenv/config';
+import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_TEST_RUNTIME =
+    process.env.NODE_ENV === 'test' ||
+    process.env.VITEST === 'true' ||
+    typeof process.env.VITEST_WORKER_ID !== 'undefined' ||
+    typeof process.env.JEST_WORKER_ID !== 'undefined';
 
 function parseBooleanEnv(name, defaultValue = false) {
     const rawValue = process.env[name];
@@ -94,13 +101,13 @@ function getAudioAdminToken() {
 function getSessionSecret() {
     const secret = process.env.SESSION_SECRET;
     if (!secret) {
-        if (IS_PRODUCTION) {
+        if (IS_PRODUCTION && !IS_TEST_RUNTIME) {
             throw new Error('SESSION_SECRET environment variable is required in production');
         }
         console.warn('[SESSION] Using development secret - NOT FOR PRODUCTION');
         return crypto.randomBytes(32).toString('hex');
     }
-    if (IS_PRODUCTION && secret.length < 32) {
+    if (IS_PRODUCTION && !IS_TEST_RUNTIME && secret.length < 32) {
         throw new Error('SESSION_SECRET must be at least 32 characters in production');
     }
     if (secret.length < 32) {
@@ -121,6 +128,10 @@ const ENABLE_COLLAB_API = parseBooleanEnv('ENABLE_COLLAB_API', !IS_PRODUCTION);
 const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
     ? path.resolve(process.env.AUDIO_STORAGE_PATH) 
     : path.join(PUBLIC_PATH, 'audio');
+const SCHOLOMANCE_DICT_PATH = typeof process.env.SCHOLOMANCE_DICT_PATH === 'string' &&
+    process.env.SCHOLOMANCE_DICT_PATH.trim().length > 0
+    ? path.resolve(process.env.SCHOLOMANCE_DICT_PATH)
+    : null;
 
 // Ensure audio directory exists
 if (!existsSync(AUDIO_UPLOAD_PATH)) {
@@ -132,6 +143,7 @@ export const fastify = Fastify({
   trustProxy: TRUST_PROXY
 });
 fastify.decorate('opsMetrics', createOpsMetrics());
+const lexiconAdapter = createLexiconAdapter(SCHOLOMANCE_DICT_PATH, { log: fastify.log });
 
 // Register multipart for uploads
 fastify.register(multipart, {
@@ -652,6 +664,7 @@ fastify.addHook('onSend', async (request, _reply, payload) => {
 
 fastify.register(wordLookupRoutes);
 fastify.register(panelAnalysisRoutes);
+fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
 
 if (ENABLE_COLLAB_API) {
     if (IS_PRODUCTION) {
@@ -722,6 +735,11 @@ function closePersistenceConnections() {
         collabPersistence.close();
     } catch (error) {
         fastify.log.warn({ err: error }, '[DB:collab] Failed to close cleanly.');
+    }
+    try {
+        lexiconAdapter.close?.();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[DB:lexicon] Failed to close cleanly.');
     }
 }
 

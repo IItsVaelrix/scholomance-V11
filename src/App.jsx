@@ -5,7 +5,8 @@ import Navigation from "./components/Navigation/Navigation.jsx";
 import AtmosphereSync from "./components/AtmosphereSync.jsx";
 import { SongProvider } from "./hooks/useCurrentSong.jsx";
 import { CODExProvider } from "./hooks/useCODExPipeline.jsx";
-import { AuthProvider } from "./hooks/useAuth.jsx";
+import { AuthProvider, useAuth } from "./hooks/useAuth.jsx";
+import { ProgressionProvider } from "./hooks/useProgression.jsx";
 import { usePrefersReducedMotion } from "./hooks/usePrefersReducedMotion.js";
 
 const fullMotionVariants = {
@@ -19,6 +20,15 @@ const reducedMotionVariants = {
   animate: {},
   exit: {},
 };
+
+function AuthScopedProviders({ children }) {
+  const { user, isLoading } = useAuth();
+  return (
+    <ProgressionProvider authReady={!isLoading} isAuthenticated={Boolean(user)}>
+      {children}
+    </ProgressionProvider>
+  );
+}
 
 export default function App() {
   const location = useLocation();
@@ -39,35 +49,37 @@ export default function App() {
   return (
     <CODExProvider>
       <AuthProvider>
-        <SongProvider>
-          <AtmosphereSync />
-          <div className="aurora-background" aria-hidden="true" />
-          <div className="vignette" aria-hidden="true" />
-          <div className="scanlines" aria-hidden="true" />
-          
-          <div className="page-container">
-            <a href="#main-content" className="skip-link">
-              Skip to main content
-            </a>
-            <Navigation />
-            <AnimatePresence mode="wait">
-              <motion.main
-                key={location.pathname}
-                id="main-content"
-                className="page-content"
-                variants={pageVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
-              >
-                <Suspense fallback={<div>Loading...</div>}>
-                  <Outlet />
-                </Suspense>
-              </motion.main>
-            </AnimatePresence>
-          </div>
-        </SongProvider>
+        <AuthScopedProviders>
+          <SongProvider>
+            <AtmosphereSync />
+            <div className="aurora-background" aria-hidden="true" />
+            <div className="vignette" aria-hidden="true" />
+            <div className="scanlines" aria-hidden="true" />
+            
+            <div className="page-container">
+              <a href="#main-content" className="skip-link">
+                Skip to main content
+              </a>
+              <Navigation />
+              <AnimatePresence mode="wait">
+                <motion.main
+                  key={location.pathname}
+                  id="main-content"
+                  className="page-content"
+                  variants={pageVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
+                >
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <Outlet />
+                  </Suspense>
+                </motion.main>
+              </AnimatePresence>
+            </div>
+          </SongProvider>
+        </AuthScopedProviders>
       </AuthProvider>
     </CODExProvider>
   );

@@ -8,6 +8,29 @@ const UserSchema = z.object({
 }).passthrough();
 
 const AuthContext = createContext(null);
+const AUTH_SESSION_HINT_KEY = "scholomance.auth.session.v1";
+
+function setSessionHint(isAuthenticated) {
+  if (typeof window === "undefined") return;
+  try {
+    if (isAuthenticated) {
+      window.localStorage.setItem(AUTH_SESSION_HINT_KEY, "1");
+    } else {
+      window.localStorage.removeItem(AUTH_SESSION_HINT_KEY);
+    }
+  } catch {
+    // Ignore storage failures (private mode, disabled storage, etc.).
+  }
+}
+
+function hasSessionHint() {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(AUTH_SESSION_HINT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -26,7 +49,14 @@ export function AuthProvider({ children }) {
     return null;
   }, []);
 
-  const checkMe = useCallback(async () => {
+  const checkMe = useCallback(async (options = {}) => {
+    const force = Boolean(options?.force);
+    if (!force && !hasSessionHint()) {
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = await fetch('/auth/me', { credentials: 'include' });
@@ -35,12 +65,17 @@ export function AuthProvider({ children }) {
         const parsed = UserSchema.safeParse(data.user);
         if (parsed.success) {
           setUser(parsed.data);
+          setSessionHint(true);
         } else {
           console.error("Invalid user data from /auth/me", parsed.error);
           setUser(null);
+          setSessionHint(false);
         }
       } else {
         setUser(null);
+        if (res.status === 401 || res.status === 403) {
+          setSessionHint(false);
+        }
       }
     } catch (e) {
       setUser(null);
@@ -67,7 +102,8 @@ export function AuthProvider({ children }) {
     });
 
     if (res.ok) {
-      await checkMe();
+      setSessionHint(true);
+      await checkMe({ force: true });
       return { success: true };
     } else {
       const err = await res.json();
@@ -102,6 +138,7 @@ export function AuthProvider({ children }) {
       headers: { 'x-csrf-token': token },
       credentials: 'include'
     });
+    setSessionHint(false);
     setUser(null);
   };
 

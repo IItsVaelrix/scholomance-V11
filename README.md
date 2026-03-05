@@ -107,7 +107,8 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `PANEL_ANALYSIS_CACHE_TTL_MS` | No | `300000` | Cache TTL in milliseconds for panel-analysis responses. |
 | `PANEL_ANALYSIS_CACHE_MAX_SIZE` | No | `1000` | Max in-memory panel-analysis cache entries before FIFO eviction. |
 | `SCHOLOMANCE_DICT_API_URL` | No | unset | Server-side Scholomance dictionary API base URL used by `/api/word-lookup*` routes. |
-| `VITE_SCHOLOMANCE_DICT_API_URL` | No | unset | Optional local dictionary API endpoint. |
+| `SCHOLOMANCE_DICT_PATH` | No | unset | Filesystem path to `scholomance_dict.sqlite` used by Fastify `/api/lexicon/*` proxy routes. |
+| `VITE_SCHOLOMANCE_DICT_API_URL` | No | unset | Client lexicon API base URL. Keep `/api/lexicon` in this value. |
 | `VITE_DICTIONARY_API_URL` | No | set in `.env.example` | Optional/legacy dictionary provider URL. |
 | `VITE_THESAURUS_API_URL` | No | set in `.env.example` | Optional/legacy thesaurus provider URL. |
 
@@ -155,6 +156,12 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 - Word lookup:
 - `GET /api/word-lookup/:word`
 - `POST /api/word-lookup/batch`
+- Lexicon proxy (session required, guest or authenticated):
+- `GET /api/lexicon/lookup/:word`
+- `GET /api/lexicon/search?q=&limit=`
+- `GET /api/lexicon/suggest?prefix=&limit=`
+- `POST /api/lexicon/lookup-batch`
+- `POST /api/lexicon/validate-batch`
 - Panel analysis:
 - `POST /api/analysis/panels`
 - Collaboration tooling (prefix `/collab`):
@@ -192,15 +199,19 @@ Use this if you want a large local dictionary backend.
 python scripts/build_scholomance_dict.py --kaikki_url "<url>" --oewn_url "<url>" --db scholomance_dict.sqlite --overwrite
 ```
 
-2. Serve dictionary API:
+2. Serve dictionary API (development only):
 
 ```bash
 python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127.0.0.1 --port 8787
 ```
 
-3. Set:
+3. Development env values:
 - `SCHOLOMANCE_DICT_API_URL=http://127.0.0.1:8787/api/lexicon`
 - `VITE_SCHOLOMANCE_DICT_API_URL=http://127.0.0.1:8787/api/lexicon`
+
+4. Production lexicon proxy values:
+- `SCHOLOMANCE_DICT_PATH=/absolute/path/to/scholomance_dict.sqlite`
+- `VITE_SCHOLOMANCE_DICT_API_URL=https://your-domain.example/api/lexicon`
 
 Reference: `DICT_BUILD.md`.
 

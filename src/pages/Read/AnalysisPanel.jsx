@@ -60,7 +60,7 @@ export default function AnalysisPanel({
             emotion={emotion}
             onGroupHover={onGroupHover}
             onGroupLeave={onGroupLeave}
-            visible={analysisMode === ANALYSIS_MODES.SCHEME}
+            visible={analysisMode === ANALYSIS_MODES.ANALYZE}
             isEmbedded={true}
           />
         </AnimatePresence>

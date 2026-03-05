@@ -17,6 +17,8 @@ import { synonymProvider } from './pls/providers/synonymProvider.js';
 import { meterProvider } from './pls/providers/meterProvider.js';
 import { colorProvider } from './pls/providers/colorProvider.js';
 import { validityProvider } from './pls/providers/validityProvider.js';
+import { democracyProvider } from './pls/providers/democracyProvider.js';
+import { predictabilityProvider } from './pls/providers/predictabilityProvider.js';
 import { rankCandidates, DEFAULT_WEIGHTS } from './pls/ranker.js';
 
 /**
@@ -27,14 +29,15 @@ import { rankCandidates, DEFAULT_WEIGHTS } from './pls/ranker.js';
  * @property {string[]} currentLineWords - All completed words on current line
  * @property {number|null} targetSyllableCount - Expected syllable count for this line (optional)
  * @property {number[]} priorLineSyllableCounts - Syllable counts of prior lines (for meter inference)
+ * @property {object} [syntaxContext] - Optional context for CODEx Judiciary { role, lineRole, stressRole, rhymePolicy, hhm? }
  */
 
 /**
  * @typedef {object} ScoredCandidate
  * @property {string} token - The word
  * @property {number} score - Final combined score (0-1)
- * @property {object} scores - Per-provider raw scores { rhyme, meter, color, prefix, synonym, validity }
- * @property {string[]} badges - E.g., ["RHYME", "METER", "COLOR"]
+ * @property {object} scores - Per-provider raw scores { rhyme, meter, color, prefix, synonym, validity, democracy, predictability }
+ * @property {string[]} badges - E.g., ["RHYME", "METER", "COLOR", "DEMOCRACY"]
  * @property {string} ghostLine - Completed line preview text
  */
 
@@ -116,18 +119,22 @@ export class PoeticLanguageServer {
     }
 
     // Phase 3: Scorers rank the combined candidate pool
-    const [meterResults, colorResults, validityResults] = await Promise.all([
+    const [meterResults, colorResults, validityResults, democracyResults, predictabilityResults] = await Promise.all([
       Promise.resolve(meterProvider(context, engines, allCandidates)),
       Promise.resolve(colorProvider(context, engines, allCandidates)),
       this.dictionaryAPI
         ? validityProvider(context, engines, allCandidates)
         : Promise.resolve(allCandidates),
+      democracyProvider(context, engines, allCandidates),
+      Promise.resolve(predictabilityProvider(context, engines, allCandidates)),
     ]);
 
     const scorerResults = {
       meter: meterResults,
       color: colorResults,
       validity: validityResults,
+      democracy: democracyResults,
+      predictability: predictabilityResults,
     };
 
     // Phase 4: Rank and return

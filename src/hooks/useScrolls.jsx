@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { z } from "zod";
 import { Storage } from "../lib/storage";
+import { useAuth } from "./useAuth.jsx";
 
 const LEGACY_LOCAL_STORAGE_KEY = "scholomance.scrolls.v1";
 const LOCAL_SCROLL_INDEX_KEY = "scholomance.scrolls.v2.index";
@@ -316,20 +317,33 @@ const upsertByRecency = (list, scroll, legacyId = null) => {
 };
 
 export function useScrolls() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [scrolls, setScrolls] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch initial scrolls from the server
+  // Fetch server-backed scrolls once authentication has resolved.
   useEffect(() => {
     const localScrolls = readLocalScrolls();
     if (localScrolls.length) {
       setScrolls(localScrolls);
     }
 
+    if (isAuthLoading) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!user) {
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     const fetchScrolls = async () => {
       setIsLoading(true);
       try {
         const response = await fetch('/api/scrolls', { credentials: "include" });
+        if (cancelled) return;
         if (response.ok) {
           const data = await response.json();
           const parsed = ScrollListSchema.safeParse(data);
@@ -348,13 +362,19 @@ export function useScrolls() {
           console.error("Failed to fetch scrolls:", response.statusText);
         }
       } catch (error) {
+        if (cancelled) return;
         console.error("Error fetching scrolls:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
     fetchScrolls();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [user, isAuthLoading]);
 
   const saveScroll = useCallback(async (scrollData) => {
     const isNew = !scrollData.id || !UUID_REGEX.test(scrollData.id);
@@ -379,6 +399,10 @@ export function useScrolls() {
     setScrolls((prev) => upsertByRecency(prev, localScroll, legacyId));
     upsertLocalScroll(localScroll);
     if (legacyId) removeLocalScroll(legacyId);
+
+    if (!user) {
+      return localScroll;
+    }
 
     try {
       const csrfToken = await getCsrfToken();
@@ -412,11 +436,16 @@ export function useScrolls() {
       console.error("Failed to save scroll to server, using local copy.", e);
       return localScroll;
     }
-  }, []);
+  }, [user]);
 
   const deleteScroll = useCallback(async (id) => {
     setScrolls((prev) => prev.filter((s) => s.id !== id));
     removeLocalScroll(id);
+
+    if (!user) {
+      return;
+    }
+
     try {
       const csrfToken = await getCsrfToken();
       const response = await fetch(`/api/scrolls/${id}`, {
@@ -433,7 +462,7 @@ export function useScrolls() {
     } catch (e) {
       console.error("Failed to delete scroll from server, keeping local state.", e);
     }
-  }, []);
+  }, [user]);
 
   const scrollLookup = useMemo(() => {
     const lookup = new Map();

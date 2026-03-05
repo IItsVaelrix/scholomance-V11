@@ -39,6 +39,7 @@ describe('[Server] index route integration', () => {
   let userDbPath;
   let collabDbPath;
   let audioStoragePath;
+  let lexiconDbPath;
   let fetchMock;
   let originalFetch;
   const previousEnv = {};
@@ -125,6 +126,7 @@ describe('[Server] index route integration', () => {
       'ENABLE_COLLAB_API',
       'ENABLE_REDIS_SESSIONS',
       'SCHOLOMANCE_DICT_API_URL',
+      'SCHOLOMANCE_DICT_PATH',
     ]) {
       previousEnv[key] = process.env[key];
     }
@@ -133,10 +135,12 @@ describe('[Server] index route integration', () => {
     userDbPath = `${tempBase}-user.sqlite`;
     collabDbPath = `${tempBase}-collab.sqlite`;
     audioStoragePath = `${tempBase}-audio`;
+    lexiconDbPath = `${tempBase}-missing-lexicon.sqlite`;
     mkdirSync(audioStoragePath, { recursive: true });
     process.env.USER_DB_PATH = userDbPath;
     process.env.COLLAB_DB_PATH = collabDbPath;
     process.env.AUDIO_STORAGE_PATH = audioStoragePath;
+    process.env.SCHOLOMANCE_DICT_PATH = lexiconDbPath;
     process.env.NODE_ENV = 'test';
     process.env.ENABLE_COLLAB_API = 'true';
     process.env.ENABLE_REDIS_SESSIONS = 'false';
@@ -226,6 +230,47 @@ describe('[Server] index route integration', () => {
       message: 'Route not found',
       path: '/api/nonexistent',
     });
+  });
+
+  it('requires a session for lexicon routes and allows guest-session access', async () => {
+    const unauthorized = await fastify.inject({
+      method: 'GET',
+      url: '/api/lexicon/lookup/arcana',
+    });
+    expect(unauthorized.statusCode).toBe(401);
+
+    const jar = createCookieJar();
+    const csrfTokenResponse = await requestWithJar(jar, {
+      method: 'GET',
+      url: '/auth/csrf-token',
+    });
+    expect(csrfTokenResponse.statusCode).toBe(200);
+    expect(typeof csrfTokenResponse.json().token).toBe('string');
+
+    const lookupResponse = await requestWithJar(jar, {
+      method: 'GET',
+      url: '/api/lexicon/lookup/arcana',
+    });
+    expect(lookupResponse.statusCode).toBe(200);
+    expect(lookupResponse.json()).toEqual({
+      word: 'arcana',
+      definition: null,
+      entries: [],
+      synonyms: [],
+      antonyms: [],
+      rhymes: [],
+      rhymeFamily: null,
+      lore: { seed: 'arcana' },
+    });
+
+    const batchResponse = await requestWithJar(jar, {
+      method: 'POST',
+      url: '/api/lexicon/lookup-batch',
+      headers: { 'content-type': 'application/json' },
+      payload: { words: ['arcana', 'banana'] },
+    });
+    expect(batchResponse.statusCode).toBe(200);
+    expect(batchResponse.json()).toEqual({ families: {} });
   });
 
   it('supports auth, progression, and scroll routes end-to-end', async () => {

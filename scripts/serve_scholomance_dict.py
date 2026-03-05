@@ -2,8 +2,10 @@
 """
 serve_scholomance_dict.py
 
-Minimal HTTP API for the Scholomance offline dictionary SQLite database.
+Development-only HTTP API for the Scholomance offline dictionary SQLite database.
 Enhanced with a robust rhyme lookup layer and batch lookups for efficiency.
+
+Do not expose this server directly in production.
 """
 
 from __future__ import annotations

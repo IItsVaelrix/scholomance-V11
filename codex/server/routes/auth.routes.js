@@ -6,6 +6,7 @@ import crypto from 'crypto';
 import { persistence } from '../persistence.adapter.js';
 import { createMailerService } from '../services/mailer.service.js';
 import { captchaService } from '../services/captcha.service.js';
+import { LEXICON_GUEST_SESSION_KEY } from '../auth-pre-handler.js';
 
 // Password policy: At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
 const passwordSchema = z.string()
@@ -126,6 +127,7 @@ export async function authRoutes(fastify, _opts) {
             }
 
             request.session.user = { id: user.id, username: user.username, email: user.email };
+            request.session[LEXICON_GUEST_SESSION_KEY] = false;
             return reply.status(200).send({ message: 'Logged in successfully' });
         },
     });
@@ -176,8 +178,12 @@ export async function authRoutes(fastify, _opts) {
     });
     
     // CSRF Token
-    fastify.get('/csrf-token', async (_request, reply) => {
+    fastify.get('/csrf-token', async (request, reply) => {
+        if (!request.session.user) {
+            request.session[LEXICON_GUEST_SESSION_KEY] = true;
+        }
         const token = await reply.generateCsrf();
+        await request.session.save();
         return { token };
     });
 }

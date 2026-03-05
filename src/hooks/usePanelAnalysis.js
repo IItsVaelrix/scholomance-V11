@@ -74,6 +74,96 @@ function normalizeVowelSummary(value) {
   };
 }
 
+function normalizeHhmStageWeights(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const stages = ["SYNTAX", "PREDICTOR", "SPELLCHECK", "JUDICIARY", "PHONEME", "HEURISTICS", "METER"];
+  const normalized = {};
+  let hasValue = false;
+  stages.forEach((stage) => {
+    const numeric = Number(value?.[stage]);
+    if (!Number.isFinite(numeric) || numeric <= 0) return;
+    normalized[stage] = numeric;
+    hasValue = true;
+  });
+  return hasValue ? normalized : null;
+}
+
+function normalizeHhmStageScores(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const scores = {};
+  let hasValue = false;
+  Object.entries(value).forEach(([stage, score]) => {
+    if (!score || typeof score !== "object") return;
+    const signal = Number(score.signal);
+    const weight = Number(score.weight);
+    const weighted = Number(score.weighted);
+    const order = Number(score.order);
+    scores[stage] = {
+      order: Number.isFinite(order) ? order : 0,
+      signal: Number.isFinite(signal) ? signal : 0,
+      weight: Number.isFinite(weight) ? weight : 0,
+      weighted: Number.isFinite(weighted) ? weighted : 0,
+    };
+    hasValue = true;
+  });
+  return hasValue ? scores : null;
+}
+
+function normalizeHhmSources(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((source) => {
+      if (!source || typeof source !== "object") return null;
+      return {
+        id: String(source.id || ""),
+        name: String(source.name || ""),
+        linked: Boolean(source.linked),
+        priority: Number.isFinite(Number(source.priority)) ? Number(source.priority) : null,
+      };
+    })
+    .filter(Boolean);
+}
+
+function normalizeHhmToken(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  const tokenWeight = Number(value.tokenWeight);
+  return {
+    model: String(value.model || "hidden_harkov_model"),
+    stanzaIndex: Number.isFinite(Number(value.stanzaIndex)) ? Number(value.stanzaIndex) : -1,
+    stanzaBar: Number.isFinite(Number(value.stanzaBar)) ? Number(value.stanzaBar) : -1,
+    hiddenState: String(value.hiddenState || "flow"),
+    tokenWeight: Number.isFinite(tokenWeight) ? tokenWeight : 1,
+    logicOrder: Array.isArray(value.logicOrder) ? value.logicOrder.map((entry) => String(entry)) : [],
+    stageWeights: normalizeHhmStageWeights(value.stageWeights),
+    stageScores: normalizeHhmStageScores(value.stageScores),
+    dictionarySources: normalizeHhmSources(value.dictionarySources),
+  };
+}
+
+function normalizeHhmSummary(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  return {
+    enabled: Boolean(value.enabled),
+    model: String(value.model || "hidden_harkov_model"),
+    stanzaSizeBars: Number.isFinite(Number(value.stanzaSizeBars)) ? Number(value.stanzaSizeBars) : 4,
+    stanzaCount: Number.isFinite(Number(value.stanzaCount)) ? Number(value.stanzaCount) : 0,
+    tokenCount: Number.isFinite(Number(value.tokenCount)) ? Number(value.tokenCount) : 0,
+    logicOrder: Array.isArray(value.logicOrder) ? value.logicOrder.map((entry) => String(entry)) : [],
+    stageWeights: normalizeHhmStageWeights(value.stageWeights),
+    contextAware: Boolean(value.contextAware),
+    dictionarySources: normalizeHhmSources(value.dictionarySources),
+    stanzas: Array.isArray(value.stanzas) ? value.stanzas : [],
+  };
+}
+
 function normalizeSyntaxSummary(value) {
   if (!value || typeof value !== "object") {
     return null;
@@ -101,6 +191,7 @@ function normalizeSyntaxSummary(value) {
           stem: String(token?.stem || ""),
           rhymePolicy: String(token?.rhymePolicy || "allow"),
           reasons: Array.isArray(token?.reasons) ? token.reasons.map((reason) => String(reason)) : [],
+          hhm: normalizeHhmToken(token?.hhm),
         };
       })
       .filter(Boolean)
@@ -122,6 +213,7 @@ function normalizeSyntaxSummary(value) {
     stressRoleCounts: value.stressRoleCounts || { primary: 0, secondary: 0, unstressed: 0, unknown: 0 },
     rhymePolicyCounts: value.rhymePolicyCounts || { allow: 0, allow_weak: 0, suppress: 0 },
     reasonCounts: value.reasonCounts || {},
+    hhm: normalizeHhmSummary(value.hhm),
     tokens,
     tokenByIdentity,
     tokenByCharStart,

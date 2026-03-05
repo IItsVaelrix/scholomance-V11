@@ -37,6 +37,26 @@ describe('usePanelAnalysis hook', () => {
                 stressRoleCounts: { primary: 1, secondary: 0, unstressed: 0, unknown: 0 },
                 rhymePolicyCounts: { allow: 1, allow_weak: 0, suppress: 0 },
                 reasonCounts: { content_default: 1 },
+                hhm: {
+                  enabled: true,
+                  model: 'hidden_harkov_model',
+                  stanzaSizeBars: 4,
+                  stanzaCount: 1,
+                  tokenCount: 1,
+                  logicOrder: ['SYNTAX', 'PREDICTOR', 'SPELLCHECK', 'JUDICIARY', 'PHONEME', 'HEURISTICS', 'METER'],
+                  stageWeights: {
+                    SYNTAX: 0.27,
+                    PREDICTOR: 0.14,
+                    SPELLCHECK: 0.1,
+                    JUDICIARY: 0.08,
+                    PHONEME: 0.18,
+                    HEURISTICS: 0.15,
+                    METER: 0.08,
+                  },
+                  contextAware: true,
+                  dictionarySources: [{ id: 'scholomance', name: 'Scholomance Dictionary', linked: true, priority: 1 }],
+                  stanzas: [],
+                },
                 tokens: [
                   {
                     word: 'Flame',
@@ -51,6 +71,26 @@ describe('usePanelAnalysis hook', () => {
                     stem: 'flame',
                     rhymePolicy: 'allow',
                     reasons: ['content_default'],
+                    hhm: {
+                      model: 'hidden_harkov_model',
+                      stanzaIndex: 0,
+                      stanzaBar: 1,
+                      hiddenState: 'stress_anchor',
+                      tokenWeight: 0.92,
+                      logicOrder: ['SYNTAX', 'PREDICTOR', 'SPELLCHECK', 'JUDICIARY', 'PHONEME', 'HEURISTICS', 'METER'],
+                      stageWeights: {
+                        SYNTAX: 0.27,
+                        PREDICTOR: 0.14,
+                        SPELLCHECK: 0.1,
+                        JUDICIARY: 0.08,
+                        PHONEME: 0.18,
+                        HEURISTICS: 0.15,
+                        METER: 0.08,
+                      },
+                      stageScores: {
+                        SYNTAX: { order: 1, signal: 0.9, weight: 0.27, weighted: 0.243 },
+                      },
+                    },
                   },
                 ],
               },
@@ -95,7 +135,7 @@ describe('usePanelAnalysis hook', () => {
     });
 
     await act(async () => {
-      vi.advanceTimersByTime(500);
+      vi.advanceTimersByTime(2600);
       await Promise.resolve();
     });
 
@@ -112,6 +152,8 @@ describe('usePanelAnalysis hook', () => {
     expect(result.current.schemeDetection?.groups).toBeInstanceOf(Map);
     expect(result.current.analysis?.rhymeGroups).toBeInstanceOf(Map);
     expect(result.current.analysis?.syntaxSummary?.tokenByIdentity).toBeInstanceOf(Map);
+    expect(result.current.analysis?.syntaxSummary?.hhm?.logicOrder).toEqual(['SYNTAX', 'PREDICTOR', 'SPELLCHECK', 'JUDICIARY', 'PHONEME', 'HEURISTICS', 'METER']);
+    expect(result.current.analysis?.syntaxSummary?.tokens?.[0]?.hhm?.stanzaBar).toBe(1);
     expect(result.current.analysis?.allConnections?.[0]?.syntax?.gate).toBe('allow_weak');
   });
 
@@ -132,7 +174,7 @@ describe('usePanelAnalysis hook', () => {
 
     // Advance past the debounce timer
     await act(async () => {
-      vi.advanceTimersByTime(600);
+      vi.advanceTimersByTime(2600);
     });
 
     // Flush multiple microtask ticks for the async fallback chain

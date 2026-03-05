@@ -30,7 +30,7 @@ describe('Ranker', () => {
 
     // "light" should rank highest: rhyme=1.0, prefix=0.7, meter=0.9, color=1.0
     expect(results[0].token).toBe('light');
-    expect(results[0].score).toBeGreaterThan(0.5);
+    expect(results[0].score).toBeGreaterThan(0.45);
     expect(results[0].badges).toContain('RHYME');
     expect(results[0].badges).toContain('COLOR');
   });
@@ -91,5 +91,39 @@ describe('Ranker', () => {
     expect(results[0].scores.prefix).toBe(0.6);
     expect(results[0].scores.meter).toBe(0.7);
     expect(results[0].scores.color).toBe(0.3);
+  });
+
+  it('uses predictability score in final ranking', () => {
+    const generators = {
+      rhyme: [],
+      prefix: [
+        { token: 'ember', score: 0.6, badge: null },
+        { token: 'ash', score: 0.6, badge: null },
+      ],
+    };
+    const scorers = {
+      meter: [],
+      color: [],
+      predictability: [
+        { token: 'ember', scores: { predictability: 1 } },
+        { token: 'ash', scores: { predictability: 0.1 } },
+      ],
+    };
+
+    const weights = {
+      rhyme: 0,
+      meter: 0,
+      color: 0,
+      prefix: 0.1,
+      synonym: 0,
+      validity: 0,
+      democracy: 0,
+      predictability: 0.9,
+    };
+    const results = rankCandidates(generators, scorers, weights, {});
+
+    expect(results[0].token).toBe('ember');
+    expect(results[0].badges).toContain('PREDICTABILITY');
+    expect(results[0].scores.predictability).toBe(1);
   });
 });

@@ -70,12 +70,12 @@ export default function ToolsSidebar({
           <span className="tool-icon">🌈</span>
           <span className="tool-label">Vowel Families</span>
         </button>
-        <button 
-          className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.SCHEME ? 'active' : ''}`}
-          onClick={() => onModeChange(ANALYSIS_MODES.SCHEME)}
+        <button
+          className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.ANALYZE ? 'active' : ''}`}
+          onClick={() => onModeChange(ANALYSIS_MODES.ANALYZE)}
         >
-          <span className="tool-icon">🎼</span>
-          <span className="tool-label">Rhyme Scheme</span>
+          <span className="tool-icon">&#x2736;</span>
+          <span className="tool-label">Analyze</span>
         </button>
         <button 
           className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.RHYME ? 'active' : ''}`}

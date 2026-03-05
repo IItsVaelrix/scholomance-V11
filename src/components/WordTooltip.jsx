@@ -1,6 +1,6 @@
 import { useRef, useLayoutEffect, useEffect, useState, useId } from "react";
 import PropTypes from "prop-types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
@@ -11,6 +11,16 @@ const TOOLTIP_MIN_WIDTH = 300;
 const TOOLTIP_MIN_HEIGHT = 350;
 const TOOLTIP_DEFAULT_WIDTH = 390;
 const TOOLTIP_DEFAULT_HEIGHT = 510;
+const DRAG_IGNORE_SELECTOR = [
+  ".card-resize-handle",
+  ".card-close-btn",
+  ".card-text-box",
+  "button",
+  "a",
+  "input",
+  "textarea",
+  "select",
+].join(", ");
 
 const SCHOOL_ICONS = {
   Evocation: "\uD83D\uDD25",
@@ -47,11 +57,24 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
   
   const [size, setSize] = useState({ width: TOOLTIP_DEFAULT_WIDTH, height: TOOLTIP_DEFAULT_HEIGHT });
   const [pos, setPos] = useState({ x, y });
+  const posRef = useRef({ x, y });
   const [isInteracting, setIsInteracting] = useState(false);
+  const setTooltipPos = (nextPos) => {
+    posRef.current = nextPos;
+    setPos(nextPos);
+  };
+  const applyLivePosition = (nextPos) => {
+    const node = containerRef.current;
+    if (!node) return;
+    node.style.left = `${nextPos.x}px`;
+    node.style.top = `${nextPos.y}px`;
+  };
 
   // Sync incoming position
   useLayoutEffect(() => {
-    setPos({ x, y });
+    const nextPos = { x, y };
+    posRef.current = nextPos;
+    setPos(nextPos);
   }, [x, y]);
 
   useEffect(() => {
@@ -64,49 +87,85 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
   // High-performance Drag Logic
   const handleDragStart = (e) => {
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.button !== undefined) return;
+    if (!(e.target instanceof Element)) return;
+    if (e.target.closest(DRAG_IGNORE_SELECTOR)) return;
+    if (e.cancelable) e.preventDefault();
+
     const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
+    const pointerId = e.pointerId;
+    let hasPointerCapture = false;
+    if (typeof pointerId === "number" && target.setPointerCapture) {
+      try {
+        target.setPointerCapture(pointerId);
+        hasPointerCapture = true;
+      } catch {
+        hasPointerCapture = false;
+      }
+    }
     setIsInteracting(true);
 
-    const startX = e.clientX - pos.x;
-    const startY = e.clientY - pos.y;
-    // Mutable tracker — avoids stale closure; handlePointerUp reads the real final position
-    let latestPos = { x: pos.x, y: pos.y };
+    const startPointerX = e.clientX;
+    const startPointerY = e.clientY;
+    const startPos = { ...posRef.current };
+    // Mutable tracker to avoid stale closure; pointer-up reads the real final position
+    let latestPos = startPos;
 
     const handlePointerMove = (moveEvent) => {
-      const nextX = moveEvent.clientX - startX;
-      const nextY = moveEvent.clientY - startY;
+      if (typeof pointerId === "number" && moveEvent.pointerId !== pointerId) return;
+      if (moveEvent.cancelable) moveEvent.preventDefault();
+      const nextX = startPos.x + (moveEvent.clientX - startPointerX);
+      const nextY = startPos.y + (moveEvent.clientY - startPointerY);
       latestPos = { x: nextX, y: nextY };
-      setPos(latestPos);
+      posRef.current = latestPos;
+      applyLivePosition(latestPos);
     };
 
-    const handlePointerUp = (upEvent) => {
-      target.releasePointerCapture(upEvent.pointerId);
-      target.removeEventListener("pointermove", handlePointerMove);
-      target.removeEventListener("pointerup", handlePointerUp);
+    const handlePointerEnd = (endEvent) => {
+      if (typeof pointerId === "number" && endEvent.pointerId !== pointerId) return;
+      if (
+        hasPointerCapture &&
+        typeof pointerId === "number" &&
+        target.hasPointerCapture?.(pointerId)
+      ) {
+        target.releasePointerCapture(pointerId);
+      }
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerEnd);
+      window.removeEventListener("pointercancel", handlePointerEnd);
       setIsInteracting(false);
+      setTooltipPos(latestPos);
       onDrag(latestPos);
     };
 
-    target.addEventListener("pointermove", handlePointerMove);
-    target.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointermove", handlePointerMove, { passive: false });
+    window.addEventListener("pointerup", handlePointerEnd);
+    window.addEventListener("pointercancel", handlePointerEnd);
   };
 
   // High-performance Resize Logic — supports all 8 directions (n/s/e/w/ne/nw/se/sw)
   const handleResizeStart = (direction) => (e) => {
     e.stopPropagation();
-    if (e.button !== 0) return;
+    if (e.button !== 0 && e.button !== undefined) return;
     const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
+    const pointerId = e.pointerId;
+    let hasPointerCapture = false;
+    if (typeof pointerId === "number" && target.setPointerCapture) {
+      try {
+        target.setPointerCapture(pointerId);
+        hasPointerCapture = true;
+      } catch {
+        hasPointerCapture = false;
+      }
+    }
     setIsInteracting(true);
 
     const startW   = size.width;
     const startH   = size.height;
     const startX   = e.clientX;
     const startY   = e.clientY;
-    const startPosX = pos.x;
-    const startPosY = pos.y;
+    const startPosX = posRef.current.x;
+    const startPosY = posRef.current.y;
 
     // Mutable tracker for the same reason as drag — avoids stale pos on pointerup
     let latestResizePos = { x: startPosX, y: startPosY };
@@ -134,11 +193,17 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
       latestResizePos = { x: newPosX, y: newPosY };
       setSize({ width: newW, height: newH });
-      setPos(latestResizePos);
+      setTooltipPos(latestResizePos);
     };
 
-    const handlePointerUp = (upEvent) => {
-      target.releasePointerCapture(upEvent.pointerId);
+    const handlePointerUp = () => {
+      if (
+        hasPointerCapture &&
+        typeof pointerId === "number" &&
+        target.hasPointerCapture?.(pointerId)
+      ) {
+        target.releasePointerCapture(pointerId);
+      }
       target.removeEventListener("pointermove", handlePointerMove);
       target.removeEventListener("pointerup", handlePointerUp);
       setIsInteracting(false);
@@ -154,7 +219,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     if (isLoading && !wordData && !analysis) {
       return (
         <div className="word-card word-card--loading">
-          <div className="card-frame">
+          <div className="card-frame" onPointerDown={handleDragStart}>
             <div className="card-inner" aria-busy="true">
               <div className="card-loading-spinner" />
               <p className="card-loading-text">Divining word essence...</p>
@@ -167,8 +232,8 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     if (error && !wordData && !analysis) {
       return (
         <div className="word-card word-card--error">
-          <div className="card-frame">
-            <button className="card-close-btn" onClick={onClose} aria-label="Close card">&#x2715;</button>
+          <div className="card-frame" onPointerDown={handleDragStart}>
+            <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
             <div className="card-inner" role="alert">
               <div className="card-error-icon" aria-hidden="true">&#x26A0;&#xFE0F;</div>
               <p className="card-error-text">{error}</p>
@@ -208,68 +273,79 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
     return (
       <div className={`word-card word-card--${rarity}`}>
-        <div className="card-frame">
-          <button className="card-close-btn" onClick={onClose} aria-label="Close card">&#x2715;</button>
+        <div className="card-frame" onPointerDown={handleDragStart}>
+          <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
 
           <div className="card-mana-cost" style={{ backgroundColor: vowelColor }} aria-label={`${syllables} syllables`}>
             <span className="mana-value" aria-hidden="true">{syllables}</span>
           </div>
 
           <div className="card-inner">
-            <header className="card-name-banner" onPointerDown={handleDragStart} style={{ cursor: "grab" }} title="Drag to move">
-              <h3 id={titleId} className="card-name">{word}</h3>
-            </header>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={word}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.13, ease: [0.4, 0, 0.2, 1] }}
+                style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+              >
+                <header className="card-name-banner" style={{ cursor: isInteracting ? "grabbing" : "grab" }} title="Drag to move">
+                  <h3 id={titleId} className="card-name">{word}</h3>
+                </header>
 
-            <div className="card-art-frame" style={{ borderColor: vowelColor }} aria-hidden="true">
-              <div className="card-art" style={{ background: `radial-gradient(ellipse at center, ${vowelColor}22 0%, transparent 70%)` }}>
-                <span className="card-school-icon">{schoolIcon}</span>
-                {vowelFamily && <span className="card-vowel-glyph" style={{ color: vowelColor }}>{vowelFamily}</span>}
-              </div>
-            </div>
-
-            <div className="card-type-line">
-              <span className="card-type">
-                {schoolName || "Arcane"} {partOfSpeech ? `\u2014 ${partOfSpeech}` : "Word"}
-              </span>
-            </div>
-
-            <div className="card-text-box" role="region" aria-label="Word definitions">
-              {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
-              
-              {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
-
-              {(synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0) && <div className="card-flavor-divider" />}
-
-              {synonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Allies:</span> {synonyms.join(", ")}</p>}
-              {antonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Foes:</span> {antonyms.join(", ")}</p>}
-              {rhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Resonates:</span> {rhymes.join(", ")}</p>}
-              {slantRhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Near Echo:</span> {slantRhymes.join(", ")}</p>}
-
-              {rhymeLinks.length > 0 && (
-                <div className="card-insight-section">
-                  <p className="card-insight-title">Connections</p>
-                  {rhymeLinks.map((link, i) => (
-                    <p key={i} className="card-insight-line">
-                      {link.linkedWord} | {link.type} ({(link.score || 0).toFixed(2)})
-                    </p>
-                  ))}
+                <div className="card-art-frame" style={{ borderColor: vowelColor }} aria-hidden="true">
+                  <div className="card-art" style={{ background: `radial-gradient(ellipse at center, ${vowelColor}22 0%, transparent 70%)` }}>
+                    <span className="card-school-icon">{schoolIcon}</span>
+                    {vowelFamily && <span className="card-vowel-glyph" style={{ color: vowelColor }}>{vowelFamily}</span>}
+                  </div>
                 </div>
-              )}
-            </div>
 
-            <footer className="card-footer">
-              {rhymeKey && (
-                <div className="card-stat card-stat--left" title="Rhyme Key">
-                  <span className="stat-icon" aria-hidden="true">&#x266A;</span>
-                  <span className="stat-value">{rhymeKey}</span>
+                <div className="card-type-line">
+                  <span className="card-type">
+                    {schoolName || "Arcane"} {partOfSpeech ? `\u2014 ${partOfSpeech}` : "Word"}
+                  </span>
                 </div>
-              )}
-              <div className="card-rarity-gem" data-rarity={rarity} aria-label={`Rarity: ${rarity}`} />
-              <div className="card-stat card-stat--right" title="Syllables">
-                <span className="stat-value">{syllables}</span>
-                <span className="stat-icon" aria-hidden="true">&#x25C6;</span>
-              </div>
-            </footer>
+
+                <div className="card-text-box" role="region" aria-label="Word definitions">
+                  {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
+
+                  {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
+
+                  {(synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0) && <div className="card-flavor-divider" />}
+
+                  {synonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Allies:</span> {synonyms.join(", ")}</p>}
+                  {antonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Foes:</span> {antonyms.join(", ")}</p>}
+                  {rhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Resonates:</span> {rhymes.join(", ")}</p>}
+                  {slantRhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Near Echo:</span> {slantRhymes.join(", ")}</p>}
+
+                  {rhymeLinks.length > 0 && (
+                    <div className="card-insight-section">
+                      <p className="card-insight-title">Connections</p>
+                      {rhymeLinks.map((link, i) => (
+                        <p key={i} className="card-insight-line">
+                          {link.linkedWord} | {link.type} ({(link.score || 0).toFixed(2)})
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <footer className="card-footer">
+                  {rhymeKey && (
+                    <div className="card-stat card-stat--left" title="Rhyme Key">
+                      <span className="stat-icon" aria-hidden="true">&#x266A;</span>
+                      <span className="stat-value">{rhymeKey}</span>
+                    </div>
+                  )}
+                  <div className="card-rarity-gem" data-rarity={rarity} aria-label={`Rarity: ${rarity}`} />
+                  <div className="card-stat card-stat--right" title="Syllables">
+                    <span className="stat-value">{syllables}</span>
+                    <span className="stat-icon" aria-hidden="true">&#x25C6;</span>
+                  </div>
+                </footer>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="card-corner card-corner--tl" aria-hidden="true" />
@@ -308,11 +384,10 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       className={`word-tooltip-container ${isInteracting ? "is-interacting" : ""}`}
       style={{
         position: "fixed",
-        top: 0,
-        left: 0,
+        top: pos.y,
+        left: pos.x,
         width: size.width,
         height: size.height,
-        transform: `translate3d(${pos.x}px, ${pos.y}px, 0)`,
         zIndex: 1000,
         touchAction: "none"
       }}
@@ -389,3 +464,4 @@ WordTooltip.defaultProps = {
 };
 
 export default WordTooltip;
+

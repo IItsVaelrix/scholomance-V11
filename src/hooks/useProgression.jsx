@@ -77,7 +77,7 @@ function debounce(func, wait) {
  * Provides progression state and actions to its children.
  * @param {{children: import("react").ReactNode}} props
  */
-export function ProgressionProvider({ children }) {
+export function ProgressionProvider({ children, authReady = true, isAuthenticated = true }) {
   const [progression, setProgression] = useState(defaultProgression);
   const [isLoading, setIsLoading] = useState(true);
   const canPersistRef = useRef(false);
@@ -112,12 +112,31 @@ export function ProgressionProvider({ children }) {
     }
   }, 1000)).current;
 
-  // Fetch initial progression from server on mount
+  // Fetch progression whenever auth transitions to an authenticated session.
   useEffect(() => {
+    if (!authReady) {
+      setIsLoading(true);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      canPersistRef.current = false;
+      cachedCsrfToken = null;
+      csrfPromise = null;
+      setProgression({
+        ...defaultProgression,
+        lastUpdated: Date.now(),
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     const fetchProgression = async () => {
       setIsLoading(true);
       try {
         const response = await fetch(getApiUrl('/api/progression'), { credentials: 'include' });
+        if (cancelled) return;
         if (response.ok) {
           canPersistRef.current = true;
           const data = await response.json();
@@ -132,26 +151,35 @@ export function ProgressionProvider({ children }) {
           if (!serverData.unlockedSchools?.length) {
             serverData.unlockedSchools = defaultProgression.unlockedSchools;
           }
-          setProgression(prev => ({
+          setProgression((prev) => ({
             ...prev,
             ...serverData,
           }));
         } else if (response.status === 401 || response.status === 403) {
           canPersistRef.current = false;
-          console.log("Not logged in, using default progression.");
+          setProgression({
+            ...defaultProgression,
+            lastUpdated: Date.now(),
+          });
         } else {
           canPersistRef.current = false;
           console.error("Failed to fetch progression:", response.status, response.statusText);
         }
       } catch (error) {
+        if (cancelled) return;
         canPersistRef.current = false;
         console.error("Error fetching progression:", error);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
     fetchProgression();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [authReady, isAuthenticated]);
 
   // Persist changes to the server
   useEffect(() => {

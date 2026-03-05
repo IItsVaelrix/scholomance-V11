@@ -4,18 +4,29 @@
 
 import { z } from "zod";
 
-const env = (typeof import.meta !== 'undefined' && import.meta.env)
-  ? import.meta.env
-  : (
-    typeof globalThis !== 'undefined' &&
-    globalThis.process &&
-    globalThis.process.env
-      ? globalThis.process.env
-      : {}
-  );
+function readEnvVar(name) {
+  const viteEnv = (typeof import.meta !== "undefined" && import.meta.env)
+    ? import.meta.env[name]
+    : undefined;
+  if (typeof viteEnv === "string") {
+    return viteEnv;
+  }
 
-const RAW_BASE_URL = env.VITE_SCHOLOMANCE_DICT_API_URL;
-const BASE_URL = RAW_BASE_URL ? RAW_BASE_URL.replace(/\/$/, "") : "";
+  if (typeof globalThis !== "undefined" && globalThis.process?.env) {
+    const processEnvValue = globalThis.process.env[name];
+    if (typeof processEnvValue === "string") {
+      return processEnvValue;
+    }
+  }
+
+  return "";
+}
+
+function resolveBaseUrl() {
+  const raw = readEnvVar("VITE_SCHOLOMANCE_DICT_API_URL") || readEnvVar("SCHOLOMANCE_DICT_API_URL");
+  const trimmed = String(raw || "").trim();
+  return trimmed ? trimmed.replace(/\/$/, "") : "";
+}
 
 const DEFAULT_TIMEOUT_MS = 5000;
 
@@ -47,11 +58,13 @@ async function fetchJson(url, options = {}) {
 }
 
 export const ScholomanceDictionaryAPI = {
-  isEnabled() { return Boolean(BASE_URL); },
+  isEnabled() { return Boolean(resolveBaseUrl()); },
+  getBaseUrl() { return resolveBaseUrl(); },
 
   async lookup(word) {
-    if (!BASE_URL || !word) return null;
-    const url = buildUrl(`${BASE_URL}/lookup/${encodeURIComponent(word)}`);
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !word) return null;
+    const url = buildUrl(`${baseUrl}/lookup/${encodeURIComponent(word)}`);
     const payload = await fetchJson(url);
     return payload;
   },
@@ -62,8 +75,9 @@ export const ScholomanceDictionaryAPI = {
    * @returns {Promise<Record<string, string>>} word (upper) -> rhyme family
    */
   async lookupBatch(words) {
-    if (!BASE_URL || !words?.length) return {};
-    const url = buildUrl(`${BASE_URL}/lookup-batch`);
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !words?.length) return {};
+    const url = buildUrl(`${baseUrl}/lookup-batch`);
     const payload = await fetchJson(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -79,8 +93,9 @@ export const ScholomanceDictionaryAPI = {
    * @returns {Promise<string[]>} lowercased valid words
    */
   async validateBatch(words) {
-    if (!BASE_URL || !words?.length) return [];
-    const url = buildUrl(`${BASE_URL}/validate-batch`);
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !words?.length) return [];
+    const url = buildUrl(`${baseUrl}/validate-batch`);
     const payload = await fetchJson(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -91,8 +106,9 @@ export const ScholomanceDictionaryAPI = {
   },
 
   async search(query, { limit = 20 } = {}) {
-    if (!BASE_URL || !query) return [];
-    const url = buildUrl(`${BASE_URL}/search`, { q: query, limit });
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !query) return [];
+    const url = buildUrl(`${baseUrl}/search`, { q: query, limit });
     const payload = await fetchJson(url);
     return payload.results || [];
   }

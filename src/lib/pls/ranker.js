@@ -3,12 +3,14 @@
  */
 
 const DEFAULT_WEIGHTS = {
-  rhyme: 0.30,
-  meter: 0.20,
-  color: 0.15,
-  prefix: 0.15,
-  synonym: 0.10,
-  validity: 0.10,
+  rhyme: 0.23,
+  meter: 0.14,
+  color: 0.08,
+  prefix: 0.08,
+  synonym: 0.08,
+  validity: 0.09,
+  democracy: 0.15,
+  predictability: 0.15,
 };
 
 const BADGE_THRESHOLDS = {
@@ -16,13 +18,15 @@ const BADGE_THRESHOLDS = {
   meter: 0.8,
   color: 1.0,
   synonym: 0.5,
+  democracy: 0.75,
+  predictability: 0.75,
 };
 
 /**
  * Merge and rank candidates from generator and scorer providers.
  *
  * @param {object} generatorResults - { rhyme: ProviderResult[], prefix: ProviderResult[], synonym?: ProviderResult[] }
- * @param {object} scorerResults - { meter: ScoredResult[], color: ScoredResult[], validity?: ScoredResult[] }
+ * @param {object} scorerResults - { meter: ScoredResult[], color: ScoredResult[], validity?: ScoredResult[], democracy?: ScoredResult[], predictability?: ScoredResult[] }
  * @param {object} [weights] - Override default weights
  * @param {object} [context] - PLSContext for ghost-line generation
  * @param {number} [limit=10] - Max results to return
@@ -31,14 +35,23 @@ const BADGE_THRESHOLDS = {
 export function rankCandidates(generatorResults, scorerResults, weights, context, limit = 10) {
   const w = { ...DEFAULT_WEIGHTS, ...weights };
 
-  // Build unified score map: token → { rhyme, meter, color, prefix, badges }
+  // Build unified score map: token → { rhyme, meter, color, prefix, synonym, validity, democracy, badges }
   const candidateMap = new Map();
 
   const ensureEntry = (token) => {
     if (!candidateMap.has(token)) {
       candidateMap.set(token, {
         token,
-        scores: { rhyme: 0, meter: 0, color: 0, prefix: 0, synonym: 0, validity: 0 },
+        scores: {
+          rhyme: 0,
+          meter: 0,
+          color: 0,
+          prefix: 0,
+          synonym: 0,
+          validity: 0,
+          democracy: 0,
+          predictability: 0,
+        },
         badges: [],
       });
     }
@@ -86,7 +99,9 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
       w.color * entry.scores.color +
       w.prefix * entry.scores.prefix +
       w.synonym * entry.scores.synonym +
-      w.validity * entry.scores.validity;
+      w.validity * entry.scores.validity +
+      w.democracy * entry.scores.democracy +
+      w.predictability * entry.scores.predictability;
 
     const ghostLine = currentLineText
       ? `${currentLineText} ${entry.token}`

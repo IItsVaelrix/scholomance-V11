@@ -67,6 +67,109 @@ function normalizeWordToken(token) {
     .toUpperCase();
 }
 
+function toFiniteInt(value, fallback = -1) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return fallback;
+  return Math.trunc(num);
+}
+
+function findSyntaxTokenForCursor(syntaxLayer, lineNumber, targetWordIndex, targetCharStart) {
+  if (!syntaxLayer || typeof syntaxLayer !== "object") return null;
+
+  const byIdentity = syntaxLayer.tokenByIdentity;
+  const byCharStart = syntaxLayer.tokenByCharStart;
+  const tokens = Array.isArray(syntaxLayer.tokens) ? syntaxLayer.tokens : [];
+
+  if (byIdentity?.get && Number.isInteger(targetCharStart) && targetCharStart >= 0) {
+    const identity = `${lineNumber}:${targetWordIndex}:${targetCharStart}`;
+    const identityToken = byIdentity.get(identity);
+    if (identityToken) return identityToken;
+  }
+
+  if (byCharStart?.get && Number.isInteger(targetCharStart) && targetCharStart >= 0) {
+    const exactCharToken = byCharStart.get(targetCharStart);
+    if (exactCharToken) return exactCharToken;
+  }
+
+  const lineTokens = tokens
+    .filter((token) => toFiniteInt(token?.lineNumber, -1) === lineNumber)
+    .sort((a, b) => toFiniteInt(a?.wordIndex, 0) - toFiniteInt(b?.wordIndex, 0));
+
+  if (lineTokens.length === 0) return null;
+
+  if (Number.isInteger(targetCharStart) && targetCharStart >= 0) {
+    const rangeMatch = lineTokens.find((token) => {
+      const start = toFiniteInt(token?.charStart, -1);
+      const end = toFiniteInt(token?.charEnd, -1);
+      if (start < 0 || end < start) return false;
+      return targetCharStart >= start && targetCharStart <= end;
+    });
+    if (rangeMatch) return rangeMatch;
+  }
+
+  const exactWordIndex = lineTokens.find(
+    (token) => toFiniteInt(token?.wordIndex, -1) === targetWordIndex
+  );
+  if (exactWordIndex) return exactWordIndex;
+
+  const closestPrior = [...lineTokens]
+    .reverse()
+    .find((token) => toFiniteInt(token?.wordIndex, -1) <= targetWordIndex);
+  if (closestPrior) return closestPrior;
+
+  return lineTokens[lineTokens.length - 1];
+}
+
+function resolveSyntaxContextForCursor({
+  syntaxLayer,
+  content,
+  cursorOffset,
+  prefix,
+  currentLineWords,
+}) {
+  if (!syntaxLayer || typeof syntaxLayer !== "object") return null;
+
+  const beforeCursor = String(content || "").slice(0, Math.max(0, toFiniteInt(cursorOffset, 0)));
+  const lineNumber = Math.max(0, beforeCursor.split("\n").length - 1);
+  const targetWordIndex = Math.max(0, Array.isArray(currentLineWords) ? currentLineWords.length : 0);
+  const targetCharStart = prefix ? Math.max(0, toFiniteInt(cursorOffset, 0) - prefix.length) : -1;
+
+  const syntaxToken = findSyntaxTokenForCursor(
+    syntaxLayer,
+    lineNumber,
+    targetWordIndex,
+    targetCharStart
+  );
+  if (!syntaxToken) return null;
+
+  const role = String(syntaxToken.role || "content");
+  const lineRole = String(
+    syntaxToken.lineRole || (targetWordIndex === 0 ? "line_start" : "line_mid")
+  );
+  const stressRole = String(syntaxToken.stressRole || "unknown");
+  const rhymePolicy = String(syntaxToken.rhymePolicy || (role === "function" ? "allow_weak" : "allow"));
+
+  const context = { role, lineRole, stressRole, rhymePolicy };
+  const tokenHhm = syntaxToken?.hhm && typeof syntaxToken.hhm === "object" ? syntaxToken.hhm : null;
+  const summaryHhm = syntaxLayer?.hhm && typeof syntaxLayer.hhm === "object" ? syntaxLayer.hhm : null;
+
+  if (tokenHhm || summaryHhm) {
+    context.hhm = {
+      tokenWeight: Number(tokenHhm?.tokenWeight) || 1,
+      logicOrder: Array.isArray(tokenHhm?.logicOrder)
+        ? tokenHhm.logicOrder
+        : (Array.isArray(summaryHhm?.logicOrder) ? summaryHhm.logicOrder : []),
+      stageWeights: tokenHhm?.stageWeights || summaryHhm?.stageWeights || null,
+      stageScores: tokenHhm?.stageScores || null,
+      dictionarySources: Array.isArray(summaryHhm?.dictionarySources)
+        ? summaryHhm.dictionarySources
+        : [],
+    };
+  }
+
+  return context;
+}
+
 // Common function words that don't carry meaningful phonemic weight for analysis.
 // These stay default/white in Truesight to reduce visual noise and let content words pop.
 const STOP_WORDS = new Set([
@@ -254,6 +357,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           currentLineWords,
           targetSyllableCount: null,
           priorLineSyllableCounts,
+          syntaxContext: resolveSyntaxContextForCursor({
+            syntaxLayer,
+            content,
+            cursorOffset: pos,
+            prefix,
+            currentLineWords,
+          }),
         };
 
         // Collect results: PLS completions + spellcheck corrections
@@ -315,7 +425,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts]);
+  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts, syntaxLayer]);
 
   // Accept an IntelliSense suggestion: replace partial word and insert
   const handleAcceptSuggestion = useCallback((token) => {

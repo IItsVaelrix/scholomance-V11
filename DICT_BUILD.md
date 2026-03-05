@@ -35,13 +35,17 @@ Options:
 - `--db PATH` — output SQLite path (default: `scholomance_dict.sqlite`)
 - `--overwrite` — overwrite existing database
 
-## Serve API
+## Serve API (Development Only)
 
-Run the lightweight API server so the app can query the offline dictionary:
+Run the lightweight Python API server for local development:
 ```bash
 python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127.0.0.1 --port 8787
 ```
 Point the app to it with `VITE_SCHOLOMANCE_DICT_API_URL=http://127.0.0.1:8787/api/lexicon` in `.env`.
+
+For production, use Fastify `/api/lexicon/*` routes and set:
+- `SCHOLOMANCE_DICT_PATH=/absolute/path/to/scholomance_dict.sqlite`
+- `VITE_SCHOLOMANCE_DICT_API_URL=https://your-domain.example/api/lexicon`
 
 ## What the Build Does
 

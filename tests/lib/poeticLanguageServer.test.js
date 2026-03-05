@@ -69,6 +69,7 @@ describe('PoeticLanguageServer', () => {
       expect(r).toHaveProperty('token');
       expect(r).toHaveProperty('score');
       expect(r).toHaveProperty('scores');
+      expect(r.scores).toHaveProperty('predictability');
       expect(r).toHaveProperty('badges');
       expect(r).toHaveProperty('ghostLine');
     }

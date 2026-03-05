@@ -6,7 +6,6 @@ import App from "./App.jsx";
 import "./index.css";
 import ErrorBoundary from "./components/shared/ErrorBoundary";
 import { ThemeProvider } from "./hooks/useTheme.jsx";
-import { ProgressionProvider } from "./hooks/useProgression.jsx";
 
 const WatchPage = lazy(() => import("./pages/Watch/WatchPage.jsx"));
 const ListenPage = lazy(() => import("./pages/Listen/ListenPage"));
@@ -33,12 +32,10 @@ const router = createBrowserRouter([
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ProgressionProvider>
-      <ThemeProvider>
-        <ErrorBoundary>
-          <RouterProvider router={router} />
-        </ErrorBoundary>
-      </ThemeProvider>
-    </ProgressionProvider>
+    <ThemeProvider>
+      <ErrorBoundary>
+        <RouterProvider router={router} />
+      </ErrorBoundary>
+    </ThemeProvider>
   </React.StrictMode>
 );

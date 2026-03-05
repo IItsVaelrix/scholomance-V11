@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { TriePredictor } from '../../codex/core/trie.js';
 import { Spellchecker } from '../../codex/core/spellchecker.js';
-import { judiciary } from '../../codex/core/judiciary.js';
+import { createJudiciaryEngine } from '../../codex/core/judiciary.js';
 import { PhonemeEngine } from '../lib/phoneme.engine.js';
 import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
 import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
@@ -13,6 +13,7 @@ import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
 export function usePredictor() {
   const [model] = useState(() => new TriePredictor());
   const [spellchecker] = useState(() => new Spellchecker());
+  const [judiciary] = useState(() => createJudiciaryEngine());
   const [isReady, setIsReady] = useState(false);
   const plsRef = useRef(null);
 
@@ -27,7 +28,7 @@ export function usePredictor() {
     }));
 
     return judiciary.vote(candidates);
-  }, []);
+  }, [judiciary]);
 
   useEffect(() => {
     async function loadCorpus() {
