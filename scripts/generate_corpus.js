@@ -21,7 +21,9 @@ function tokenize(text) {
 }
 
 async function run() {
-  const inputPath = path.resolve(process.cwd(), "DATA-SET 1.md");
+  const preferredInputPath = path.resolve(process.cwd(), "docs", "references", "DATA-SET 1.md");
+  const legacyInputPath = path.resolve(process.cwd(), "DATA-SET 1.md");
+  const inputPath = fs.existsSync(preferredInputPath) ? preferredInputPath : legacyInputPath;
   const outputPath = path.resolve(process.cwd(), "public", "corpus.json");
 
   if (!fs.existsSync(inputPath)) {

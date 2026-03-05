@@ -18,7 +18,7 @@ Complete these readings in order before your first commit:
 1.  **Project Map**: `GEMINI.md` & `README.md` (The "What" and "How").
 2.  **Architecture**: `ARCH.md` (The "Why" and the current problems).
 3.  **Security**: `SECURITY_ARCHITECTURE_V2.0.md` (The "Shield").
-4.  **The Vision**: `ARCH_DICTIONARY_MUD.md` (The "Future").
+4.  **The Vision**: `docs/architecture/ARCH_DICTIONARY_MUD.md` (The "Future").
 
 **Technical Stack Proficiency Check:**
 - React 18 (Hooks, Context, Suspense).
@@ -33,7 +33,7 @@ Your first "Ritual" is to help build the **Linguistic Bedrock**.
 
 - **Task 1: Environment Setup**: Clone the repo, run `npm ci`, and successfully boot the server (`npm run start`) and frontend (`npm run dev`).
 - **Task 2: Data Inspection**: Run `python scripts/serve_scholomance_dict.py` and query the `/api/lexicon/lookup/time` endpoint. Explain the JSON structure to your mentor.
-- **Task 3: Schema Migration**: Add the `phonetics` table to `build_scholomance_dict.py` (Follow the plan in `ARCH_DICTIONARY_MUD.md`).
+- **Task 3: Schema Migration**: Add the `phonetics` table to `build_scholomance_dict.py` (Follow the plan in `docs/architecture/ARCH_DICTIONARY_MUD.md`).
 
 ---
 

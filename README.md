@@ -213,7 +213,7 @@ python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127
 - `SCHOLOMANCE_DICT_PATH=/absolute/path/to/scholomance_dict.sqlite`
 - `VITE_SCHOLOMANCE_DICT_API_URL=https://your-domain.example/api/lexicon`
 
-Reference: `DICT_BUILD.md`.
+Reference: `docs/operations/DICT_BUILD.md`.
 
 ## Collaboration quick start
 
@@ -247,7 +247,7 @@ node scripts/collab-client.js status
 - Set `REDIS_URL` to your Upstash connection string.
 - Keep `USER_DB_PATH=/var/data/scholomance_user.sqlite`.
 
-Reference: `DEPLOY_RENDER.md`.
+Reference: `docs/operations/DEPLOY_RENDER.md`.
 
 ### Docker
 
@@ -307,11 +307,12 @@ npm run test:visual:full
 
 ## Documentation index
 
-- `ARCH.md`: architecture review and current improvement plan.
+- `docs/README.md`: documentation map for AI and contributors.
+- `ARCHIVE REFERENCE DOCS/ARCH.md`: architecture review and current improvement plan.
 - `codex/README.md`: CODEx module details.
-- `DEPLOY_RENDER.md`: Render deployment guide.
-- `DICT_BUILD.md`: offline dictionary build details.
-- `SECURITY_ARCHITECTURE_V2.0.md`: security architecture notes.
+- `docs/operations/DEPLOY_RENDER.md`: Render deployment guide.
+- `docs/operations/DICT_BUILD.md`: offline dictionary build details.
+- `ARCHIVE REFERENCE DOCS/SECURITY_ARCHITECTURE_V2.0.md`: security architecture notes.
 
 ## Pre-push checklist
 

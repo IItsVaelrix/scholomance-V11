@@ -14,7 +14,11 @@ function writeJsonl(outputPath, rows) {
 
 function getInputPathFromArgs() {
   const inputArg = process.argv[2];
-  if (!inputArg) return path.join(process.cwd(), "DATA-SET 1.md");
+  if (!inputArg) {
+    const preferredInputPath = path.join(process.cwd(), "docs", "references", "DATA-SET 1.md");
+    if (fs.existsSync(preferredInputPath)) return preferredInputPath;
+    return path.join(process.cwd(), "DATA-SET 1.md");
+  }
   return path.resolve(process.cwd(), inputArg);
 }
 

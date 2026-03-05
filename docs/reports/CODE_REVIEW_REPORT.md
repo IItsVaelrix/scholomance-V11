@@ -2,7 +2,7 @@
 
 **Review Date:** 2026-02-06
 **Scope:** Security, Efficiency, Performance, and Aesthetics
-**Based On:** AI_README_ARCHITECTURE.md, ARCH_CONTRACT_SECURITY.md, AI_COLLABORATION_ARCHITECTURE_PLAN.md
+**Based On:** docs/ai/AI_README_ARCHITECTURE.md, ARCH_CONTRACT_SECURITY.md, AI_COLLABORATION_ARCHITECTURE_PLAN.md
 
 ---
 

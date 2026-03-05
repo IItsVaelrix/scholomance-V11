@@ -3,9 +3,9 @@
 This file converts your ARCH docs into a practical instruction set that is tuned to Codex strengths: architecture-safe implementation, fast cross-file refactors, backend contract alignment, security hardening, and test-backed delivery.
 
 ## Source Docs Used
-- `AI_README_ARCHITECTURE.md`
-- `ARCH_DICTIONARY_MUD.md`
-- `UNLOCKABLE_SCHOOLS_ARCHITECTURE.md`
+- `docs/ai/AI_README_ARCHITECTURE.md`
+- `docs/architecture/ARCH_DICTIONARY_MUD.md`
+- `docs/architecture/UNLOCKABLE_SCHOOLS_ARCHITECTURE.md`
 - `ARCHIVE REFERENCE DOCS/ARCH.md`
 - `ARCHIVE REFERENCE DOCS/ARCH_CONTRACT.md`
 - `ARCHIVE REFERENCE DOCS/ARCH_CONTRACT_SECURITY.md`

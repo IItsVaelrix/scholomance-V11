@@ -128,7 +128,7 @@ python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127
 For full details beyond this summary:
 - **Architecture & agent playbooks**: `AI_ARCHITECTURE_V2.md`
 - **Security patterns & code**: `ARCH_CONTRACT_SECURITY.md`
-- **Runtime architecture**: `AI_README_ARCHITECTURE.md`
-- **Unlockable schools**: `UNLOCKABLE_SCHOOLS_ARCHITECTURE.md`
-- **PLS + Dictionary integration**: `PLS_DICTIONARY_INTEGRATION.md`
+- **Runtime architecture**: `docs/ai/AI_README_ARCHITECTURE.md`
+- **Unlockable schools**: `docs/architecture/UNLOCKABLE_SCHOOLS_ARCHITECTURE.md`
+- **PLS + Dictionary integration**: `docs/architecture/PLS_DICTIONARY_INTEGRATION.md`
 - **Gemini context**: `GEMINI.md`
