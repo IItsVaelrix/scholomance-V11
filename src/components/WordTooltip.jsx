@@ -123,12 +123,12 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
       if (direction.includes("e")) newW = Math.max(TOOLTIP_MIN_WIDTH, startW + dx);
       if (direction.includes("w")) {
-        newW = Math.max(TOOLTIP_MIN_WIDTH, startW - dx);
+        newW = Math.max(TOOLTIP_MIN_WIDTH, startW + dx);
         newPosX = startPosX + (startW - newW);
       }
       if (direction.includes("s")) newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
       if (direction.includes("n")) {
-        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH - dy);
+        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
         newPosY = startPosY + (startH - newH);
       }
 
