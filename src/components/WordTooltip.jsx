@@ -7,6 +7,31 @@ import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
 import { normalizeVowelFamily } from "../lib/vowelFamily.js";
 import "./WordTooltip.css";
 
+// ── Fading ink transition variants ──────────────────────────────────────────
+// Exit: ink lifts off the page — brightens and blurs upward (evaporation)
+const INK_EXIT = {
+  opacity: 0,
+  filter: "blur(1.5px) brightness(1.6)",
+  y: -6,
+  transition: { duration: 0.16, ease: "easeIn" },
+};
+// Enter: ink soaks into parchment — starts dark/blurry, brief gold flash, resolves crisp
+const INK_INITIAL = { opacity: 0, filter: "blur(2.5px) brightness(0.5)", y: 8 };
+const INK_ANIMATE = {
+  opacity: 1,
+  filter: [
+    "blur(2px) brightness(0.55)",
+    "blur(0.4px) brightness(1.22)",  // gold flash — wet ink catching light
+    "blur(0px) brightness(1)",
+  ],
+  y: 0,
+  transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
+};
+// Mana gem: syllable count pop on word change
+const GEM_EXIT    = { opacity: 0, scale: 1.35, transition: { duration: 0.11, ease: "easeIn" } };
+const GEM_INITIAL = { opacity: 0, scale: 0.65 };
+const GEM_ANIMATE = { opacity: 1, scale: 1, transition: { duration: 0.28, delay: 0.1, ease: [0.22, 1, 0.36, 1] } };
+
 const TOOLTIP_MIN_WIDTH = 300;
 const TOOLTIP_MIN_HEIGHT = 350;
 const TOOLTIP_DEFAULT_WIDTH = 390;
@@ -58,6 +83,10 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
   const [size, setSize] = useState({ width: TOOLTIP_DEFAULT_WIDTH, height: TOOLTIP_DEFAULT_HEIGHT });
   const [pos, setPos] = useState({ x, y });
   const posRef = useRef({ x, y });
+  // Once the card is placed on screen we own our position — don't let
+  // incoming x/y props (computed from the newly-clicked word's DOM rect)
+  // teleport the card. The user may have dragged it; posRef is always live.
+  const posInitialized = useRef(false);
   const [isInteracting, setIsInteracting] = useState(false);
   const setTooltipPos = (nextPos) => {
     posRef.current = nextPos;
@@ -70,11 +99,15 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     node.style.top = `${nextPos.y}px`;
   };
 
-  // Sync incoming position
+  // Only snap to x/y on first appearance. After that the card is position-locked
+  // — new word clicks update ink content in place, not card location.
   useLayoutEffect(() => {
+    if (posInitialized.current) return;
+    posInitialized.current = true;
     const nextPos = { x, y };
     posRef.current = nextPos;
     setPos(nextPos);
+    applyLivePosition(nextPos);
   }, [x, y]);
 
   useEffect(() => {
@@ -277,17 +310,27 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
           <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
 
           <div className="card-mana-cost" style={{ backgroundColor: vowelColor }} aria-label={`${syllables} syllables`}>
-            <span className="mana-value" aria-hidden="true">{syllables}</span>
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={`${word}-${syllables}`}
+                className="mana-value"
+                aria-hidden="true"
+                initial={GEM_INITIAL}
+                animate={GEM_ANIMATE}
+                exit={GEM_EXIT}
+              >
+                {syllables}
+              </motion.span>
+            </AnimatePresence>
           </div>
 
           <div className="card-inner">
             <AnimatePresence mode="wait">
               <motion.div
                 key={word}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.13, ease: [0.4, 0, 0.2, 1] }}
+                initial={INK_INITIAL}
+                animate={INK_ANIMATE}
+                exit={INK_EXIT}
                 style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
               >
                 <header className="card-name-banner" style={{ cursor: isInteracting ? "grabbing" : "grab" }} title="Drag to move">
