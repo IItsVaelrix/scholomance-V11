@@ -189,7 +189,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
           </div>
 
           <div className="card-inner">
-            <header className="card-name-banner" onPointerDown={handleDragStart} style={{ cursor: "grab" }}>
+            <header className="card-name-banner" onPointerDown={handleDragStart} style={{ cursor: "grab" }} title="Drag to move">
               <h3 id={titleId} className="card-name">{word}</h3>
             </header>
 
@@ -250,13 +250,13 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
           <div className="card-corner card-corner--bl" aria-hidden="true" />
           <div className="card-corner card-corner--br" aria-hidden="true" />
           
-          <div 
-            className="card-resize-handle" 
+          <div
+            className="card-resize-handle"
             onPointerDown={handleResizeStart}
             role="separator"
             aria-label="Resize card"
             aria-valuenow={size.width}
-            style={{ cursor: "nwse-resize" }}
+            style={{ cursor: "nwse-resize", pointerEvents: "all" }}
           />
         </div>
       </div>
