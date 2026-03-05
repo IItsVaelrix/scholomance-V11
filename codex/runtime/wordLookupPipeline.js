@@ -19,7 +19,10 @@ import { mergeLexicalEntries } from '../core/schemas.js';
 
 // Constants
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours (persisted to IndexedDB)
-const RATE_LIMIT_MS = 100; // Max 10 lookups per second
+// 10ms per-word cooldown — effectively unlimited since the 24hr cache handles
+// repeat lookups. Only prevents the same word being fired multiple times in
+// a single render cycle.
+const RATE_LIMIT_MS = 10;
 const CACHE_PREFIX = 'lexical:';
 
 // Event names
@@ -83,8 +86,9 @@ export function setupWordLookupPipeline(adapters) {
       return;
     }
 
-    // 2. Check rate limit
-    if (!isActionAllowed('word_lookup', RATE_LIMIT_MS)) {
+    // 2. Check rate limit — keyed per-word so concurrent lookups of different
+    //    words never block each other; only rapid re-requests of the same word are throttled.
+    if (!isActionAllowed(`word_lookup:${normalizedWord}`, RATE_LIMIT_MS)) {
       emit(`${effectiveResponseEvent}:error`, {
         word: normalizedWord,
         requestId,
