@@ -220,7 +220,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       }
       if (direction.includes("s")) newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
       if (direction.includes("n")) {
-        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
+        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH - dy);
         newPosY = startPosY + (startH - newH);
       }
 
