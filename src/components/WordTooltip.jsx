@@ -90,26 +90,43 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     target.addEventListener("pointerup", handlePointerUp);
   };
 
-  // High-performance Resize Logic
-  const handleResizeStart = (e) => {
+  // High-performance Resize Logic — supports all 8 directions (n/s/e/w/ne/nw/se/sw)
+  const handleResizeStart = (direction) => (e) => {
     e.stopPropagation();
     if (e.button !== 0) return;
     const target = e.currentTarget;
     target.setPointerCapture(e.pointerId);
     setIsInteracting(true);
 
-    const startWidth = size.width;
-    const startHeight = size.height;
-    const startX = e.clientX;
-    const startY = e.clientY;
+    const startW   = size.width;
+    const startH   = size.height;
+    const startX   = e.clientX;
+    const startY   = e.clientY;
+    const startPosX = pos.x;
+    const startPosY = pos.y;
 
     const handlePointerMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      const deltaY = moveEvent.clientY - startY;
-      setSize({
-        width: Math.max(TOOLTIP_MIN_WIDTH, startWidth + deltaX),
-        height: Math.max(TOOLTIP_MIN_HEIGHT, startHeight + deltaY)
-      });
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+
+      let newW = startW;
+      let newH = startH;
+      let newPosX = startPosX;
+      let newPosY = startPosY;
+
+      if (direction.includes("e")) newW = Math.max(TOOLTIP_MIN_WIDTH, startW + dx);
+      if (direction.includes("w")) {
+        newW = Math.max(TOOLTIP_MIN_WIDTH, startW - dx);
+        newPosX = startPosX + (startW - newW);
+      }
+      if (direction.includes("s")) newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
+      if (direction.includes("n")) {
+        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH - dy);
+        newPosY = startPosY + (startH - newH);
+      }
+
+      setSize({ width: newW, height: newH });
+      setPos({ x: newPosX, y: newPosY });
     };
 
     const handlePointerUp = (upEvent) => {
@@ -249,15 +266,23 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
           <div className="card-corner card-corner--tr" aria-hidden="true" />
           <div className="card-corner card-corner--bl" aria-hidden="true" />
           <div className="card-corner card-corner--br" aria-hidden="true" />
-          
+
+          {/* Edge handles */}
+          <div className="card-resize-handle card-resize-handle--n"  onPointerDown={handleResizeStart("n")}  aria-hidden="true" />
+          <div className="card-resize-handle card-resize-handle--s"  onPointerDown={handleResizeStart("s")}  aria-hidden="true" />
+          <div className="card-resize-handle card-resize-handle--e"  onPointerDown={handleResizeStart("e")}  aria-hidden="true" />
+          <div className="card-resize-handle card-resize-handle--w"  onPointerDown={handleResizeStart("w")}  aria-hidden="true" />
+          {/* Corner handles */}
+          <div className="card-resize-handle card-resize-handle--ne" onPointerDown={handleResizeStart("ne")} aria-hidden="true" />
+          <div className="card-resize-handle card-resize-handle--nw" onPointerDown={handleResizeStart("nw")} aria-hidden="true" />
           <div
-            className="card-resize-handle"
-            onPointerDown={handleResizeStart}
+            className="card-resize-handle card-resize-handle--se"
+            onPointerDown={handleResizeStart("se")}
             role="separator"
             aria-label="Resize card"
             aria-valuenow={size.width}
-            style={{ cursor: "nwse-resize", pointerEvents: "all" }}
           />
+          <div className="card-resize-handle card-resize-handle--sw" onPointerDown={handleResizeStart("sw")} aria-hidden="true" />
         </div>
       </div>
     );
