@@ -71,11 +71,14 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
 
     const startX = e.clientX - pos.x;
     const startY = e.clientY - pos.y;
+    // Mutable tracker — avoids stale closure; handlePointerUp reads the real final position
+    let latestPos = { x: pos.x, y: pos.y };
 
     const handlePointerMove = (moveEvent) => {
       const nextX = moveEvent.clientX - startX;
       const nextY = moveEvent.clientY - startY;
-      setPos({ x: nextX, y: nextY });
+      latestPos = { x: nextX, y: nextY };
+      setPos(latestPos);
     };
 
     const handlePointerUp = (upEvent) => {
@@ -83,7 +86,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       target.removeEventListener("pointermove", handlePointerMove);
       target.removeEventListener("pointerup", handlePointerUp);
       setIsInteracting(false);
-      onDrag({ x: pos.x, y: pos.y });
+      onDrag(latestPos);
     };
 
     target.addEventListener("pointermove", handlePointerMove);
@@ -105,6 +108,10 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     const startPosX = pos.x;
     const startPosY = pos.y;
 
+    // Mutable tracker for the same reason as drag — avoids stale pos on pointerup
+    let latestResizePos = { x: startPosX, y: startPosY };
+    const movesPosition = direction.includes("w") || direction.includes("n");
+
     const handlePointerMove = (moveEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
@@ -125,8 +132,9 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
         newPosY = startPosY + (startH - newH);
       }
 
+      latestResizePos = { x: newPosX, y: newPosY };
       setSize({ width: newW, height: newH });
-      setPos({ x: newPosX, y: newPosY });
+      setPos(latestResizePos);
     };
 
     const handlePointerUp = (upEvent) => {
@@ -134,6 +142,8 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
       target.removeEventListener("pointermove", handlePointerMove);
       target.removeEventListener("pointerup", handlePointerUp);
       setIsInteracting(false);
+      // If position moved (W/N edges), inform parent so it doesn't snap back on re-render
+      if (movesPosition) onDrag(latestResizePos);
     };
 
     target.addEventListener("pointermove", handlePointerMove);

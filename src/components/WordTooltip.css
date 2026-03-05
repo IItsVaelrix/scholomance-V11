@@ -573,39 +573,59 @@
   opacity: 1;
 }
 
-/* ── Edge handles (thin strips) ── */
+/* ── Edge handles — 12px hit area, 3px visual indicator via ::after ── */
 .card-resize-handle--n {
   top: 0; left: 16px; right: 16px;
-  height: 6px;
+  height: 12px;
   cursor: ns-resize;
-  background: linear-gradient(to bottom, rgba(200, 168, 75, 0.22), transparent);
+}
+.card-resize-handle--n::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(to bottom, rgba(200, 168, 75, 0.28), transparent);
+  transition: background 0.18s;
 }
 
 .card-resize-handle--s {
   bottom: 0; left: 16px; right: 16px;
-  height: 6px;
+  height: 12px;
   cursor: ns-resize;
-  background: linear-gradient(to top, rgba(200, 168, 75, 0.22), transparent);
+}
+.card-resize-handle--s::after {
+  content: ''; position: absolute;
+  bottom: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(to top, rgba(200, 168, 75, 0.28), transparent);
+  transition: background 0.18s;
 }
 
 .card-resize-handle--e {
   right: 0; top: 16px; bottom: 16px;
-  width: 6px;
+  width: 12px;
   cursor: ew-resize;
-  background: linear-gradient(to left, rgba(200, 168, 75, 0.22), transparent);
+}
+.card-resize-handle--e::after {
+  content: ''; position: absolute;
+  top: 0; right: 0; bottom: 0; width: 3px;
+  background: linear-gradient(to left, rgba(200, 168, 75, 0.28), transparent);
+  transition: background 0.18s;
 }
 
 .card-resize-handle--w {
   left: 0; top: 16px; bottom: 16px;
-  width: 6px;
+  width: 12px;
   cursor: ew-resize;
-  background: linear-gradient(to right, rgba(200, 168, 75, 0.22), transparent);
+}
+.card-resize-handle--w::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; bottom: 0; width: 3px;
+  background: linear-gradient(to right, rgba(200, 168, 75, 0.28), transparent);
+  transition: background 0.18s;
 }
 
-.card-resize-handle--n:hover { background: linear-gradient(to bottom, rgba(200, 168, 75, 0.45), transparent); }
-.card-resize-handle--s:hover { background: linear-gradient(to top,   rgba(200, 168, 75, 0.45), transparent); }
-.card-resize-handle--e:hover { background: linear-gradient(to left,  rgba(200, 168, 75, 0.45), transparent); }
-.card-resize-handle--w:hover { background: linear-gradient(to right, rgba(200, 168, 75, 0.45), transparent); }
+.card-resize-handle--n:hover::after { background: linear-gradient(to bottom, rgba(200, 168, 75, 0.55), transparent); }
+.card-resize-handle--s:hover::after { background: linear-gradient(to top,    rgba(200, 168, 75, 0.55), transparent); }
+.card-resize-handle--e:hover::after { background: linear-gradient(to left,   rgba(200, 168, 75, 0.55), transparent); }
+.card-resize-handle--w:hover::after { background: linear-gradient(to right,  rgba(200, 168, 75, 0.55), transparent); }
 
 /* ── Corner handles (16×16 squares) ── */
 .card-resize-handle--nw {
