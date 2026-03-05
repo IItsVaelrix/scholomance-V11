@@ -1,23 +1,26 @@
-import React, { lazy } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./lib/config/zod.config.js";
 import App from "./App.jsx";
 import "./index.css";
 import ErrorBoundary from "./components/shared/ErrorBoundary";
+import RouteErrorPage from "./components/shared/RouteErrorPage.jsx";
 import { ThemeProvider } from "./hooks/useTheme.jsx";
+import { lazyWithRetry } from "./lib/lazyWithRetry.js";
 
-const WatchPage = lazy(() => import("./pages/Watch/WatchPage.jsx"));
-const ListenPage = lazy(() => import("./pages/Listen/ListenPage"));
-const ReadPage = lazy(() => import("./pages/Read/ReadPage.jsx"));
-const AuthPage = lazy(() => import("./pages/Auth/AuthPage.jsx"));
-const CollabPage = lazy(() => import("./pages/Collab/CollabPage.jsx"));
-const ProfilePage = lazy(() => import("./pages/Profile/ProfilePage.jsx"));
+const WatchPage = lazyWithRetry(() => import("./pages/Watch/WatchPage.jsx"), "watch-page");
+const ListenPage = lazyWithRetry(() => import("./pages/Listen/ListenPage"), "listen-page");
+const ReadPage = lazyWithRetry(() => import("./pages/Read/ReadPage.jsx"), "read-page");
+const AuthPage = lazyWithRetry(() => import("./pages/Auth/AuthPage.jsx"), "auth-page");
+const CollabPage = lazyWithRetry(() => import("./pages/Collab/CollabPage.jsx"), "collab-page");
+const ProfilePage = lazyWithRetry(() => import("./pages/Profile/ProfilePage.jsx"), "profile-page");
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    errorElement: <RouteErrorPage />,
     children: [
       { index: true, element: <WatchPage /> },
       { path: "watch", element: <WatchPage /> },

@@ -32,7 +32,7 @@ import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
 import { lexiconRoutes } from './routes/lexicon.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
-import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
+import { isApiRoutePath, isStaticAssetPath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
 import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
@@ -682,7 +682,30 @@ if (ENABLE_COLLAB_API) {
 }
 
 if (SHOULD_SERVE_FRONTEND) {
-    fastify.register(fastifyStatic, { root: FRONTEND_DIST_PATH, prefix: '/', index: ['index.html'] });
+    fastify.register(fastifyStatic, {
+        root: FRONTEND_DIST_PATH,
+        prefix: '/',
+        index: ['index.html'],
+        setHeaders: (res, filePath) => {
+            const normalizedPath = String(filePath || '');
+            const fileName = path.basename(normalizedPath).toLowerCase();
+
+            if (fileName === 'index.html') {
+                // Always fetch latest shell so dynamic chunk URLs stay in sync after deploys.
+                res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+                return;
+            }
+
+            if (normalizedPath.includes(`${path.sep}assets${path.sep}`)) {
+                // Fingerprinted assets are immutable by design.
+                res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+                return;
+            }
+
+            // Non-fingerprinted static files get a short cache.
+            res.setHeader('Cache-Control', 'public, max-age=3600');
+        },
+    });
     fastify.setNotFoundHandler((request, reply) => {
         const requestPath = stripQueryFromUrl(request.raw?.url || request.url);
         if (isApiRoutePath(requestPath)) {
@@ -691,6 +714,10 @@ if (SHOULD_SERVE_FRONTEND) {
                 path: requestPath,
             });
         }
+        if (isStaticAssetPath(requestPath)) {
+            return reply.code(404).type('text/plain; charset=utf-8').send('Not found');
+        }
+        reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
         return reply.type('text/html; charset=utf-8').sendFile('index.html');
     });
 } else {
@@ -701,6 +728,9 @@ if (SHOULD_SERVE_FRONTEND) {
                 message: 'Route not found',
                 path: requestPath,
             });
+        }
+        if (isStaticAssetPath(requestPath)) {
+            return reply.code(404).type('text/plain; charset=utf-8').send('Not found');
         }
         return reply.code(404).send({ message: 'Not found' });
     });
