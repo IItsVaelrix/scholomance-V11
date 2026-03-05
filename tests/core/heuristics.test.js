@@ -3,6 +3,7 @@ import { createScoringEngine } from '../../codex/core/scoring.engine.js';
 import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_density.js';
 import { meterRegularityHeuristic } from '../../codex/core/heuristics/meter_regularity.js';
 import { alliterationDensityHeuristic } from '../../codex/core/heuristics/alliteration_density.js';
+import { scrollPowerHeuristic } from '../../codex/core/heuristics/scroll_power.js';
 
 // Mock AnalyzedDocument
 const mockDoc = {
@@ -16,7 +17,16 @@ const mockDoc = {
   lines: [
     { text: "Hello hello heavy heart", syllableCount: 7, start: 0, end: 23, words: [] }
   ],
-  stats: { wordCount: 4 }
+  stats: { wordCount: 4 },
+  parsed: {
+    scrollPower: {
+      rhymeDensity: 0.8,
+      coherence: 0.6,
+      product: 0.48,
+      cappedProduct: 0.336,
+      normalized: 0.48,
+    }
+  }
 };
 
 describe('Heuristics Integration', () => {
@@ -39,6 +49,12 @@ describe('Heuristics Integration', () => {
     expect(result.diagnostics.length).toBeGreaterThan(0);
     expect(result.diagnostics[0].message).toBe('Alliteration chain');
     expect(result.diagnostics[0].metadata.words.length).toBeGreaterThan(1);
+  });
+
+  it('Scroll Power uses the bounded product signal', () => {
+    const result = scrollPowerHeuristic.scorer(mockDoc);
+    expect(result.rawScore).toBeCloseTo(0.48, 4);
+    expect(result.explanation).toContain('cap 70%');
   });
 
   it('Scoring Engine runs correctly with mock doc', async () => {

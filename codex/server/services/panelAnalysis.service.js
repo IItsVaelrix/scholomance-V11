@@ -11,6 +11,7 @@ import { literaryDeviceRichnessHeuristic } from '../../core/heuristics/literary_
 import { meterRegularityHeuristic } from '../../core/heuristics/meter_regularity.js';
 import { phonemeDensityHeuristic } from '../../core/heuristics/phoneme_density.js';
 import { rhymeQualityHeuristic } from '../../core/heuristics/rhyme_quality.js';
+import { scrollPowerHeuristic } from '../../core/heuristics/scroll_power.js';
 import { vocabularyRichnessHeuristic } from '../../core/heuristics/vocabulary_richness.js';
 import { phoneticHackingHeuristic } from '../../core/heuristics/phonetic_hacking.js';
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
@@ -25,6 +26,7 @@ const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
   alliterationDensityHeuristic,
   rhymeQualityHeuristic,
+  scrollPowerHeuristic,
   meterRegularityHeuristic,
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,

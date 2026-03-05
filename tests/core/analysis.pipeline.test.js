@@ -118,6 +118,17 @@ describe('Analysis Pipeline', () => {
     expect(doc.stats.sentenceCount).toBe(3);
   });
 
+  it('builds bounded scroll power signal from rhyme density and coherence', () => {
+    const text = "Bright flame\nNight flame\nLight flame";
+    const doc = analyzeText(text);
+    const signal = doc.parsed.scrollPower;
+
+    expect(signal.rhymeDensity).toBeGreaterThan(0.9);
+    expect(signal.product).toBeCloseTo(signal.rhymeDensity * signal.coherence, 6);
+    expect(signal.cappedProduct).toBeLessThanOrEqual(0.7);
+    expect(signal.normalized).toBeCloseTo(signal.cappedProduct / 0.7, 6);
+  });
+
   it('handles empty input', () => {
     const doc = analyzeText('');
     expect(doc.lines.length).toBe(0);

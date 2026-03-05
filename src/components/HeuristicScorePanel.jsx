@@ -10,6 +10,7 @@ const HEURISTIC_LABELS = {
   phoneme_density: 'Phoneme Density',
   alliteration_density: 'Alliteration',
   rhyme_quality: 'Rhyme Quality',
+  scroll_power: 'Scroll Power',
   meter_regularity: 'Meter',
   literary_device_richness: 'Literary Devices',
   vocabulary_richness: 'Vocabulary',
@@ -41,6 +42,7 @@ function HeuristicBar({ trace, index }) {
 
 export default function HeuristicScorePanel({ scoreData, genreProfile, visible, isEmbedded = false, onClose = null }) {
   if (!visible || !scoreData) return null;
+  const totalWeight = scoreData.traces.reduce((sum, trace) => sum + (Number(trace.weight) || 0), 0);
 
   const content = (
     <>
@@ -88,7 +90,7 @@ export default function HeuristicScorePanel({ scoreData, genreProfile, visible, 
 
       <div className="score-footer">
         <span className="score-footer-label">
-          {scoreData.traces.length} heuristics &middot; weight total 1.00
+          {scoreData.traces.length} heuristics &middot; weight total {totalWeight.toFixed(2)}
         </span>
       </div>
     </>

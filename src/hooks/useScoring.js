@@ -8,12 +8,14 @@ import { meterRegularityHeuristic } from '../../codex/core/heuristics/meter_regu
 import { phoneticHackingHeuristic } from '../../codex/core/heuristics/phonetic_hacking.js';
 import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_density.js';
 import { rhymeQualityHeuristic } from '../../codex/core/heuristics/rhyme_quality.js';
+import { scrollPowerHeuristic } from '../../codex/core/heuristics/scroll_power.js';
 import { vocabularyRichnessHeuristic } from '../../codex/core/heuristics/vocabulary_richness.js';
 
 const HEURISTICS = [
   phonemeDensityHeuristic,
   alliterationDensityHeuristic,
   rhymeQualityHeuristic,
+  scrollPowerHeuristic,
   meterRegularityHeuristic,
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,

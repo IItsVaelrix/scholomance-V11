@@ -10,6 +10,7 @@ import { WORD_REGEX_GLOBAL } from "../../src/lib/wordTokenization.js";
 const WORD_REGEX = WORD_REGEX_GLOBAL;
 const SENTENCE_SPLIT_REGEX = /[.!?]+|\n+/;
 const TERMINAL_PUNCTUATION_REGEX = /[.!?;:]$/;
+const SCROLL_POWER_CAP = 0.7;
 
 const STOP_WORDS = new Set([
   "a", "an", "the", "and", "or", "but", "if", "then", "else", "than",
@@ -184,6 +185,12 @@ export function analyzeText(text) {
     : 0;
 
   const stressProfile = inferStressProfile(lines);
+  const scrollPower = buildScrollPowerSignal({
+    lineEndingRepeatCount: boundaryPatterns.lineEndingRepeatCount,
+    nonEmptyLineCount: nonEmptyLines.length,
+    lexicalDiversity: wordCount > 0 ? uniqueWordCount / wordCount : 0,
+    stressCoherence: stressProfile.coherence,
+  });
 
   return {
     raw: text,
@@ -218,6 +225,7 @@ export function analyzeText(text) {
         ratio: clamp01(enjambmentRatio),
       },
       stressProfile,
+      scrollPower,
     },
   };
 }
@@ -253,6 +261,13 @@ function createEmptyDocument() {
       sentenceLengths: [],
       enjambment: { count: 0, ratio: 0 },
       stressProfile: { dominantFoot: "mixed", coherence: 0, error: 1 },
+      scrollPower: {
+        rhymeDensity: 0,
+        coherence: 0,
+        product: 0,
+        cappedProduct: 0,
+        normalized: 0,
+      },
     },
   };
 }
@@ -391,6 +406,37 @@ function buildLineBoundaryPatterns(lines) {
   return {
     lineStarters: toRankedArray(starters),
     lineEnders: toRankedArray(enders),
+    lineEndingRepeatCount: countRepeatedOccurrences(enders),
+  };
+}
+
+function countRepeatedOccurrences(entriesMap) {
+  let repeatCount = 0;
+  for (const lineNumbers of entriesMap.values()) {
+    repeatCount += Math.max(0, lineNumbers.length - 1);
+  }
+  return repeatCount;
+}
+
+function buildScrollPowerSignal({ lineEndingRepeatCount, nonEmptyLineCount, lexicalDiversity, stressCoherence }) {
+  const safeLineCount = Number(nonEmptyLineCount) || 0;
+  const repeatCount = Math.max(0, Number(lineEndingRepeatCount) || 0);
+
+  const rhymeDensity = safeLineCount > 1
+    ? clamp01(repeatCount / Math.max(1, safeLineCount - 1))
+    : 0;
+
+  const coherence = clamp01((clamp01(lexicalDiversity) + clamp01(stressCoherence)) / 2);
+  const product = clamp01(rhymeDensity * coherence);
+  const cappedProduct = Math.max(0, Math.min(SCROLL_POWER_CAP, product * SCROLL_POWER_CAP));
+  const normalized = SCROLL_POWER_CAP > 0 ? clamp01(cappedProduct / SCROLL_POWER_CAP) : 0;
+
+  return {
+    rhymeDensity,
+    coherence,
+    product,
+    cappedProduct,
+    normalized,
   };
 }
 

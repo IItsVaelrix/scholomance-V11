@@ -61,6 +61,13 @@ export interface DocumentParsed {
   sentenceLengths: number[];
   enjambment: { count: number; ratio: number };
   stressProfile: { dominantFoot: string; coherence: number; error: number };
+  scrollPower: {
+    rhymeDensity: number;
+    coherence: number;
+    product: number;
+    cappedProduct: number;
+    normalized: number;
+  };
 }
 
 export interface AnalyzedDocument {
