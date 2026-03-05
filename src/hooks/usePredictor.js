@@ -68,11 +68,25 @@ export function usePredictor() {
         const authoritySample = uniqueWords.slice(0, 500);
         await PhonemeEngine.ensureAuthorityBatch(authoritySample);
 
+        const dictionaryAPI = ScholomanceDictionaryAPI.isEnabled() ? ScholomanceDictionaryAPI : null;
+        spellchecker.configureAsync({
+          validateWord: (dictionaryAPI && typeof dictionaryAPI.validateBatch === 'function')
+            ? async (candidateWord) => {
+              const valid = await dictionaryAPI.validateBatch([candidateWord]);
+              const normalizedCandidate = String(candidateWord || '').toLowerCase();
+              return Array.isArray(valid) && valid.some((word) => String(word || '').toLowerCase() === normalizedCandidate);
+            }
+            : null,
+          suggestWords: (dictionaryAPI && typeof dictionaryAPI.suggest === 'function')
+            ? async (prefix, limit) => dictionaryAPI.suggest(prefix, { limit })
+            : null,
+        });
+
         const pls = new PoeticLanguageServer({
           phonemeEngine: PhonemeEngine,
           trie: model,
           spellchecker,
-          dictionaryAPI: ScholomanceDictionaryAPI.isEnabled() ? ScholomanceDictionaryAPI : null,
+          dictionaryAPI,
         });
         pls.buildIndex(words);
         plsRef.current = pls;
@@ -118,14 +132,14 @@ export function usePredictor() {
   /**
    * Spellcheck a word
    */
-  const checkSpelling = useCallback((word) => {
+  const checkSpelling = useCallback(async (word) => {
     if (!isReady) return true;
-    return spellchecker.check(word);
+    return spellchecker.checkAsync(word);
   }, [isReady, spellchecker]);
 
-  const getSpellingSuggestions = useCallback((word, prevWord = null, limit = 5) => {
+  const getSpellingSuggestions = useCallback(async (word, prevWord = null, limit = 5) => {
     if (!isReady) return [];
-    return spellchecker.suggest(word, limit, prevWord);
+    return spellchecker.suggestAsync(word, limit, prevWord);
   }, [isReady, spellchecker]);
 
   return { predict, getCompletions, checkSpelling, getSpellingSuggestions, getDemocraticChoice, isReady };

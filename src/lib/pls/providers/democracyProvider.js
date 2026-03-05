@@ -10,16 +10,46 @@ const pipelineJudiciary = createJudiciaryEngine();
  */
 export async function democracyProvider(context, engines, candidates) {
   const { prefix, prevWord, prevLineEndWord, syntaxContext } = context;
-  const { trie, spellchecker, phonemeEngine } = engines;
+  const { trie, spellchecker, phonemeEngine, dictionaryAPI } = engines;
   if (!candidates || candidates.length === 0) return [];
 
   // 1. Prepare "voters" for each candidate by checking endorsements from each layer.
   // To avoid expensive lookups for every single candidate, we'll pre-check 
   // the top-tier suggestions for the current context.
   
-  const trieSuggestions = trie ? new Set(trie.predict(prefix || '', 30)) : new Set();
-  const bigramSuggestions = (trie && prevWord) ? new Set(trie.predictNext(prevWord, 30)) : new Set();
-  const spellSuggestions = (spellchecker && prefix) ? new Set(spellchecker.suggest(prefix, 15)) : new Set();
+  const trieSuggestions = trie
+    ? new Set((trie.predict(prefix || '', 30) || []).map((token) => String(token).toLowerCase()))
+    : new Set();
+  const bigramSuggestions = (trie && prevWord)
+    ? new Set((trie.predictNext(prevWord, 30) || []).map((token) => String(token).toLowerCase()))
+    : new Set();
+
+  let spellSuggestions = new Set();
+  if (spellchecker && prefix) {
+    const spellingCandidates = typeof spellchecker.suggestAsync === 'function'
+      ? await spellchecker.suggestAsync(prefix, 15, prevWord)
+      : spellchecker.suggest(prefix, 15, prevWord);
+    spellSuggestions = new Set(
+      (Array.isArray(spellingCandidates) ? spellingCandidates : [])
+        .map((token) => String(token).toLowerCase())
+    );
+  }
+
+  let dictionaryValidWords = new Set();
+  if (dictionaryAPI && typeof dictionaryAPI.validateBatch === 'function') {
+    try {
+      const validWords = await dictionaryAPI.validateBatch(candidates.map((candidate) => candidate.token));
+      dictionaryValidWords = new Set(
+        (Array.isArray(validWords) ? validWords : [])
+          .map((word) => String(word).toLowerCase())
+      );
+      if (spellchecker && typeof spellchecker.primeValidWords === 'function' && dictionaryValidWords.size > 0) {
+        spellchecker.primeValidWords([...dictionaryValidWords]);
+      }
+    } catch (_error) {
+      // Dictionary validation is additive only.
+    }
+  }
 
   const targetAnalysis = (prevLineEndWord && phonemeEngine) ? phonemeEngine.analyzeWord(prevLineEndWord) : null;
 
@@ -28,9 +58,10 @@ export async function democracyProvider(context, engines, candidates) {
   
   candidates.forEach(candidate => {
     const word = candidate.token;
+    const normalizedWord = String(word).toLowerCase();
 
     // Endorsement from Predictor Layer
-    if (trieSuggestions.has(word) || bigramSuggestions.has(word)) {
+    if (trieSuggestions.has(normalizedWord) || bigramSuggestions.has(normalizedWord)) {
       judiciaryCandidates.push({
         word,
         layer: 'PREDICTOR',
@@ -39,11 +70,22 @@ export async function democracyProvider(context, engines, candidates) {
     }
 
     // Endorsement from Spellcheck Layer
-    if (spellSuggestions.has(word)) {
+    const isSuggestedBySpellchecker = spellSuggestions.has(normalizedWord);
+    const isValidatedByDictionary = dictionaryValidWords.has(normalizedWord);
+    const isKnownLocally = spellchecker && typeof spellchecker.check === 'function'
+      ? spellchecker.check(normalizedWord)
+      : false;
+
+    let spellcheckConfidence = null;
+    if (isSuggestedBySpellchecker) spellcheckConfidence = 0.7;
+    if (isKnownLocally) spellcheckConfidence = Math.max(spellcheckConfidence || 0, 0.78);
+    if (isValidatedByDictionary) spellcheckConfidence = Math.max(spellcheckConfidence || 0, 0.9);
+
+    if (spellcheckConfidence !== null) {
       judiciaryCandidates.push({
         word,
         layer: 'SPELLCHECK',
-        confidence: 0.7
+        confidence: spellcheckConfidence
       });
     }
 

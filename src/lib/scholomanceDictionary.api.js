@@ -38,6 +38,13 @@ const ValidateBatchSchema = z.object({
   valid: z.array(z.string())
 });
 
+const SuggestSchema = z.object({
+  results: z.array(z.object({
+    headword: z.string(),
+    pos: z.string().nullable().optional(),
+  })),
+});
+
 function buildUrl(base, params) {
   const url = new URL(base, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
   Object.entries(params || {}).forEach(([key, value]) => {
@@ -103,6 +110,31 @@ export const ScholomanceDictionaryAPI = {
     });
     const parsed = ValidateBatchSchema.safeParse(payload);
     return parsed.success ? parsed.data.valid : [];
+  },
+
+  /**
+   * Returns dictionary suggestions for a prefix.
+   * @param {string} prefix
+   * @param {{ limit?: number }} [options]
+   * @returns {Promise<string[]>}
+   */
+  async suggest(prefix, { limit = 20 } = {}) {
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !prefix) return [];
+    const url = buildUrl(`${baseUrl}/suggest`, { prefix, limit });
+    const payload = await fetchJson(url);
+    const parsed = SuggestSchema.safeParse(payload);
+    if (!parsed.success) return [];
+
+    const deduped = [];
+    const seen = new Set();
+    for (const row of parsed.data.results) {
+      const headword = String(row?.headword || '').trim().toLowerCase();
+      if (!headword || seen.has(headword)) continue;
+      seen.add(headword);
+      deduped.push(headword);
+    }
+    return deduped;
   },
 
   async search(query, { limit = 20 } = {}) {

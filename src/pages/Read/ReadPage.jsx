@@ -698,16 +698,37 @@ export default function ReadPage() {
       setMisspellings([]);
       return;
     }
-    const allWords = editorContent.match(/\b(\w+)\b/g) || [];
-    const uniqueWords = [...new Set(allWords)];
-    const errors = uniqueWords
-      .filter(w => w.length > 2 && !checkSpelling(w))
-      .map(w => {
-        const index = allWords.indexOf(w);
+
+    let cancelled = false;
+
+    const runSpellcheck = async () => {
+      const allWords = editorContent.match(/\b(\w+)\b/g) || [];
+      const uniqueWords = [...new Set(allWords)];
+      const candidateWords = uniqueWords.filter((word) => word.length > 2);
+
+      const checked = await Promise.all(candidateWords.map(async (word) => {
+        const isValid = await checkSpelling(word);
+        if (isValid) return null;
+
+        const index = allWords.indexOf(word);
         const prevWord = index > 0 ? allWords[index - 1] : null;
-        return { word: w, suggestions: getSpellingSuggestions(w, prevWord, 3) };
-      });
-    setMisspellings(errors);
+        const suggestions = await getSpellingSuggestions(word, prevWord, 3);
+
+        return {
+          word,
+          suggestions: Array.isArray(suggestions) ? suggestions : [],
+        };
+      }));
+
+      if (cancelled) return;
+      setMisspellings(checked.filter(Boolean));
+    };
+
+    void runSpellcheck();
+
+    return () => {
+      cancelled = true;
+    };
   }, [editorContent, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
 
   return (

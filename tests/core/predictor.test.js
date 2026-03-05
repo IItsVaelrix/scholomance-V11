@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { TriePredictor } from '../../codex/core/trie.js';
 import { Spellchecker } from '../../codex/core/spellchecker.js';
 
@@ -79,5 +79,30 @@ describe('Spellchecker Logic (Levenshtein-based)', () => {
     // "froot" sounds like "fruit"
     const frootSuggestions = spellchecker.suggest('froot');
     expect(frootSuggestions).toContain('fruit');
+  });
+
+  it('bridges async validation and caches positive dictionary hits', async () => {
+    const dynamicSpellchecker = new Spellchecker();
+    dynamicSpellchecker.init(['ritual', 'void']);
+
+    const validateWord = vi.fn(async (word) => word === 'galaxy');
+    dynamicSpellchecker.configureAsync({ validateWord });
+
+    await expect(dynamicSpellchecker.checkAsync('galaxy')).resolves.toBe(true);
+    expect(dynamicSpellchecker.check('galaxy')).toBe(true);
+    await dynamicSpellchecker.checkAsync('galaxy');
+    expect(validateWord).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds async dictionary suggestions to fallback candidates', async () => {
+    const dynamicSpellchecker = new Spellchecker();
+    dynamicSpellchecker.init(['ritual', 'void']);
+    dynamicSpellchecker.configureAsync({
+      suggestWords: async () => ['design', 'designer', 'designed'],
+    });
+
+    const suggestions = await dynamicSpellchecker.suggestAsync('desgin', 5);
+    expect(suggestions).toContain('design');
+    expect(dynamicSpellchecker.check('design')).toBe(true);
   });
 });

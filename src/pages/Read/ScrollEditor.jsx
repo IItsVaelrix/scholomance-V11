@@ -371,19 +371,27 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         const seenTokens = new Set();
 
         // 1. Spelling corrections (highest priority)
-        if (prefix && checkSpelling && !checkSpelling(prefix)) {
-          (getSpellingSuggestions?.(prefix, null, 3) || []).forEach((suggestion) => {
-            if (!suggestion || seenTokens.has(suggestion)) return;
-            seenTokens.add(suggestion);
-            finalResults.push({
-              token: suggestion,
-              type: 'correction',
-              score: 10,
-              isRhyme: false,
-              badges: [],
-              ghostLine: null,
+        if (prefix && checkSpelling) {
+          const isSpelledCorrectly = await checkSpelling(prefix);
+          if (cancelled) return;
+
+          if (!isSpelledCorrectly) {
+            const spellingSuggestions = await (getSpellingSuggestions?.(prefix, null, 3) || []);
+            if (cancelled) return;
+
+            (Array.isArray(spellingSuggestions) ? spellingSuggestions : []).forEach((suggestion) => {
+              if (!suggestion || seenTokens.has(suggestion)) return;
+              seenTokens.add(suggestion);
+              finalResults.push({
+                token: suggestion,
+                type: 'correction',
+                score: 10,
+                isRhyme: false,
+                badges: [],
+                ghostLine: null,
+              });
             });
-          });
+          }
         }
 
         // 2. PLS completions (rhyme, meter, color-aware)

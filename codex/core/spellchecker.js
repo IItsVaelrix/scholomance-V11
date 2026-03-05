@@ -7,21 +7,51 @@ export class Spellchecker {
   constructor() {
     this.dictionary = new Map(); // Map<word, frequency>
     this.phoneticMap = new Map(); // Map<phoneticKey, Set<word>>
+    this.validationCache = new Map(); // Map<word, boolean>
+    this.validationInFlight = new Map(); // Map<word, Promise<boolean>>
+    this.asyncValidator = null; // (word: string) => Promise<boolean>
+    this.asyncSuggestor = null; // (prefix: string, limit: number) => Promise<string[]>
     this.isLoaded = false;
+  }
+
+  normalizeWord(word) {
+    return String(word || '').trim().toLowerCase();
+  }
+
+  remember(word, weight = 1) {
+    const normalized = this.normalizeWord(word);
+    if (!normalized) return false;
+
+    this.dictionary.set(normalized, (this.dictionary.get(normalized) || 0) + Math.max(1, Number(weight) || 1));
+
+    const key = phoneticMatcher.encode(normalized);
+    if (!this.phoneticMap.has(key)) this.phoneticMap.set(key, new Set());
+    this.phoneticMap.get(key).add(normalized);
+    return true;
+  }
+
+  primeValidWords(words) {
+    if (!Array.isArray(words)) return;
+    words.forEach((word) => {
+      const normalized = this.normalizeWord(word);
+      if (!normalized) return;
+      this.validationCache.set(normalized, true);
+      this.remember(normalized);
+    });
+  }
+
+  configureAsync({ validateWord = null, suggestWords = null } = {}) {
+    this.asyncValidator = typeof validateWord === 'function' ? validateWord : null;
+    this.asyncSuggestor = typeof suggestWords === 'function' ? suggestWords : null;
   }
 
   init(words) {
     if (!Array.isArray(words)) return;
     
     words.forEach(w => {
-      const lower = w.toLowerCase();
-      // Store frequency for contextual scoring
-      this.dictionary.set(lower, (this.dictionary.get(lower) || 0) + 1);
-      
-      // Index by phonetic signature
-      const key = phoneticMatcher.encode(lower);
-      if (!this.phoneticMap.has(key)) this.phoneticMap.set(key, new Set());
-      this.phoneticMap.get(key).add(lower);
+      const lower = this.normalizeWord(w);
+      if (!lower) return;
+      this.remember(lower, 1);
     });
     
     this.isLoaded = true;
@@ -29,7 +59,42 @@ export class Spellchecker {
 
   check(word) {
     if (!word) return true;
-    return this.dictionary.has(word.toLowerCase());
+    return this.dictionary.has(this.normalizeWord(word));
+  }
+
+  async checkAsync(word) {
+    const normalized = this.normalizeWord(word);
+    if (!normalized) return true;
+
+    if (this.dictionary.has(normalized)) return true;
+
+    if (this.validationCache.has(normalized)) {
+      const cached = Boolean(this.validationCache.get(normalized));
+      if (cached) this.remember(normalized);
+      return cached;
+    }
+
+    if (!this.asyncValidator) return false;
+
+    if (this.validationInFlight.has(normalized)) {
+      return this.validationInFlight.get(normalized);
+    }
+
+    const pending = (async () => {
+      try {
+        const valid = Boolean(await this.asyncValidator(normalized));
+        this.validationCache.set(normalized, valid);
+        if (valid) this.remember(normalized);
+        return valid;
+      } catch (_error) {
+        return false;
+      } finally {
+        this.validationInFlight.delete(normalized);
+      }
+    })();
+
+    this.validationInFlight.set(normalized, pending);
+    return pending;
   }
 
   /**
@@ -39,7 +104,8 @@ export class Spellchecker {
    */
   suggest(word, limit = 5, _contextPrevWord = null) {
     if (!word) return [];
-    const target = word.toLowerCase();
+    const target = this.normalizeWord(word);
+    if (!target) return [];
     const suggestions = [];
 
     // 1. Check Phonetic Matches (High Priority)
@@ -84,6 +150,45 @@ export class Spellchecker {
       })
       .slice(0, limit)
       .map(s => s.word);
+  }
+
+  async suggestAsync(word, limit = 5, contextPrevWord = null) {
+    const normalized = this.normalizeWord(word);
+    if (!normalized) return [];
+
+    const local = this.suggest(normalized, limit, contextPrevWord);
+    const merged = [];
+    const seen = new Set();
+
+    const pushWord = (candidate) => {
+      const candidateWord = this.normalizeWord(candidate);
+      if (!candidateWord || candidateWord === normalized || seen.has(candidateWord)) return;
+      seen.add(candidateWord);
+      merged.push(candidateWord);
+    };
+
+    local.forEach(pushWord);
+
+    if (this.asyncSuggestor) {
+      try {
+        const remote = await this.asyncSuggestor(normalized, Math.max(limit * 3, 15));
+        (Array.isArray(remote) ? remote : []).forEach((candidate) => {
+          const candidateWord = this.normalizeWord(candidate);
+          if (!candidateWord) return;
+          this.validationCache.set(candidateWord, true);
+          this.remember(candidateWord);
+          pushWord(candidateWord);
+        });
+      } catch (_error) {
+        // Remote suggestions are additive only; keep local fallback.
+      }
+    }
+
+    if (merged.length < limit) {
+      this.suggest(normalized, limit + 10, contextPrevWord).forEach(pushWord);
+    }
+
+    return merged.slice(0, limit);
   }
 
   levenshtein(a, b) {
