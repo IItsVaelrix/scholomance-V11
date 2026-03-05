@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
 import { z } from "zod";
-import { Storage } from "../lib/storage";
+import { Storage } from "../lib/platform/storage";
 import { useAuth } from "./useAuth.jsx";
 
 const LEGACY_LOCAL_STORAGE_KEY = "scholomance.scrolls.v1";

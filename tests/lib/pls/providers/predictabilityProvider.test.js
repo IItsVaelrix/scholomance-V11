@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { predictabilityProvider } from '../../../../src/lib/pls/providers/predictabilityProvider.js';
-import { HHM_LOGIC_ORDER, HHM_STAGE_WEIGHTS } from '../../../../src/lib/harkov.model.js';
+import { HHM_LOGIC_ORDER, HHM_STAGE_WEIGHTS } from '../../../../src/lib/models/harkov.model.js';
 
 describe('predictabilityProvider', () => {
   it('prioritizes sequentially likely candidates with HHM context', () => {

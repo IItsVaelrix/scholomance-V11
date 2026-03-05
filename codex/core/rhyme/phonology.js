@@ -1,4 +1,4 @@
-import { PhonemeEngine } from "../../../src/lib/phoneme.engine.js";
+import { PhonemeEngine } from "../../../src/lib/phonology/phoneme.engine.js";
 
 const TOKEN_REGEX = /[a-z]+(?:'[a-z]+)*/gi;
 

@@ -1,4 +1,4 @@
-import { PhonemeEngine } from "../../src/lib/phoneme.engine.js";
+import { PhonemeEngine } from "../../src/lib/phonology/phoneme.engine.js";
 import { WORD_REGEX_GLOBAL } from "../../src/lib/wordTokenization.js";
 
 /**

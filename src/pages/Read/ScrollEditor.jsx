@@ -5,7 +5,7 @@ import { useColorCodex } from "../../hooks/useColorCodex.js";
 import IntelliSense from "../../components/IntelliSense.jsx";
 import Gutter from "./Gutter.jsx";
 import MarkdownRenderer from "../../components/MarkdownRenderer.jsx";
-import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
+import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 import { DEFAULT_VOWEL_COLORS } from "../../data/schoolPalettes.js";
 
@@ -991,10 +991,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}
-                            onMouseEnter={(event) => emitWordActivation("hover", wordPayload, event)}
-                            onMouseLeave={(event) => emitWordActivation("leave", wordPayload, event)}
-                            onFocus={(event) => emitWordActivation("hover", wordPayload, event)}
-                            onBlur={(event) => emitWordActivation("leave", wordPayload, event)}
                             onClick={(event) => emitWordActivation("pin", wordPayload, event)}
                           >
                             {token}

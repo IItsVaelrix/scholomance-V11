@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPhonologicalProcesses, PHONOLOGICAL_PROCESS_RULES } from "../../src/lib/phonologicalProcesses.js";
+import { applyPhonologicalProcesses, PHONOLOGICAL_PROCESS_RULES } from "../../src/lib/phonology/phonologicalProcesses.js";
 
 describe("phonologicalProcesses", () => {
   it("exposes a deterministic ordered rule set", () => {

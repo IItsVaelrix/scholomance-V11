@@ -1,4 +1,4 @@
-import { normalizeVowelFamily } from '../../vowelFamily.js';
+import { normalizeVowelFamily } from '../../phonology/vowelFamily.js';
 
 /**
  * ColorProvider — Scorer provider.

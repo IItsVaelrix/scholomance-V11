@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
-import { normalizeVowelFamily } from "../lib/vowelFamily.js";
+import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
 import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 

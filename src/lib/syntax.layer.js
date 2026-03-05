@@ -1,5 +1,5 @@
 import { stemWord } from "../../codex/core/analysis.pipeline.js";
-import { buildHiddenHarkovSummary } from "./harkov.model.js";
+import { buildHiddenHarkovSummary } from "./models/harkov.model.js";
 
 /**
  * Strict set of English function words (closed-class tokens).

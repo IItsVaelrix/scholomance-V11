@@ -7,7 +7,7 @@
  */
 
 // Assume the core phoneme engine can be imported. The actual path may vary.
-import { PhonemeEngine } from "../../../src/lib/phoneme.engine.js";
+import { PhonemeEngine } from "../../../src/lib/phonology/phoneme.engine.js";
 import { ScholomanceDictionaryAPI } from "../../../src/lib/scholomanceDictionary.api.js";
 import { describe, test, expect, beforeAll, vi } from "vitest";
 

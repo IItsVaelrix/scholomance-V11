@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PhonemeEngine } from '../../src/lib/phoneme.engine';
+import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine';
 
 describe('UR Vowel Family (New Core Family)', () => {
   it('should identify UR family for "pure"', () => {

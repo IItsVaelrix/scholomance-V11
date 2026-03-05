@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { Storage } from '../lib/storage';
+import { Storage } from '../lib/platform/storage';
 
 const ThemeContext = createContext(null);
 

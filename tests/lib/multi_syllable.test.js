@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PhonemeEngine } from '../../src/lib/phoneme.engine';
+import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine';
 
 describe('Multi-Syllable Rhyme Detection', () => {
   it('should identify multi-syllable match for "nation" and "station"', () => {

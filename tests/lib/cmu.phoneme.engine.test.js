@@ -1,8 +1,8 @@
 // @vitest-environment node
 
 import { beforeAll, describe, expect, it } from "vitest";
-import { CmuPhonemeEngine } from "../../src/lib/cmu.phoneme.engine.js";
-import { PhonemeEngine } from "../../src/lib/phoneme.engine.js";
+import { CmuPhonemeEngine } from "../../src/lib/phonology/cmu.phoneme.engine.js";
+import { PhonemeEngine } from "../../src/lib/phonology/phoneme.engine.js";
 
 describe("CMUDICT integration", () => {
   beforeAll(async () => {

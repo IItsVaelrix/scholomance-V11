@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PhonemeEngine } from '../../src/lib/phoneme.engine';
+import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine';
 import fs from 'node:fs';
 import path from 'node:path';
 

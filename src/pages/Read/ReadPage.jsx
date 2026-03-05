@@ -14,12 +14,12 @@ import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
-import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
+import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
 
-import AnalyzePanel from "../../components/AnalyzePanel.jsx";
+import AnalysisPanel from "./AnalysisPanel.jsx";
 import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
 import HeuristicScorePanel from "../../components/HeuristicScorePanel.jsx";
@@ -930,7 +930,7 @@ export default function ReadPage() {
           minWidth={280}
           minHeight={200}
         >
-          <AnalyzePanel
+          <AnalysisPanel
             scheme={schemeDetection}
             meter={meterDetection}
             statistics={deepAnalysis?.statistics}

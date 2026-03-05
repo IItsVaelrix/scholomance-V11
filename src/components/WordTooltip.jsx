@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
-import { normalizeVowelFamily } from "../lib/vowelFamily.js";
+import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
 import "./WordTooltip.css";
 
 // ── Fading ink transition variants ──────────────────────────────────────────

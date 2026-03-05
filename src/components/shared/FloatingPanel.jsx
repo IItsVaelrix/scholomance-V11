@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { ResizableBox } from 'react-resizable';
 import PropTypes from 'prop-types';
-import { Storage } from '../../lib/storage';
+import { Storage } from '../../lib/platform/storage';
 import './FloatingPanel.css';
 
 /**

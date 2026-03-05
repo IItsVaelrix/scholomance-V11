@@ -4,9 +4,9 @@
  * internal rhymes, and rhyme connections.
  */
 
-import { PhonemeEngine } from "./phoneme.engine.js";
+import { PhonemeEngine } from "./phonology/phoneme.engine.js";
 import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
-import { normalizeVowelFamily } from "./vowelFamily.js";
+import { normalizeVowelFamily } from "./phonology/vowelFamily.js";
 import { WORD_REGEX_GLOBAL } from "./wordTokenization.js";
 
 /**

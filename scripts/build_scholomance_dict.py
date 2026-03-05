@@ -29,14 +29,14 @@ DEFAULT_DB_PATH = "scholomance_dict.sqlite"
 DEFAULT_CMU_PATH = os.path.join("node_modules", "cmudict", "lib", "cmu", "cmudict.0.7a")
 SCHEMA_VERSION = "2"
 
-# ARPAbet vowels (match src/lib/phoneme.constants.js)
+# ARPAbet vowels (match src/lib/phonology/phoneme.constants.js)
 ARPABET_VOWELS = {
     "AA", "AE", "AH", "AO", "AW", "AY",
     "EH", "ER", "EY", "IH", "IY", "OW",
     "OY", "UH", "UW",
 }
 
-# Map ARPAbet vowels to base families (match src/lib/phoneme.constants.js VOWEL_TO_BASE_FAMILY)
+# Map ARPAbet vowels to base families (match src/lib/phonology/phoneme.constants.js VOWEL_TO_BASE_FAMILY)
 VOWEL_TO_FAMILY = {
     "AA": "A",  "AH": "U",  "AW": "AW", "AE": "AE",
     "EH": "AE", "AO": "AO", "OW": "OW", "OY": "OY",

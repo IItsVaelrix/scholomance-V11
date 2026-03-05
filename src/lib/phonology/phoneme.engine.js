@@ -41,9 +41,9 @@ import {
 } from "./phoneme.constants.js";
 import { Syllabifier } from "./syllabifier.js";
 import { PhoneticSimilarity } from "./phoneticSimilarity.js";
-import { ScholomanceDictionaryAPI } from "./scholomanceDictionary.api.js";
+import { ScholomanceDictionaryAPI } from "../scholomanceDictionary.api.js";
 import { applyPhonologicalProcesses as applyOrderedPhonologicalProcesses } from "./phonologicalProcesses.js";
-import { VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
+import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 
 /**
  * Targeted pronunciation overrides for high-impact words.

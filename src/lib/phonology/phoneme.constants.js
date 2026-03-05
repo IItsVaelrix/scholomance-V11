@@ -51,7 +51,7 @@ export const SONORITY_HIERARCHY = {
 
 /**
  * Maps ARPAbet vowels to their base vowel families before normalization.
- * Aligned with src/lib/vowelFamily.js normalization.
+ * Aligned with src/lib/phonology/vowelFamily.js normalization.
  */
 export const VOWEL_TO_BASE_FAMILY = {
   'AA': 'AA',

@@ -8,7 +8,7 @@ import { normalizeVowelFamily } from "./vowelFamily.js";
 
 const isBrowser = typeof window !== "undefined";
 const WORD_VARIANT_SUFFIX = /\(\d+\)$/;
-const CMU_DICT_RELATIVE_PATH = "../../node_modules/cmudict/lib/cmu/cmudict.0.7a";
+const CMU_DICT_RELATIVE_PATH = "../../../node_modules/cmudict/lib/cmu/cmudict.0.7a";
 
 function findLastVowelIndex(phones) {
   for (let i = phones.length - 1; i >= 0; i -= 1) {

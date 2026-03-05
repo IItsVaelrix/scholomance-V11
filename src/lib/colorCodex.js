@@ -6,8 +6,8 @@
  * high-salience words become anchors, low-salience words are ghosted.
  */
 
-import { normalizeVowelFamily } from "./vowelFamily.js";
-import { weightBalancer } from "./phoneticWeighting.js";
+import { normalizeVowelFamily } from "./phonology/vowelFamily.js";
+import { weightBalancer } from "./phonology/phoneticWeighting.js";
 
 /** Minimum connection score to cluster two words together. */
 const CLUSTER_MIN_SCORE = 0.60;

@@ -23,7 +23,7 @@ import {
   buildHiddenHarkovSummary,
   HHM_LOGIC_ORDER,
   HHM_STAGE_WEIGHTS,
-} from '../../src/lib/harkov.model.js';
+} from '../../src/lib/models/harkov.model.js';
 import { buildSyntaxLayer } from '../../src/lib/syntax.layer.js';
 import { JudiciaryEngine } from '../../codex/core/judiciary.js';
 

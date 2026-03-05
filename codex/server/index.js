@@ -34,7 +34,7 @@ import { lexiconRoutes } from './routes/lexicon.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { isApiRoutePath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
-import { PhonemeEngine } from '../../src/lib/phoneme.engine.js';
+import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
 import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
 

@@ -5,7 +5,7 @@
 
 import { analyzeText } from '../../core/analysis.pipeline.js';
 import { createScoringEngine } from '../../core/scoring.engine.js';
-import { PhonemeEngine } from '../../../src/lib/phoneme.engine.js';
+import { PhonemeEngine } from '../../../src/lib/phonology/phoneme.engine.js';
 import { alliterationDensityHeuristic } from '../../core/heuristics/alliteration_density.js';
 import { literaryDeviceRichnessHeuristic } from '../../core/heuristics/literary_device_richness.js';
 import { meterRegularityHeuristic } from '../../core/heuristics/meter_regularity.js';
@@ -17,7 +17,7 @@ import { phoneticHackingHeuristic } from '../../core/heuristics/phonetic_hacking
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
 import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detector.js';
 import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literaryDevices.detector.js';
-import { normalizeVowelFamily } from '../../../src/lib/vowelFamily.js';
+import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js';
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
 import { parseBooleanFlag } from '../utils/envFlags.js';

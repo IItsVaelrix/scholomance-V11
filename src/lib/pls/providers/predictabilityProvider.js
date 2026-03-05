@@ -1,4 +1,4 @@
-import { HHM_LOGIC_ORDER, HHM_STAGE_WEIGHTS } from '../../harkov.model.js';
+import { HHM_LOGIC_ORDER, HHM_STAGE_WEIGHTS } from '../../models/harkov.model.js';
 
 const FUNCTION_WORDS = new Set([
   'a', 'an', 'the', 'and', 'or', 'but', 'if', 'then', 'else', 'than',

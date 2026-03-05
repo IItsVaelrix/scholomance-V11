@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { Syllabifier } from '../../src/lib/syllabifier';
-import { Phonotactics } from '../../src/lib/phonotactics';
+import { Syllabifier } from '../../src/lib/phonology/syllabifier';
+import { Phonotactics } from '../../src/lib/phonology/phonotactics';
 
 describe('Phonotactics', () => {
   it('should validate valid onsets', () => {

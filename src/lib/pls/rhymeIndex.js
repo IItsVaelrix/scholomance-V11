@@ -1,4 +1,4 @@
-import { normalizeVowelFamily } from '../vowelFamily.js';
+import { normalizeVowelFamily } from '../phonology/vowelFamily.js';
 
 /**
  * RhymeIndex — Pre-computed index mapping rhymeKeys and vowelFamilies to word entries.

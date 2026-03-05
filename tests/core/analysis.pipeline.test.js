@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { analyzeText } from '../../codex/core/analysis.pipeline.js';
 
 // Mock PhonemeEngine to avoid fetching external JSONs
-vi.mock('../../src/lib/phoneme.engine.js', () => {
+vi.mock('../../src/lib/phonology/phoneme.engine.js', () => {
   const analyzeWord = vi.fn((word) => {
     if (word.toLowerCase() === 'hello') {
       return {

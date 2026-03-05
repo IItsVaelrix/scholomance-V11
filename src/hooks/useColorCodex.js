@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import { buildColorMap } from '../lib/colorCodex';
-import { normalizeVowelFamily } from '../lib/vowelFamily';
+import { normalizeVowelFamily } from '../lib/phonology/vowelFamily';
 
 const STOP_WORDS = new Set([
   "A", "AN", "THE",

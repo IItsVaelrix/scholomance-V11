@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { TriePredictor } from '../../codex/core/trie.js';
 import { Spellchecker } from '../../codex/core/spellchecker.js';
 import { createJudiciaryEngine } from '../../codex/core/judiciary.js';
-import { PhonemeEngine } from '../lib/phoneme.engine.js';
+import { PhonemeEngine } from '../lib/phonology/phoneme.engine.js';
 import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
 import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
 

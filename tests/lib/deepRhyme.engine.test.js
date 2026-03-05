@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DeepRhymeEngine } from '../../src/lib/deepRhyme.engine.js';
-import { PhonemeEngine } from '../../src/lib/phoneme.engine.js';
+import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 
 function createMockPhonemeEngine() {
   return {
