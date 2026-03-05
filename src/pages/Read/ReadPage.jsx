@@ -17,8 +17,10 @@ import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
+import { patternColor } from "../../lib/patternColor.js";
 
-import RhymeSchemePanel from "../../components/RhymeSchemePanel.jsx";
+import AnalyzePanel from "../../components/AnalyzePanel.jsx";
+import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
 import HeuristicScorePanel from "../../components/HeuristicScorePanel.jsx";
 import VowelFamilyPanel from "../../components/VowelFamilyPanel.jsx";
@@ -56,11 +58,17 @@ const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanEnvFlag(
 function clampTooltipPosition(position) {
   const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1200;
   const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 900;
+  const minX = Math.min(TOOLTIP_MARGIN, viewportWidth - TOOLTIP_WIDTH - TOOLTIP_MARGIN);
+  const minY = Math.min(TOOLTIP_MARGIN, viewportHeight - TOOLTIP_HEIGHT - TOOLTIP_MARGIN);
   const maxX = Math.max(TOOLTIP_MARGIN, viewportWidth - TOOLTIP_WIDTH - TOOLTIP_MARGIN);
   const maxY = Math.max(TOOLTIP_MARGIN, viewportHeight - TOOLTIP_HEIGHT - TOOLTIP_MARGIN);
+  const rawX = Number(position?.x);
+  const rawY = Number(position?.y);
+  const safeX = Number.isFinite(rawX) ? rawX : TOOLTIP_MARGIN;
+  const safeY = Number.isFinite(rawY) ? rawY : TOOLTIP_MARGIN;
   return {
-    x: Math.min(Math.max(TOOLTIP_MARGIN, Number(position?.x) || TOOLTIP_MARGIN), maxX),
-    y: Math.min(Math.max(TOOLTIP_MARGIN, Number(position?.y) || TOOLTIP_MARGIN), maxY),
+    x: Math.min(Math.max(minX, safeX), maxX),
+    y: Math.min(Math.max(minY, safeY), maxY),
   };
 }
 
@@ -100,6 +108,8 @@ export default function ReadPage() {
   const [showMinimap, setShowMinimap] = useState(false);
   const [minimapScrollTop, setMinimapScrollTop] = useState(0);
   const [toasts, setToasts] = useState([]);
+  const [infoBeamEnabled, setInfoBeamEnabled] = useState(false);
+  const [infoBeamFamily, setInfoBeamFamily] = useState(null);
 
   const addToast = useCallback((message, type = "info") => {
     const id = Date.now();
@@ -150,6 +160,11 @@ export default function ReadPage() {
 
   const editorRef = useRef(null);
   const focusReturnRef = useRef(null);
+  const tooltipCloseGuardRef = useRef({
+    expiresAt: 0,
+    lineIndex: null,
+    charStart: null,
+  });
   const [tooltipState, setTooltipState] = useState({
     visible: false,
     pinned: false,
@@ -313,6 +328,23 @@ export default function ReadPage() {
     }
     return Array.isArray(activeConnections) ? activeConnections : [];
   }, [isTruesight, activeConnections]);
+
+  const handleInfoBeamClick = useCallback((label) => {
+    setInfoBeamFamily(label);
+  }, []);
+
+  const infoBeamConnections = useMemo(() => {
+    if (!infoBeamEnabled || !infoBeamFamily) return [];
+    const all = Array.isArray(deepAnalysis?.allConnections)
+      ? deepAnalysis.allConnections
+      : [];
+    return all.filter((c) => c.groupLabel === infoBeamFamily);
+  }, [infoBeamEnabled, infoBeamFamily, deepAnalysis]);
+
+  const scrollLines = useMemo(
+    () => truesightContent.split("\n"),
+    [truesightContent]
+  );
 
   useEffect(() => {
     if (truesightContent && (isTruesight || showScorePanel)) {
@@ -509,7 +541,14 @@ export default function ReadPage() {
     };
   }, [analyzedWords, analyzedWordsByCharStart, deepAnalysis, selectedSchool]);
 
-  const handleCloseTooltip = useCallback(() => {
+  const handleCloseTooltip = useCallback((options = {}) => {
+    const shouldRestoreFocus = options?.restoreFocus !== false;
+    const token = tooltipState.token;
+    tooltipCloseGuardRef.current = {
+      expiresAt: Date.now() + 300,
+      lineIndex: Number.isInteger(token?.lineIndex) ? token.lineIndex : null,
+      charStart: Number.isInteger(token?.charStart) ? token.charStart : null,
+    };
     setTooltipState((prev) => ({
       ...prev,
       visible: false,
@@ -518,11 +557,11 @@ export default function ReadPage() {
       localAnalysis: null,
     }));
     resetWordLookup();
-    if (focusReturnRef.current && typeof focusReturnRef.current.focus === "function") {
+    if (shouldRestoreFocus && focusReturnRef.current && typeof focusReturnRef.current.focus === "function") {
       focusReturnRef.current.focus();
     }
     focusReturnRef.current = null;
-  }, [resetWordLookup]);
+  }, [resetWordLookup, tooltipState.token]);
 
   const handleTooltipDrag = useCallback((position) => {
     setTooltipState((prev) => ({
@@ -534,6 +573,15 @@ export default function ReadPage() {
   const handleWordActivate = useCallback((activation) => {
     if (!activation || !activation.normalizedWord || !isTruesight) {
       return;
+    }
+
+    const closeGuard = tooltipCloseGuardRef.current;
+    if (Date.now() < closeGuard.expiresAt) {
+      const sameToken = closeGuard.lineIndex === activation.lineIndex &&
+        closeGuard.charStart === activation.charStart;
+      if (sameToken && activation.trigger !== "leave") {
+        return;
+      }
     }
 
     if (activation.trigger === "leave") {
@@ -583,7 +631,8 @@ export default function ReadPage() {
         visible: true,
         pinned: true,
         token: activation,
-        position,
+        // Keep card's current position if already pinned — let it morph in place
+        position: (prev.pinned && prev.visible) ? prev.position : position,
         localAnalysis,
       }));
       resetWordLookup();
@@ -605,7 +654,7 @@ export default function ReadPage() {
   }, [isTruesight, resetWordLookup]);
 
   const tooltipWordData = useMemo(() => {
-    if (!tooltipState.visible || !tooltipState.token) return null;
+    if (!tooltipState.token) return null;
 
     const baseWordData = {
       word: tooltipState.token.word,
@@ -869,23 +918,56 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {isTruesight && analysisMode === ANALYSIS_MODES.SCHEME && (
+      {isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
         <FloatingPanel
-          id="scheme-panel"
-          title="Rhyme Scheme"
+          id="analyze-panel"
+          title="Analyze"
           onClose={() => handleModeChange(ANALYSIS_MODES.NONE)}
-          defaultX={window.innerWidth - 380}
-          defaultY={120}
+          defaultX={window.innerWidth - 360}
+          defaultY={80}
+          defaultWidth={340}
+          defaultHeight={540}
+          minWidth={280}
+          minHeight={200}
         >
-          <RhymeSchemePanel
+          <AnalyzePanel
             scheme={schemeDetection}
             meter={meterDetection}
             statistics={deepAnalysis?.statistics}
             literaryDevices={literaryDevices}
             emotion={emotion}
+            genreProfile={genreProfile}
+            hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
+            scoreData={scoreData}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}
-            isEmbedded={true}
+            infoBeamEnabled={infoBeamEnabled}
+            onInfoBeamToggle={() => setInfoBeamEnabled((prev) => !prev)}
+            onGroupClick={handleInfoBeamClick}
+            activeInfoBeamFamily={infoBeamFamily}
+          />
+        </FloatingPanel>
+      )}
+
+      {infoBeamEnabled && infoBeamFamily && (
+        <FloatingPanel
+          id="infobeam-panel"
+          title={`InfoBeam — Group ${infoBeamFamily}`}
+          onClose={() => setInfoBeamFamily(null)}
+          defaultX={window.innerWidth - 720}
+          defaultY={80}
+          defaultWidth={320}
+          defaultHeight={480}
+          minWidth={220}
+          minHeight={160}
+          zIndex={150}
+          className="infobeam-floating-panel"
+        >
+          <InfoBeamPanel
+            groupLabel={infoBeamFamily}
+            groupColor={patternColor(infoBeamFamily)}
+            connections={infoBeamConnections}
+            scrollLines={scrollLines}
           />
         </FloatingPanel>
       )}
@@ -907,18 +989,21 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {isTruesight && tooltipState.visible && tooltipState.token && (
-        <WordTooltip
-          wordData={tooltipWordData}
-          analysis={tooltipState.localAnalysis}
-          isLoading={tooltipState.pinned && isLookupLoading}
-          error={tooltipState.pinned ? lookupError : null}
-          x={tooltipState.position.x}
-          y={tooltipState.position.y}
-          onDrag={handleTooltipDrag}
-          onClose={handleCloseTooltip}
-        />
-      )}
+      <AnimatePresence>
+        {isTruesight && tooltipState.token && (
+          <WordTooltip
+            key="word-card"
+            wordData={tooltipWordData}
+            analysis={tooltipState.localAnalysis}
+            isLoading={tooltipState.pinned && isLookupLoading}
+            error={tooltipState.pinned ? lookupError : null}
+            x={tooltipState.position.x}
+            y={tooltipState.position.y}
+            onDrag={handleTooltipDrag}
+            onClose={handleCloseTooltip}
+          />
+        )}
+      </AnimatePresence>
 
       {isPredictive && misspellings.length > 0 && (
         <FloatingPanel
