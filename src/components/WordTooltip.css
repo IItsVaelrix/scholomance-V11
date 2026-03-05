@@ -37,7 +37,6 @@
   font-family: Georgia, serif;
   pointer-events: auto;
   user-select: none;
-  transform-style: preserve-3d;
   filter: drop-shadow(0 22px 55px rgba(0, 0, 0, 0.85));
   transition: filter 0.4s ease;
 }
@@ -83,14 +82,13 @@
   flex-direction: column;
 
   transform: rotateX(1.5deg) rotateY(-0.5deg);
-  transform-style: preserve-3d;
   transition:
     transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1),
     box-shadow 0.4s ease;
 }
 
 .word-card:hover .card-frame {
-  transform: rotateX(0deg) rotateY(0deg) translateZ(8px);
+  transform: rotateX(0deg) rotateY(0deg) translateY(-2px);
 }
 
 /* Secondary inner border line */
@@ -818,7 +816,6 @@
   .card-frame,
   .word-card:hover .card-frame {
     transform: none !important;
-    transition: none !important;
   }
 }
 
