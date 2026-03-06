@@ -4,10 +4,10 @@
  * returns candidates scored by rhyme strength.
  */
 export async function rhymeProvider(context, engines) {
-  const { prevLineEndWord } = context;
+  const { prevLineEndWord, prevWord } = context;
   if (!prevLineEndWord) return [];
 
-  const { phonemeEngine, rhymeIndex, dictionaryAPI } = engines;
+  const { phonemeEngine, rhymeIndex, dictionaryAPI, trie } = engines;
   const targetAnalysis = phonemeEngine.analyzeWord(prevLineEndWord);
   if (!targetAnalysis) return [];
 
@@ -15,33 +15,67 @@ export async function rhymeProvider(context, engines) {
   const targetVowelFamily = targetAnalysis.vowelFamily;
   const targetUpper = String(prevLineEndWord).toUpperCase();
   const prefixUpper = String(context.prefix || '').toUpperCase();
+  const prevWordLower = String(prevWord || '').toLowerCase();
+
+  const buildRankMap = (words = []) => {
+    const out = new Map();
+    const total = words.length || 1;
+    words.forEach((token, index) => {
+      const normalized = String(token || '').toUpperCase();
+      if (!normalized || out.has(normalized)) return;
+      out.set(normalized, Math.max(0, 1 - (index / total)));
+    });
+    return out;
+  };
+
+  const sequentialRankMap = (trie && prevWordLower && typeof trie.predictNext === 'function')
+    ? buildRankMap(trie.predictNext(prevWordLower, 40))
+    : new Map();
 
   const seen = new Set();
   const results = [];
+  let maxFrequency = 1;
 
-  const addCandidate = (entry, score) => {
+  const addCandidate = (entry, baseScore) => {
     const tokenUpper = String(entry?.token || '').toUpperCase();
     if (!tokenUpper) return;
     if (seen.has(tokenUpper)) return;
     if (tokenUpper === targetUpper) return; // don't suggest the target word itself
     if (prefixUpper && !tokenUpper.startsWith(prefixUpper)) return;
+
+    const frequency = Number(entry?.frequency) || 0;
+    const frequencySignal = Math.log10(frequency + 1.1) / Math.log10(maxFrequency + 1.1);
+    const sequentialSignal = sequentialRankMap.get(tokenUpper) || 0;
+    const score = Math.max(
+      0,
+      Math.min(1, (baseScore * 0.76) + (sequentialSignal * 0.17) + (frequencySignal * 0.07))
+    );
+
     seen.add(tokenUpper);
     results.push({
       token: tokenUpper.toLowerCase(),
       score,
       badge: score >= 0.7 ? 'RHYME' : null,
-      frequency: Number(entry?.frequency) || 0,
+      frequency,
     });
   };
 
   // 1. Exact rhyme key matches (perfect rhyme)
   const exactMatches = rhymeIndex.getByRhymeKey(targetRhymeKey);
+  maxFrequency = Math.max(
+    maxFrequency,
+    ...exactMatches.map((entry) => Number(entry?.frequency) || 0)
+  );
   for (const entry of exactMatches) {
     addCandidate(entry, 1.0);
   }
 
   // 2. Same vowel family (slant/assonance rhyme)
   const familyMatches = rhymeIndex.getByVowelFamily(targetVowelFamily);
+  maxFrequency = Math.max(
+    maxFrequency,
+    ...familyMatches.map((entry) => Number(entry?.frequency) || 0)
+  );
   for (const entry of familyMatches) {
     if (seen.has(entry.token)) continue;
     // Score based on whether codas are related

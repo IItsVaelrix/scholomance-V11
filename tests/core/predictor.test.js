@@ -105,4 +105,30 @@ describe('Spellchecker Logic (Levenshtein-based)', () => {
     expect(suggestions).toContain('design');
     expect(dynamicSpellchecker.check('design')).toBe(true);
   });
+
+  it('uses previous-word context to rank corrections', () => {
+    const contextualSpellchecker = new Spellchecker();
+    contextualSpellchecker.init([
+      'to', 'steal',
+      'to', 'steal',
+      'to', 'steal',
+      'cold', 'steel',
+    ]);
+
+    const suggestions = contextualSpellchecker.suggest('stel', 3, 'to');
+    expect(suggestions[0]).toBe('steal');
+    expect(suggestions).toContain('steel');
+  });
+
+  it('queries shorter prefixes when async suggestor cannot resolve raw typo', async () => {
+    const dynamicSpellchecker = new Spellchecker();
+    dynamicSpellchecker.init(['ritual']);
+
+    dynamicSpellchecker.configureAsync({
+      suggestWords: async (prefix) => (prefix === 'des' ? ['design'] : []),
+    });
+
+    const suggestions = await dynamicSpellchecker.suggestAsync('desgin', 5);
+    expect(suggestions).toContain('design');
+  });
 });

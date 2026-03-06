@@ -702,17 +702,24 @@ export default function ReadPage() {
     let cancelled = false;
 
     const runSpellcheck = async () => {
-      const allWords = editorContent.match(/\b(\w+)\b/g) || [];
-      const uniqueWords = [...new Set(allWords)];
+      const allWords = editorContent.match(/[a-zA-Z']+/g) || [];
+      const uniqueWords = [...new Set(allWords.map((word) => String(word || '').toLowerCase()))];
       const candidateWords = uniqueWords.filter((word) => word.length > 2);
+      const prevContextByWord = new Map();
+
+      for (let i = 0; i < allWords.length; i++) {
+        const normalizedWord = String(allWords[i] || '').toLowerCase();
+        if (!normalizedWord || prevContextByWord.has(normalizedWord)) continue;
+        const previous = i > 0 ? String(allWords[i - 1] || '').toLowerCase() : null;
+        prevContextByWord.set(normalizedWord, previous || null);
+      }
 
       const checked = await Promise.all(candidateWords.map(async (word) => {
         const isValid = await checkSpelling(word);
         if (isValid) return null;
 
-        const index = allWords.indexOf(word);
-        const prevWord = index > 0 ? allWords[index - 1] : null;
-        const suggestions = await getSpellingSuggestions(word, prevWord, 3);
+        const prevWord = prevContextByWord.get(word) || null;
+        const suggestions = await getSpellingSuggestions(word, prevWord, 5);
 
         return {
           word,

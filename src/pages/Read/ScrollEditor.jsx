@@ -275,16 +275,17 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
     const addBasicPredictions = (prefix, prevWord, seenTokens, finalResults) => {
       const basicResults = prefix
-        ? (predict?.(prefix, null, 10) || [])
+        ? (predict?.(prefix, prevWord, 10) || [])
         : (predict?.(null, prevWord, 10) || []);
 
       for (const token of basicResults) {
-        if (!token || seenTokens.has(token)) continue;
-        seenTokens.add(token);
+        const normalizedToken = String(token || '').trim().toLowerCase();
+        if (!normalizedToken || seenTokens.has(normalizedToken)) continue;
+        seenTokens.add(normalizedToken);
         finalResults.push({
-          token,
+          token: normalizedToken,
           type: 'prediction',
-          score: 5,
+          score: 0.45,
           isRhyme: false,
           badges: [],
           ghostLine: null,
@@ -307,8 +308,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
         if (lastWordMatch && lastWordMatch[1].length >= 1) {
           prefix = lastWordMatch[1];
+          const beforePrefix = textBefore.slice(0, textBefore.length - prefix.length);
+          const wordsBeforePrefix = beforePrefix.match(/[a-zA-Z']+/g);
+          if (wordsBeforePrefix?.length > 0) {
+            prevWord = wordsBeforePrefix[wordsBeforePrefix.length - 1];
+          }
         } else if (isAfterSpace) {
-          const words = textBefore.match(/\b(\w+)\b/g);
+          const words = textBefore.match(/[a-zA-Z']+/g);
           if (words?.length > 0) prevWord = words[words.length - 1];
         }
 
@@ -376,16 +382,17 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           if (cancelled) return;
 
           if (!isSpelledCorrectly) {
-            const spellingSuggestions = await (getSpellingSuggestions?.(prefix, null, 3) || []);
+            const spellingSuggestions = await (getSpellingSuggestions?.(prefix, prevWord, 5) || []);
             if (cancelled) return;
 
             (Array.isArray(spellingSuggestions) ? spellingSuggestions : []).forEach((suggestion) => {
-              if (!suggestion || seenTokens.has(suggestion)) return;
-              seenTokens.add(suggestion);
+              const normalizedSuggestion = String(suggestion || '').trim().toLowerCase();
+              if (!normalizedSuggestion || seenTokens.has(normalizedSuggestion)) return;
+              seenTokens.add(normalizedSuggestion);
               finalResults.push({
-                token: suggestion,
+                token: normalizedSuggestion,
                 type: 'correction',
-                score: 10,
+                score: 1.08,
                 isRhyme: false,
                 badges: [],
                 ghostLine: null,
@@ -399,13 +406,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           try {
             const plsResults = await getCompletions(plsContext, { limit: 10 });
             for (const result of (Array.isArray(plsResults) ? plsResults : [])) {
-              if (!result?.token || seenTokens.has(result.token)) continue;
+              const normalizedToken = String(result?.token || '').trim().toLowerCase();
+              if (!normalizedToken || seenTokens.has(normalizedToken)) continue;
               const badges = Array.isArray(result.badges) ? result.badges : [];
-              seenTokens.add(result.token);
+              seenTokens.add(normalizedToken);
               finalResults.push({
-                token: result.token,
+                token: normalizedToken,
                 type: 'prediction',
-                score: result.score,
+                score: Number(result.score) || 0,
                 isRhyme: badges.includes('RHYME'),
                 badges,
                 ghostLine: result.ghostLine,
@@ -421,7 +429,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         }
 
         if (cancelled) return;
-        const sliced = finalResults.slice(0, 7);
+        const ranked = [...finalResults].sort((a, b) => {
+          const scoreA = Number(a?.score) || 0;
+          const scoreB = Number(b?.score) || 0;
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          if (a.type !== b.type) return a.type === 'correction' ? -1 : 1;
+          return String(a?.token || '').localeCompare(String(b?.token || ''));
+        });
+        const sliced = ranked.slice(0, 7);
         setIntellisenseSuggestions(sliced);
         setIntellisenseIndex(0);
         if (sliced.length > 0) {

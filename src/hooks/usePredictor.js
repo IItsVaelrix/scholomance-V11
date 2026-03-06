@@ -104,15 +104,48 @@ export function usePredictor() {
    */
   const predict = useCallback((prefix, contextWord = null, limit = 5) => {
     if (!isReady) return [];
+    const normalizedPrefix = String(prefix || '').toLowerCase();
+    const normalizedContextWord = String(contextWord || '').toLowerCase();
 
     // If we have a prefix (user currently typing), use Trie prefix lookup
-    if (prefix && prefix.length > 0) {
-      return model.predict(prefix, limit);
+    if (normalizedPrefix.length > 0) {
+      const queryLimit = Math.max(limit * 4, 20);
+      const prefixMatches = model.predict(normalizedPrefix, queryLimit);
+      const contextMatches = normalizedContextWord
+        ? model.predictNext(normalizedContextWord, queryLimit).filter((token) => String(token || '').startsWith(normalizedPrefix))
+        : [];
+
+      if (contextMatches.length === 0) {
+        return prefixMatches.slice(0, limit);
+      }
+
+      const scoreByToken = new Map();
+      const applyScore = (token, score) => {
+        const normalizedToken = String(token || '').toLowerCase();
+        if (!normalizedToken) return;
+        const current = scoreByToken.get(normalizedToken) || 0;
+        if (score > current) scoreByToken.set(normalizedToken, score);
+      };
+
+      prefixMatches.forEach((token, index) => {
+        applyScore(token, 1 - (index / Math.max(prefixMatches.length, 1)));
+      });
+      contextMatches.forEach((token, index) => {
+        const normalizedToken = String(token || '').toLowerCase();
+        const contextualScore = 1 - (index / Math.max(contextMatches.length, 1));
+        const prefixScore = scoreByToken.get(normalizedToken) || 0;
+        applyScore(token, (prefixScore * 0.58) + (contextualScore * 0.42));
+      });
+
+      return [...scoreByToken.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .slice(0, limit)
+        .map(([token]) => token);
     }
 
     // If no prefix but we have a previous word, use Bigram prediction
-    if (contextWord) {
-      return model.predictNext(contextWord, limit);
+    if (normalizedContextWord) {
+      return model.predictNext(normalizedContextWord, limit);
     }
 
     return [];

@@ -7,6 +7,7 @@ export class Spellchecker {
   constructor() {
     this.dictionary = new Map(); // Map<word, frequency>
     this.phoneticMap = new Map(); // Map<phoneticKey, Set<word>>
+    this.bigramMap = new Map(); // Map<prevWord, Map<nextWord, frequency>>
     this.validationCache = new Map(); // Map<word, boolean>
     this.validationInFlight = new Map(); // Map<word, Promise<boolean>>
     this.asyncValidator = null; // (word: string) => Promise<boolean>
@@ -30,13 +31,26 @@ export class Spellchecker {
     return true;
   }
 
+  rememberSequence(prevWord, nextWord, weight = 1) {
+    const prev = this.normalizeWord(prevWord);
+    const next = this.normalizeWord(nextWord);
+    if (!prev || !next) return false;
+
+    if (!this.bigramMap.has(prev)) {
+      this.bigramMap.set(prev, new Map());
+    }
+    const nextMap = this.bigramMap.get(prev);
+    nextMap.set(next, (nextMap.get(next) || 0) + Math.max(1, Number(weight) || 1));
+    return true;
+  }
+
   primeValidWords(words) {
     if (!Array.isArray(words)) return;
     words.forEach((word) => {
       const normalized = this.normalizeWord(word);
       if (!normalized) return;
       this.validationCache.set(normalized, true);
-      this.remember(normalized);
+      this.remember(normalized, 2);
     });
   }
 
@@ -48,11 +62,15 @@ export class Spellchecker {
   init(words) {
     if (!Array.isArray(words)) return;
     
-    words.forEach(w => {
+    words.forEach((w) => {
       const lower = this.normalizeWord(w);
       if (!lower) return;
       this.remember(lower, 1);
     });
+
+    for (let i = 0; i < words.length - 1; i++) {
+      this.rememberSequence(words[i], words[i + 1], 1);
+    }
     
     this.isLoaded = true;
   }
@@ -102,93 +120,282 @@ export class Spellchecker {
    * @param {string} word 
    * @param {string} contextPrevWord - Optional previous word for Bigram context
    */
-  suggest(word, limit = 5, _contextPrevWord = null) {
+  suggest(word, limit = 5, contextPrevWord = null) {
     if (!word) return [];
     const target = this.normalizeWord(word);
     if (!target) return [];
-    const suggestions = [];
+    if (this.dictionary.has(target)) return [];
 
-    // 1. Check Phonetic Matches (High Priority)
+    const maxDistance = this.getMaxEditDistance(target.length);
+    const candidateMap = new Map(); // Map<word, { word, distance, phonetic }>
+
+    const upsertCandidate = (candidateWord, details = {}) => {
+      const normalizedCandidate = this.normalizeWord(candidateWord);
+      if (!normalizedCandidate || normalizedCandidate === target) return;
+      const current = candidateMap.get(normalizedCandidate) || {
+        word: normalizedCandidate,
+        distance: null,
+        phonetic: false,
+      };
+
+      if (Number.isInteger(details.distance)) {
+        current.distance = current.distance === null
+          ? details.distance
+          : Math.min(current.distance, details.distance);
+      }
+      if (details.phonetic) current.phonetic = true;
+
+      candidateMap.set(normalizedCandidate, current);
+    };
+
+    // 1. Phonetic neighborhood
     const phoneticKey = phoneticMatcher.encode(target);
     const soundAlikes = this.phoneticMap.get(phoneticKey) || [];
     
-    soundAlikes.forEach(sa => {
-      if (sa !== target) {
-        suggestions.push({ 
-          word: sa, 
-          reason: 'phonetic', 
-          score: 2.0, 
-          freq: this.dictionary.get(sa) 
-        });
-      }
+    soundAlikes.forEach((candidateWord) => {
+      upsertCandidate(candidateWord, { phonetic: true });
     });
 
-    // 2. Check Levenshtein Matches (Distance <= 2)
+    // 2. Edit-distance neighborhood
     for (const [entry, freq] of this.dictionary.entries()) {
-      if (Math.abs(entry.length - target.length) > 2) continue;
-      
-      // Skip if already added via phonetics
-      if (suggestions.some(s => s.word === entry)) continue;
+      if (freq <= 0) continue;
+      if (Math.abs(entry.length - target.length) > (maxDistance + 1)) continue;
 
       const distance = this.levenshtein(target, entry);
-      if (distance <= 2) {
-        suggestions.push({ 
-          word: entry, 
-          reason: 'edit', 
-          score: 1.0 / (distance + 1), 
-          freq 
-        });
+      if (distance <= maxDistance) {
+        upsertCandidate(entry, { distance });
       }
     }
 
-    // 3. Final Scoring (Heuristic: Similarity * Frequency)
-    return suggestions
-      .sort((a, b) => {
-        const scoreA = a.score * Math.log10(a.freq + 1.1);
-        const scoreB = b.score * Math.log10(b.freq + 1.1);
-        return scoreB - scoreA;
+    // 3. Rank candidates with composite scoring
+    return this.rankCandidates(target, [...candidateMap.values()], limit, contextPrevWord)
+      .map((entry) => entry.word);
+  }
+
+  getMaxEditDistance(wordLength) {
+    if (wordLength <= 4) return 1;
+    if (wordLength <= 8) return 2;
+    return 3;
+  }
+
+  commonPrefixLength(a, b) {
+    const limit = Math.min(a.length, b.length);
+    let count = 0;
+    while (count < limit && a[count] === b[count]) count += 1;
+    return count;
+  }
+
+  normalizedBigramOverlap(a, b) {
+    if (a.length < 2 || b.length < 2) return 0;
+
+    const gramsA = new Set();
+    for (let i = 0; i < a.length - 1; i++) {
+      gramsA.add(a.slice(i, i + 2));
+    }
+
+    const gramsB = new Set();
+    for (let i = 0; i < b.length - 1; i++) {
+      gramsB.add(b.slice(i, i + 2));
+    }
+
+    let intersection = 0;
+    gramsA.forEach((gram) => {
+      if (gramsB.has(gram)) intersection += 1;
+    });
+
+    const union = gramsA.size + gramsB.size - intersection;
+    if (union <= 0) return 0;
+    return intersection / union;
+  }
+
+  isTranspositionAway(a, b) {
+    if (a.length !== b.length || a.length < 2) return false;
+
+    let firstMismatch = -1;
+    let secondMismatch = -1;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] === b[i]) continue;
+      if (firstMismatch < 0) {
+        firstMismatch = i;
+      } else if (secondMismatch < 0) {
+        secondMismatch = i;
+      } else {
+        return false;
+      }
+    }
+
+    if (firstMismatch < 0 || secondMismatch < 0 || secondMismatch !== firstMismatch + 1) {
+      return false;
+    }
+
+    return a[firstMismatch] === b[secondMismatch] && a[secondMismatch] === b[firstMismatch];
+  }
+
+  getContextScore(prevWord, candidateWord) {
+    const prev = this.normalizeWord(prevWord);
+    const candidate = this.normalizeWord(candidateWord);
+    if (!prev || !candidate) return 0;
+
+    const nextMap = this.bigramMap.get(prev);
+    if (!nextMap || nextMap.size === 0) return 0;
+
+    const raw = Number(nextMap.get(candidate) || 0);
+    if (raw <= 0) return 0;
+
+    let max = 0;
+    for (const value of nextMap.values()) {
+      if (value > max) max = value;
+    }
+    if (max <= 0) return 0;
+    return raw / max;
+  }
+
+  rankCandidates(target, rawCandidates, limit, contextPrevWord = null) {
+    if (!Array.isArray(rawCandidates) || rawCandidates.length === 0) return [];
+
+    let maxFrequency = 0;
+    for (const value of this.dictionary.values()) {
+      if (value > maxFrequency) maxFrequency = value;
+    }
+    const safeMaxFrequency = Math.max(maxFrequency, 1);
+    const maxDistance = this.getMaxEditDistance(target.length);
+
+    const ranked = rawCandidates
+      .map((candidate) => {
+        const candidateWord = this.normalizeWord(candidate?.word);
+        if (!candidateWord || candidateWord === target) return null;
+
+        const distance = Number.isInteger(candidate?.distance)
+          ? candidate.distance
+          : this.levenshtein(target, candidateWord);
+        const phoneticMatch = Boolean(candidate?.phonetic || phoneticMatcher.isSoundAlike(target, candidateWord));
+        const allowedDistance = phoneticMatch ? (maxDistance + 1) : maxDistance;
+        if (distance > allowedDistance) return null;
+
+        const baseFrequency = Number(this.dictionary.get(candidateWord) || 0);
+        const frequencyScore = Math.log10(baseFrequency + 1.1) / Math.log10(safeMaxFrequency + 1.1);
+        const prefixScore = this.commonPrefixLength(target, candidateWord) / Math.max(1, target.length);
+        const overlapScore = this.normalizedBigramOverlap(target, candidateWord);
+        const distanceScore = Math.max(0, 1 - (distance / (maxDistance + 0.5)));
+        const transpositionBonus = this.isTranspositionAway(target, candidateWord) ? 0.12 : 0;
+        const phoneticScore = phoneticMatch ? 1 : 0;
+        const contextScore = this.getContextScore(contextPrevWord, candidateWord);
+
+        const score = (
+          (distanceScore * 0.40) +
+          (prefixScore * 0.16) +
+          (overlapScore * 0.11) +
+          (phoneticScore * 0.15) +
+          (frequencyScore * 0.10) +
+          (contextScore * 0.08) +
+          transpositionBonus
+        );
+
+        return {
+          word: candidateWord,
+          score,
+          distance,
+          contextScore,
+          frequency: baseFrequency,
+          phonetic: Boolean(phoneticScore),
+        };
       })
-      .slice(0, limit)
-      .map(s => s.word);
+      .filter(Boolean);
+
+    ranked.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      if (b.contextScore !== a.contextScore) return b.contextScore - a.contextScore;
+      if (b.frequency !== a.frequency) return b.frequency - a.frequency;
+      return a.word.localeCompare(b.word);
+    });
+
+    return ranked.slice(0, limit);
+  }
+
+  buildSuggestQueries(word) {
+    const normalized = this.normalizeWord(word);
+    if (!normalized) return [];
+
+    const seeds = [
+      normalized,
+      normalized.slice(0, Math.max(2, Math.min(4, normalized.length - 1))),
+      normalized.slice(0, 3),
+      normalized.slice(0, 2),
+    ];
+
+    const out = [];
+    const seen = new Set();
+    seeds.forEach((seed) => {
+      if (!seed || seed.length < 2 || seen.has(seed)) return;
+      seen.add(seed);
+      out.push(seed);
+    });
+    return out;
+  }
+
+  async fetchRemoteSuggestions(word, limit) {
+    if (!this.asyncSuggestor) return [];
+    const queries = this.buildSuggestQueries(word);
+    if (queries.length === 0) return [];
+
+    const merged = [];
+    const seen = new Set();
+    for (const query of queries) {
+      try {
+        const remote = await this.asyncSuggestor(query, limit);
+        (Array.isArray(remote) ? remote : []).forEach((candidate) => {
+          const normalizedCandidate = this.normalizeWord(candidate);
+          if (!normalizedCandidate || seen.has(normalizedCandidate)) return;
+          seen.add(normalizedCandidate);
+          merged.push(normalizedCandidate);
+        });
+      } catch (_error) {
+        // Keep querying alternate prefixes.
+      }
+    }
+    return merged;
   }
 
   async suggestAsync(word, limit = 5, contextPrevWord = null) {
     const normalized = this.normalizeWord(word);
     if (!normalized) return [];
+    if (this.dictionary.has(normalized)) return [];
 
-    const local = this.suggest(normalized, limit, contextPrevWord);
-    const merged = [];
-    const seen = new Set();
+    const queryLimit = Math.max(limit * 4, 20);
+    const localRanked = this.rankCandidates(
+      normalized,
+      this.suggest(normalized, queryLimit, contextPrevWord).map((candidateWord) => ({ word: candidateWord })),
+      queryLimit,
+      contextPrevWord
+    );
 
-    const pushWord = (candidate) => {
-      const candidateWord = this.normalizeWord(candidate);
-      if (!candidateWord || candidateWord === normalized || seen.has(candidateWord)) return;
-      seen.add(candidateWord);
-      merged.push(candidateWord);
-    };
+    const candidateMap = new Map();
+    localRanked.forEach((entry) => {
+      candidateMap.set(entry.word, {
+        word: entry.word,
+        distance: entry.distance,
+        phonetic: entry.phonetic,
+      });
+    });
 
-    local.forEach(pushWord);
-
-    if (this.asyncSuggestor) {
-      try {
-        const remote = await this.asyncSuggestor(normalized, Math.max(limit * 3, 15));
-        (Array.isArray(remote) ? remote : []).forEach((candidate) => {
-          const candidateWord = this.normalizeWord(candidate);
-          if (!candidateWord) return;
-          this.validationCache.set(candidateWord, true);
-          this.remember(candidateWord);
-          pushWord(candidateWord);
-        });
-      } catch (_error) {
-        // Remote suggestions are additive only; keep local fallback.
+    const remoteCandidates = await this.fetchRemoteSuggestions(normalized, queryLimit);
+    remoteCandidates.forEach((candidateWord) => {
+      this.validationCache.set(candidateWord, true);
+      this.remember(candidateWord, 2);
+      if (!candidateMap.has(candidateWord)) {
+        candidateMap.set(candidateWord, { word: candidateWord });
       }
-    }
+    });
 
-    if (merged.length < limit) {
-      this.suggest(normalized, limit + 10, contextPrevWord).forEach(pushWord);
-    }
+    const reranked = this.rankCandidates(
+      normalized,
+      [...candidateMap.values()],
+      queryLimit,
+      contextPrevWord
+    );
 
-    return merged.slice(0, limit);
+    return reranked.slice(0, limit).map((entry) => entry.word);
   }
 
   levenshtein(a, b) {
