@@ -37,6 +37,8 @@ import { createOpsMetrics } from './observability.metrics.js';
 import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
 import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
+import { createCorpusAdapter } from './adapters/corpus.sqlite.adapter.js';
+import { corpusRoutes } from './routes/corpus.routes.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -132,6 +134,10 @@ const SCHOLOMANCE_DICT_PATH = typeof process.env.SCHOLOMANCE_DICT_PATH === 'stri
     process.env.SCHOLOMANCE_DICT_PATH.trim().length > 0
     ? path.resolve(process.env.SCHOLOMANCE_DICT_PATH)
     : null;
+const SCHOLOMANCE_CORPUS_PATH = typeof process.env.SCHOLOMANCE_CORPUS_PATH === 'string' &&
+    process.env.SCHOLOMANCE_CORPUS_PATH.trim().length > 0
+    ? path.resolve(process.env.SCHOLOMANCE_CORPUS_PATH)
+    : null;
 
 // Ensure audio directory exists
 if (!existsSync(AUDIO_UPLOAD_PATH)) {
@@ -144,6 +150,7 @@ export const fastify = Fastify({
 });
 fastify.decorate('opsMetrics', createOpsMetrics());
 const lexiconAdapter = createLexiconAdapter(SCHOLOMANCE_DICT_PATH, { log: fastify.log });
+const corpusAdapter = createCorpusAdapter(SCHOLOMANCE_CORPUS_PATH, { log: fastify.log });
 
 // Register multipart for uploads
 fastify.register(multipart, {
@@ -665,6 +672,7 @@ fastify.addHook('onSend', async (request, _reply, payload) => {
 fastify.register(wordLookupRoutes);
 fastify.register(panelAnalysisRoutes);
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
+fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
 
 if (ENABLE_COLLAB_API) {
     if (IS_PRODUCTION) {
@@ -770,6 +778,11 @@ function closePersistenceConnections() {
         lexiconAdapter.close?.();
     } catch (error) {
         fastify.log.warn({ err: error }, '[DB:lexicon] Failed to close cleanly.');
+    }
+    try {
+        corpusAdapter.close?.();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[DB:corpus] Failed to close cleanly.');
     }
 }
 

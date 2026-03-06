@@ -76,7 +76,15 @@ global.fetch = vi.fn().mockImplementation((url) => {
   if (href.endsWith('corpus.json')) {
     return Promise.resolve({
       ok: true,
-      json: () => Promise.resolve(['ritual', 'magic', 'scroll', 'ancient']),
+      json: () => Promise.resolve({
+        version: 2,
+        dictionary: ['ritual', 'magic', 'scroll', 'ancient'],
+        sequences: [
+          ['ancient', 'ritual', 4],
+          ['ritual', 'magic', 3],
+          ['magic', 'scroll', 2],
+        ],
+      }),
     });
   }
   

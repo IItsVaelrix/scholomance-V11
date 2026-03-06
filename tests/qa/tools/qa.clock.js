@@ -1,6 +1,7 @@
 import { vi } from "vitest";
 
-export const ANALYSIS_DEBOUNCE_MS = 500;
+// Keep in sync with src/hooks/usePanelAnalysis.js (ANALYSIS_DEBOUNCE_MS).
+export const ANALYSIS_DEBOUNCE_MS = 2500;
 
 export function useFakeClock() {
   vi.useFakeTimers();

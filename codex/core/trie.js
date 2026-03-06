@@ -19,26 +19,43 @@ export class TriePredictor {
     this.root = new TrieNode();
   }
 
+  normalizeWord(word) {
+    return String(word || '').trim().toLowerCase();
+  }
+
+  normalizeWeight(weight) {
+    const numericWeight = Number(weight);
+    if (!Number.isFinite(numericWeight)) return 1;
+    return Math.max(1, Math.trunc(numericWeight));
+  }
+
   /**
    * Inserts a word into the trie and optionally updates its N-gram follow-set.
-   * @param {string} word 
-   * @param {string} nextWord 
+   * @param {string} word
+   * @param {string|null} nextWord
+   * @param {number} [weight=1]
    */
-  insert(word, nextWord = null) {
+  insert(word, nextWord = null, weight = 1) {
+    const normalizedWord = this.normalizeWord(word);
+    if (!normalizedWord) return;
+
+    const normalizedNextWord = nextWord ? this.normalizeWord(nextWord) : null;
+    const normalizedWeight = this.normalizeWeight(weight);
+
     let node = this.root;
-    for (const char of word.toLowerCase()) {
+    for (const char of normalizedWord) {
       if (!node.children[char]) {
         node.children[char] = new TrieNode();
       }
       node = node.children[char];
     }
     node.isEndOfWord = true;
-    node.frequency++;
-    node.word = word.toLowerCase();
+    node.frequency += normalizedWeight;
+    node.word = normalizedWord;
 
-    if (nextWord) {
-      const nextFreq = node.ngrams.get(nextWord.toLowerCase()) || 0;
-      node.ngrams.set(nextWord.toLowerCase(), nextFreq + 1);
+    if (normalizedNextWord) {
+      const nextFreq = node.ngrams.get(normalizedNextWord) || 0;
+      node.ngrams.set(normalizedNextWord, nextFreq + normalizedWeight);
     }
   }
 

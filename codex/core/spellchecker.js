@@ -269,7 +269,10 @@ export class Spellchecker {
           ? candidate.distance
           : this.levenshtein(target, candidateWord);
         const phoneticMatch = Boolean(candidate?.phonetic || phoneticMatcher.isSoundAlike(target, candidateWord));
-        const allowedDistance = phoneticMatch ? (maxDistance + 1) : maxDistance;
+        const remoteMatch = Boolean(candidate?.remote);
+
+        // Remote suggestions from the authority dictionary bypass distance filter
+        const allowedDistance = remoteMatch ? (maxDistance + 4) : (phoneticMatch ? (maxDistance + 1) : maxDistance);
         if (distance > allowedDistance) return null;
 
         const baseFrequency = Number(this.dictionary.get(candidateWord) || 0);
@@ -384,7 +387,9 @@ export class Spellchecker {
       this.validationCache.set(candidateWord, true);
       this.remember(candidateWord, 2);
       if (!candidateMap.has(candidateWord)) {
-        candidateMap.set(candidateWord, { word: candidateWord });
+        candidateMap.set(candidateWord, { word: candidateWord, remote: true });
+      } else {
+        candidateMap.get(candidateWord).remote = true;
       }
     });
 
@@ -404,8 +409,16 @@ export class Spellchecker {
     for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
     for (let i = 1; i <= b.length; i++) {
       for (let j = 1; j <= a.length; j++) {
-        if (b.charAt(i - 1) === a.charAt(j - 1)) matrix[i][j] = matrix[i - 1][j - 1];
-        else matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j] + 1);
+        const cost = b.charAt(i - 1) === a.charAt(j - 1) ? 0 : 1;
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,      // deletion
+          matrix[i][j - 1] + 1,      // insertion
+          matrix[i - 1][j - 1] + cost // substitution
+        );
+        // Transposition (Damerau-Levenshtein)
+        if (i > 1 && j > 1 && b.charAt(i - 1) === a.charAt(j - 2) && b.charAt(i - 2) === a.charAt(j - 1)) {
+          matrix[i][j] = Math.min(matrix[i][j], matrix[i - 2][j - 2] + 1);
+        }
       }
     }
     return matrix[b.length][a.length];

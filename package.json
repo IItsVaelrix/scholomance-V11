@@ -22,7 +22,7 @@
     "verify:backend-contract": "node scripts/verify-backend-contract.js",
     "test": "vitest",
     "preview": "vite preview",
-    "start": "node codex/server/index.js",
+    "start": "node scripts/ritual-init.js && node codex/server/index.js",
     "start:server": "node codex/server/index.js",
     "db:setup": "node scripts/setup_database.cjs",
     "track:add:suno": "node scripts/add_suno_track.js"

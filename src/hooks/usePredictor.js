@@ -6,6 +6,92 @@ import { PhonemeEngine } from '../lib/phonology/phoneme.engine.js';
 import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
 import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
 
+const MIN_CORPUS_WORD_LENGTH = 2;
+
+function normalizeCorpusWord(value) {
+  const token = String(value || '').trim().toLowerCase();
+  if (token.length < MIN_CORPUS_WORD_LENGTH) return '';
+  if (/^\d+$/.test(token)) return '';
+  return token;
+}
+
+function normalizeSequenceWeight(weight) {
+  const parsed = Number(weight);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.max(1, Math.trunc(parsed));
+}
+
+function normalizeSequenceEntry(entry) {
+  let prevRaw = null;
+  let nextRaw = null;
+  let weightRaw = 1;
+
+  if (Array.isArray(entry)) {
+    [prevRaw, nextRaw] = entry;
+    if (entry.length >= 3) weightRaw = entry[2];
+  } else if (entry && typeof entry === 'object') {
+    prevRaw = entry.prev ?? entry.from ?? null;
+    nextRaw = entry.next ?? entry.to ?? null;
+    weightRaw = entry.weight ?? entry.count ?? entry.frequency ?? 1;
+  } else {
+    return null;
+  }
+
+  const prev = normalizeCorpusWord(prevRaw);
+  const next = normalizeCorpusWord(nextRaw);
+  if (!prev || !next) return null;
+
+  return {
+    prev,
+    next,
+    weight: normalizeSequenceWeight(weightRaw),
+  };
+}
+
+function normalizeCorpusPayload(rawPayload) {
+  const dictionaryRaw = Array.isArray(rawPayload)
+    ? rawPayload
+    : (Array.isArray(rawPayload?.dictionary) ? rawPayload.dictionary : []);
+  const sequencesRaw = Array.isArray(rawPayload?.sequences) ? rawPayload.sequences : [];
+
+  const dictionary = [];
+  dictionaryRaw.forEach((entry) => {
+    const normalized = normalizeCorpusWord(entry);
+    if (!normalized) return;
+    dictionary.push(normalized);
+  });
+
+  const sequenceByPair = new Map();
+  const addSequence = (prev, next, weight = 1) => {
+    const key = `${prev}\u0000${next}`;
+    const current = sequenceByPair.get(key) || 0;
+    sequenceByPair.set(key, current + normalizeSequenceWeight(weight));
+  };
+
+  if (sequencesRaw.length > 0) {
+    sequencesRaw.forEach((entry) => {
+      const normalizedEntry = normalizeSequenceEntry(entry);
+      if (!normalizedEntry) return;
+      addSequence(normalizedEntry.prev, normalizedEntry.next, normalizedEntry.weight);
+    });
+  } else if (Array.isArray(rawPayload)) {
+    // Legacy compatibility: when corpus.json is still a flat array, infer adjacent bigrams.
+    for (let i = 0; i < rawPayload.length - 1; i++) {
+      const prev = normalizeCorpusWord(rawPayload[i]);
+      const next = normalizeCorpusWord(rawPayload[i + 1]);
+      if (!prev || !next) continue;
+      addSequence(prev, next, 1);
+    }
+  }
+
+  const sequences = [...sequenceByPair.entries()].map(([pair, weight]) => {
+    const [prev, next] = pair.split('\u0000');
+    return { prev, next, weight };
+  });
+
+  return { dictionary, sequences };
+}
+
 /**
  * Enhanced Hook for managing robust predictive text, spellchecking,
  * and the Poetic Language Server (PLS).
@@ -42,24 +128,27 @@ export function usePredictor() {
           return;
         }
 
-        const rawWords = await response.json();
-        if (!Array.isArray(rawWords)) {
-          console.error("[Predictor] corpus.json is not an array");
+        const payload = await response.json();
+        const { dictionary: words, sequences } = normalizeCorpusPayload(payload);
+
+        if (words.length === 0) {
+          console.warn("[Predictor] corpus dictionary is empty");
           return;
         }
 
-        // Filter tokenization artifacts (single chars, numbers, split contractions)
-        const words = rawWords.filter(w => typeof w === 'string' && w.length >= 2 && !/^\d+$/.test(w));
-
-        // Train Trie and Spellchecker
-        for (let i = 0; i < words.length - 1; i++) {
-          model.insert(words[i], words[i + 1]);
+        // 1. Train Trie and Spellchecker (Vocabulary)
+        for (const word of words) {
+          model.insert(word);
         }
-        if (words.length > 0) model.insert(words[words.length - 1]);
-
         spellchecker.init(words);
 
-        // Initialize PLS with the PhonemeEngine and trained Trie
+        // 2. Train Bigrams (Natural Sequences)
+        for (const { prev, next, weight } of sequences) {
+          model.insert(prev, next, weight);
+          spellchecker.rememberSequence(prev, next, weight);
+        }
+
+        // Initialize PLS with the PhonemeEngine
         await PhonemeEngine.ensureInitialized();
         
         // Pre-fetch authority data for the top corpus words to ensure high quality initial suggestions

@@ -11,6 +11,13 @@ RUN npm prune --omit=dev
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 
+# Install Python 3 and curl for data ingestion
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
@@ -21,8 +28,10 @@ COPY --from=build /app/codex ./codex
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src ./src
 COPY --from=build /app/public ./public
+COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/docs ./docs
 COPY --from=build /app/mailer.adapter.js ./mailer.adapter.js
 
 EXPOSE 3000
 
-CMD ["node", "codex/server/index.js"]
+CMD ["npm", "start"]
