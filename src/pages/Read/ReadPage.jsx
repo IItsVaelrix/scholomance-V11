@@ -72,6 +72,28 @@ function clampTooltipPosition(position) {
   };
 }
 
+function escapeRegExp(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function applyMatchCase(sourceWord, replacement) {
+  const source = String(sourceWord || "");
+  const nextWord = String(replacement || "");
+  if (!source || !nextWord) return nextWord;
+
+  if (source === source.toUpperCase()) {
+    return nextWord.toUpperCase();
+  }
+
+  const first = source.charAt(0);
+  const rest = source.slice(1);
+  if (first === first.toUpperCase() && rest === rest.toLowerCase()) {
+    return `${nextWord.charAt(0).toUpperCase()}${nextWord.slice(1)}`;
+  }
+
+  return nextWord;
+}
+
 function getSchoolMetaFromVowelFamily(familyId) {
   const normalizedFamily = normalizeVowelFamily(familyId);
   const schoolId = VOWEL_FAMILY_TO_SCHOOL[normalizedFamily] || null;
@@ -691,6 +713,19 @@ export default function ReadPage() {
 
   const { predict, getCompletions, checkSpelling, getSpellingSuggestions, isReady: predictorReady } = usePredictor();
   const [misspellings, setMisspellings] = useState([]);
+  const applySpellcheckCorrection = useCallback((misspelledWord, suggestion) => {
+    const sourceWord = String(misspelledWord || "").trim();
+    const replacement = String(suggestion || "").trim();
+    if (!sourceWord || !replacement || !editorContent) return;
+
+    const wordPattern = new RegExp(`\\b${escapeRegExp(sourceWord)}\\b`, "gi");
+    const newContent = editorContent.replace(
+      wordPattern,
+      (matchedWord) => applyMatchCase(matchedWord, replacement)
+    );
+    if (newContent === editorContent) return;
+    editorRef.current?.replaceContent?.(newContent);
+  }, [editorContent]);
 
   // Document-wide spellcheck (debounced via editorContent)
   useEffect(() => {
@@ -1045,16 +1080,25 @@ export default function ReadPage() {
           <div className="misspellings-list">
             {misspellings.map((err, i) => (
               <div key={i} className="misspelling-item">
-                <span className="error-word">{err.word}</span>
+                <button
+                  type="button"
+                  className={`error-word${err.suggestions.length > 0 ? " error-word--interactive" : ""}`}
+                  disabled={err.suggestions.length === 0}
+                  onClick={() => applySpellcheckCorrection(err.word, err.suggestions[0])}
+                  title={
+                    err.suggestions.length > 0
+                      ? `Replace "${err.word}" with "${err.suggestions[0]}"`
+                      : "No suggestions available"
+                  }
+                >
+                  {err.word}
+                </button>
                 <div className="error-suggestions">
                   {err.suggestions.map((s, j) => (
                     <button
                       key={j}
                       className="btn-tiny"
-                      onClick={() => {
-                        const newContent = editorContent.replace(new RegExp(`\\b${err.word}\\b`, 'g'), s);
-                        editorRef.current?.replaceContent?.(newContent);
-                      }}
+                      onClick={() => applySpellcheckCorrection(err.word, s)}
                     >
                       {s}
                     </button>
