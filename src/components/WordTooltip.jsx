@@ -74,12 +74,25 @@ const getRarity = (word) => {
   return "common";
 };
 
-const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClose }) => {
+const WordTooltip = ({
+  wordData,
+  analysis,
+  isLoading,
+  error,
+  x,
+  y,
+  onDrag,
+  onClose,
+  onSuggestionClick,
+  sessionHistory,
+  sessionIndex,
+  onSessionNavigate,
+}) => {
   const { theme } = useTheme();
   const vowelPalette = getVowelColorsForSchool("DEFAULT", theme);
   const containerRef = useRef(null);
   const titleId = useId();
-  
+
   const [size, setSize] = useState({ width: TOOLTIP_DEFAULT_WIDTH, height: TOOLTIP_DEFAULT_HEIGHT });
   const [pos, setPos] = useState({ x, y });
   const posRef = useRef({ x, y });
@@ -88,6 +101,11 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
   // teleport the card. The user may have dragged it; posRef is always live.
   const posInitialized = useRef(false);
   const [isInteracting, setIsInteracting] = useState(false);
+
+  // Card-local navigation history (suggestion rune clicks)
+  const [cardHistory, setCardHistory] = useState([]);
+  const [cardHistoryIndex, setCardHistoryIndex] = useState(0);
+
   const setTooltipPos = (nextPos) => {
     posRef.current = nextPos;
     setPos(nextPos);
@@ -110,13 +128,54 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     applyLivePosition(nextPos);
   }, [x, y]);
 
+  // Reset card history when the session entry changes (pin or session nav)
+  const prevSessionIndexRef = useRef(sessionIndex);
+  useEffect(() => {
+    if (prevSessionIndexRef.current === sessionIndex) return;
+    prevSessionIndexRef.current = sessionIndex;
+    const word = sessionHistory[sessionIndex]?.word;
+    if (word) {
+      setCardHistory([word]);
+      setCardHistoryIndex(0);
+    }
+  }, [sessionIndex, sessionHistory]);
+
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Arrow session nav — only when focus is inside this dialog
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (sessionHistory.length <= 1) return;
+      const tooltipHasFocus =
+        containerRef.current &&
+        (containerRef.current === document.activeElement ||
+          containerRef.current.contains(document.activeElement));
+      if (!tooltipHasFocus) return;
+      event.preventDefault();
+      if (event.key === "ArrowLeft") onSessionNavigate(sessionIndex - 1);
+      else onSessionNavigate(sessionIndex + 1);
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, [onClose, onSessionNavigate, sessionHistory.length, sessionIndex]);
+
+  // ── Card history: suggestion rune click ─────────────────────────────────
+  const handleSuggestionRune = (word) => {
+    const newHistory = [...cardHistory.slice(0, cardHistoryIndex + 1), word];
+    setCardHistory(newHistory);
+    setCardHistoryIndex(newHistory.length - 1);
+    onSuggestionClick(word);
+  };
+
+  // ── Card history: breadcrumb ancestor click ──────────────────────────────
+  const handleBreadcrumbClick = (index) => {
+    if (index === cardHistoryIndex) return;
+    setCardHistoryIndex(index);
+    onSuggestionClick(cardHistory[index]);
+  };
 
   // High-performance Drag Logic
   const handleDragStart = (e) => {
@@ -248,6 +307,59 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     target.addEventListener("pointerup", handlePointerUp);
   };
 
+  const renderSuggestionRunes = (words) =>
+    words.map((w, i) => (
+      <button
+        key={i}
+        className="suggestion-rune"
+        onClick={() => handleSuggestionRune(w)}
+        type="button"
+      >
+        {w}
+      </button>
+    ));
+
+  const renderBreadcrumb = () => {
+    if (cardHistory.length <= 1) return null;
+    const end = cardHistoryIndex + 1;
+    const start = Math.max(0, end - 6);
+    const truncated = start > 0;
+    const visible = cardHistory.slice(start, end);
+
+    return (
+      <div className="card-breadcrumb" aria-label="Word navigation history">
+        {truncated && (
+          <span className="card-breadcrumb-item">
+            <span className="card-breadcrumb-ancestor card-breadcrumb-truncated">\u2026</span>
+            <span className="card-breadcrumb-sep" aria-hidden="true">\u203A</span>
+          </span>
+        )}
+        {visible.map((w, relIdx) => {
+          const absIdx = start + relIdx;
+          const isCurrent = absIdx === cardHistoryIndex;
+          return (
+            <span key={absIdx} className="card-breadcrumb-item">
+              {(relIdx > 0) && (
+                <span className="card-breadcrumb-sep" aria-hidden="true">\u203A</span>
+              )}
+              {isCurrent ? (
+                <span className="card-breadcrumb-current">{w}</span>
+              ) : (
+                <button
+                  className="card-breadcrumb-ancestor"
+                  onClick={() => handleBreadcrumbClick(absIdx)}
+                  type="button"
+                >
+                  {w}
+                </button>
+              )}
+            </span>
+          );
+        })}
+      </div>
+    );
+  };
+
   const cardContent = () => {
     if (isLoading && !wordData && !analysis) {
       return (
@@ -303,6 +415,7 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
     const syllables = wordData?.syllableCount || localCore?.syllableCount || 1;
 
     const rhymeLinks = Array.isArray(rhymeContext?.links) ? rhymeContext.links.slice(0, 6) : [];
+    const hasSuggestions = synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0;
 
     return (
       <div className={`word-card word-card--${rarity}`}>
@@ -351,16 +464,38 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
                 </div>
 
                 <div className="card-text-box" role="region" aria-label="Word definitions">
+                  {renderBreadcrumb()}
+
                   {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
 
                   {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
 
-                  {(synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0) && <div className="card-flavor-divider" />}
+                  {hasSuggestions && <div className="card-flavor-divider" />}
 
-                  {synonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Allies:</span> {synonyms.join(", ")}</p>}
-                  {antonyms.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Foes:</span> {antonyms.join(", ")}</p>}
-                  {rhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Resonates:</span> {rhymes.join(", ")}</p>}
-                  {slantRhymes.length > 0 && <p className="card-flavor-text"><span className="flavor-label">Near Echo:</span> {slantRhymes.join(", ")}</p>}
+                  {synonyms.length > 0 && (
+                    <p className="card-flavor-text">
+                      <span className="flavor-label">Allies:</span>{" "}
+                      {renderSuggestionRunes(synonyms)}
+                    </p>
+                  )}
+                  {antonyms.length > 0 && (
+                    <p className="card-flavor-text">
+                      <span className="flavor-label">Foes:</span>{" "}
+                      {renderSuggestionRunes(antonyms)}
+                    </p>
+                  )}
+                  {rhymes.length > 0 && (
+                    <p className="card-flavor-text">
+                      <span className="flavor-label">Resonates:</span>{" "}
+                      {renderSuggestionRunes(rhymes)}
+                    </p>
+                  )}
+                  {slantRhymes.length > 0 && (
+                    <p className="card-flavor-text">
+                      <span className="flavor-label">Near Echo:</span>{" "}
+                      {renderSuggestionRunes(slantRhymes)}
+                    </p>
+                  )}
 
                   {rhymeLinks.length > 0 && (
                     <div className="card-insight-section">
@@ -387,6 +522,32 @@ const WordTooltip = ({ wordData, analysis, isLoading, error, x, y, onDrag, onClo
                     <span className="stat-icon" aria-hidden="true">&#x25C6;</span>
                   </div>
                 </footer>
+
+                {sessionHistory.length > 1 && (
+                  <div className="card-session-nav" role="navigation" aria-label="Session word history">
+                    <button
+                      className="session-nav-btn"
+                      type="button"
+                      onClick={() => onSessionNavigate(sessionIndex - 1)}
+                      disabled={sessionIndex <= 0}
+                      aria-label="Previous session word"
+                    >
+                      &#x25C2;
+                    </button>
+                    <span className="session-nav-pos">
+                      {sessionIndex + 1} / {sessionHistory.length}
+                    </span>
+                    <button
+                      className="session-nav-btn"
+                      type="button"
+                      onClick={() => onSessionNavigate(sessionIndex + 1)}
+                      disabled={sessionIndex >= sessionHistory.length - 1}
+                      aria-label="Next session word"
+                    >
+                      &#x25B8;
+                    </button>
+                  </div>
+                )}
               </motion.div>
             </AnimatePresence>
           </div>
@@ -497,6 +658,15 @@ WordTooltip.propTypes = {
   y: PropTypes.number.isRequired,
   onDrag: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
+  onSuggestionClick: PropTypes.func,
+  sessionHistory: PropTypes.arrayOf(
+    PropTypes.shape({
+      word: PropTypes.string,
+      localAnalysis: PropTypes.object,
+    })
+  ),
+  sessionIndex: PropTypes.number,
+  onSessionNavigate: PropTypes.func,
 };
 
 WordTooltip.defaultProps = {
@@ -504,7 +674,10 @@ WordTooltip.defaultProps = {
   analysis: null,
   isLoading: false,
   error: null,
+  onSuggestionClick: () => {},
+  sessionHistory: [],
+  sessionIndex: -1,
+  onSessionNavigate: () => {},
 };
 
 export default WordTooltip;
-

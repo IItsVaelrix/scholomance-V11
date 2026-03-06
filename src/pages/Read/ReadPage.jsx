@@ -18,6 +18,7 @@ import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
+import { getCachedWord, setCachedWord, pruneOldCaches } from "../../lib/platform/wordCache.js";
 
 import AnalysisPanel from "./AnalysisPanel.jsx";
 import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
@@ -180,6 +181,12 @@ export default function ReadPage() {
     reset: resetWordLookup,
   } = useWordLookup();
 
+  // Session history: words explicitly pinned via Truesight (not suggestion navigations)
+  const [sessionWords, setSessionWords] = useState([]);
+  const [sessionIndex, setSessionIndex] = useState(-1);
+  // lookupOverride: inject cached word data without going through the hook
+  const [lookupOverride, setLookupOverride] = useState(null);
+
   const editorRef = useRef(null);
   const focusReturnRef = useRef(null);
   const tooltipCloseGuardRef = useRef({
@@ -194,6 +201,9 @@ export default function ReadPage() {
     position: { x: TOOLTIP_MARGIN, y: TOOLTIP_MARGIN },
     localAnalysis: null,
   });
+
+  // Prune stale day-cache keys on mount
+  useEffect(() => { pruneOldCaches(); }, []);
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
   const activeScrollContent = String(activeScroll?.content || "");
   const truesightContent = isEditable ? editorContent : activeScrollContent;
@@ -657,10 +667,29 @@ export default function ReadPage() {
         position: (prev.pinned && prev.visible) ? prev.position : position,
         localAnalysis,
       }));
-      resetWordLookup();
-      lookup(activation.normalizedWord);
+
+      // Session history — navigate to existing entry or append new one
+      const existingIdx = sessionWords.findIndex(e => e.word === activation.normalizedWord);
+      if (existingIdx >= 0) {
+        setSessionIndex(existingIdx);
+      } else {
+        const newIdx = sessionWords.length;
+        setSessionWords(prev => [...prev, { word: activation.normalizedWord, localAnalysis }]);
+        setSessionIndex(newIdx);
+      }
+
+      // Cache check before live lookup
+      const cached = getCachedWord(activation.normalizedWord);
+      if (cached) {
+        setLookupOverride(cached);
+        resetWordLookup();
+      } else {
+        setLookupOverride(null);
+        resetWordLookup();
+        lookup(activation.normalizedWord);
+      }
     }
-  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
+  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition, sessionWords, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
 
   useEffect(() => {
     if (!isTruesight) {
@@ -685,31 +714,93 @@ export default function ReadPage() {
       syllableCount: tooltipState.localAnalysis?.core?.syllableCount || undefined,
     };
 
-    if (!tooltipState.pinned || !lookupData) {
+    const effectiveLookupData = lookupOverride ?? lookupData;
+
+    if (!tooltipState.pinned || !effectiveLookupData) {
       return baseWordData;
     }
 
     const selectedWord = String(tooltipState.token.normalizedWord || "").toUpperCase();
-    const lookupWord = String(lookupData.word || "").toUpperCase();
+    const lookupWord = String(effectiveLookupData.word || "").toUpperCase();
     if (lookupWord && lookupWord !== selectedWord) {
       return baseWordData;
     }
 
     return {
       ...baseWordData,
-      ...lookupData,
-      word: lookupData.word || baseWordData.word,
-      vowelFamily: lookupData.vowelFamily || baseWordData.vowelFamily,
-      rhymeKey: lookupData.rhymeKey || baseWordData.rhymeKey,
-      syllableCount: lookupData.syllableCount || baseWordData.syllableCount,
+      ...effectiveLookupData,
+      word: effectiveLookupData.word || baseWordData.word,
+      vowelFamily: effectiveLookupData.vowelFamily || baseWordData.vowelFamily,
+      rhymeKey: effectiveLookupData.rhymeKey || baseWordData.rhymeKey,
+      syllableCount: effectiveLookupData.syllableCount || baseWordData.syllableCount,
     };
-  }, [lookupData, tooltipState]);
+  }, [lookupData, lookupOverride, tooltipState]);
 
   const totalSyllables = useMemo(() => {
     const counts = deepAnalysis?.lineSyllableCounts;
     if (!Array.isArray(counts)) return 0;
     return counts.reduce((a, b) => a + (Number(b) || 0), 0);
   }, [deepAnalysis]);
+
+  // Save resolved lookup to day-cache
+  useEffect(() => {
+    if (!lookupData || !tooltipState.pinned || !tooltipState.token?.normalizedWord) return;
+    const tokenWord = String(tooltipState.token.normalizedWord).toLowerCase();
+    const dataWord = String(lookupData.word || "").toLowerCase();
+    if (!dataWord || dataWord === tokenWord) {
+      setCachedWord(tooltipState.token.normalizedWord, lookupData);
+    }
+  }, [lookupData, tooltipState.pinned, tooltipState.token?.normalizedWord]);
+
+  // Handle clicking a suggestion rune inside the card
+  const handleSuggestionClick = useCallback((word) => {
+    const normalized = String(word || "").toLowerCase().trim();
+    if (!normalized) return;
+
+    // Reset live lookup state first
+    resetWordLookup();
+    setLookupOverride(null);
+
+    // Update token word (keep card pinned in place, clear local analysis)
+    setTooltipState(prev => ({
+      ...prev,
+      token: prev.token ? { ...prev.token, word: normalized, normalizedWord: normalized } : prev.token,
+      localAnalysis: null,
+    }));
+
+    // Cache hit or live fetch
+    const cached = getCachedWord(normalized);
+    if (cached) {
+      setLookupOverride(cached);
+    } else {
+      lookup(normalized);
+    }
+  }, [lookup, resetWordLookup]);
+
+  // Handle session footer navigation (◂ ▸)
+  const handleSessionNavigate = useCallback((index) => {
+    if (index < 0 || index >= sessionWords.length) return;
+    const entry = sessionWords[index];
+    setSessionIndex(index);
+
+    setTooltipState(prev => ({
+      ...prev,
+      token: prev.token
+        ? { ...prev.token, word: entry.word, normalizedWord: entry.word }
+        : prev.token,
+      localAnalysis: entry.localAnalysis,
+    }));
+
+    resetWordLookup();
+    setLookupOverride(null);
+
+    const cached = getCachedWord(entry.word);
+    if (cached) {
+      setLookupOverride(cached);
+    } else {
+      lookup(entry.word);
+    }
+  }, [sessionWords, lookup, resetWordLookup]);
 
   const { predict, getCompletions, checkSpelling, getSpellingSuggestions, isReady: predictorReady } = usePredictor();
   const [misspellings, setMisspellings] = useState([]);
@@ -1058,12 +1149,16 @@ export default function ReadPage() {
             key="word-card"
             wordData={tooltipWordData}
             analysis={tooltipState.localAnalysis}
-            isLoading={tooltipState.pinned && isLookupLoading}
+            isLoading={tooltipState.pinned && isLookupLoading && !lookupOverride}
             error={tooltipState.pinned ? lookupError : null}
             x={tooltipState.position.x}
             y={tooltipState.position.y}
             onDrag={handleTooltipDrag}
             onClose={handleCloseTooltip}
+            onSuggestionClick={handleSuggestionClick}
+            sessionHistory={sessionWords}
+            sessionIndex={sessionIndex}
+            onSessionNavigate={handleSessionNavigate}
           />
         )}
       </AnimatePresence>
