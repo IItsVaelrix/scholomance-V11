@@ -13,7 +13,7 @@ import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
-import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
+import { SCHOOLS } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
@@ -24,7 +24,6 @@ import AnalysisPanel from "./AnalysisPanel.jsx";
 import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
 import HeuristicScorePanel from "../../components/HeuristicScorePanel.jsx";
-import VowelFamilyPanel from "../../components/VowelFamilyPanel.jsx";
 import WordTooltip from "../../components/WordTooltip.jsx";
 
 import ScrollEditor from "./ScrollEditor.jsx";
@@ -38,12 +37,15 @@ import FloatingPanel from "../../components/shared/FloatingPanel.jsx";
 import "./IDE.css";
 
 const SCHOOL_GLYPHS = {
-  DEFAULT: "\uD83C\uDF08",
-  SONIC: "\u266A",
-  PSYCHIC: "\u25EC",
-  VOID: "\u2205",
-  ALCHEMY: "\u2697",
-  WILL: "\u26A1",
+  DEFAULT:    "\uD83C\uDF08",
+  SONIC:      "\u266A",
+  PSYCHIC:    "\u25EC",
+  VOID:       "\u2205",
+  ALCHEMY:    "\u2697",
+  WILL:       "\u26A1",
+  DIVINATION: "\u25C9",
+  NECROMANCY: "\u263D",
+  ABJURATION: "\u2B21",
 };
 const TOOLTIP_WIDTH = 390;
 const TOOLTIP_HEIGHT = 510;
@@ -95,17 +97,6 @@ function applyMatchCase(sourceWord, replacement) {
   return nextWord;
 }
 
-function getSchoolMetaFromVowelFamily(familyId) {
-  const normalizedFamily = normalizeVowelFamily(familyId);
-  const schoolId = VOWEL_FAMILY_TO_SCHOOL[normalizedFamily] || null;
-  if (!schoolId) {
-    return { schoolName: "Unbound", schoolGlyph: "\u2736" };
-  }
-  return {
-    schoolName: SCHOOLS[schoolId]?.name || schoolId,
-    schoolGlyph: SCHOOL_GLYPHS[schoolId] || "\u2736",
-  };
-}
 
 export default function ReadPage() {
   const { theme } = useTheme();
@@ -116,7 +107,7 @@ export default function ReadPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isTruesight, setIsTruesight] = useState(false);
   const [isPredictive, setIsPredictive] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.VOWEL);
+  const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.NONE);
   const [editorContent, setEditorContent] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
   const [selectedSchool, setSelectedSchool] = useState("DEFAULT");
@@ -145,7 +136,7 @@ export default function ReadPage() {
   const schoolList = useMemo(
     () => [
       { id: "DEFAULT", name: "Truesight", glyph: String(SCHOOL_GLYPHS.DEFAULT || "") },
-      ...["SONIC", "PSYCHIC", "VOID", "ALCHEMY", "WILL"].map((id) => {
+      ...["SONIC", "PSYCHIC", "VOID", "ALCHEMY", "WILL", "DIVINATION", "NECROMANCY", "ABJURATION"].map((id) => {
         const school = SCHOOLS[id];
         return {
           id: String(id),
@@ -163,7 +154,6 @@ export default function ReadPage() {
     meterDetection,
     genreProfile,
     scoreData,
-    vowelSummary,
     isAnalyzing,
     analyzeDocument,
     activeConnections,
@@ -316,43 +306,20 @@ export default function ReadPage() {
     analyzedWordsByCharStart: new Map(),
     colorMap: null,
   });
+  const isTypingRef = useRef(false);
+  const typingTimeoutRef = useRef(null);
+  const pendingCommitRef = useRef(null);
+
   useEffect(() => {
     if (!deepAnalysis?.wordAnalyses?.length) return;
-    setCommittedColors({ analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap });
+    const next = { analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap };
+    if (isTypingRef.current) {
+      pendingCommitRef.current = next;
+    } else {
+      setCommittedColors(next);
+      pendingCommitRef.current = null;
+    }
   }, [deepAnalysis, analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap]);
-
-  const vowelFamilyAnalytics = useMemo(() => {
-    if (!isTruesight || analysisMode !== ANALYSIS_MODES.VOWEL) {
-      return { families: [], totalWords: 0, uniqueWords: 0 };
-    }
-    if (!vowelSummary || !Array.isArray(vowelSummary.families)) {
-      return { families: [], totalWords: 0, uniqueWords: 0 };
-    }
-    const totalWords = Number(vowelSummary.totalWords) || 0;
-    const fallbackColor = theme === "light" ? "#1a1a2e" : "#f8f9ff";
-    const families = vowelSummary.families
-      .map((family) => {
-        const id = String(family?.id || "").toUpperCase();
-        const count = Number(family?.count) || 0;
-        if (!id || count <= 0) return null;
-        const schoolMeta = getSchoolMetaFromVowelFamily(id);
-        return {
-          id,
-          count,
-          percentLabel: `${(totalWords > 0 ? (count / totalWords) * 100 : 0).toFixed(1)}%`,
-          color: activeVowelColors[id] || fallbackColor,
-          schoolName: schoolMeta.schoolName,
-          schoolGlyph: schoolMeta.schoolGlyph,
-        };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.count - a.count);
-    return {
-      families,
-      totalWords,
-      uniqueWords: Number(vowelSummary.uniqueWords) || 0,
-    };
-  }, [isTruesight, analysisMode, vowelSummary, theme, activeVowelColors]);
 
   const overlayConnections = useMemo(() => {
     if (!isTruesight) {
@@ -380,11 +347,7 @@ export default function ReadPage() {
 
   useEffect(() => {
     if (truesightContent && (isTruesight || showScorePanel)) {
-      // Only re-analyze if content has actually changed from what we last analyzed
       analyzeDocument(truesightContent);
-    } else if (!isTruesight && !showScorePanel) {
-      // If nothing needs analysis, we could potentially clear it or just let it stay
-      // but let's not call analyzeDocument unnecessarily.
     }
   }, [isTruesight, showScorePanel, truesightContent, analyzeDocument]);
 
@@ -472,10 +435,9 @@ export default function ReadPage() {
   const handleModeChange = useCallback(
     (nextMode) => {
       setAnalysisMode((prev) => (prev === nextMode ? ANALYSIS_MODES.NONE : nextMode));
-      if (!isTruesight) setIsTruesight(true);
       setHighlightedLines([]);
     },
-    [isTruesight]
+    []
   );
 
   useEffect(() => {
@@ -988,6 +950,15 @@ export default function ReadPage() {
                     getSpellingSuggestions={getSpellingSuggestions}
                     predictorReady={predictorReady}
                     onContentChange={(content) => {
+                      isTypingRef.current = true;
+                      clearTimeout(typingTimeoutRef.current);
+                      typingTimeoutRef.current = setTimeout(() => {
+                        isTypingRef.current = false;
+                        if (pendingCommitRef.current) {
+                          setCommittedColors(pendingCommitRef.current);
+                          pendingCommitRef.current = null;
+                        }
+                      }, 400);
                       setEditorContent(content);
                       setSaveStatus("Unsaved");
                     }}
@@ -1051,23 +1022,6 @@ export default function ReadPage() {
                 editorRef.current.scrollTo(y);
               }
             }}
-          />
-        </FloatingPanel>
-      )}
-
-      {isTruesight && analysisMode === ANALYSIS_MODES.VOWEL && (
-        <FloatingPanel
-          id="vowel-panel"
-          title="Vowel Analysis"
-          onClose={() => handleModeChange(ANALYSIS_MODES.NONE)}
-          defaultX={window.innerWidth - 380}
-          defaultY={120}
-        >
-          <VowelFamilyPanel
-            families={vowelFamilyAnalytics.families}
-            totalWords={vowelFamilyAnalytics.totalWords}
-            uniqueWords={vowelFamilyAnalytics.uniqueWords}
-            isEmbedded={true}
           />
         </FloatingPanel>
       )}

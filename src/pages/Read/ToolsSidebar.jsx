@@ -63,13 +63,6 @@ export default function ToolsSidebar({
 
       <div className="sidebar-section">
         <h3 className="sidebar-section-title">Modes</h3>
-        <button 
-          className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.VOWEL ? 'active' : ''}`}
-          onClick={() => onModeChange(ANALYSIS_MODES.VOWEL)}
-        >
-          <span className="tool-icon">🌈</span>
-          <span className="tool-label">Vowel Families</span>
-        </button>
         <button
           className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.ANALYZE ? 'active' : ''}`}
           onClick={() => onModeChange(ANALYSIS_MODES.ANALYZE)}

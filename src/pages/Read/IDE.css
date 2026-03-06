@@ -1143,7 +1143,6 @@
 .ide-layout-wrapper .truesight-overlay {
   z-index: 5;
   overflow-y: auto;
-  word-break: break-word;
   scrollbar-color: transparent transparent;
 }
 
@@ -1179,7 +1178,6 @@
 .ide-layout-wrapper .truesight-line--heading {
   color: #ffd700;
   font-weight: 700;
-  font-size: 1.1em;
 }
 
 .truesight-line--list-item {
@@ -1199,7 +1197,7 @@
   position: relative;
   display: inline;
   margin: 0;
-  padding: 0 0.08em;
+  padding: 0;
   border-radius: 0.2em;
   background: none;
   font: inherit;
@@ -1258,8 +1256,7 @@
 }
 
 .ide-layout-wrapper .rhyme-scheme-panel,
-.ide-layout-wrapper .rhyme-diagram-panel,
-.ide-layout-wrapper .vowel-family-panel {
+.ide-layout-wrapper .rhyme-diagram-panel {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl, 1rem);
   background: linear-gradient(180deg, rgba(10, 11, 30, 0.95), rgba(8, 9, 24, 0.98));
@@ -1269,7 +1266,6 @@
 
 /* Embedded overrides for FloatingPanel */
 .floating-panel .rhyme-scheme-panel.embedded,
-.floating-panel .vowel-family-panel.embedded,
 .floating-panel .heuristic-score-panel.embedded {
   position: static !important;
   width: 100% !important;
@@ -1285,7 +1281,6 @@
 }
 
 .scheme-embedded-header,
-.vowel-family-stats-summary,
 .score-embedded-summary {
   padding-bottom: var(--space-2, 0.5rem);
   margin-bottom: var(--space-2, 0.5rem);
@@ -1413,8 +1408,7 @@
 }
 
 .ide-layout-wrapper .scheme-pattern-badge,
-.ide-layout-wrapper .panel-close-btn,
-.ide-layout-wrapper .vowel-family-sort {
+.ide-layout-wrapper .panel-close-btn {
   border-radius: var(--radius-md, 0.5rem);
   border: 1px solid var(--border-color);
   background: rgba(255, 255, 255, 0.05);
@@ -1424,8 +1418,7 @@
 .ide-layout-wrapper .pattern-breakdown-card,
 .ide-layout-wrapper .stat-item,
 .ide-layout-wrapper .emotion-display,
-.ide-layout-wrapper .device-item,
-.ide-layout-wrapper .vowel-family-row {
+.ide-layout-wrapper .device-item {
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: var(--radius-md, 0.5rem);
   background: rgba(255, 255, 255, 0.04);
@@ -1448,168 +1441,6 @@
   grid-column: span 2;
 }
 
-.ide-layout-wrapper .vowel-family-panel {
-  position: fixed;
-  right: var(--space-4, 1rem);
-  bottom: var(--space-4, 1rem);
-  width: min(360px, calc(100vw - 2rem));
-  max-height: 48vh;
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-3, 0.75rem);
-  z-index: 45;
-}
-
-.ide-layout-wrapper .vowel-family-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-2, 0.5rem);
-}
-
-.ide-layout-wrapper .vowel-family-title {
-  margin: 0;
-  font-size: var(--text-sm, 0.875rem);
-  font-weight: 700;
-}
-
-.ide-layout-wrapper .vowel-family-header-main {
-  min-width: 0;
-}
-
-.ide-layout-wrapper .vowel-family-toolbar {
-  margin-top: var(--space-2, 0.5rem);
-  display: flex;
-  align-items: center;
-  gap: var(--space-2, 0.5rem);
-}
-
-.ide-layout-wrapper .vowel-family-sort-label {
-  flex-shrink: 0;
-  color: var(--read-text-muted);
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.ide-layout-wrapper .vowel-family-sort {
-  min-width: 0;
-  height: 30px;
-  padding: 0 var(--space-2, 0.5rem);
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
-  font-size: 0.74rem;
-}
-
-.ide-layout-wrapper .vowel-family-meta,
-.ide-layout-wrapper .vowel-family-school,
-.ide-layout-wrapper .vowel-family-percent {
-  color: var(--read-text-faint);
-  font-size: 0.68rem;
-}
-
-.ide-layout-wrapper .vowel-family-empty {
-  margin-top: var(--space-2, 0.5rem);
-  padding: var(--space-3, 0.75rem);
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  border-radius: var(--radius-md, 0.5rem);
-  color: var(--read-text-muted);
-  font-size: 0.72rem;
-}
-
-.ide-layout-wrapper .vowel-family-list {
-  margin-top: var(--space-2, 0.5rem);
-  display: grid;
-  gap: var(--space-2, 0.5rem);
-  overflow: auto;
-  min-height: 0;
-  align-content: start;
-}
-
-.ide-layout-wrapper .vowel-family-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2, 0.5rem);
-  padding: var(--space-2, 0.5rem);
-  min-width: 0;
-}
-
-.ide-layout-wrapper .vowel-family-left {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2, 0.5rem);
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.ide-layout-wrapper .vowel-family-right {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 1px;
-  min-width: 4.5rem;
-  flex-shrink: 0;
-}
-
-.ide-layout-wrapper .vowel-family-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  border-radius: var(--radius-full, 999px);
-  border: 1px solid currentColor;
-  padding: 2px 8px;
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.ide-layout-wrapper .vowel-family-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full, 999px);
-}
-
-.ide-layout-wrapper .vowel-family-school {
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-}
-
-.ide-layout-wrapper .vowel-family-school-glyph {
-  flex: 0 0 auto;
-  opacity: 0.82;
-  font-size: 0.74rem;
-  line-height: 1;
-}
-
-.ide-layout-wrapper .vowel-family-school-name {
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.ide-layout-wrapper .vowel-family-count {
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
-  font-size: 0.82rem;
-  font-weight: 700;
-  line-height: 1.1;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.ide-layout-wrapper .vowel-family-percent {
-  line-height: 1.1;
-  white-space: nowrap;
-  font-family: var(--font-mono, "JetBrains Mono", monospace);
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 960px) {
   .ide-layout-wrapper {
     min-height: calc(100vh - 68px);
@@ -1626,8 +1457,7 @@
     max-width: 100%;
   }
 
-  .ide-layout-wrapper .rhyme-scheme-panel,
-  .ide-layout-wrapper .vowel-family-panel {
+  .ide-layout-wrapper .rhyme-scheme-panel {
     position: static;
     width: 100%;
     max-height: none;
@@ -1688,7 +1518,6 @@
 [data-theme="light"] .ide-layout-wrapper .rhyme-conn-btn,
 [data-theme="light"] .ide-layout-wrapper .stat-item,
 [data-theme="light"] .ide-layout-wrapper .emotion-display,
-[data-theme="light"] .ide-layout-wrapper .vowel-family-row,
 [data-theme="light"] .ide-layout-wrapper .pattern-breakdown-card {
   background: rgba(0, 0, 0, 0.03);
 }
@@ -1758,14 +1587,9 @@
 }
 
 [data-theme="light"] .ide-layout-wrapper .rhyme-scheme-panel,
-[data-theme="light"] .ide-layout-wrapper .rhyme-diagram-panel,
-[data-theme="light"] .ide-layout-wrapper .vowel-family-panel {
+[data-theme="light"] .ide-layout-wrapper .rhyme-diagram-panel {
   background: #ffffff;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
-}
-
-[data-theme="light"] .ide-layout-wrapper .vowel-family-empty {
-  border-color: rgba(0, 0, 0, 0.18);
 }
 
 /* IntelliSense Autocomplete */

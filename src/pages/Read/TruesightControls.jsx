@@ -5,7 +5,6 @@ import PropTypes from 'prop-types';
  */
 export const ANALYSIS_MODES = {
   NONE: 'none',
-  VOWEL: 'vowel',
   RHYME: 'rhyme',
   ANALYZE: 'analyze',
 };
@@ -54,15 +53,6 @@ export default function TruesightControls({
         <div className="truesight-mode-selector animate-fadeIn" role="group" aria-label="Analysis mode">
           <button
             type="button"
-            className={`mode-btn ${analysisMode === ANALYSIS_MODES.VOWEL ? 'mode-btn--active' : ''}`}
-            onClick={() => onModeChange(ANALYSIS_MODES.VOWEL)}
-            aria-pressed={analysisMode === ANALYSIS_MODES.VOWEL}
-            title="Focus on vowel-family breakdown"
-          >
-            Vowels
-          </button>
-          <button
-            type="button"
             className={`mode-btn ${analysisMode === ANALYSIS_MODES.RHYME ? 'mode-btn--active' : ''}`}
             onClick={() => onModeChange(ANALYSIS_MODES.RHYME)}
             aria-pressed={analysisMode === ANALYSIS_MODES.RHYME}
@@ -96,7 +86,7 @@ export default function TruesightControls({
 TruesightControls.propTypes = {
   isTruesight: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
-  analysisMode: PropTypes.oneOf(Object.values(ANALYSIS_MODES)).isRequired,
+  analysisMode: PropTypes.oneOf(Object.values(ANALYSIS_MODES)),
   onModeChange: PropTypes.func.isRequired,
   isAnalyzing: PropTypes.bool,
   disabled: PropTypes.bool,
