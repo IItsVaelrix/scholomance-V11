@@ -86,9 +86,6 @@
     box-shadow 0.3s ease;
 }
 
-.word-card:hover .card-frame {
-  transform: translateY(-3px);
-}
 
 /* Secondary inner border line */
 .card-frame::before {
