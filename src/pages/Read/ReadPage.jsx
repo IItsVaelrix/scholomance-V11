@@ -13,7 +13,7 @@ import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
-import { SCHOOLS } from "../../data/schools.js";
+import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
@@ -466,6 +466,15 @@ export default function ReadPage() {
       : (Number.isFinite(activation?.clientY) ? activation.clientY + TOOLTIP_OFFSET_Y : TOOLTIP_MARGIN);
     return clampTooltipPosition({ x, y });
   }, []);
+
+  function getSchoolMetaFromVowelFamily(familyId) {
+    const schoolId = VOWEL_FAMILY_TO_SCHOOL[familyId] || null;
+    if (!schoolId) return { schoolName: "Unbound", schoolGlyph: "\u2736" };
+    return {
+      schoolName: SCHOOLS[schoolId]?.name || schoolId,
+      schoolGlyph: SCHOOL_GLYPHS[schoolId] || "\u2736",
+    };
+  }
 
   const buildTooltipAnalysis = useCallback((activation) => {
     const normalizedWord = String(activation?.normalizedWord || "").toUpperCase();
