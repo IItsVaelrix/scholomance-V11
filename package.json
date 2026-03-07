@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:server": "node --env-file=.env codex/server/index.js",
+    "dev:full": "node --env-file=.env codex/server/index.js & vite",
     "build:corpus": "node scripts/generate_corpus.js",
     "build": "node scripts/generate-school-styles.js && npm run build:corpus && vite build",
     "build:app": "vite build",
@@ -20,6 +22,7 @@
     "security:qa": "node scripts/security/security-qa.js",
     "security:audit": "node scripts/security/dependency-audit.js",
     "verify:backend-contract": "node scripts/verify-backend-contract.js",
+    "verify:rhyme-astrology:phase0": "node scripts/verify-rhyme-astrology-phase0.js",
     "test": "vitest",
     "preview": "vite preview",
     "start": "node scripts/ritual-init.js && node codex/server/index.js",
