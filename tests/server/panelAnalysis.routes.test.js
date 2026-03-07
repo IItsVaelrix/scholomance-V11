@@ -1,5 +1,5 @@
 import Fastify from 'fastify';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { panelAnalysisRoutes } from '../../codex/server/routes/panelAnalysis.routes.js';
 
 describe('[Server] panelAnalysis.routes', () => {
@@ -168,5 +168,43 @@ describe('[Server] panelAnalysis.routes', () => {
         process.env.ENABLE_SYNTAX_RHYME_LAYER = previous;
       }
     }
+  });
+
+  it('closes panel analysis service when app shuts down', async () => {
+    const close = vi.fn();
+    const analyzePanels = vi.fn().mockResolvedValue({
+      analysis: null,
+      scheme: null,
+      meter: null,
+      literaryDevices: [],
+      emotion: 'Neutral',
+      scoreData: null,
+      vowelSummary: {
+        families: [],
+        totalWords: 0,
+        uniqueWords: 0,
+      },
+      rhymeAstrology: null,
+    });
+
+    const app = Fastify({ logger: false });
+    await app.register(panelAnalysisRoutes, {
+      panelAnalysisService: {
+        analyzePanels,
+        close,
+      },
+    });
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/analysis/panels',
+      payload: { text: 'embers drift' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(analyzePanels).toHaveBeenCalledTimes(1);
+
+    await app.close();
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });

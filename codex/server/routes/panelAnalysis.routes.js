@@ -68,11 +68,15 @@ function setAnalysisResponseHeaders(reply, cacheStatus, durationMs) {
 /**
  * Registers panel analysis routes on the Fastify instance.
  * @param {import('fastify').FastifyInstance} fastify
- * @param {Object} _opts
+ * @param {{
+ *   panelAnalysisService?: ReturnType<typeof createPanelAnalysisService>,
+ *   enableRhymeAstrology?: boolean,
+ * }} [opts]
  */
-export async function panelAnalysisRoutes(fastify, _opts) {
-  const panelAnalysisService = createPanelAnalysisService({
+export async function panelAnalysisRoutes(fastify, opts = {}) {
+  const panelAnalysisService = opts.panelAnalysisService || createPanelAnalysisService({
     log: fastify.log,
+    enableRhymeAstrology: opts.enableRhymeAstrology ?? fastify.featureFlags?.rhymeAstrology,
   });
   const memoryCache = new Map();
 
@@ -169,5 +173,9 @@ export async function panelAnalysisRoutes(fastify, _opts) {
         throw error;
       }
     },
+  });
+
+  fastify.addHook('onClose', async () => {
+    panelAnalysisService.close?.();
   });
 }

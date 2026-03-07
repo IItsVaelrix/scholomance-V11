@@ -192,8 +192,8 @@ const STOP_WORDS = new Set([
 ]);
 
 
-// Compute cursor pixel position in a textarea (monospace font)
-let _cachedCharWidth = null;
+// Compute cursor pixel position in a textarea.
+// Uses canvas text measurement for accurate results with proportional fonts (Georgia serif).
 function getCursorCoordsFromTextarea(textarea) {
   if (!textarea) return { x: 0, y: 0 };
   const style = window.getComputedStyle(textarea);
@@ -202,21 +202,19 @@ function getCursorCoordsFromTextarea(textarea) {
   const paddingLeft = parseFloat(style.paddingLeft) || 0;
   const paddingTop = parseFloat(style.paddingTop) || 0;
 
-  if (!_cachedCharWidth) {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    ctx.font = `${style.fontSize} ${style.fontFamily}`;
-    _cachedCharWidth = ctx.measureText('m').width;
-  }
-
   const pos = textarea.selectionStart;
   const text = textarea.value.substring(0, pos);
   const lines = text.split('\n');
   const lineNum = lines.length - 1;
-  const colNum = lines[lines.length - 1].length;
+  const currentLineText = lines[lines.length - 1];
+
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const textWidth = ctx.measureText(currentLineText).width;
 
   return {
-    x: rect.left + paddingLeft + colNum * _cachedCharWidth,
+    x: rect.left + paddingLeft + textWidth,
     y: rect.top + paddingTop + (lineNum + 1) * lineHeight - textarea.scrollTop,
   };
 }
@@ -241,6 +239,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   analyzedWordsByCharStart = new Map(),
   activeConnections = [],
   lineSyllableCounts = [],
+  plsPhoneticFeatures = null,
   highlightedLines = [],
   vowelColors = null,
   colorMap = null,
@@ -362,6 +361,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           currentLineWords,
           targetSyllableCount: null,
           priorLineSyllableCounts,
+          plsPhoneticFeatures,
           syntaxContext: resolveSyntaxContextForCursor({
             syntaxLayer,
             content,
@@ -447,7 +447,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts, syntaxLayer]);
+  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts, plsPhoneticFeatures, syntaxLayer]);
 
   // Accept an IntelliSense suggestion: replace partial word and insert
   const handleAcceptSuggestion = useCallback((token) => {
@@ -478,7 +478,11 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     });
   }, [content, onContentChange]);
 
-  const BUFFER = 10;
+  // Buffer of extra lines rendered above/below the viewport.
+  // Kept at 20 (not 10) to absorb wrapped-line drift: logical line N sits lower
+  // than N * lineHeightPx when prior lines wrap, so a larger buffer prevents
+  // the windowed content from popping in visibly at the edges.
+  const BUFFER = 20;
 
   const overlayLines = useMemo(() => {
     const perfStart = performance.now();
@@ -610,10 +614,15 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     let newCursorPos;
 
     if (fmt.lineStart) {
-      // Line-start formats (headings, lists)
+      // Line-start formats (headings, lists) — toggle: remove prefix if already present
       const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      newContent = value.slice(0, lineStart) + fmt.prefix + value.slice(lineStart);
-      newCursorPos = end + fmt.prefix.length;
+      if (value.slice(lineStart).startsWith(fmt.prefix)) {
+        newContent = value.slice(0, lineStart) + value.slice(lineStart + fmt.prefix.length);
+        newCursorPos = Math.max(lineStart, end - fmt.prefix.length);
+      } else {
+        newContent = value.slice(0, lineStart) + fmt.prefix + value.slice(lineStart);
+        newCursorPos = end + fmt.prefix.length;
+      }
     } else {
       // Wrap selection
       newContent = value.slice(0, start) + fmt.prefix + selected + fmt.suffix + value.slice(end);
@@ -682,6 +691,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   }, [isTruesight]);
 
   useEffect(() => {
+    if (!isTruesight) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -898,6 +908,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               zIndex: isTruesight ? 1 : 10,
               pointerEvents: (!isEditable && isTruesight) ? 'none' : 'auto',
             }}
+            aria-hidden={isTruesight && !isEditable && !!onWordActivate}
             placeholder={isEditable
               ? "Inscribe thy verses upon this sacred parchment..."
               : ""}
@@ -924,7 +935,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                 zIndex: 5,
                 pointerEvents: isEditable ? 'none' : 'auto'
               }}
-              aria-hidden="true"
+              aria-hidden={isEditable || !onWordActivate}
               onScroll={handleOverlayScroll}
             >
               <div style={{ paddingTop, paddingBottom }}>
@@ -952,14 +963,29 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           )
                           : null;
 
-                        if (!isWord || !analysis) {
+                        if (!isWord) {
                           return <span key={start}>{token}</span>;
                         }
 
                         const isStopWord = STOP_WORDS.has(clean);
-                        const wordVowelFamily = normalizeVowelFamily(analysis.vowelFamily);
-                        
-                        const shouldColorWord = shouldColorWordHook(charStart, clean, wordVowelFamily);
+                        const wordVowelFamily = analysis
+                          ? normalizeVowelFamily(analysis.vowelFamily)
+                          : null;
+                        const shouldColorWord = analysis
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
+                          : false;
+
+                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
+                        const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
+                        const codexEntry = shouldColorWord ? (activeColorMap?.get(charStart) ?? null) : null;
+                        const color = shouldColorWord
+                          ? (codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
+                          : undefined;
+                        const wordOpacity = shouldColorWord
+                          ? (codexEntry?.opacity ?? undefined)
+                          : undefined;
+                        const isMultiSyllable = shouldColorWord && codexEntry?.isMultiSyllable;
+                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordPayload = {
                           word: token,
@@ -968,38 +994,24 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
                           charStart,
                           charEnd,
-                          vowelFamily: wordVowelFamily || null,
+                          vowelFamily: shouldColorWord ? (wordVowelFamily || null) : null,
                           isStopWord,
                         };
 
-                        if (!shouldColorWord) {
-                          return <span key={start}>{token}</span>;
-                        }
-
-                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
-                        const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
-                        const codexEntry = activeColorMap?.get(charStart) ?? null;
-                        const color = shouldColorWord
-                          ? (codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
-                          : undefined;
-                        const wordOpacity = shouldColorWord
-                          ? (codexEntry?.opacity ?? undefined)
-                          : undefined;
-
-                        // O(1) lookup for multi-syllable rhyme (Fix 1 + ColorCodex)
-                        const isMultiSyllable = shouldColorWord && codexEntry?.isMultiSyllable;
-
-                        // O(1) lookup for highlighted line (Fix 1)
-                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
+                        const wordClassName = [
+                          'grimoire-word',
+                          !shouldColorWord ? 'grimoire-word--grey' : '',
+                          isMultiSyllable ? 'word--multi-rhyme' : '',
+                          isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
+                        ].filter(Boolean).join(' ');
 
                         if (!onWordActivate) {
                           return (
                             <span
                               key={start}
-                              className={`grimoire-word ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                              className={wordClassName}
                               style={{ color, opacity: wordOpacity }}
                               data-char-start={charStart}
-                              data-syllables={isMultiSyllable ? (Number(analysis.syllableCount) || undefined) : undefined}
                             >
                               {token}
                             </span>
@@ -1010,11 +1022,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           <button
                             key={start}
                             type="button"
-                            className={`grimoire-word grimoire-word--interactive ${isMultiSyllable ? 'word--multi-rhyme' : ''} ${isLineHighlighted ? 'grimoire-word--rhyme-highlight' : ''}`}
+                            className={`${wordClassName} grimoire-word--interactive`}
                             style={{ color, opacity: wordOpacity }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}
+                            aria-label={token}
                             onClick={(event) => emitWordActivation("pin", wordPayload, event)}
                           >
                             {token}

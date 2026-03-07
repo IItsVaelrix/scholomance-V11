@@ -34,6 +34,8 @@ const GEM_ANIMATE = { opacity: 1, scale: 1, transition: { duration: 0.28, delay:
 
 const TOOLTIP_MIN_WIDTH = 300;
 const TOOLTIP_MIN_HEIGHT = 350;
+const TOOLTIP_MAX_WIDTH = 680;
+const TOOLTIP_MAX_HEIGHT = 720;
 const TOOLTIP_DEFAULT_WIDTH = 390;
 const TOOLTIP_DEFAULT_HEIGHT = 510;
 const DRAG_IGNORE_SELECTOR = [
@@ -272,14 +274,14 @@ const WordTooltip = ({
       let newPosX = startPosX;
       let newPosY = startPosY;
 
-      if (direction.includes("e")) newW = Math.max(TOOLTIP_MIN_WIDTH, startW + dx);
+      if (direction.includes("e")) newW = Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH, startW + dx));
       if (direction.includes("w")) {
-        newW = Math.max(TOOLTIP_MIN_WIDTH, startW - dx);
+        newW = Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH, startW - dx));
         newPosX = startPosX + (startW - newW);
       }
-      if (direction.includes("s")) newH = Math.max(TOOLTIP_MIN_HEIGHT, startH + dy);
+      if (direction.includes("s")) newH = Math.min(TOOLTIP_MAX_HEIGHT, Math.max(TOOLTIP_MIN_HEIGHT, startH + dy));
       if (direction.includes("n")) {
-        newH = Math.max(TOOLTIP_MIN_HEIGHT, startH - dy);
+        newH = Math.min(TOOLTIP_MAX_HEIGHT, Math.max(TOOLTIP_MIN_HEIGHT, startH - dy));
         newPosY = startPosY + (startH - newH);
       }
 
@@ -390,6 +392,7 @@ const WordTooltip = ({
 
     const localCore = analysis?.core || null;
     const rhymeContext = analysis?.rhyme || null;
+    const astrologyContext = analysis?.rhymeAstrology || null;
 
     const word = String(wordData?.word || analysis?.token?.word || "Unknown");
     const definition = wordData?.definition || null;
@@ -415,6 +418,13 @@ const WordTooltip = ({
     const syllables = wordData?.syllableCount || localCore?.syllableCount || 1;
 
     const rhymeLinks = Array.isArray(rhymeContext?.links) ? rhymeContext.links.slice(0, 6) : [];
+    const astrologyTopMatches = Array.isArray(astrologyContext?.topMatches)
+      ? astrologyContext.topMatches.slice(0, 4)
+      : [];
+    const astrologyClusters = Array.isArray(astrologyContext?.clusters)
+      ? astrologyContext.clusters.slice(0, 3)
+      : [];
+    const astrologySign = typeof astrologyContext?.sign === "string" ? astrologyContext.sign : "";
     const hasSuggestions = synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0;
 
     return (
@@ -505,6 +515,62 @@ const WordTooltip = ({
                           {link.linkedWord} | {link.type} ({(link.score || 0).toFixed(2)})
                         </p>
                       ))}
+                    </div>
+                  )}
+
+                  {astrologyContext?.enabled && (astrologySign || astrologyClusters.length > 0 || astrologyTopMatches.length > 0) && (
+                    <div className="card-insight-section card-insight-section--astrology">
+                      <p className="card-insight-title">
+                        <span className="card-astro-icon" aria-hidden="true">&#x2736;</span>
+                        Rhyme Astrology
+                      </p>
+                      {astrologySign && (
+                        <div className="card-astro-sign-badge">
+                          <span className="card-astro-sign-label">Sign</span>
+                          <span className="card-astro-sign">{astrologySign}</span>
+                        </div>
+                      )}
+                      {astrologyClusters.length > 0 && (
+                        <div className="card-astro-clusters">
+                          {astrologyClusters.map((cluster) => (
+                            <span key={cluster.id || cluster.label} className="card-astro-cluster-chip">
+                              {cluster.label || cluster.id}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {astrologyTopMatches.length > 0 && (
+                        <div className="card-astro-matches">
+                          <p className="card-astro-matches-label">Echoes</p>
+                          {astrologyTopMatches.map((match, i) => {
+                            const token = String(match?.token || "");
+                            const score = Number(match?.overallScore || 0);
+                            const reasons = Array.isArray(match?.reasons) ? match.reasons.slice(0, 2) : [];
+                            if (!token) return null;
+                            return (
+                              <div key={i} className="card-astro-match-row">
+                                <div className="card-astro-match-header">
+                                  <span className="card-astro-match-word">{token}</span>
+                                  <span className="card-astro-match-score">{Math.round(score * 100)}%</span>
+                                </div>
+                                <div className="card-astro-match-bar-track">
+                                  <div
+                                    className="card-astro-match-bar-fill"
+                                    style={{ width: `${Math.round(score * 100)}%` }}
+                                  />
+                                </div>
+                                {reasons.length > 0 && (
+                                  <div className="card-astro-reason-pills">
+                                    {reasons.map((reason, ri) => (
+                                      <span key={ri} className="card-astro-reason-pill">{reason}</span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -643,6 +709,34 @@ WordTooltip.propTypes = {
         })
       ),
       gateReasons: PropTypes.arrayOf(PropTypes.string),
+    }),
+    rhymeAstrology: PropTypes.shape({
+      enabled: PropTypes.bool,
+      sign: PropTypes.string,
+      topMatches: PropTypes.arrayOf(
+        PropTypes.shape({
+          token: PropTypes.string,
+          overallScore: PropTypes.number,
+        })
+      ),
+      clusters: PropTypes.arrayOf(
+        PropTypes.shape({
+          id: PropTypes.string,
+          label: PropTypes.string,
+          sign: PropTypes.string,
+        })
+      ),
+      diagnostics: PropTypes.shape({
+        queryTimeMs: PropTypes.number,
+        cacheHit: PropTypes.bool,
+        candidateCount: PropTypes.number,
+      }),
+      features: PropTypes.shape({
+        rhymeAffinityScore: PropTypes.number,
+        constellationDensity: PropTypes.number,
+        internalRecurrenceScore: PropTypes.number,
+        phoneticNoveltyScore: PropTypes.number,
+      }),
     }),
     syntax: PropTypes.shape({
       role: PropTypes.string,

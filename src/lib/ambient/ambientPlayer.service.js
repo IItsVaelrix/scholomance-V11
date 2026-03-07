@@ -357,6 +357,7 @@ async function createTrackController({
 
     let resolvedLoad = false;
     let loadTimeoutId = null;
+    let resolveLoad = null;
     const handleCanPlay = () => {
       if (resolvedLoad) return;
       resolvedLoad = true;
@@ -365,6 +366,7 @@ async function createTrackController({
         clearTimeout(loadTimeoutId);
       }
       loadTimeoutId = null;
+      resolveLoad?.();
     };
 
     const handleEnded = () => onTrackEnded?.();
@@ -472,6 +474,7 @@ async function createTrackController({
     }
 
     const loadPromise = new Promise((resolve) => {
+      resolveLoad = resolve;
       const resolveWhenReady = () => {
         if (resolvedLoad) {
           resolve();
@@ -603,6 +606,7 @@ async function createTrackController({
       destroy: () => {
         if (destroyed) return;
         destroyed = true;
+        resolveLoad?.();
         audio.pause();
         stopSunoEmbedFallback();
         fallbackIframe?.remove();

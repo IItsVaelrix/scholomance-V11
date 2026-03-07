@@ -3,8 +3,10 @@
  * Produces unified data for rhyme/scheme, score, and vowel-family panels.
  */
 
+import path from 'path';
 import { analyzeText } from '../../core/analysis.pipeline.js';
 import { createScoringEngine } from '../../core/scoring.engine.js';
+import { buildPlsPhoneticFeatures } from '../../core/rhyme-astrology/scoring.js';
 import { PhonemeEngine } from '../../../src/lib/phonology/phoneme.engine.js';
 import { alliterationDensityHeuristic } from '../../core/heuristics/alliteration_density.js';
 import { literaryDeviceRichnessHeuristic } from '../../core/heuristics/literary_device_richness.js';
@@ -21,6 +23,9 @@ import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js'
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
 import { parseBooleanFlag } from '../utils/envFlags.js';
+import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
+import { createRhymeAstrologyLexiconRepo } from './rhyme-astrology/lexiconRepo.js';
+import { createRhymeAstrologyIndexRepo } from './rhyme-astrology/indexRepo.js';
 
 const SCORE_HEURISTICS = [
   phonemeDensityHeuristic,
@@ -38,6 +43,35 @@ const EMPTY_VOWEL_SUMMARY = Object.freeze({
   totalWords: 0,
   uniqueWords: 0,
 });
+
+const DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
+const DEFAULT_RHYME_ASTROLOGY_ANCHOR_LIMIT = 14;
+const DEFAULT_RHYME_ASTROLOGY_MATCH_LIMIT = 6;
+const DEFAULT_RHYME_ASTROLOGY_MIN_SCORE = 0.35;
+const DEFAULT_RHYME_ASTROLOGY_MAX_CLUSTERS = 4;
+const DEFAULT_RHYME_ASTROLOGY_BUCKET_CAP = 200;
+const DEFAULT_RHYME_ASTROLOGY_CACHE_SIZE = 500;
+
+function parsePositiveInt(value, fallback) {
+  const parsed = Number(value);
+  if (Number.isInteger(parsed) && parsed > 0) return parsed;
+  return fallback;
+}
+
+function parseScore(value, fallback) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  if (parsed < 0) return 0;
+  if (parsed > 1) return 1;
+  return parsed;
+}
+
+function resolveArtifactPath(rawPath, fallbackPath) {
+  if (typeof rawPath === 'string' && rawPath.trim()) {
+    return path.resolve(rawPath.trim());
+  }
+  return fallbackPath;
+}
 
 function getPrimaryStressedVowelFamily(analyzedWord) {
   const syllables = Array.isArray(analyzedWord?.deepPhonetics?.syllables)
@@ -159,7 +193,7 @@ function summarizeVowelFamilies(analyzedDoc) {
   };
 }
 
-function toMinimalAnalysisPayload(analysis, analyzedDoc, syntaxLayer = null) {
+function toMinimalAnalysisPayload(analysis, wordAnalyses, lineSyllableCounts) {
   if (!analysis || typeof analysis !== 'object') {
     return null;
   }
@@ -170,8 +204,8 @@ function toMinimalAnalysisPayload(analysis, analyzedDoc, syntaxLayer = null) {
     schemePattern: typeof analysis.schemePattern === 'string' ? analysis.schemePattern : '',
     rhymeGroups: toSerializableGroupEntries(analysis.rhymeGroups),
     syntaxSummary: analysis.syntaxSummary || null,
-    wordAnalyses: buildAnalysisWordProfiles(analyzedDoc, syntaxLayer),
-    lineSyllableCounts: buildLineSyllableCounts(analyzedDoc),
+    wordAnalyses: Array.isArray(wordAnalyses) ? wordAnalyses : [],
+    lineSyllableCounts: Array.isArray(lineSyllableCounts) ? lineSyllableCounts : [],
   };
 }
 
@@ -185,6 +219,7 @@ function createEmptyPanelPayload() {
     emotion: 'Neutral',
     scoreData: null,
     vowelSummary: EMPTY_VOWEL_SUMMARY,
+    rhymeAstrology: null,
   };
 }
 
@@ -194,14 +229,270 @@ function normalizeInputText(rawText) {
   return String(rawText);
 }
 
+function buildRhymeAstrologyAnchorCandidates(wordAnalyses, maxAnchors) {
+  const profiles = Array.isArray(wordAnalyses) ? wordAnalyses : [];
+  if (profiles.length === 0) return [];
+
+  const byLine = new Map();
+  for (const profile of profiles) {
+    const lineIndex = Number(profile?.lineIndex);
+    if (!Number.isInteger(lineIndex)) continue;
+    if (!byLine.has(lineIndex)) byLine.set(lineIndex, []);
+    byLine.get(lineIndex).push(profile);
+  }
+
+  /** @type {Array<any>} */
+  const anchors = [];
+  const seen = new Set();
+  const addAnchor = (profile) => {
+    const lineIndex = Number(profile?.lineIndex);
+    const wordIndex = Number(profile?.wordIndex);
+    const charStart = Number(profile?.charStart);
+    if (!Number.isInteger(lineIndex) || !Number.isInteger(wordIndex) || !Number.isInteger(charStart)) return;
+    const key = `${lineIndex}:${wordIndex}:${charStart}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    anchors.push(profile);
+  };
+
+  const sortedLineEntries = [...byLine.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [, lineWords] of sortedLineEntries) {
+    const sortedWords = [...lineWords].sort(
+      (a, b) => (Number(a?.wordIndex) || 0) - (Number(b?.wordIndex) || 0)
+    );
+    const lineEndWord = sortedWords[sortedWords.length - 1];
+    if (lineEndWord) addAnchor(lineEndWord);
+  }
+
+  if (anchors.length < maxAnchors) {
+    const internalCandidates = profiles
+      .filter((profile) => Number(profile?.syllableCount) >= 2)
+      .sort((a, b) => {
+        const syllableDiff = (Number(b?.syllableCount) || 0) - (Number(a?.syllableCount) || 0);
+        if (syllableDiff !== 0) return syllableDiff;
+        const lineDiff = (Number(a?.lineIndex) || 0) - (Number(b?.lineIndex) || 0);
+        if (lineDiff !== 0) return lineDiff;
+        return (Number(a?.wordIndex) || 0) - (Number(b?.wordIndex) || 0);
+      });
+    for (const candidate of internalCandidates) {
+      if (anchors.length >= maxAnchors) break;
+      addAnchor(candidate);
+    }
+  }
+
+  return anchors.slice(0, maxAnchors);
+}
+
+function buildRhymeAstrologyClusterSummary(anchors, maxClusters) {
+  const rows = Array.isArray(anchors) ? anchors : [];
+  const clusterMap = new Map();
+
+  for (const anchor of rows) {
+    const anchorWord = String(anchor?.word || '');
+    const anchorSign = String(anchor?.sign || '');
+    const constellations = Array.isArray(anchor?.constellations) ? anchor.constellations : [];
+    for (const constellation of constellations) {
+      const id = String(constellation?.id || '');
+      if (!id) continue;
+      if (!clusterMap.has(id)) {
+        clusterMap.set(id, {
+          id,
+          label: String(constellation?.label || ''),
+          anchorWord,
+          sign: anchorSign,
+          dominantVowelFamily: Array.isArray(constellation?.dominantVowelFamily)
+            ? constellation.dominantVowelFamily
+            : [],
+          dominantStressPattern: String(constellation?.dominantStressPattern || ''),
+          densityScore: Number(constellation?.densityScore) || 0,
+          cohesionScore: Number(constellation?.cohesionScore) || 0,
+          membersCount: Array.isArray(constellation?.members) ? constellation.members.length : 0,
+        });
+      }
+    }
+  }
+
+  return [...clusterMap.values()]
+    .sort((first, second) => {
+      if (second.cohesionScore !== first.cohesionScore) {
+        return second.cohesionScore - first.cohesionScore;
+      }
+      if (second.densityScore !== first.densityScore) {
+        return second.densityScore - first.densityScore;
+      }
+      return first.label.localeCompare(second.label);
+    })
+    .slice(0, maxClusters);
+}
+
 export function createPanelAnalysisService(options = {}) {
   const log = options.log ?? console;
   const enableSyntaxRhymeLayer = options.enableSyntaxRhymeLayer ?? parseBooleanFlag(
     process.env.ENABLE_SYNTAX_RHYME_LAYER,
     false
   );
+  const enableRhymeAstrology = options.enableRhymeAstrology ?? parseBooleanFlag(
+    process.env.ENABLE_RHYME_ASTROLOGY,
+    false
+  );
   const scoreEngine = createScoreEngine();
   const deepRhymeEngine = new DeepRhymeEngine();
+
+  const rhymeAstrologyAnchorLimit = parsePositiveInt(
+    options.rhymeAstrologyAnchorLimit ?? process.env.RHYME_ASTROLOGY_PANEL_ANCHOR_LIMIT,
+    DEFAULT_RHYME_ASTROLOGY_ANCHOR_LIMIT
+  );
+  const rhymeAstrologyMatchLimit = parsePositiveInt(
+    options.rhymeAstrologyMatchLimit ?? process.env.RHYME_ASTROLOGY_PANEL_MATCH_LIMIT,
+    DEFAULT_RHYME_ASTROLOGY_MATCH_LIMIT
+  );
+  const rhymeAstrologyMaxClusters = parsePositiveInt(
+    options.rhymeAstrologyMaxClusters ?? process.env.RHYME_ASTROLOGY_PANEL_MAX_CLUSTERS,
+    DEFAULT_RHYME_ASTROLOGY_MAX_CLUSTERS
+  );
+  const rhymeAstrologyMinScore = parseScore(
+    options.rhymeAstrologyMinScore ?? process.env.RHYME_ASTROLOGY_PANEL_MIN_SCORE,
+    DEFAULT_RHYME_ASTROLOGY_MIN_SCORE
+  );
+  const rhymeAstrologyOutputDir = resolveArtifactPath(
+    options.rhymeAstrologyOutputDir ?? process.env.RHYME_ASTROLOGY_OUTPUT_DIR,
+    DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR
+  );
+  const rhymeAstrologyLexiconDbPath = resolveArtifactPath(
+    options.rhymeAstrologyLexiconDbPath ?? process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH,
+    path.join(rhymeAstrologyOutputDir, 'rhyme_lexicon.sqlite')
+  );
+  const rhymeAstrologyIndexDbPath = resolveArtifactPath(
+    options.rhymeAstrologyIndexDbPath ?? process.env.RHYME_ASTROLOGY_INDEX_DB_PATH,
+    path.join(rhymeAstrologyOutputDir, 'rhyme_index.sqlite')
+  );
+  const rhymeAstrologyEdgesDbPath = resolveArtifactPath(
+    options.rhymeAstrologyEdgesDbPath ?? process.env.RHYME_ASTROLOGY_EDGES_DB_PATH,
+    path.join(rhymeAstrologyOutputDir, 'rhyme_edges.sqlite')
+  );
+
+  const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
+  let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
+
+  if (!rhymeAstrologyQueryEngine && enableRhymeAstrology) {
+    const lexiconRepo = createRhymeAstrologyLexiconRepo(rhymeAstrologyLexiconDbPath, { log });
+    const indexRepo = createRhymeAstrologyIndexRepo({
+      indexDbPath: rhymeAstrologyIndexDbPath,
+      edgesDbPath: rhymeAstrologyEdgesDbPath,
+      log,
+    });
+    rhymeAstrologyQueryEngine = createRhymeAstrologyQueryEngine({
+      lexiconRepo,
+      indexRepo,
+      phonemeEngine: options.phonemeEngine || PhonemeEngine,
+      cacheSize: parsePositiveInt(
+        options.rhymeAstrologyCacheSize ?? process.env.RHYME_ASTROLOGY_CACHE_SIZE,
+        DEFAULT_RHYME_ASTROLOGY_CACHE_SIZE
+      ),
+      bucketCandidateCap: parsePositiveInt(
+        options.rhymeAstrologyBucketCandidateCap ?? process.env.RHYME_ASTROLOGY_BUCKET_QUERY_CAP,
+        DEFAULT_RHYME_ASTROLOGY_BUCKET_CAP
+      ),
+      maxClusters: rhymeAstrologyMaxClusters,
+      log,
+    });
+  }
+
+  async function buildRhymeAstrologyPayload(wordAnalyses) {
+    if (!enableRhymeAstrology || !rhymeAstrologyQueryEngine) return null;
+    const anchors = buildRhymeAstrologyAnchorCandidates(wordAnalyses, rhymeAstrologyAnchorLimit);
+    if (anchors.length === 0) {
+      return {
+        enabled: true,
+        features: buildPlsPhoneticFeatures([]),
+        inspector: {
+          anchors: [],
+          clusters: [],
+        },
+        diagnostics: {
+          anchorCount: 0,
+          cacheHitCount: 0,
+          averageQueryTimeMs: 0,
+        },
+      };
+    }
+
+    const anchorResults = (await Promise.all(
+      anchors.map(async (anchor) => {
+        const word = String(anchor?.normalizedWord || anchor?.word || '').trim();
+        if (!word) return null;
+        try {
+          const result = await rhymeAstrologyQueryEngine.query({
+            text: word,
+            mode: 'word',
+            limit: rhymeAstrologyMatchLimit,
+            minScore: rhymeAstrologyMinScore,
+            includeConstellations: true,
+            includeDiagnostics: true,
+          });
+          const resolvedNodes = Array.isArray(result?.query?.resolvedNodes)
+            ? result.query.resolvedNodes
+            : [];
+          const resolvedAnchor = resolvedNodes[resolvedNodes.length - 1] || null;
+          return {
+            word: String(anchor?.word || '').trim(),
+            normalizedWord: String(anchor?.normalizedWord || '').toUpperCase(),
+            lineIndex: Number.isInteger(anchor?.lineIndex) ? anchor.lineIndex : -1,
+            wordIndex: Number.isInteger(anchor?.wordIndex) ? anchor.wordIndex : -1,
+            charStart: Number.isInteger(anchor?.charStart) ? anchor.charStart : -1,
+            charEnd: Number.isInteger(anchor?.charEnd) ? anchor.charEnd : -1,
+            sign: String(resolvedAnchor?.endingSignature || ''),
+            dominantVowelFamily: String(anchor?.vowelFamily || ''),
+            topMatches: Array.isArray(result?.topMatches) ? result.topMatches : [],
+            constellations: Array.isArray(result?.constellations) ? result.constellations : [],
+            diagnostics: result?.diagnostics || {
+              queryTimeMs: 0,
+              cacheHit: false,
+              candidateCount: 0,
+            },
+          };
+        } catch (error) {
+          log?.warn?.(
+            { err: error, word },
+            '[PanelAnalysisService] RhymeAstrology anchor query failed.'
+          );
+          return null;
+        }
+      })
+    )).filter(Boolean);
+
+    const frequencyResolver = (nodeId) => {
+      const lexiconRepo = rhymeAstrologyQueryEngine?.__unsafe?.lexiconRepo;
+      if (typeof lexiconRepo?.lookupNodeById !== 'function') return null;
+      return Number(lexiconRepo.lookupNodeById(nodeId)?.frequencyScore) || 0;
+    };
+
+    const features = buildPlsPhoneticFeatures(anchorResults, { frequencyResolver });
+    const cacheHitCount = anchorResults.reduce(
+      (sum, row) => sum + (row?.diagnostics?.cacheHit ? 1 : 0),
+      0
+    );
+    const avgQueryTimeMs = anchorResults.length > 0
+      ? anchorResults.reduce(
+        (sum, row) => sum + (Number(row?.diagnostics?.queryTimeMs) || 0),
+        0
+      ) / anchorResults.length
+      : 0;
+
+    return {
+      enabled: true,
+      features,
+      inspector: {
+        anchors: anchorResults,
+        clusters: buildRhymeAstrologyClusterSummary(anchorResults, rhymeAstrologyMaxClusters),
+      },
+      diagnostics: {
+        anchorCount: anchorResults.length,
+        cacheHitCount,
+        averageQueryTimeMs: Number(avgQueryTimeMs.toFixed(3)),
+      },
+    };
+  }
 
   async function analyzePanels(rawText) {
     const text = normalizeInputText(rawText);
@@ -216,6 +507,8 @@ export function createPanelAnalysisService(options = {}) {
       const analyzedDoc = analyzeText(text);
       const scoreData = await scoreEngine.calculateScore(analyzedDoc);
       const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
+      const wordAnalyses = buildAnalysisWordProfiles(analyzedDoc, syntaxLayer);
+      const lineSyllableCounts = buildLineSyllableCounts(analyzedDoc);
 
       const deepAnalysis = await deepRhymeEngine.analyzeDocument(
         text,
@@ -227,9 +520,16 @@ export function createPanelAnalysisService(options = {}) {
       const meter = analyzeMeter(deepAnalysis.lines);
       const literaryDevices = analyzeLiteraryDevices(text);
       const emotion = detectEmotion(text);
+      const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses);
+      const scoreDataWithPlsFeatures = scoreData && rhymeAstrology?.features
+        ? {
+          ...scoreData,
+          plsPhoneticFeatures: rhymeAstrology.features,
+        }
+        : scoreData;
 
       return {
-        analysis: toMinimalAnalysisPayload(deepAnalysis, analyzedDoc, syntaxLayer),
+        analysis: toMinimalAnalysisPayload(deepAnalysis, wordAnalyses, lineSyllableCounts),
         scheme: scheme
           ? {
             ...scheme,
@@ -240,8 +540,9 @@ export function createPanelAnalysisService(options = {}) {
         genreProfile,
         literaryDevices,
         emotion,
-        scoreData,
+        scoreData: scoreDataWithPlsFeatures,
         vowelSummary: summarizeVowelFamilies(analyzedDoc),
+        rhymeAstrology,
       };
     } catch (error) {
       log?.error?.({ err: error }, '[PanelAnalysisService] Failed to analyze panel payload');
@@ -249,7 +550,14 @@ export function createPanelAnalysisService(options = {}) {
     }
   }
 
+  function close() {
+    if (!hasInjectedRhymeAstrologyQueryEngine) {
+      rhymeAstrologyQueryEngine?.close?.();
+    }
+  }
+
   return {
     analyzePanels,
+    close,
   };
 }

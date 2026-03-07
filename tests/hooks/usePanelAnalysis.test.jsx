@@ -108,11 +108,60 @@ describe('usePanelAnalysis hook', () => {
             scoreData: {
               totalScore: 77,
               traces: [],
+              plsPhoneticFeatures: {
+                rhymeAffinityScore: 0.82,
+                constellationDensity: 0.61,
+                internalRecurrenceScore: 0.44,
+                phoneticNoveltyScore: 0.37,
+              },
             },
             vowelSummary: {
               families: [{ id: 'AY', count: 2, percent: 1 }],
               totalWords: 2,
               uniqueWords: 2,
+            },
+            rhymeAstrology: {
+              enabled: true,
+              features: {
+                rhymeAffinityScore: 0.82,
+                constellationDensity: 0.61,
+                internalRecurrenceScore: 0.44,
+                phoneticNoveltyScore: 0.37,
+              },
+              inspector: {
+                anchors: [
+                  {
+                    word: 'Flame',
+                    normalizedWord: 'FLAME',
+                    lineIndex: 0,
+                    wordIndex: 0,
+                    charStart: 0,
+                    charEnd: 5,
+                    sign: 'EY1M',
+                    topMatches: [{ token: 'name', overallScore: 0.92 }],
+                    constellations: [],
+                    diagnostics: { queryTimeMs: 2.3, cacheHit: false, candidateCount: 12 },
+                  },
+                ],
+                clusters: [
+                  {
+                    id: 'ey1m-a',
+                    label: 'Burning Choir',
+                    anchorWord: 'Flame',
+                    sign: 'EY1M',
+                    dominantVowelFamily: ['EY'],
+                    dominantStressPattern: '1',
+                    densityScore: 0.63,
+                    cohesionScore: 0.71,
+                    membersCount: 8,
+                  },
+                ],
+              },
+              diagnostics: {
+                anchorCount: 1,
+                cacheHitCount: 0,
+                averageQueryTimeMs: 2.3,
+              },
             },
           },
         };
@@ -155,6 +204,10 @@ describe('usePanelAnalysis hook', () => {
     expect(result.current.analysis?.syntaxSummary?.hhm?.logicOrder).toEqual(['SYNTAX', 'PREDICTOR', 'SPELLCHECK', 'JUDICIARY', 'PHONEME', 'HEURISTICS', 'METER']);
     expect(result.current.analysis?.syntaxSummary?.tokens?.[0]?.hhm?.stanzaBar).toBe(1);
     expect(result.current.analysis?.allConnections?.[0]?.syntax?.gate).toBe('allow_weak');
+    expect(result.current.scoreData?.plsPhoneticFeatures?.rhymeAffinityScore).toBe(0.82);
+    expect(result.current.rhymeAstrology?.enabled).toBe(true);
+    expect(result.current.rhymeAstrology?.inspector?.anchors?.[0]?.sign).toBe('EY1M');
+    expect(result.current.rhymeAstrology?.inspector?.clusters?.[0]?.label).toBe('Burning Choir');
   });
 
   it('falls back to client-side analysis when server fails', async () => {

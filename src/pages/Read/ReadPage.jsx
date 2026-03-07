@@ -25,6 +25,7 @@ import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
 import RhymeDiagramPanel from "../../components/RhymeDiagramPanel.jsx";
 import HeuristicScorePanel from "../../components/HeuristicScorePanel.jsx";
 import WordTooltip from "../../components/WordTooltip.jsx";
+import VowelFamilyPanel from "../../components/VowelFamilyPanel.jsx";
 
 import ScrollEditor from "./ScrollEditor.jsx";
 import ScrollList from "./ScrollList.jsx";
@@ -154,6 +155,8 @@ export default function ReadPage() {
     meterDetection,
     genreProfile,
     scoreData,
+    rhymeAstrology,
+    vowelSummary,
     isAnalyzing,
     analyzeDocument,
     activeConnections,
@@ -509,6 +512,25 @@ export default function ReadPage() {
         };
       });
 
+    const astrologyAnchors = Array.isArray(rhymeAstrology?.inspector?.anchors)
+      ? rhymeAstrology.inspector.anchors
+      : [];
+    const astrologyClusters = Array.isArray(rhymeAstrology?.inspector?.clusters)
+      ? rhymeAstrology.inspector.clusters
+      : [];
+    const anchorMatch = astrologyAnchors.find((anchor) => {
+      const matchesLine = Number(anchor?.lineIndex) === Number(activation?.lineIndex);
+      const matchesCharStart = Number(anchor?.charStart) === Number(activation?.charStart);
+      return matchesLine && matchesCharStart;
+    }) || astrologyAnchors.find((anchor) => {
+      const normalizedAnchor = String(anchor?.normalizedWord || "").toUpperCase();
+      return normalizedAnchor && normalizedAnchor === normalizedWord;
+    }) || null;
+    const anchorSign = String(anchorMatch?.sign || "").trim();
+    const anchorClusters = anchorSign
+      ? astrologyClusters.filter((cluster) => String(cluster?.sign || "").trim() === anchorSign).slice(0, 3)
+      : [];
+
     const syntaxSummary = deepAnalysis?.syntaxSummary;
     const syntaxIdentity = `${activation?.lineIndex}:${activation?.wordIndex}:${activation?.charStart}`;
     const syntaxToken = ENABLE_SYNTAX_RHYME_LAYER
@@ -532,6 +554,14 @@ export default function ReadPage() {
         links: tokenLinks,
         gateReasons: Array.from(new Set(tokenLinks.flatMap((link) => link.reasons))).slice(0, 6),
       },
+      rhymeAstrology: {
+        enabled: Boolean(rhymeAstrology?.enabled),
+        sign: anchorSign || null,
+        topMatches: Array.isArray(anchorMatch?.topMatches) ? anchorMatch.topMatches.slice(0, 5) : [],
+        clusters: anchorClusters,
+        diagnostics: anchorMatch?.diagnostics || null,
+        features: rhymeAstrology?.features || null,
+      },
       syntax: syntaxToken
         ? {
           role: syntaxToken.role,
@@ -542,7 +572,7 @@ export default function ReadPage() {
         }
         : null,
     };
-  }, [analyzedWords, analyzedWordsByCharStart, deepAnalysis, selectedSchool]);
+  }, [analyzedWords, analyzedWordsByCharStart, deepAnalysis, rhymeAstrology, selectedSchool]);
 
   const handleCloseTooltip = useCallback((options = {}) => {
     const shouldRestoreFocus = options?.restoreFocus !== false;
@@ -927,6 +957,17 @@ export default function ReadPage() {
                       />
                     </div>
                   )}
+                  {isTruesight && (
+                    <div className="sidebar-sub-panel">
+                      <VowelFamilyPanel
+                        visible={true}
+                        families={vowelSummary?.families ?? []}
+                        totalWords={vowelSummary?.totalWords ?? 0}
+                        uniqueWords={vowelSummary?.uniqueWords ?? 0}
+                        isEmbedded={true}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -958,6 +999,7 @@ export default function ReadPage() {
                     checkSpelling={checkSpelling}
                     getSpellingSuggestions={getSpellingSuggestions}
                     predictorReady={predictorReady}
+                    plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
                     onContentChange={(content) => {
                       isTypingRef.current = true;
                       clearTimeout(typingTimeoutRef.current);
@@ -1018,6 +1060,8 @@ export default function ReadPage() {
           defaultHeight={300}
           minWidth={80}
           minHeight={100}
+          maxWidth={280}
+          maxHeight={600}
           zIndex={200}
           className="minimap-floating-panel"
         >
@@ -1046,6 +1090,8 @@ export default function ReadPage() {
           defaultHeight={540}
           minWidth={280}
           minHeight={200}
+          maxWidth={580}
+          maxHeight={860}
         >
           <AnalysisPanel
             scheme={schemeDetection}
@@ -1056,6 +1102,7 @@ export default function ReadPage() {
             genreProfile={genreProfile}
             hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
             scoreData={scoreData}
+            rhymeAstrology={rhymeAstrology}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}
             infoBeamEnabled={infoBeamEnabled}
@@ -1077,6 +1124,8 @@ export default function ReadPage() {
           defaultHeight={480}
           minWidth={220}
           minHeight={160}
+          maxWidth={500}
+          maxHeight={700}
           zIndex={150}
           className="infobeam-floating-panel"
         >
@@ -1096,6 +1145,10 @@ export default function ReadPage() {
           onClose={() => setShowScorePanel(false)}
           defaultX={window.innerWidth - 340}
           defaultY={80}
+          minWidth={260}
+          minHeight={180}
+          maxWidth={500}
+          maxHeight={700}
         >
           <HeuristicScorePanel
             scoreData={scoreData}
@@ -1133,6 +1186,10 @@ export default function ReadPage() {
           onClose={() => setIsPredictive(false)}
           defaultX={window.innerWidth - 300}
           defaultY={window.innerHeight - 300}
+          minWidth={220}
+          minHeight={120}
+          maxWidth={400}
+          maxHeight={500}
           className="spellcheck-panel"
         >
           <div className="misspellings-list">

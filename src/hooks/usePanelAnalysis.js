@@ -17,6 +17,23 @@ const EMPTY_VOWEL_SUMMARY = Object.freeze({
   uniqueWords: 0,
 });
 
+const EMPTY_RHYME_ASTROLOGY_INSPECTOR = Object.freeze({
+  anchors: [],
+  clusters: [],
+});
+
+function toFiniteNumber(value, fallback = 0) {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function toUnitNumber(value) {
+  const numeric = toFiniteNumber(value, 0);
+  if (numeric <= 0) return 0;
+  if (numeric >= 1) return 1;
+  return numeric;
+}
+
 function getPanelAnalysisEndpoint() {
   return API_BASE_URL ? `${API_BASE_URL}/api/analysis/panels` : "/api/analysis/panels";
 }
@@ -164,6 +181,88 @@ function normalizeHhmSummary(value) {
   };
 }
 
+function normalizePlsPhoneticFeatures(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    rhymeAffinityScore: toUnitNumber(value.rhymeAffinityScore),
+    constellationDensity: toUnitNumber(value.constellationDensity),
+    internalRecurrenceScore: toUnitNumber(value.internalRecurrenceScore),
+    phoneticNoveltyScore: toUnitNumber(value.phoneticNoveltyScore),
+  };
+}
+
+function normalizeRhymeAstrology(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const rawInspector = value.inspector && typeof value.inspector === "object"
+    ? value.inspector
+    : EMPTY_RHYME_ASTROLOGY_INSPECTOR;
+  const anchors = Array.isArray(rawInspector.anchors)
+    ? rawInspector.anchors
+      .map((anchor) => {
+        if (!anchor || typeof anchor !== "object") return null;
+        return {
+          word: String(anchor.word || ""),
+          normalizedWord: String(anchor.normalizedWord || "").toUpperCase(),
+          lineIndex: Number.isInteger(Number(anchor.lineIndex)) ? Number(anchor.lineIndex) : -1,
+          wordIndex: Number.isInteger(Number(anchor.wordIndex)) ? Number(anchor.wordIndex) : -1,
+          charStart: Number.isInteger(Number(anchor.charStart)) ? Number(anchor.charStart) : -1,
+          charEnd: Number.isInteger(Number(anchor.charEnd)) ? Number(anchor.charEnd) : -1,
+          sign: String(anchor.sign || ""),
+          dominantVowelFamily: String(anchor.dominantVowelFamily || ""),
+          topMatches: Array.isArray(anchor.topMatches) ? anchor.topMatches : [],
+          constellations: Array.isArray(anchor.constellations) ? anchor.constellations : [],
+          diagnostics: {
+            queryTimeMs: toFiniteNumber(anchor?.diagnostics?.queryTimeMs, 0),
+            cacheHit: Boolean(anchor?.diagnostics?.cacheHit),
+            candidateCount: toFiniteNumber(anchor?.diagnostics?.candidateCount, 0),
+          },
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  const clusters = Array.isArray(rawInspector.clusters)
+    ? rawInspector.clusters
+      .map((cluster) => {
+        if (!cluster || typeof cluster !== "object") return null;
+        return {
+          id: String(cluster.id || ""),
+          label: String(cluster.label || ""),
+          anchorWord: String(cluster.anchorWord || ""),
+          sign: String(cluster.sign || ""),
+          dominantVowelFamily: Array.isArray(cluster.dominantVowelFamily)
+            ? cluster.dominantVowelFamily.map((entry) => String(entry || ""))
+            : [],
+          dominantStressPattern: String(cluster.dominantStressPattern || ""),
+          densityScore: toUnitNumber(cluster.densityScore),
+          cohesionScore: toUnitNumber(cluster.cohesionScore),
+          membersCount: toFiniteNumber(cluster.membersCount, 0),
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  return {
+    enabled: Boolean(value.enabled),
+    features: normalizePlsPhoneticFeatures(value.features),
+    inspector: {
+      anchors,
+      clusters,
+    },
+    diagnostics: {
+      anchorCount: toFiniteNumber(value?.diagnostics?.anchorCount, 0),
+      cacheHitCount: toFiniteNumber(value?.diagnostics?.cacheHitCount, 0),
+      averageQueryTimeMs: toFiniteNumber(value?.diagnostics?.averageQueryTimeMs, 0),
+    },
+  };
+}
+
 function normalizeSyntaxSummary(value) {
   if (!value || typeof value !== "object") {
     return null;
@@ -231,6 +330,7 @@ function normalizePanelPayload(rawPayload) {
       emotion: "Neutral",
       scoreData: null,
       vowelSummary: EMPTY_VOWEL_SUMMARY,
+      rhymeAstrology: null,
       source: rawPayload?.source ?? null,
     };
   }
@@ -261,8 +361,14 @@ function normalizePanelPayload(rawPayload) {
     meter: payload.meter || null,
     literaryDevices: Array.isArray(payload.literaryDevices) ? payload.literaryDevices : [],
     emotion: typeof payload.emotion === "string" ? payload.emotion : "Neutral",
-    scoreData: payload.scoreData || null,
+    scoreData: payload.scoreData
+      ? {
+        ...payload.scoreData,
+        plsPhoneticFeatures: normalizePlsPhoneticFeatures(payload.scoreData.plsPhoneticFeatures),
+      }
+      : null,
     vowelSummary: normalizeVowelSummary(payload.vowelSummary),
+    rhymeAstrology: normalizeRhymeAstrology(payload.rhymeAstrology),
     genreProfile: payload.genreProfile || null,
     source: rawPayload?.source ?? payload.source ?? null,
   };
@@ -341,6 +447,7 @@ async function runClientSideAnalysis(text) {
       scoreData: null,
       genreProfile: null,
       vowelSummary,
+      rhymeAstrology: null,
     },
     source: "client",
   };
@@ -352,6 +459,7 @@ export function usePanelAnalysis() {
   const [meterDetection, setMeterDetection] = useState(null);
   const [scoreData, setScoreData] = useState(null);
   const [vowelSummary, setVowelSummary] = useState(EMPTY_VOWEL_SUMMARY);
+  const [rhymeAstrology, setRhymeAstrology] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeConnections, setActiveConnections] = useState([]);
   const [highlightedGroup, setHighlightedGroup] = useState(null);
@@ -374,6 +482,7 @@ export function usePanelAnalysis() {
     setMeterDetection(null);
     setScoreData(null);
     setVowelSummary(EMPTY_VOWEL_SUMMARY);
+    setRhymeAstrology(null);
     setActiveConnections([]);
     setHighlightedGroup(null);
     setLiteraryDevices([]);
@@ -399,6 +508,7 @@ export function usePanelAnalysis() {
     setMeterDetection(normalized.meter);
     setScoreData(normalized.scoreData);
     setVowelSummary(normalized.vowelSummary);
+    setRhymeAstrology(normalized.rhymeAstrology);
     setActiveConnections(allConnections);
     setHighlightedGroup(null);
     setLiteraryDevices(normalized.literaryDevices);
@@ -578,6 +688,7 @@ export function usePanelAnalysis() {
     literaryDevices,
     emotion,
     scoreData,
+    rhymeAstrology,
     genreProfile,
     vowelSummary,
     isAnalyzing,

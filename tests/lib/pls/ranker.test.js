@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { rankCandidates, DEFAULT_WEIGHTS } from '../../../src/lib/pls/ranker.js';
+import {
+  rankCandidates,
+  DEFAULT_WEIGHTS,
+  deriveFeatureAdjustedWeights,
+} from '../../../src/lib/pls/ranker.js';
 
 describe('Ranker', () => {
   it('ranks by weighted final score', () => {
@@ -125,5 +129,48 @@ describe('Ranker', () => {
     expect(results[0].token).toBe('ember');
     expect(results[0].badges).toContain('PREDICTABILITY');
     expect(results[0].scores.predictability).toBe(1);
+  });
+
+  it('derives deterministic weight adjustments from PLS phonetic features', () => {
+    const adjusted = deriveFeatureAdjustedWeights(DEFAULT_WEIGHTS, {
+      plsPhoneticFeatures: {
+        rhymeAffinityScore: 0.9,
+        constellationDensity: 0.85,
+        internalRecurrenceScore: 0.8,
+        phoneticNoveltyScore: 0.2,
+      },
+    });
+
+    expect(adjusted.rhyme).toBeGreaterThan(DEFAULT_WEIGHTS.rhyme);
+    expect(adjusted.predictability).toBeGreaterThan(DEFAULT_WEIGHTS.predictability);
+    expect(adjusted.synonym).toBeLessThan(DEFAULT_WEIGHTS.synonym);
+  });
+
+  it('applies phonetic feature context to ranking outcomes', () => {
+    const generators = {
+      rhyme: [{ token: 'ember', score: 0.8, badge: null }],
+      synonym: [{ token: 'cinder', score: 0.8, badge: null }],
+      prefix: [],
+    };
+    const scorers = {
+      meter: [],
+      color: [],
+      validity: [],
+      democracy: [],
+      predictability: [],
+    };
+
+    const baseResults = rankCandidates(generators, scorers, DEFAULT_WEIGHTS, {});
+    const noveltyResults = rankCandidates(generators, scorers, DEFAULT_WEIGHTS, {
+      plsPhoneticFeatures: {
+        rhymeAffinityScore: 0,
+        constellationDensity: 0,
+        internalRecurrenceScore: 0.4,
+        phoneticNoveltyScore: 1,
+      },
+    });
+
+    expect(baseResults[0].token).toBe('ember');
+    expect(noveltyResults[0].token).toBe('cinder');
   });
 });

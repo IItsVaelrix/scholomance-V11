@@ -84,6 +84,8 @@ dist-ssr
 dict_data/*
 !dict_data/.gitkeep
 !dict_data/README.md
+scholomance_corpus.sqlite-shm
+scholomance_corpus.sqlite-wal
 scholomance_user.sqlite
 scholomance_user.sqlite-shm
 scholomance_user.sqlite-wal

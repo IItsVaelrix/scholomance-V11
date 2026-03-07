@@ -39,6 +39,7 @@ import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAut
 import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
 import { createCorpusAdapter } from './adapters/corpus.sqlite.adapter.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
+import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -127,6 +128,7 @@ const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_PATH, 'index.html');
 const PUBLIC_PATH = path.join(PROJECT_ROOT, 'public');
 const TRUST_PROXY = parseTrustProxyEnv();
 const ENABLE_COLLAB_API = parseBooleanEnv('ENABLE_COLLAB_API', !IS_PRODUCTION);
+const ENABLE_RHYME_ASTROLOGY = parseBooleanEnv('ENABLE_RHYME_ASTROLOGY', false);
 const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
     ? path.resolve(process.env.AUDIO_STORAGE_PATH) 
     : path.join(PUBLIC_PATH, 'audio');
@@ -149,6 +151,9 @@ export const fastify = Fastify({
   trustProxy: TRUST_PROXY
 });
 fastify.decorate('opsMetrics', createOpsMetrics());
+fastify.decorate('featureFlags', Object.freeze({
+  rhymeAstrology: ENABLE_RHYME_ASTROLOGY,
+}));
 const lexiconAdapter = createLexiconAdapter(SCHOLOMANCE_DICT_PATH, { log: fastify.log });
 const corpusAdapter = createCorpusAdapter(SCHOLOMANCE_CORPUS_PATH, { log: fastify.log });
 
@@ -169,6 +174,25 @@ const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
     existsSync(FRONTEND_INDEX_PATH);
+const RHYME_ASTROLOGY_OUTPUT_DIR = typeof process.env.RHYME_ASTROLOGY_OUTPUT_DIR === 'string' &&
+    process.env.RHYME_ASTROLOGY_OUTPUT_DIR.trim().length > 0
+    ? path.resolve(process.env.RHYME_ASTROLOGY_OUTPUT_DIR)
+    : path.join(PROJECT_ROOT, 'dict_data', 'rhyme-astrology');
+const RHYME_ASTROLOGY_LEXICON_DB_PATH = typeof process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH === 'string' &&
+    process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH.trim().length > 0
+    ? path.resolve(process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH)
+    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_lexicon.sqlite');
+const RHYME_ASTROLOGY_INDEX_DB_PATH = typeof process.env.RHYME_ASTROLOGY_INDEX_DB_PATH === 'string' &&
+    process.env.RHYME_ASTROLOGY_INDEX_DB_PATH.trim().length > 0
+    ? path.resolve(process.env.RHYME_ASTROLOGY_INDEX_DB_PATH)
+    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_index.sqlite');
+const RHYME_ASTROLOGY_EDGES_DB_PATH = typeof process.env.RHYME_ASTROLOGY_EDGES_DB_PATH === 'string' &&
+    process.env.RHYME_ASTROLOGY_EDGES_DB_PATH.trim().length > 0
+    ? path.resolve(process.env.RHYME_ASTROLOGY_EDGES_DB_PATH)
+    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_edges.sqlite');
+const RHYME_ASTROLOGY_CACHE_SIZE = parsePositiveIntEnv('RHYME_ASTROLOGY_CACHE_SIZE', 500);
+const RHYME_ASTROLOGY_BUCKET_QUERY_CAP = parsePositiveIntEnv('RHYME_ASTROLOGY_BUCKET_QUERY_CAP', 200);
+const RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS = parsePositiveIntEnv('RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS', 12);
 
 const progressionBodySchema = z.object({
     xp: z.number().int().min(0),
@@ -437,6 +461,7 @@ fastify.get('/metrics', async () => {
       ready: readiness.ready,
       status: readiness.status,
     },
+    featureFlags: fastify.featureFlags,
     counters: fastify.opsMetrics.snapshot(),
   };
 });
@@ -670,9 +695,24 @@ fastify.addHook('onSend', async (request, _reply, payload) => {
 });
 
 fastify.register(wordLookupRoutes);
-fastify.register(panelAnalysisRoutes);
+fastify.register(panelAnalysisRoutes, {
+    enableRhymeAstrology: fastify.featureFlags?.rhymeAstrology,
+});
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
 fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
+if (ENABLE_RHYME_ASTROLOGY) {
+    fastify.register(rhymeAstrologyRoutes, {
+        lexiconDbPath: RHYME_ASTROLOGY_LEXICON_DB_PATH,
+        indexDbPath: RHYME_ASTROLOGY_INDEX_DB_PATH,
+        edgesDbPath: RHYME_ASTROLOGY_EDGES_DB_PATH,
+        cacheSize: RHYME_ASTROLOGY_CACHE_SIZE,
+        bucketCandidateCap: RHYME_ASTROLOGY_BUCKET_QUERY_CAP,
+        maxClusters: RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS,
+        phonemeEngine: PhonemeEngine,
+    });
+} else {
+    fastify.log.info('[RhymeAstrology] API disabled. Set ENABLE_RHYME_ASTROLOGY=true to enable.');
+}
 
 if (ENABLE_COLLAB_API) {
     if (IS_PRODUCTION) {

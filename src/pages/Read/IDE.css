@@ -1211,6 +1211,15 @@
   cursor: pointer;
 }
 
+.ide-layout-wrapper .grimoire-word--grey {
+  color: #6b7080;
+}
+
+.ide-layout-wrapper .grimoire-word--grey.grimoire-word--interactive:hover {
+  color: #9aa0b0;
+  background: rgba(30, 32, 48, 0.6);
+}
+
 .ide-layout-wrapper .grimoire-word:hover {
   background: rgba(255, 255, 255, 0.1);
 }

@@ -86,6 +86,7 @@ export default function AnalysisPanel({
   genreProfile = null,
   hhmSummary = null,
   scoreData = null,
+  rhymeAstrology = null,
   onGroupHover = null,
   onGroupLeave = null,
   infoBeamEnabled = false,
@@ -96,7 +97,14 @@ export default function AnalysisPanel({
   const [groupsExpanded, setGroupsExpanded] = useState(false);
   const groupEntries = scheme?.groups ? Array.from(scheme.groups.entries()) : [];
   const patternLetters = scheme?.pattern ? [...scheme.pattern] : [];
-  const hasContent = scheme || meter || statistics || hhmSummary?.enabled || literaryDevices.length > 0;
+  const hasRhymeAstrology = Boolean(rhymeAstrology?.enabled);
+  const rhymeAstrologyAnchors = Array.isArray(rhymeAstrology?.inspector?.anchors)
+    ? rhymeAstrology.inspector.anchors
+    : [];
+  const rhymeAstrologyClusters = Array.isArray(rhymeAstrology?.inspector?.clusters)
+    ? rhymeAstrology.inspector.clusters
+    : [];
+  const hasContent = scheme || meter || statistics || hhmSummary?.enabled || literaryDevices.length > 0 || hasRhymeAstrology;
 
   return (
     <div className="analyze-panel">
@@ -214,6 +222,117 @@ export default function AnalysisPanel({
                 <span className="analyze-stat-label">{label}</span>
               </div>
             ))}
+          </div>
+        </section>
+      )}
+
+      {/* Rhyme Astrology */}
+      {hasRhymeAstrology && (
+        <section className="analyze-section">
+          <h4 className="analyze-section-title">
+            <span className="analyze-glyph">&#x2736;</span> Rhyme Astrology
+          </h4>
+          {rhymeAstrology?.features && (
+            <div className="analyze-astro-features-bars">
+              {[
+                { label: "Affinity", key: "rhymeAffinityScore", color: "#67e8f9" },
+                { label: "Density", key: "constellationDensity", color: "#c084fc" },
+                { label: "Recurrence", key: "internalRecurrenceScore", color: "#f0d060" },
+                { label: "Novelty", key: "phoneticNoveltyScore", color: "#4ade80" },
+              ].map(({ label, key, color }) => {
+                const pct = Math.round((Number(rhymeAstrology.features[key]) || 0) * 100);
+                return (
+                  <div key={label} className="analyze-astro-bar-row">
+                    <div className="analyze-astro-bar-labels">
+                      <span className="analyze-astro-bar-label">{label}</span>
+                      <span className="analyze-astro-bar-value" style={{ color }}>{pct}%</span>
+                    </div>
+                    <div className="analyze-astro-bar-track">
+                      <motion.div
+                        className="analyze-astro-bar-fill"
+                        style={{ "--astro-bar-color": color }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.55, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {rhymeAstrologyClusters.length > 0 && (
+            <div className="analyze-astro-clusters">
+              {rhymeAstrologyClusters.map((cluster) => {
+                const cohesion = Number(cluster.cohesionScore) || 0;
+                const density = Number(cluster.densityScore) || 0;
+                const vowelFamilies = Array.isArray(cluster.dominantVowelFamily)
+                  ? cluster.dominantVowelFamily.slice(0, 3)
+                  : [];
+                return (
+                  <div key={cluster.id || cluster.label} className="analyze-astro-cluster">
+                    <div className="analyze-astro-cluster-header">
+                      <span className="analyze-astro-cluster-label">{cluster.label || cluster.id}</span>
+                      <div className="analyze-astro-cluster-scores">
+                        <span className="analyze-astro-cluster-score" title="Cohesion">
+                          &#x25C9; {cohesion.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="analyze-astro-cluster-meta">
+                      {cluster.anchorWord && <span className="analyze-astro-cluster-anchor">{cluster.anchorWord}</span>}
+                      {cluster.sign && (
+                        <span className="analyze-astro-cluster-sign">{cluster.sign}</span>
+                      )}
+                      <span className="analyze-astro-cluster-members">
+                        {Number(cluster.membersCount) || 0} stars
+                      </span>
+                    </div>
+                    {vowelFamilies.length > 0 && (
+                      <div className="analyze-astro-cluster-families">
+                        {vowelFamilies.map((f) => (
+                          <span key={f} className="analyze-astro-family-tag">{f}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="analyze-astro-cluster-bar-track">
+                      <motion.div
+                        className="analyze-astro-cluster-bar-fill"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.round(density * 100)}%` }}
+                        transition={{ duration: 0.5, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {rhymeAstrologyAnchors.length > 0 && (
+            <div className="analyze-astro-anchor-strip">
+              {rhymeAstrologyAnchors.slice(0, 8).map((anchor) => (
+                <span
+                  key={`${anchor.lineIndex}:${anchor.charStart}:${anchor.word}`}
+                  className="analyze-astro-anchor"
+                  title={anchor.sign ? `Sign: ${anchor.sign}` : undefined}
+                >
+                  {anchor.word}
+                  {anchor.sign && (
+                    <span className="analyze-astro-anchor-sign">{anchor.sign.split("-")[0]}</span>
+                  )}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="analyze-astro-diagnostics">
+            <span>{Number(rhymeAstrology?.diagnostics?.anchorCount) || 0} anchors</span>
+            <span className="analyze-dot">&#183;</span>
+            <span>{Number(rhymeAstrology?.diagnostics?.cacheHitCount) || 0} hits</span>
+            <span className="analyze-dot">&#183;</span>
+            <span>{(Number(rhymeAstrology?.diagnostics?.averageQueryTimeMs) || 0).toFixed(1)}ms</span>
           </div>
         </section>
       )}
@@ -398,6 +517,24 @@ AnalysisPanel.propTypes = {
   }),
   hhmSummary: PropTypes.object,
   scoreData: PropTypes.object,
+  rhymeAstrology: PropTypes.shape({
+    enabled: PropTypes.bool,
+    features: PropTypes.shape({
+      rhymeAffinityScore: PropTypes.number,
+      constellationDensity: PropTypes.number,
+      internalRecurrenceScore: PropTypes.number,
+      phoneticNoveltyScore: PropTypes.number,
+    }),
+    inspector: PropTypes.shape({
+      anchors: PropTypes.arrayOf(PropTypes.object),
+      clusters: PropTypes.arrayOf(PropTypes.object),
+    }),
+    diagnostics: PropTypes.shape({
+      anchorCount: PropTypes.number,
+      cacheHitCount: PropTypes.number,
+      averageQueryTimeMs: PropTypes.number,
+    }),
+  }),
   onGroupHover: PropTypes.func,
   onGroupLeave: PropTypes.func,
   infoBeamEnabled: PropTypes.bool,

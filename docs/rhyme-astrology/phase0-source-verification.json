@@ -1,0 +1,105 @@
+{
+  "generatedAt": "2026-03-06T12:25:43.453Z",
+  "targetLexiconSize": 50000,
+  "sources": {
+    "dictionary": "C:\\Users\\Vaelrix\\Desktop\\scholomance-v10-main-main\\scholomance_dict.sqlite",
+    "corpus": "C:\\Users\\Vaelrix\\Desktop\\scholomance-v10-main-main\\scholomance_corpus.sqlite",
+    "lexiconSource": "scholomance_dict.sqlite:entry + rhyme_index",
+    "frequencySource": "scholomance_corpus.sqlite:sentence text token frequency (fallback floor for uncovered words)"
+  },
+  "frequencyPolicy": {
+    "method": "corpus_frequency_then_fallback_floor",
+    "fallbackFloorCount": 1,
+    "fallbackSort": "shorter token first, then lexical"
+  },
+  "dictionary": {
+    "entryCount": 123611,
+    "rhymeIndexCount": 123611,
+    "pronunciationBackedWordCount": 123611
+  },
+  "corpus": {
+    "sentenceCount": 161489,
+    "tokenCount": 1877762,
+    "uniqueTokenCount": 54431
+  },
+  "candidatePool": {
+    "intersectionCount": 34356,
+    "selectedCount": 50000,
+    "selectedFromCorpusCount": 34356,
+    "selectedFromFallbackCount": 15644,
+    "coverageGap": 15644,
+    "targetReady": true
+  },
+  "frequencyPreview": [
+    {
+      "rank": 1,
+      "token": "the",
+      "count": 96102,
+      "source": "corpus",
+      "normalizedScore": 1
+    },
+    {
+      "rank": 2,
+      "token": "and",
+      "count": 55711,
+      "source": "corpus",
+      "normalizedScore": 0.952478
+    },
+    {
+      "rank": 3,
+      "token": "of",
+      "count": 47419,
+      "source": "corpus",
+      "normalizedScore": 0.938432
+    },
+    {
+      "rank": 4,
+      "token": "to",
+      "count": 45008,
+      "source": "corpus",
+      "normalizedScore": 0.933884
+    },
+    {
+      "rank": 5,
+      "token": "in",
+      "count": 28951,
+      "source": "corpus",
+      "normalizedScore": 0.895427
+    },
+    {
+      "rank": 6,
+      "token": "that",
+      "count": 23256,
+      "source": "corpus",
+      "normalizedScore": 0.876336
+    },
+    {
+      "rank": 7,
+      "token": "you",
+      "count": 22335,
+      "source": "corpus",
+      "normalizedScore": 0.872815
+    },
+    {
+      "rank": 8,
+      "token": "he",
+      "count": 19878,
+      "source": "corpus",
+      "normalizedScore": 0.862657
+    },
+    {
+      "rank": 9,
+      "token": "my",
+      "count": 19526,
+      "source": "corpus",
+      "normalizedScore": 0.8611
+    },
+    {
+      "rank": 10,
+      "token": "is",
+      "count": 18874,
+      "source": "corpus",
+      "normalizedScore": 0.85814
+    }
+  ]
+}

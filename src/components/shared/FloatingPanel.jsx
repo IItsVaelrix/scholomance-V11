@@ -16,6 +16,8 @@ export default function FloatingPanel({
   onClose,
   minWidth = 200,
   minHeight = 150,
+  maxWidth = Infinity,
+  maxHeight = Infinity,
   defaultWidth = 320,
   defaultHeight = 400,
   defaultX = 100,
@@ -156,6 +158,7 @@ export default function FloatingPanel({
         width={size.width}
         height={size.height}
         minConstraints={[minWidth, minHeight]}
+        maxConstraints={[maxWidth, maxHeight]}
         onResize={onResize}
         resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
       >
@@ -196,6 +199,8 @@ FloatingPanel.propTypes = {
   onClose: PropTypes.func,
   minWidth: PropTypes.number,
   minHeight: PropTypes.number,
+  maxWidth: PropTypes.number,
+  maxHeight: PropTypes.number,
   defaultWidth: PropTypes.number,
   defaultHeight: PropTypes.number,
   defaultX: PropTypes.number,

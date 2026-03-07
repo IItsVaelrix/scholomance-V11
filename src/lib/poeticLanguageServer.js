@@ -29,6 +29,7 @@ import { rankCandidates, DEFAULT_WEIGHTS } from './pls/ranker.js';
  * @property {string[]} currentLineWords - All completed words on current line
  * @property {number|null} targetSyllableCount - Expected syllable count for this line (optional)
  * @property {number[]} priorLineSyllableCounts - Syllable counts of prior lines (for meter inference)
+ * @property {{ rhymeAffinityScore?: number, constellationDensity?: number, internalRecurrenceScore?: number, phoneticNoveltyScore?: number } | null} [plsPhoneticFeatures]
  * @property {object} [syntaxContext] - Optional context for CODEx Judiciary { role, lineRole, stressRole, rhymePolicy, hhm? }
  */
 

@@ -250,6 +250,199 @@
   text-align: center;
 }
 
+/* Rhyme astrology */
+
+/* Feature metric bars */
+.analyze-astro-features-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.analyze-astro-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.analyze-astro-bar-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.analyze-astro-bar-label {
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.analyze-astro-bar-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.analyze-astro-bar-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.analyze-astro-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--astro-bar-color, #67e8f9);
+  opacity: 0.78;
+  min-width: 2px;
+}
+
+/* Cluster cards */
+.analyze-astro-clusters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.analyze-astro-cluster {
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: rgba(103, 232, 249, 0.04);
+  border: 1px solid rgba(103, 232, 249, 0.18);
+}
+
+.analyze-astro-cluster-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.analyze-astro-cluster-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.82);
+  letter-spacing: 0.01em;
+}
+
+.analyze-astro-cluster-scores {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.analyze-astro-cluster-score {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.63rem;
+  color: rgba(103, 232, 249, 0.9);
+}
+
+.analyze-astro-cluster-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+  flex-wrap: wrap;
+}
+
+.analyze-astro-cluster-anchor {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.analyze-astro-cluster-sign {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.6rem;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(201, 168, 64, 0.12);
+  border: 1px solid rgba(201, 168, 64, 0.22);
+  color: rgba(201, 168, 64, 0.85);
+  letter-spacing: 0.03em;
+}
+
+.analyze-astro-cluster-members {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.3);
+  margin-left: auto;
+}
+
+.analyze-astro-cluster-families {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.analyze-astro-family-tag {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.58rem;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(129, 140, 248, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  color: rgba(199, 210, 254, 0.8);
+  letter-spacing: 0.04em;
+}
+
+.analyze-astro-cluster-bar-track {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.analyze-astro-cluster-bar-fill {
+  height: 100%;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(103, 232, 249, 0.55) 0%, rgba(103, 232, 249, 0.25) 100%);
+  min-width: 2px;
+}
+
+/* Anchor strip */
+.analyze-astro-anchor-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.analyze-astro-anchor {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 0.64rem;
+  letter-spacing: 0.04em;
+  color: #c7d2fe;
+  background: rgba(129, 140, 248, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+}
+
+.analyze-astro-anchor-sign {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.55rem;
+  opacity: 0.55;
+  letter-spacing: 0;
+}
+
+/* Diagnostics */
+.analyze-astro-diagnostics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.28);
+  font-family: "JetBrains Mono", monospace;
+}
+
 /* ── Verse Structure (HHM) ── */
 
 .analyze-hhm-meta {

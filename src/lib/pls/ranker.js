@@ -22,6 +22,82 @@ const BADGE_THRESHOLDS = {
   predictability: 0.75,
 };
 
+function toUnitInterval(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  if (numeric <= 0) return 0;
+  if (numeric >= 1) return 1;
+  return numeric;
+}
+
+function sumWeightValues(weights) {
+  return Object.values(weights).reduce((sum, value) => sum + (Number(value) || 0), 0);
+}
+
+/**
+ * Dynamically tunes ranker weights using Phonetic feature signals from the
+ * panel-analysis pipeline. Adjustment is deterministic and scaled back into
+ * the original total weight mass so score magnitudes remain stable.
+ *
+ * @param {Record<string, number>} baseWeights
+ * @param {object} context
+ * @returns {Record<string, number>}
+ */
+export function deriveFeatureAdjustedWeights(baseWeights, context) {
+  const features = context?.plsPhoneticFeatures;
+  if (!features || typeof features !== 'object') {
+    return baseWeights;
+  }
+
+  const affinity = toUnitInterval(features.rhymeAffinityScore);
+  const density = toUnitInterval(features.constellationDensity);
+  const recurrence = toUnitInterval(features.internalRecurrenceScore);
+  const novelty = toUnitInterval(features.phoneticNoveltyScore);
+
+  const adjusted = {
+    ...baseWeights,
+    rhyme: Math.max(
+      0,
+      (Number(baseWeights.rhyme) || 0) + ((affinity - 0.5) * 0.18) + ((density - 0.5) * 0.07)
+    ),
+    meter: Math.max(
+      0,
+      (Number(baseWeights.meter) || 0) + ((recurrence - 0.5) * 0.06)
+    ),
+    prefix: Math.max(
+      0,
+      (Number(baseWeights.prefix) || 0) - ((affinity - 0.5) * 0.06)
+    ),
+    synonym: Math.max(
+      0,
+      (Number(baseWeights.synonym) || 0) + ((novelty - 0.5) * 0.14)
+    ),
+    validity: Math.max(
+      0,
+      (Number(baseWeights.validity) || 0) + ((density - 0.5) * 0.03)
+    ),
+    democracy: Math.max(
+      0,
+      (Number(baseWeights.democracy) || 0) + ((affinity - 0.5) * 0.05) + ((recurrence - 0.5) * 0.05)
+    ),
+    predictability: Math.max(
+      0,
+      (Number(baseWeights.predictability) || 0) + ((recurrence - 0.5) * 0.12)
+    ),
+  };
+
+  const targetTotal = sumWeightValues(baseWeights);
+  const adjustedTotal = sumWeightValues(adjusted);
+  if (adjustedTotal <= 0 || targetTotal <= 0) {
+    return baseWeights;
+  }
+
+  const scale = targetTotal / adjustedTotal;
+  return Object.fromEntries(
+    Object.entries(adjusted).map(([key, value]) => [key, (Number(value) || 0) * scale])
+  );
+}
+
 /**
  * Merge and rank candidates from generator and scorer providers.
  *
@@ -33,7 +109,8 @@ const BADGE_THRESHOLDS = {
  * @returns {ScoredCandidate[]}
  */
 export function rankCandidates(generatorResults, scorerResults, weights, context, limit = 10) {
-  const w = { ...DEFAULT_WEIGHTS, ...weights };
+  const baseWeights = { ...DEFAULT_WEIGHTS, ...weights };
+  const w = deriveFeatureAdjustedWeights(baseWeights, context);
 
   // Build unified score map: token → { rhyme, meter, color, prefix, synonym, validity, democracy, badges }
   const candidateMap = new Map();

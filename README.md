@@ -104,6 +104,13 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `VITE_API_BASE_URL` | No | browser origin fallback | Base API origin for non-browser/test contexts. |
 | `ENABLE_PANEL_ANALYSIS_CACHE` | No | `true` | Enables in-memory caching for `/api/analysis/panels`. |
 | `ENABLE_PANEL_ANALYSIS_REDIS_CACHE` | No | `true` | Enables Redis L2 caching for `/api/analysis/panels` when Redis is ready. |
+| `ENABLE_RHYME_ASTROLOGY` | No | `false` | Backend feature flag for the `/api/rhyme-astrology/*` subsystem rollout. |
+| `RHYME_ASTROLOGY_CACHE_SIZE` | No | `500` | Max in-memory query cache entries for `/api/rhyme-astrology/query`. |
+| `RHYME_ASTROLOGY_BUCKET_QUERY_CAP` | No | `200` | Max bucket candidates scored per request on bucket fallback path. |
+| `RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS` | No | `12` | Maximum constellation clusters returned per query. |
+| `RHYME_ASTROLOGY_LEXICON_DB_PATH` | No | `<RHYME_ASTROLOGY_OUTPUT_DIR>/rhyme_lexicon.sqlite` | Runtime override for lexicon artifact path. |
+| `RHYME_ASTROLOGY_INDEX_DB_PATH` | No | `<RHYME_ASTROLOGY_OUTPUT_DIR>/rhyme_index.sqlite` | Runtime override for index artifact path. |
+| `RHYME_ASTROLOGY_EDGES_DB_PATH` | No | `<RHYME_ASTROLOGY_OUTPUT_DIR>/rhyme_edges.sqlite` | Runtime override for hot-edge artifact path. |
 | `PANEL_ANALYSIS_CACHE_TTL_MS` | No | `300000` | Cache TTL in milliseconds for panel-analysis responses. |
 | `PANEL_ANALYSIS_CACHE_MAX_SIZE` | No | `1000` | Max in-memory panel-analysis cache entries before FIFO eviction. |
 | `SCHOLOMANCE_DICT_API_URL` | No | unset | Server-side Scholomance dictionary API base URL used by `/api/word-lookup*` routes. |
@@ -127,6 +134,7 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 | `npm run test:visual:full` | Run full Playwright project matrix. |
 | `npm run security:qa` | Security QA checks from `scripts/security/security-qa.js`. |
 | `npm run security:audit` | Dependency audit checks from `scripts/security/dependency-audit.js`. |
+| `npm run build:rhyme-astrology:index` | Build Phase 2 RhymeAstrology artifacts (`rhyme_lexicon.sqlite`, `rhyme_index.sqlite`, `rhyme_edges.sqlite`, manifest). |
 | `npm run db:setup` | Reset and seed local user DB for development. |
 | `npm run track:add:suno` | Helper script for adding Suno track metadata. |
 
@@ -164,6 +172,8 @@ The project reads env vars from `.env` (via `dotenv/config` in server scripts) a
 - `POST /api/lexicon/validate-batch`
 - Panel analysis:
 - `POST /api/analysis/panels`
+- RhymeAstrology (feature-flagged with `ENABLE_RHYME_ASTROLOGY=true`):
+- `GET /api/rhyme-astrology/query?text=&mode=word|line&limit=&minScore=`
 - Collaboration tooling (prefix `/collab`):
 - agents, tasks, locks, pipelines, activity, status (`ENABLE_COLLAB_API=true`, auth required when enabled).
 
