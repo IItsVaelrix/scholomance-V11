@@ -1,5 +1,5 @@
 /**
- * Ranker — Combines scores from multiple providers into a final ranked list.
+ * Ranker - Combines scores from multiple providers into a final ranked list.
  */
 
 const DEFAULT_WEIGHTS = {
@@ -22,6 +22,16 @@ const BADGE_THRESHOLDS = {
   predictability: 0.75,
 };
 
+const ARBITER_SECOND_PASS = {
+  ambiguityThreshold: 0.06,
+  maxDelta: 0.08,
+  badgeThreshold: 0.75,
+};
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
 function toUnitInterval(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -32,6 +42,71 @@ function toUnitInterval(value) {
 
 function sumWeightValues(weights) {
   return Object.values(weights).reduce((sum, value) => sum + (Number(value) || 0), 0);
+}
+
+function sortRankedCandidates(ranked) {
+  ranked.sort((a, b) => {
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.badges.length !== a.badges.length) return b.badges.length - a.badges.length;
+    return a.token.localeCompare(b.token);
+  });
+}
+
+function applyArbiterSecondPass(ranked, context) {
+  if (!Array.isArray(ranked) || ranked.length < 2) return ranked;
+
+  const topGap = ranked[0].score - ranked[1].score;
+  if (!Number.isFinite(topGap) || topGap > ARBITER_SECOND_PASS.ambiguityThreshold) {
+    return ranked;
+  }
+
+  const ambiguityFactor = clamp(1 - (topGap / ARBITER_SECOND_PASS.ambiguityThreshold), 0, 1);
+  let changed = false;
+
+  for (const candidate of ranked) {
+    const arbiter = candidate?.arbiter;
+    if (!arbiter || typeof arbiter !== 'object') continue;
+
+    const confidence = toUnitInterval(arbiter.confidence);
+    if (confidence <= 0) continue;
+
+    const predictability = toUnitInterval(candidate?.scores?.predictability);
+    const lexicalFit = toUnitInterval(arbiter?.signals?.lexicalFit);
+    const contextBias = context?.syntaxContext?.role
+      ? lexicalFit * 0.18
+      : lexicalFit * 0.06;
+    const blendedSignal = (predictability * 0.62) + (confidence * 0.38);
+
+    const delta = clamp(
+      ambiguityFactor * ((blendedSignal * ARBITER_SECOND_PASS.maxDelta) + (contextBias * 0.02)),
+      0,
+      ARBITER_SECOND_PASS.maxDelta
+    );
+
+    if (delta <= 0) continue;
+
+    candidate.score = clamp(candidate.score + delta, 0, 1);
+    candidate.arbiter = {
+      ...arbiter,
+      secondPass: {
+        applied: true,
+        ambiguityFactor,
+        delta,
+      },
+    };
+
+    if (confidence >= ARBITER_SECOND_PASS.badgeThreshold && !candidate.badges.includes('ARBITER')) {
+      candidate.badges.push('ARBITER');
+    }
+
+    changed = true;
+  }
+
+  if (changed) {
+    sortRankedCandidates(ranked);
+  }
+
+  return ranked;
 }
 
 /**
@@ -112,7 +187,7 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
   const baseWeights = { ...DEFAULT_WEIGHTS, ...weights };
   const w = deriveFeatureAdjustedWeights(baseWeights, context);
 
-  // Build unified score map: token → { rhyme, meter, color, prefix, synonym, validity, democracy, badges }
+  // Build unified score map: token -> per-provider scores plus optional arbiter metadata.
   const candidateMap = new Map();
 
   const ensureEntry = (token) => {
@@ -130,6 +205,7 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
           predictability: 0,
         },
         badges: [],
+        arbiter: null,
       });
     }
     return candidateMap.get(token);
@@ -140,6 +216,9 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
     for (const r of results) {
       const entry = ensureEntry(r.token);
       entry.scores[providerName] = r.score;
+      if (r.arbiter && typeof r.arbiter === 'object') {
+        entry.arbiter = r.arbiter;
+      }
       if (r.badge && !entry.badges.includes(r.badge)) entry.badges.push(r.badge);
       const threshold = BADGE_THRESHOLDS[providerName];
       if (!r.badge && threshold && r.score >= threshold) {
@@ -156,7 +235,9 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
       if (r.scores?.[providerName] !== undefined) {
         entry.scores[providerName] = r.scores[providerName];
       }
-      // Check badge thresholds
+      if (r.arbiter && typeof r.arbiter === 'object') {
+        entry.arbiter = r.arbiter;
+      }
       const threshold = BADGE_THRESHOLDS[providerName];
       if (threshold && entry.scores[providerName] >= threshold) {
         const badgeName = providerName.toUpperCase();
@@ -165,12 +246,12 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
     }
   }
 
-  // Compute final scores and build ghost lines
+  // Compute first-pass weighted scores and build ghost lines.
   const currentLineText = (context?.currentLineWords || []).join(' ');
   const ranked = [];
 
   for (const entry of candidateMap.values()) {
-    const finalScore =
+    const firstPassScore =
       w.rhyme * entry.scores.rhyme +
       w.meter * entry.scores.meter +
       w.color * entry.scores.color +
@@ -186,19 +267,19 @@ export function rankCandidates(generatorResults, scorerResults, weights, context
 
     ranked.push({
       token: entry.token,
-      score: finalScore,
+      score: firstPassScore,
       scores: { ...entry.scores },
       badges: entry.badges,
       ghostLine,
+      ...(entry.arbiter ? { arbiter: { ...entry.arbiter } } : {}),
     });
   }
 
-  // Sort: finalScore desc → badge count desc → alphabetical
-  ranked.sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (b.badges.length !== a.badges.length) return b.badges.length - a.badges.length;
-    return a.token.localeCompare(b.token);
-  });
+  // Sort first-pass results.
+  sortRankedCandidates(ranked);
+
+  // Second pass: if top results are close, let arbiter confidence resolve ambiguity.
+  applyArbiterSecondPass(ranked, context);
 
   return ranked.slice(0, limit);
 }

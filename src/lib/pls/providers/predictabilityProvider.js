@@ -85,6 +85,57 @@ function getLexicalFit(token, preferredRole) {
   return isFunctionWord ? 0.65 : 0.9;
 }
 
+function buildArbiterDecision({
+  hasPrefix,
+  hasPrevWord,
+  prefixEvidence,
+  sequentialEvidence,
+  lexicalFit,
+  baseEvidence,
+  score,
+  hhmAmplifier,
+}) {
+  const signals = [lexicalFit];
+  if (hasPrefix) signals.push(prefixEvidence);
+  if (hasPrevWord) signals.push(sequentialEvidence);
+
+  const strongest = signals.length ? Math.max(...signals) : 0;
+  const weakest = signals.length ? Math.min(...signals) : 0;
+  const spread = strongest - weakest;
+  const consistency = clamp(1 - spread, 0, 1);
+  const confidence = clamp((score * 0.68) + (consistency * 0.32), 0, 1);
+
+  let reason = 'lexical_fit_dominant';
+  let sourceSignal = lexicalFit;
+  if (hasPrefix && prefixEvidence >= sourceSignal) {
+    reason = 'prefix_evidence_dominant';
+    sourceSignal = prefixEvidence;
+  }
+  if (hasPrevWord && sequentialEvidence >= sourceSignal) {
+    reason = 'sequential_evidence_dominant';
+  }
+
+  if (hasPrefix && hasPrevWord) {
+    const agreement = clamp(1 - Math.abs(prefixEvidence - sequentialEvidence), 0, 1);
+    reason += agreement >= 0.5 ? '|prefix_sequential_alignment' : '|prefix_sequential_conflict';
+  }
+
+  return {
+    source: 'detect_first_predictability',
+    reason,
+    confidence,
+    signals: {
+      prefixEvidence,
+      sequentialEvidence,
+      lexicalFit,
+      baseEvidence,
+      score,
+      consistency,
+      hhmAmplifier,
+    },
+  };
+}
+
 /**
  * PredictabilityProvider - Scorer provider.
  * Builds an explicit predictability signal from trie sequence evidence and HHM stage metadata.
@@ -153,8 +204,23 @@ export function predictabilityProvider(context, engines, candidates) {
     }
 
     const score = clamp(baseEvidence * hhmAmplifier, 0, 1);
+    const arbiter = buildArbiterDecision({
+      hasPrefix,
+      hasPrevWord,
+      prefixEvidence,
+      sequentialEvidence,
+      lexicalFit,
+      baseEvidence,
+      score,
+      hhmAmplifier,
+    });
+
     return {
       ...candidate,
+      arbiter: {
+        ...(candidate?.arbiter && typeof candidate.arbiter === 'object' ? candidate.arbiter : {}),
+        ...arbiter,
+      },
       scores: {
         ...candidate.scores,
         predictability: score,
@@ -162,3 +228,4 @@ export function predictabilityProvider(context, engines, candidates) {
     };
   });
 }
+

@@ -44,6 +44,12 @@ describe('predictabilityProvider', () => {
     expect(scoreByToken.get('ember')).toBeGreaterThan(scoreByToken.get('ash'));
     expect(scoreByToken.get('ash')).toBeGreaterThan(scoreByToken.get('the'));
     expect(scoreByToken.get('the')).toBeGreaterThan(scoreByToken.get('void'));
+
+    const ember = results.find((candidate) => candidate.token === 'ember');
+    expect(ember?.arbiter?.source).toBe('detect_first_predictability');
+    expect(ember?.arbiter?.reason).toContain('sequential_evidence_dominant');
+    expect(ember?.arbiter?.confidence).toBeGreaterThan(0.5);
+    expect(ember?.arbiter?.signals?.sequentialEvidence).toBeGreaterThan(ember?.arbiter?.signals?.prefixEvidence || 0);
   });
 
   it('falls back to lexical-role scoring when trie evidence is missing', () => {
@@ -60,11 +66,16 @@ describe('predictabilityProvider', () => {
     ];
 
     const results = predictabilityProvider(context, {}, candidates);
-    const theScore = results.find((candidate) => candidate.token === 'the')?.scores.predictability;
-    const thunderScore = results.find((candidate) => candidate.token === 'thunder')?.scores.predictability;
+    const the = results.find((candidate) => candidate.token === 'the');
+    const thunder = results.find((candidate) => candidate.token === 'thunder');
+    const theScore = the?.scores.predictability;
+    const thunderScore = thunder?.scores.predictability;
 
     expect(theScore).toBeGreaterThan(thunderScore);
     expect(typeof theScore).toBe('number');
     expect(typeof thunderScore).toBe('number');
+    expect(the?.arbiter?.source).toBe('detect_first_predictability');
+    expect(the?.arbiter?.reason).toContain('lexical_fit_dominant');
+    expect(thunder?.arbiter?.source).toBe('detect_first_predictability');
   });
 });

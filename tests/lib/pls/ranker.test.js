@@ -32,7 +32,6 @@ describe('Ranker', () => {
 
     const results = rankCandidates(generators, scorers, DEFAULT_WEIGHTS, { currentLineWords: ['the'] });
 
-    // "light" should rank highest: rhyme=1.0, prefix=0.7, meter=0.9, color=1.0
     expect(results[0].token).toBe('light');
     expect(results[0].score).toBeGreaterThan(0.45);
     expect(results[0].badges).toContain('RHYME');
@@ -76,7 +75,6 @@ describe('Ranker', () => {
     const scorers = { meter: [], color: [] };
 
     const results = rankCandidates(generators, scorers, DEFAULT_WEIGHTS, {});
-    // beta has RHYME badge, alpha doesn't — beta should come first
     expect(results[0].token).toBe('beta');
   });
 
@@ -129,6 +127,62 @@ describe('Ranker', () => {
     expect(results[0].token).toBe('ember');
     expect(results[0].badges).toContain('PREDICTABILITY');
     expect(results[0].scores.predictability).toBe(1);
+  });
+
+  it('applies arbiter second-pass when top scores are ambiguous', () => {
+    const generators = {
+      rhyme: [],
+      prefix: [
+        { token: 'ash', score: 0.6, badge: null },
+        { token: 'ember', score: 0.6, badge: null },
+      ],
+    };
+    const scorers = {
+      meter: [],
+      color: [],
+      predictability: [
+        {
+          token: 'ash',
+          scores: { predictability: 0.6 },
+          arbiter: {
+            source: 'detect_first_predictability',
+            confidence: 0.2,
+            reason: 'lexical_fit_dominant',
+            signals: { lexicalFit: 0.25 },
+          },
+        },
+        {
+          token: 'ember',
+          scores: { predictability: 0.6 },
+          arbiter: {
+            source: 'detect_first_predictability',
+            confidence: 0.95,
+            reason: 'sequential_evidence_dominant',
+            signals: { lexicalFit: 0.95 },
+          },
+        },
+      ],
+    };
+
+    const weights = {
+      rhyme: 0,
+      meter: 0,
+      color: 0,
+      prefix: 0.5,
+      synonym: 0,
+      validity: 0,
+      democracy: 0,
+      predictability: 0.5,
+    };
+
+    const results = rankCandidates(generators, scorers, weights, {
+      syntaxContext: { role: 'content' },
+    });
+
+    expect(results[0].token).toBe('ember');
+    expect(results[0].badges).toContain('ARBITER');
+    expect(results[0].arbiter?.secondPass?.applied).toBe(true);
+    expect(results[0].score).toBeGreaterThan(results[1].score);
   });
 
   it('derives deterministic weight adjustments from PLS phonetic features', () => {
