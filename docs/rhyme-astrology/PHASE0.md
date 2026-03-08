@@ -32,6 +32,19 @@ Phase 0 establishes fixed contracts and rollout guardrails before any runtime be
   - overlap pool size and any coverage gap against target lexicon size (`50000` by default)
   - deterministic fallback fill policy for uncovered words (`fallback_floor`)
 
+## Audit Status (2026-03-08)
+
+- [x] Contract module and defaults are present and enforced.
+- [x] Feature flag wiring is present (`ENABLE_RHYME_ASTROLOGY`).
+- [x] Source verification script run completed successfully.
+- [x] Verification artifact refreshed at `docs/rhyme-astrology/phase0-source-verification.json`.
+
+Observed from latest run:
+- pronunciation-backed dictionary words: `123611`
+- corpus overlap candidates: `34356`
+- selected lexicon size: `50000`
+- coverage gap filled by fallback floor: `15644`
+
 ## Runbook
 
 ```bash

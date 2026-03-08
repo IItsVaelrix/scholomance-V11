@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-03-06T12:25:43.453Z",
+  "generatedAt": "2026-03-08T17:38:10.930Z",
   "targetLexiconSize": 50000,
   "sources": {
     "dictionary": "C:\\Users\\Vaelrix\\Desktop\\scholomance-v10-main-main\\scholomance_dict.sqlite",
-    "corpus": "C:\\Users\\Vaelrix\\Desktop\\scholomance-v10-main-main\\scholomance_corpus.sqlite",
+    "corpus": "C:\\Users\\Vaelrix\\Desktop\\scholomance-V11\\scholomance_corpus.sqlite",
     "lexiconSource": "scholomance_dict.sqlite:entry + rhyme_index",
     "frequencySource": "scholomance_corpus.sqlite:sentence text token frequency (fallback floor for uncovered words)"
   },
