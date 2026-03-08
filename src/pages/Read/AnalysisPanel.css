@@ -596,6 +596,121 @@
   line-height: 1.4;
 }
 
+.analyze-craft-ledger {
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid color-mix(in srgb, var(--text-color, #e2d9c8) 14%, transparent);
+}
+
+.analyze-craft-subtitle {
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 58%, transparent);
+  margin-bottom: 8px;
+}
+
+.analyze-heuristic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.analyze-heuristic-item {
+  padding: 9px 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text-color, #e2d9c8) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text-color, #e2d9c8) 10%, transparent);
+}
+
+.analyze-heuristic-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.analyze-heuristic-name {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-color, #e2d9c8);
+}
+
+.analyze-heuristic-contribution {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.68rem;
+  color: var(--accent-gold, #c9a840);
+}
+
+.analyze-heuristic-track {
+  height: 3px;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 5px;
+  background: color-mix(in srgb, var(--text-color, #e2d9c8) 12%, transparent);
+}
+
+.analyze-heuristic-fill {
+  height: 100%;
+  min-width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #67e8f9 0%, #c9a840 100%);
+  opacity: 0.82;
+}
+
+.analyze-heuristic-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.57rem;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 56%, transparent);
+  margin-bottom: 6px;
+}
+
+.analyze-heuristic-explanation {
+  margin: 0;
+  font-size: 0.67rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 74%, transparent);
+}
+
+.analyze-heuristic-note {
+  margin: 6px 0 0;
+  font-size: 0.62rem;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 62%, transparent);
+}
+
+.analyze-codex-commentary {
+  margin-top: 11px;
+  padding: 10px 11px;
+  border-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent-gold, #c9a840) 12%, transparent) 0%,
+    color-mix(in srgb, var(--text-color, #e2d9c8) 6%, transparent) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--accent-gold, #c9a840) 28%, transparent);
+}
+
+.analyze-codex-kicker {
+  display: block;
+  font-size: 0.56rem;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: color-mix(in srgb, var(--accent-gold, #c9a840) 78%, transparent);
+  margin-bottom: 5px;
+}
+
+.analyze-codex-commentary p {
+  margin: 0;
+  font-size: 0.68rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 78%, transparent);
+}
+
 /* ── Rhyme groups ── */
 
 .analyze-section-toggle-row {
@@ -725,3 +840,5 @@
   margin: 0;
   line-height: 1.6;
 }
+
+

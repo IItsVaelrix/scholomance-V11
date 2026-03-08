@@ -23,6 +23,111 @@ const HIDDEN_STATE_COLORS = {
   flow: "#475569",
 };
 
+const HEURISTIC_LABELS = {
+  phoneme_density: "Phoneme Density",
+  alliteration_density: "Alliteration",
+  rhyme_quality: "Rhyme Quality",
+  scroll_power: "Scroll Power",
+  meter_regularity: "Meter",
+  literary_device_richness: "Literary Devices",
+  vocabulary_richness: "Vocabulary",
+  phonetic_hacking: "Phonetic Hacking",
+  emotional_resonance: "Emotional Resonance",
+};
+
+function formatHeuristicLabel(heuristicId) {
+  if (!heuristicId) return "Heuristic";
+  if (HEURISTIC_LABELS[heuristicId]) return HEURISTIC_LABELS[heuristicId];
+  return String(heuristicId)
+    .split("_")
+    .filter(Boolean)
+    .map((chunk) => chunk[0].toUpperCase() + chunk.slice(1))
+    .join(" ");
+}
+
+function formatPercentFromUnit(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return "0%";
+  if (numeric <= 0) return "0%";
+  if (numeric >= 1) return "100%";
+  return `${Math.round(numeric * 100)}%`;
+}
+
+function formatNumber(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return digits > 0 ? (0).toFixed(digits) : "0";
+  }
+  return numeric.toFixed(digits);
+}
+
+function buildCodexCommentary({
+  traces = [],
+  literaryDevices = [],
+  genreProfile = null,
+  emotion = "Neutral",
+  statistics = null,
+}) {
+  if (!Array.isArray(traces) || traces.length === 0) return "";
+
+  const lead = traces[0];
+  const supporting = traces.slice(1, 3);
+  const profileBits = [];
+
+  if (genreProfile?.genre) {
+    profileBits.push(`genre leans ${String(genreProfile.genre).toLowerCase()}`);
+  }
+  if (emotion && emotion !== "Neutral") {
+    profileBits.push(`tone reads ${String(emotion).toLowerCase()}`);
+  }
+
+  const inTextExamples = literaryDevices
+    .flatMap((device) => (Array.isArray(device?.examples) ? device.examples : []))
+    .filter((example) => typeof example === "string" && example.trim().length > 0)
+    .slice(0, 2);
+
+  const rhymeSummary = statistics
+    ? {
+      perfect: Number(statistics.perfectCount) || 0,
+      near: Number(statistics.nearCount) || 0,
+      slant: Number(statistics.slantCount) || 0,
+      internal: Number(statistics.internalCount) || 0,
+    }
+    : null;
+
+  const commentary = [
+    `The strongest craft signal is ${formatHeuristicLabel(lead.heuristic)} (${formatPercentFromUnit(lead.rawScore)} signal, ${formatNumber(lead.contribution, 1)} CODEx points).`,
+  ];
+
+  if (lead.explanation) {
+    commentary.push(String(lead.explanation).trim());
+  }
+
+  if (supporting.length > 0) {
+    commentary.push(
+      `Secondary drivers are ${supporting
+        .map((trace) => `${formatHeuristicLabel(trace.heuristic)} (${formatPercentFromUnit(trace.rawScore)})`)
+        .join(" and ")}.`
+    );
+  }
+
+  if (profileBits.length > 0) {
+    commentary.push(`Song profile: ${profileBits.join("; ")}.`);
+  }
+
+  if (rhymeSummary && (rhymeSummary.perfect + rhymeSummary.near + rhymeSummary.slant + rhymeSummary.internal > 0)) {
+    commentary.push(
+      `Rhyme footprint: ${rhymeSummary.perfect} perfect, ${rhymeSummary.near} near, ${rhymeSummary.slant} slant, ${rhymeSummary.internal} internal links.`
+    );
+  }
+
+  if (inTextExamples.length > 0) {
+    commentary.push(`Text evidence: ${inTextExamples.map((example) => `"${example}"`).join(" | ")}.`);
+  }
+
+  return commentary.join(" ");
+}
+
 function PatternChip({ letter }) {
   const color = patternColor(letter);
   return (
@@ -104,7 +209,29 @@ export default function AnalysisPanel({
   const rhymeAstrologyClusters = Array.isArray(rhymeAstrology?.inspector?.clusters)
     ? rhymeAstrology.inspector.clusters
     : [];
-  const hasContent = scheme || meter || statistics || hhmSummary?.enabled || literaryDevices.length > 0 || hasRhymeAstrology;
+  const heuristicTraces = Array.isArray(scoreData?.traces)
+    ? [...scoreData.traces]
+      .filter((trace) => trace && typeof trace === "object")
+      .map((trace) => ({
+        ...trace,
+        rawScore: Number(trace.rawScore) || 0,
+        weight: Number(trace.weight) || 0,
+        contribution: Number(trace.contribution) || 0,
+        diagnostics: Array.isArray(trace.diagnostics) ? trace.diagnostics : [],
+      }))
+      .sort((a, b) => b.contribution - a.contribution)
+    : [];
+  const hasLiteraryCraft = literaryDevices.length > 0 || heuristicTraces.length > 0;
+  const codexCommentary = hasLiteraryCraft
+    ? buildCodexCommentary({
+      traces: heuristicTraces,
+      literaryDevices,
+      genreProfile,
+      emotion,
+      statistics,
+    })
+    : "";
+  const hasContent = scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology;
 
   return (
     <div className="analyze-panel">
@@ -371,31 +498,79 @@ export default function AnalysisPanel({
       )}
 
       {/* Literary Craft */}
-      {literaryDevices.length > 0 && (
+      {hasLiteraryCraft && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25B3;</span> Literary Craft
           </h4>
-          <div className="analyze-devices">
-            {literaryDevices.map((device) => (
-              <div key={device.id} className="analyze-device">
-                <div className="analyze-device-header">
-                  <span className="analyze-device-name">{device.name}</span>
-                  <span className="analyze-device-count">{device.count}&times;</span>
-                </div>
-                {device.definition && (
-                  <p className="analyze-device-def">{device.definition}</p>
-                )}
-                {device.examples?.length > 0 && (
-                  <div className="analyze-device-examples">
-                    {device.examples.slice(0, 2).map((ex, i) => (
-                      <span key={i} className="analyze-device-example">&ldquo;{ex}&rdquo;</span>
-                    ))}
+
+          {literaryDevices.length > 0 && (
+            <div className="analyze-devices">
+              {literaryDevices.map((device) => (
+                <div key={device.id} className="analyze-device">
+                  <div className="analyze-device-header">
+                    <span className="analyze-device-name">{device.name}</span>
+                    <span className="analyze-device-count">{device.count}&times;</span>
                   </div>
-                )}
+                  {device.definition && (
+                    <p className="analyze-device-def">{device.definition}</p>
+                  )}
+                  {device.examples?.length > 0 && (
+                    <div className="analyze-device-examples">
+                      {device.examples.slice(0, 2).map((ex, i) => (
+                        <span key={i} className="analyze-device-example">&ldquo;{ex}&rdquo;</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {heuristicTraces.length > 0 && (
+            <div className="analyze-craft-ledger">
+              <div className="analyze-craft-subtitle">Heuristic Ledger</div>
+              <div className="analyze-heuristic-list">
+                {heuristicTraces.map((trace) => {
+                  const topDiagnostic = trace.diagnostics.find((diagnostic) => diagnostic?.message);
+                  const meterPercent = Math.max(0, Math.min(100, Math.round(trace.rawScore * 100)));
+                  return (
+                    <article key={trace.heuristic} className="analyze-heuristic-item">
+                      <div className="analyze-heuristic-header">
+                        <span className="analyze-heuristic-name">{formatHeuristicLabel(trace.heuristic)}</span>
+                        <span className="analyze-heuristic-contribution">{formatNumber(trace.contribution, 1)}</span>
+                      </div>
+                      <div className="analyze-heuristic-track" aria-hidden="true">
+                        <motion.div
+                          className="analyze-heuristic-fill"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${meterPercent}%` }}
+                          transition={{ duration: 0.45, ease: "easeOut" }}
+                        />
+                      </div>
+                      <div className="analyze-heuristic-meta">
+                        <span>Signal {formatPercentFromUnit(trace.rawScore)}</span>
+                        <span>Weight {formatNumber(trace.weight, 2)}</span>
+                      </div>
+                      {trace.explanation && (
+                        <p className="analyze-heuristic-explanation">{trace.explanation}</p>
+                      )}
+                      {topDiagnostic?.message && (
+                        <p className="analyze-heuristic-note">Note: {topDiagnostic.message}</p>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {codexCommentary && (
+            <div className="analyze-codex-commentary">
+              <span className="analyze-codex-kicker">CODEx Commentary</span>
+              <p>{codexCommentary}</p>
+            </div>
+          )}
         </section>
       )}
 
@@ -542,3 +717,4 @@ AnalysisPanel.propTypes = {
   onGroupClick: PropTypes.func,
   activeInfoBeamFamily: PropTypes.string,
 };
+
