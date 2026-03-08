@@ -1,8 +1,8 @@
 import { stemWord } from "../../codex/core/analysis.pipeline.js";
-import { buildHiddenHarkovSummary } from "./models/harkov.model.js";
+import { englishSyntaxHMM } from "../../codex/core/hmm.js";
 
 /**
- * Strict set of English function words (closed-class tokens).
+ * English function words (closed-class tokens).
  */
 const FUNCTION_WORDS = new Set([
   "a", "an", "the", "and", "or", "but", "if", "then", "else", "than",
@@ -41,7 +41,7 @@ export class SyntaxAnalyzer {
 }
 
 /**
- * Refined buildSyntaxLayer using multi-pass context awareness.
+ * Refined buildSyntaxLayer using stanza-aware contextual HMM analysis.
  */
 export function buildSyntaxLayer(analyzedDoc) {
   const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
@@ -72,101 +72,84 @@ export function buildSyntaxLayer(analyzedDoc) {
     });
   };
 
-  // Pass 1: Local Context Classification
-  for (let lIdx = 0; lIdx < lines.length; lIdx++) {
-    const line = lines[lIdx];
-    const lineWords = Array.isArray(line?.words) ? line.words : [];
-    const lineNum = Number.isInteger(line?.number) ? line.number : lIdx;
+  // Process document in 4-line stanzas for contextual awareness
+  const stanzaSize = 4;
+  for (let sIdx = 0; sIdx < lines.length; sIdx += stanzaSize) {
+    const stanzaLines = lines.slice(sIdx, sIdx + stanzaSize);
+    const stanzaWords = stanzaLines.flatMap(line => line.words || []);
+    const observations = stanzaWords.map(word => word.text);
 
-    for (let wIdx = 0; wIdx < lineWords.length; wIdx++) {
-      const analyzedWord = lineWords[wIdx];
-      const prevWord = wIdx > 0 ? lineWords[wIdx - 1] : null;
+    // Contextual role prediction using the grounded HMM
+    const predictedRoles = englishSyntaxHMM.predict(observations, FUNCTION_WORDS);
 
-      const normalized = SyntaxAnalyzer.normalize(analyzedWord.text);
-      const prevNorm = prevWord ? SyntaxAnalyzer.normalize(prevWord.text) : "";
-      
-      const reasons = [];
-      let role = "content";
-      let rhymePolicy = "allow";
+    let globalWordIdx = 0;
+    for (let lIdx = 0; lIdx < stanzaLines.length; lIdx++) {
+      const line = stanzaLines[lIdx];
+      const lineWords = Array.isArray(line?.words) ? line.words : [];
+      const lineNum = Number.isInteger(line?.number) ? line.number : (sIdx + lIdx);
 
-      // 1. Initial Function Word Check
-      const isFunction = FUNCTION_WORDS.has(normalized);
-      if (isFunction) {
-        role = "function";
-        reasons.push("closed_class_token");
+      for (let wIdx = 0; wIdx < lineWords.length; wIdx++) {
+        const analyzedWord = lineWords[wIdx];
+        const normalized = SyntaxAnalyzer.normalize(analyzedWord.text);
+        
+        const reasons = ["hmm_contextual_judgment"];
+        // Initial role from HMM prediction
+        let role = predictedRoles[globalWordIdx] || "content";
+
+        // Contextual refinement (HMM error correction for explicit triggers)
+        const prevWord = wIdx > 0 ? lineWords[wIdx - 1] : null;
+        const prevNorm = prevWord ? SyntaxAnalyzer.normalize(prevWord.text) : "";
+        if (prevNorm && NOUN_TRIGGERS.has(prevNorm)) {
+            reasons.push("noun_precursor_context");
+            role = "content"; 
+        } else if (prevNorm && VERB_TRIGGERS.has(prevNorm)) {
+            reasons.push("verb_precursor_context");
+            role = "content"; 
+        }
+
+        // Line Positioning
+        let lineRole = "line_mid";
+        if (wIdx === 0 && lineWords.length === 1) lineRole = "line_end";
+        else if (wIdx === 0) lineRole = "line_start";
+        else if (wIdx === lineWords.length - 1) lineRole = "line_end";
+
+        // Stress Role
+        let stressRole = "unknown";
+        const stresses = analyzedWord.deepPhonetics?.syllables?.map(s => s.stress) || [];
+        if (stresses.includes(1)) stressRole = "primary";
+        else if (stresses.includes(2)) stressRole = "secondary";
+        else if (stresses.includes(0)) stressRole = "unstressed";
+
+        // Policy Finalization
+        let rhymePolicy = "allow";
+        if (role === "function" && lineRole !== "line_end") {
+          rhymePolicy = "suppress";
+          reasons.push("function_non_terminal");
+        } else if (role === "function" && lineRole === "line_end") {
+          rhymePolicy = "allow_weak";
+          reasons.push("function_line_end_exception");
+        } else {
+          reasons.push("content_default");
+        }
+
+        registerToken({
+          word: analyzedWord.text,
+          normalized,
+          lineNumber: lineNum,
+          wordIndex: wIdx,
+          charStart: analyzedWord.start,
+          charEnd: analyzedWord.end,
+          role,
+          lineRole,
+          stressRole,
+          stem: stemWord(normalized),
+          rhymePolicy,
+          reasons
+        });
+
+        globalWordIdx++;
       }
-
-      // 2. Contextual Override (Sight-based)
-      if (prevNorm && NOUN_TRIGGERS.has(prevNorm)) {
-          reasons.push("noun_precursor_context");
-          if (role === "function") role = "content"; 
-      } else if (prevNorm && VERB_TRIGGERS.has(prevNorm)) {
-          reasons.push("verb_precursor_context");
-          role = "content"; 
-      }
-
-      // 3. Morphological Suffix Check
-      if (normalized.length > 4 && (normalized.endsWith("ing") || normalized.endsWith("ed") || normalized.endsWith("ly") || normalized.endsWith("ness"))) {
-          reasons.push("morphological_suffix");
-          role = "content";
-      }
-
-      // 4. Line Positioning
-      let lineRole = "line_mid";
-      if (wIdx === 0 && lineWords.length === 1) lineRole = "line_end"; // Edge case
-      else if (wIdx === 0) lineRole = "line_start";
-      else if (wIdx === lineWords.length - 1) lineRole = "line_end";
-
-      // 5. Stress Role
-      let stressRole = "unknown";
-      const stresses = analyzedWord.deepPhonetics?.syllables?.map(s => s.stress) || [];
-      if (stresses.includes(1)) stressRole = "primary";
-      else if (stresses.includes(2)) stressRole = "secondary";
-      else if (stresses.includes(0)) stressRole = "unstressed";
-
-      // 6. Policy Finalization
-      if (role === "function" && lineRole !== "line_end") {
-        rhymePolicy = "suppress";
-        reasons.push("function_non_terminal");
-      } else if (role === "function" && lineRole === "line_end") {
-        rhymePolicy = "allow_weak";
-        reasons.push("function_line_end_exception");
-      } else {
-        reasons.push("content_default");
-      }
-
-      // 7. Capitalization heuristic (Proper nouns or emphasis)
-      if (analyzedWord.text[0] === analyzedWord.text[0].toUpperCase() && lineRole !== "line_start") {
-          reasons.push("mid_sentence_cap");
-          if (role === "function") role = "content";
-      }
-
-      registerToken({
-        word: analyzedWord.text,
-        normalized,
-        lineNumber: lineNum,
-        wordIndex: wIdx,
-        charStart: analyzedWord.start,
-        charEnd: analyzedWord.end,
-        role,
-        lineRole,
-        stressRole,
-        stem: stemWord(normalized),
-        rhymePolicy,
-        reasons
-      });
     }
-  }
-
-  const hiddenHarkov = buildHiddenHarkovSummary(tokens, { stanzaSizeBars: 4 });
-  if (hiddenHarkov?.tokenStateByIdentity?.size) {
-    tokens.forEach((token) => {
-      const identityKey = `${token.lineNumber}:${token.wordIndex}:${token.charStart}`;
-      const hhmState = hiddenHarkov.tokenStateByIdentity.get(identityKey);
-      if (hhmState) {
-        token.hhm = hhmState;
-      }
-    });
   }
 
   return {
@@ -174,12 +157,10 @@ export function buildSyntaxLayer(analyzedDoc) {
     tokens,
     tokenByIdentity,
     tokenByCharStart,
-    hhm: hiddenHarkov.summary,
     syntaxSummary: {
       enabled: tokens.length > 0,
       tokenCount: tokens.length,
       ...counts,
-      hhm: hiddenHarkov.summary,
       tokens,
     },
   };
