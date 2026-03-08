@@ -18,12 +18,12 @@ function getSchoolName(familyId) {
 }
 
 export default function VowelFamilyPanel({ visible, families, totalWords, uniqueWords, isEmbedded }) {
-  if (!visible) return null;
-
   const topFamilies = useMemo(
     () => (Array.isArray(families) ? families.slice(0, 8) : []),
     [families]
   );
+
+  if (!visible) return null;
 
   const isEmpty = topFamilies.length === 0 || totalWords === 0;
 
