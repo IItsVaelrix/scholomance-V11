@@ -7,6 +7,8 @@ import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
 import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
 
 const MIN_CORPUS_WORD_LENGTH = 2;
+const VALIDATION_BATCH_MAX_SIZE = 500;
+const VALIDATION_BATCH_WINDOW_MS = 12;
 
 function normalizeCorpusWord(value) {
   const token = String(value || '').trim().toLowerCase();
@@ -92,6 +94,91 @@ function normalizeCorpusPayload(rawPayload) {
   return { dictionary, sequences };
 }
 
+function createBatchedDictionaryValidator(dictionaryAPI, {
+  maxBatchSize = VALIDATION_BATCH_MAX_SIZE,
+  flushWindowMs = VALIDATION_BATCH_WINDOW_MS,
+} = {}) {
+  const pendingByWord = new Map();
+  let flushTimer = null;
+  let flushInFlight = false;
+
+  const toNormalized = (value) => String(value || '').trim().toLowerCase();
+
+  const scheduleFlush = (delayMs = flushWindowMs) => {
+    if (flushTimer !== null) return;
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      void flush();
+    }, delayMs);
+  };
+
+  const flush = async () => {
+    if (flushInFlight || pendingByWord.size === 0) return;
+    flushInFlight = true;
+
+    try {
+      while (pendingByWord.size > 0) {
+        const batchEntries = [...pendingByWord.entries()].slice(0, maxBatchSize);
+        batchEntries.forEach(([word]) => pendingByWord.delete(word));
+
+        const words = batchEntries.map(([word]) => word);
+        try {
+          const validWords = await dictionaryAPI.validateBatch(words);
+          const validSet = new Set((Array.isArray(validWords) ? validWords : []).map(toNormalized));
+          batchEntries.forEach(([word, resolvers]) => {
+            const isValid = validSet.has(word);
+            resolvers.forEach(({ resolve }) => resolve(isValid));
+          });
+        } catch (error) {
+          batchEntries.forEach(([, resolvers]) => {
+            resolvers.forEach(({ reject }) => reject(error));
+          });
+        }
+      }
+    } finally {
+      flushInFlight = false;
+      if (pendingByWord.size > 0) scheduleFlush(0);
+    }
+  };
+
+  const validateWord = (candidateWord) => new Promise((resolve, reject) => {
+    const normalized = toNormalized(candidateWord);
+    if (!normalized) {
+      resolve(true);
+      return;
+    }
+
+    const queue = pendingByWord.get(normalized) || [];
+    queue.push({ resolve, reject });
+    pendingByWord.set(normalized, queue);
+
+    if (pendingByWord.size >= maxBatchSize) {
+      if (flushTimer !== null) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      void flush();
+      return;
+    }
+
+    scheduleFlush();
+  });
+
+  const cancel = () => {
+    if (flushTimer !== null) {
+      clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    const cancelError = new Error('Batched dictionary validation cancelled.');
+    pendingByWord.forEach((resolvers) => {
+      resolvers.forEach(({ reject }) => reject(cancelError));
+    });
+    pendingByWord.clear();
+  };
+
+  return { validateWord, cancel };
+}
+
 /**
  * Enhanced Hook for managing robust predictive text, spellchecking,
  * and the Poetic Language Server (PLS).
@@ -101,15 +188,16 @@ export function usePredictor() {
   const [spellchecker] = useState(() => new Spellchecker());
   const [judiciary] = useState(() => createJudiciaryEngine());
   const [isReady, setIsReady] = useState(false);
+  const [isDictionaryConnected, setIsDictionaryConnected] = useState(false);
   const plsRef = useRef(null);
 
   // democracy layer
   const getDemocraticChoice = useCallback((suggestions) => {
     // Convert raw suggestions into vote candidates
-    const candidates = suggestions.map(s => ({
+    const candidates = suggestions.map((s) => ({
       word: s.token || s,
-      layer: s.reason === 'phonetic' ? 'PHONEME' :
-             s.reason === 'edit' ? 'SPELLCHECK' : 'PREDICTOR',
+      layer: s.reason === 'phonetic' ? 'PHONEME'
+        : s.reason === 'edit' ? 'SPELLCHECK' : 'PREDICTOR',
       confidence: s.score ? s.score / 2 : 0.8 // Normalize confidence
     }));
 
@@ -117,6 +205,9 @@ export function usePredictor() {
   }, [judiciary]);
 
   useEffect(() => {
+    let isDisposed = false;
+    let cancelBatchValidator = null;
+
     async function loadCorpus() {
       try {
         // Skip fetch if we're in a test environment without a proper URL structure
@@ -124,7 +215,7 @@ export function usePredictor() {
 
         const response = await fetch('/corpus.json');
         if (!response.ok) {
-          console.warn("[Predictor] Failed to load corpus.json:", response.status);
+          console.warn('[Predictor] Failed to load corpus.json:', response.status);
           return;
         }
 
@@ -132,7 +223,7 @@ export function usePredictor() {
         const { dictionary: words, sequences } = normalizeCorpusPayload(payload);
 
         if (words.length === 0) {
-          console.warn("[Predictor] corpus dictionary is empty");
+          console.warn('[Predictor] corpus dictionary is empty');
           return;
         }
 
@@ -150,25 +241,48 @@ export function usePredictor() {
 
         // Initialize PLS with the PhonemeEngine
         await PhonemeEngine.ensureInitialized();
-        
+
         // Pre-fetch authority data for the top corpus words to ensure high quality initial suggestions
         const uniqueWords = [...new Set(words)];
         // Limit to top 500 to avoid massive initial requests
         const authoritySample = uniqueWords.slice(0, 500);
         await PhonemeEngine.ensureAuthorityBatch(authoritySample);
 
-        const dictionaryAPI = ScholomanceDictionaryAPI.isEnabled() ? ScholomanceDictionaryAPI : null;
+        let dictionaryAPI = null;
+        if (ScholomanceDictionaryAPI.isConfigured()) {
+          const connected = await ScholomanceDictionaryAPI.checkConnectivity({ force: true });
+          if (connected) {
+            dictionaryAPI = ScholomanceDictionaryAPI;
+            if (!isDisposed) setIsDictionaryConnected(true);
+          } else {
+            const baseUrl = ScholomanceDictionaryAPI.getBaseUrl();
+            console.warn(`[Predictor] Scholomance Dictionary API unreachable at ${baseUrl} — running in offline mode.`);
+            if (!isDisposed) setIsDictionaryConnected(false);
+          }
+        } else if (!isDisposed) {
+          setIsDictionaryConnected(false);
+        }
+
+        const batchedValidator = (dictionaryAPI && typeof dictionaryAPI.validateBatch === 'function')
+          ? createBatchedDictionaryValidator(dictionaryAPI)
+          : null;
+        if (batchedValidator) {
+          cancelBatchValidator = batchedValidator.cancel;
+        }
+
         spellchecker.configureAsync({
-          validateWord: (dictionaryAPI && typeof dictionaryAPI.validateBatch === 'function')
-            ? async (candidateWord) => {
-              const valid = await dictionaryAPI.validateBatch([candidateWord]);
-              const normalizedCandidate = String(candidateWord || '').toLowerCase();
-              return Array.isArray(valid) && valid.some((word) => String(word || '').toLowerCase() === normalizedCandidate);
-            }
-            : null,
+          validateWord: batchedValidator ? batchedValidator.validateWord : null,
           suggestWords: (dictionaryAPI && typeof dictionaryAPI.suggest === 'function')
             ? async (prefix, limit) => dictionaryAPI.suggest(prefix, { limit })
             : null,
+          onAsyncOffline: ({ source } = {}) => {
+            ScholomanceDictionaryAPI.markUnavailable(`spellchecker:${source || 'unknown'}`);
+            if (!isDisposed) setIsDictionaryConnected(false);
+          },
+          onAsyncOnline: () => {
+            ScholomanceDictionaryAPI.markAvailable();
+            if (!isDisposed) setIsDictionaryConnected(true);
+          },
         });
 
         const pls = new PoeticLanguageServer({
@@ -180,12 +294,18 @@ export function usePredictor() {
         pls.buildIndex(words);
         plsRef.current = pls;
 
-        setIsReady(true);
+        if (!isDisposed) setIsReady(true);
       } catch (err) {
-        console.error("Failed to load ritual corpus:", err);
+        console.error('Failed to load ritual corpus:', err);
       }
     }
+
     loadCorpus();
+
+    return () => {
+      isDisposed = true;
+      cancelBatchValidator?.();
+    };
   }, [model, spellchecker]);
 
   /**
@@ -264,5 +384,13 @@ export function usePredictor() {
     return spellchecker.suggestAsync(word, limit, prevWord);
   }, [isReady, spellchecker]);
 
-  return { predict, getCompletions, checkSpelling, getSpellingSuggestions, getDemocraticChoice, isReady };
+  return {
+    predict,
+    getCompletions,
+    checkSpelling,
+    getSpellingSuggestions,
+    getDemocraticChoice,
+    isReady,
+    isDictionaryConnected,
+  };
 }
