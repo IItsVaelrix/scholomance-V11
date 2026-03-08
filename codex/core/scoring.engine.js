@@ -7,6 +7,7 @@
  */
 
 import { analyzeText } from './analysis.pipeline.js';
+import { attachHeuristicCommentary } from './commentary/commentary.builder.js';
 
 /**
  * Creates a new scoring engine instance with encapsulated state.
@@ -38,15 +39,17 @@ export function createScoringEngine(initialHeuristics = []) {
        // Most will fail or return 0. Let's let them run but they expect a doc.
     }
 
-    const traces = await Promise.all(heuristics.map(async (h) => {
+    const rawTraces = await Promise.all(heuristics.map(async (h) => {
       const raw = await h.scorer(doc);
       return {
         ...raw,
+        heuristic: raw?.heuristic || h.name,
         weight: h.weight,
         contribution: raw.rawScore * h.weight * 100,
       };
     }));
 
+    const traces = attachHeuristicCommentary(rawTraces, doc);
     const totalScore = traces.reduce((sum, t) => sum + t.contribution, 0);
 
     return {
@@ -65,3 +68,4 @@ export function createScoringEngine(initialHeuristics = []) {
 
   return { calculateScore, registerHeuristic, reset, getHeuristics };
 }
+

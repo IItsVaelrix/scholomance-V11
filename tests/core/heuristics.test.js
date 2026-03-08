@@ -64,6 +64,8 @@ describe('Heuristics Integration', () => {
 
     expect(score.totalScore).toBeGreaterThan(0);
     expect(score.traces[0].heuristic).toBe('phoneme_density');
+    expect(typeof score.traces[0].commentary).toBe('string');
+    expect(score.traces[0].commentary.length).toBeGreaterThan(0);
   });
   it('Emotional Resonance scores tonal coherence above baseline for emotive lines', () => {
     const emotionalDoc = {
@@ -87,3 +89,4 @@ describe('Heuristics Integration', () => {
     expect(result.rawScore).toBeGreaterThan(0.2);
   });
 });
+

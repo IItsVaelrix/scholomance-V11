@@ -31,6 +31,7 @@
  * @property {number} weight - The weight of this heuristic in the total score.
  * @property {number} contribution - The final contribution to the total score (rawScore * weight * scale).
  * @property {string} explanation - A human-readable explanation of the score.
+ * @property {string} [commentary] - Criticism-informed commentary keyed to the heuristic signal.
  * @property {Diagnostic[]} [diagnostics] - Optional range-based diagnostics from the heuristic.
  */
 
@@ -172,3 +173,4 @@ export function mergeLexicalEntries(base, overlay) {
 
 // This is just for type definitions, so we export an empty object.
 export const schemas = {};
+

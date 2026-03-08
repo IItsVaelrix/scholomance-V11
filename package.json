@@ -24,6 +24,7 @@
     "verify:backend-contract": "node scripts/verify-backend-contract.js",
     "verify:rhyme-astrology:phase0": "node scripts/verify-rhyme-astrology-phase0.js",
     "build:rhyme-astrology:index": "node scripts/buildRhymeAstrologyIndex.js",
+    "ingest:corpus:criticism": "python scripts/ingest_criticism_corpus.py",
     "test": "vitest",
     "preview": "vite preview",
     "start": "node scripts/ritual-init.js && node codex/server/index.js",
@@ -86,3 +87,4 @@
     "vitest": "^4.0.18"
   }
 }
+

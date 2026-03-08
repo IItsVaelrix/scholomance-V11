@@ -70,7 +70,7 @@ function HeuristicBar({ trace, index }) {
         <span className="heuristic-metric">Contribution {formatMetric(contribution, 1)}</span>
       </div>
 
-      <p className="heuristic-explanation">{trace.explanation}</p>
+      <p className="heuristic-explanation">{trace.commentary || trace.explanation}</p>
 
       {topDiagnostic?.message && (
         <p className="heuristic-diagnostic">
@@ -171,3 +171,4 @@ export default function HeuristicScorePanel({ scoreData, genreProfile, visible, 
     </AnimatePresence>
   );
 }
+

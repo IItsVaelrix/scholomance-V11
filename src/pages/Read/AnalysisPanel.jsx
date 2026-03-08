@@ -115,8 +115,9 @@ function buildCodexCommentary({
     `The strongest craft signal is ${formatHeuristicLabel(lead.heuristic)} (${formatPercentFromUnit(lead.rawScore)} signal, ${formatNumber(lead.contribution, 1)} CODEx points).`,
   ];
 
-  if (lead.explanation) {
-    commentary.push(String(lead.explanation).trim());
+  const leadNarrative = lead.commentary || lead.explanation;
+  if (leadNarrative) {
+    commentary.push(String(leadNarrative).trim());
   }
 
   if (supporting.length > 0) {
@@ -572,7 +573,7 @@ export default function AnalysisPanel({
                         <div className="analyze-council-header">
                           <span className="analyze-council-title">Deliberation of {getCouncilMember(trace.heuristic)}</span>
                         </div>
-                        <p className="analyze-heuristic-explanation">{trace.explanation || "No arcane justification provided."}</p>
+                        <p className="analyze-heuristic-explanation">{trace.commentary || trace.explanation || "No arcane justification provided."}</p>
                         {trace.examples?.length > 0 && (
                           <div className="analyze-council-citations">
                             {trace.examples.slice(0, 2).map((cite, ci) => (

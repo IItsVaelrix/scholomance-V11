@@ -33,6 +33,7 @@ describe('[Server] panelAnalysis.routes', () => {
     expect(payload.data.scoreData).toBeTruthy();
     expect(typeof payload.data.scoreData.totalScore).toBe('number');
     expect(Array.isArray(payload.data.scoreData.traces)).toBe(true);
+    expect(typeof payload.data.scoreData.traces[0]?.commentary).toBe('string');
     expect(Array.isArray(payload.data.analysis.rhymeGroups)).toBe(true);
     expect(Array.isArray(payload.data.scheme.groups)).toBe(true);
     expect(Array.isArray(payload.data.vowelSummary.families)).toBe(true);
@@ -208,3 +209,4 @@ describe('[Server] panelAnalysis.routes', () => {
     expect(close).toHaveBeenCalledTimes(1);
   });
 });
+
