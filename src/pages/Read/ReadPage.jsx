@@ -111,6 +111,8 @@ export default function ReadPage() {
   const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.NONE);
   const [editorContent, setEditorContent] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
+  const [pinnedLines, setPinnedLines] = useState(null);
+  const effectiveHighlightedLines = pinnedLines ?? highlightedLines;
   const [selectedSchool, setSelectedSchool] = useState("DEFAULT");
   const [showScorePanel, setShowScorePanel] = useState(false);
   const [isNarrowViewport, setIsNarrowViewport] = useState(() => {
@@ -947,13 +949,15 @@ export default function ReadPage() {
                         connections={overlayConnections}
                         lineCount={lineCount}
                         visible={true}
-                        onConnectionHover={setHighlightedLines}
-                        onConnectionLeave={() => setHighlightedLines([])}
-                        onConnectionClick={(lines) => {
-                          if (lines && lines.length > 0) {
-                            editorRef.current?.jumpToLine?.(lines[0] + 1);
-                          }
+                        onPairSelect={(lines) => {
+                          setPinnedLines(lines);
+                          if (!lines) setHighlightedLines([]);
+                          if (lines) editorRef.current?.scrollToTopSmooth?.();
                         }}
+                        onConnectionClick={() => {
+                          editorRef.current?.scrollToTopSmooth?.();
+                        }}
+                        highlightedLines={effectiveHighlightedLines}
                       />
                     </div>
                   )}
@@ -1018,7 +1022,8 @@ export default function ReadPage() {
                     analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
                     activeConnections={overlayConnections}
                     lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
-                    highlightedLines={highlightedLines}
+                    highlightedLines={effectiveHighlightedLines}
+                    pinnedLines={pinnedLines}
                     vowelColors={activeVowelColors}
                     colorMap={committedColors.colorMap}
                     syntaxLayer={deepAnalysis?.syntaxSummary}

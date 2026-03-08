@@ -9,7 +9,9 @@ function getCorpusBaselineWords(limit = 24) {
   const words = [];
   const seen = new Set();
 
-  for (const token of raw) {
+  const dictionary = Array.isArray(raw) ? raw : (raw.dictionary || []);
+
+  for (const token of dictionary) {
     const normalized = String(token || '').toUpperCase().replace(/[^A-Z]/g, '');
     if (normalized.length < 2 || seen.has(normalized)) continue;
     seen.add(normalized);

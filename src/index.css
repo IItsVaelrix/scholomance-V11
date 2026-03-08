@@ -1233,20 +1233,3 @@ h6 { font-size: var(--text-base); }
   width: 100%;
 }
 
-/* === RHYME WORD STYLING === */
-/* Layered glow: tight crisp halo + soft ambient aura */
-.grimoire-word.rhyme-A  { color: var(--vowel-A);  text-shadow: 0 0 3px var(--vowel-A),  0 0 8px color-mix(in srgb, var(--vowel-A) 40%, transparent); }
-.grimoire-word.rhyme-AE { color: var(--vowel-AE); text-shadow: 0 0 3px var(--vowel-AE), 0 0 8px color-mix(in srgb, var(--vowel-AE) 40%, transparent); }
-.grimoire-word.rhyme-AO { color: var(--vowel-AO); text-shadow: 0 0 3px var(--vowel-AO), 0 0 8px color-mix(in srgb, var(--vowel-AO) 40%, transparent); }
-.grimoire-word.rhyme-AW { color: var(--vowel-AW); text-shadow: 0 0 3px var(--vowel-AW), 0 0 8px color-mix(in srgb, var(--vowel-AW) 40%, transparent); }
-.grimoire-word.rhyme-AY { color: var(--vowel-AY); text-shadow: 0 0 3px var(--vowel-AY), 0 0 8px color-mix(in srgb, var(--vowel-AY) 40%, transparent); }
-.grimoire-word.rhyme-EH { color: var(--vowel-EH); text-shadow: 0 0 3px var(--vowel-EH), 0 0 8px color-mix(in srgb, var(--vowel-EH) 40%, transparent); }
-.grimoire-word.rhyme-ER { color: var(--vowel-ER); text-shadow: 0 0 3px var(--vowel-ER), 0 0 8px color-mix(in srgb, var(--vowel-ER) 40%, transparent); }
-.grimoire-word.rhyme-EY { color: var(--vowel-EY); text-shadow: 0 0 3px var(--vowel-EY), 0 0 8px color-mix(in srgb, var(--vowel-EY) 40%, transparent); }
-.grimoire-word.rhyme-IH { color: var(--vowel-IH); text-shadow: 0 0 3px var(--vowel-IH), 0 0 8px color-mix(in srgb, var(--vowel-IH) 40%, transparent); }
-.grimoire-word.rhyme-IY { color: var(--vowel-IY); text-shadow: 0 0 3px var(--vowel-IY), 0 0 8px color-mix(in srgb, var(--vowel-IY) 40%, transparent); }
-.grimoire-word.rhyme-OH { color: var(--vowel-OH); text-shadow: 0 0 3px var(--vowel-OH), 0 0 8px color-mix(in srgb, var(--vowel-OH) 40%, transparent); }
-.grimoire-word.rhyme-OW { color: var(--vowel-OW); text-shadow: 0 0 3px var(--vowel-OW), 0 0 8px color-mix(in srgb, var(--vowel-OW) 40%, transparent); }
-.grimoire-word.rhyme-OY { color: var(--vowel-OY); text-shadow: 0 0 3px var(--vowel-OY), 0 0 8px color-mix(in srgb, var(--vowel-OY) 40%, transparent); }
-.grimoire-word.rhyme-UH { color: var(--vowel-UH); text-shadow: 0 0 3px var(--vowel-UH), 0 0 8px color-mix(in srgb, var(--vowel-UH) 40%, transparent); }
-.grimoire-word.rhyme-UW { color: var(--vowel-UW); text-shadow: 0 0 3px var(--vowel-UW), 0 0 8px color-mix(in srgb, var(--vowel-UW) 40%, transparent); }

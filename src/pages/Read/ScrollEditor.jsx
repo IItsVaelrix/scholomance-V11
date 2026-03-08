@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useColorCodex } from "../../hooks/useColorCodex.js";
@@ -241,6 +241,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   lineSyllableCounts = [],
   plsPhoneticFeatures = null,
   highlightedLines = [],
+  pinnedLines = null,
   vowelColors = null,
   colorMap = null,
   syntaxLayer = null,
@@ -257,6 +258,9 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [scrollTop, setScrollTop] = useState(0);
   const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
   const [intellisenseSuggestions, setIntellisenseSuggestions] = useState([]);
+  const scrollTopRef = useRef(0);
+  const [ghostData, setGhostData] = useState(null);   // { sortedLines, initialYMap }
+  const [isGhostPinned, setIsGhostPinned] = useState(false);
   const [intellisenseIndex, setIntellisenseIndex] = useState(0);
   const [intellisensePos, setIntellisensePos] = useState({ x: 0, y: 0 });
   const [cursorVersion, setCursorVersion] = useState(0);
@@ -573,6 +577,24 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   // Pre-compute Set for O(1) highlighted line lookups (Fix 1)
   const highlightedLinesSet = useMemo(() => new Set(highlightedLines || []), [highlightedLines]);
 
+  const lineFocusMaskGradient = useMemo(() => {
+    if (!highlightedLinesSet.size || isTruesight) return null;
+    const sorted = [...highlightedLinesSet].sort((a, b) => a - b);
+    const stops = [];
+    let lastEnd = 0;
+    for (const li of sorted) {
+      const top = Math.max(0, li * lineHeightPx - scrollTop);
+      const bottom = top + lineHeightPx;
+      if (top > lastEnd) {
+        stops.push(`var(--editor-bg, #0d0d14) ${lastEnd}px`, `var(--editor-bg, #0d0d14) ${top}px`);
+      }
+      stops.push(`transparent ${top}px`, `transparent ${bottom}px`);
+      lastEnd = bottom;
+    }
+    stops.push(`var(--editor-bg, #0d0d14) ${lastEnd}px`, `var(--editor-bg, #0d0d14) 100%`);
+    return `linear-gradient(to bottom, ${stops.join(', ')})`;
+  }, [highlightedLinesSet, isTruesight, scrollTop, lineHeightPx]);
+
   const emitWordActivation = useCallback((trigger, payload, event) => {
     if (!onWordActivate || !payload) return;
 
@@ -715,6 +737,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
     const top = textarea.scrollTop;
     setScrollTop(top);
+    scrollTopRef.current = top;
     onScrollChange?.(top);
 
     if (truesightOverlayRef.current) {
@@ -744,6 +767,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [content, title, onSave]);
 
+  // Capture ghost positions synchronously before scroll animation starts
+  useLayoutEffect(() => {
+    if (pinnedLines && pinnedLines.length > 0) {
+      const sorted = [...pinnedLines].sort((a, b) => a - b);
+      const initialYMap = new Map();
+      for (const li of sorted) {
+        initialYMap.set(li, li * lineHeightPx - scrollTopRef.current);
+      }
+      setGhostData({ sortedLines: sorted, initialYMap });
+      setIsGhostPinned(true);
+    } else {
+      setIsGhostPinned(false);
+    }
+  }, [pinnedLines, lineHeightPx]);
+
   const jumpToLine = useCallback((lineNum) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -768,19 +806,37 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, []);
 
+  const scrollToTopSmooth = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.scrollTop;
+    if (start === 0) return;
+    const duration = 320;
+    const startTime = performance.now();
+    const step = (now) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      textarea.scrollTop = start * (1 - ease);
+      if (t < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }, []);
+
   // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
     applyFormat,
     save: handleSave,
     jumpToLine,
     scrollTo,
+    scrollToTopSmooth,
     replaceContent(newContent) {
       setContent(newContent);
       onContentChange?.(newContent);
     },
     get clientHeight() { return textareaRef.current?.clientHeight || 0; },
     get scrollHeight() { return textareaRef.current?.scrollHeight || 0; },
-  }), [applyFormat, handleSave, jumpToLine, scrollTo, onContentChange]);
+  }), [applyFormat, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -899,6 +955,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               {content}
             </div>
           )}
+          {lineFocusMaskGradient && (
+            <div
+              className="line-focus-mask"
+              style={{ background: lineFocusMaskGradient }}
+              aria-hidden="true"
+            />
+          )}
           {/* Textarea: visible when editing, or in read-only+Truesight for overlay sync */}
           <textarea
             id="scroll-content"
@@ -942,7 +1005,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                 {windowedLines.map(({ lineIndex: li, tokens, lineType }) => {
                   const isGroupActive = highlightedLinesSet.size > 0;
                   const isHighlighted = highlightedLinesSet.has(li);
-                  const isLineDimmed = isGroupActive && !isHighlighted;
+                  const isLineDimmed = (isGroupActive && !isHighlighted) || isGhostPinned;
 
                   return (
                     <div
@@ -1038,6 +1101,62 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                   );
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Ghost layer: pinned lines fly to top on pair select */}
+          {isTruesight && ghostData && (
+            <div className="truesight-ghost-layer" aria-hidden="true">
+              <AnimatePresence onExitComplete={() => setGhostData(null)}>
+                {isGhostPinned && ghostData.sortedLines.map((li, i) => {
+                  const lineData = overlayLines[li];
+                  if (!lineData) return null;
+                  const initialY = ghostData.initialYMap.get(li) ?? 0;
+                  const targetY = 8 + i * (lineHeightPx + 4);
+                  return (
+                    <motion.div
+                      key={`ghost-${li}`}
+                      className={`truesight-line truesight-line--${lineData.lineType} truesight-line--highlighted truesight-ghost-line`}
+                      initial={{ y: initialY, opacity: 0.6 }}
+                      animate={{ y: targetY, opacity: 1 }}
+                      exit={{ y: initialY, opacity: 0 }}
+                      transition={{ type: "spring", stiffness: 140, damping: 20 }}
+                    >
+                      {lineData.tokens.map(({ token, start: charStart, lineIndex, wordIndex }) => {
+                        const isWord = WORD_TOKEN_REGEX.test(token);
+                        if (!isWord) return <span key={charStart}>{token}</span>;
+
+                        const clean = token.toUpperCase();
+                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+                        const analysis = analyzedWordsByIdentity.get(identityKey)
+                          || derivedAnalyzedWordsByCharStart.get(charStart)
+                          || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis.vowelFamily) : null;
+                        const shouldColor = analysis ? shouldColorWordHook(charStart, clean, wordVowelFamily) : false;
+                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
+                        const codexEntry = shouldColor ? (activeColorMap?.get(charStart) ?? null) : null;
+                        const color = shouldColor
+                          ? (codexEntry?.color || activeColors[wordVowelFamily] || undefined)
+                          : undefined;
+                        const isMultiSyllable = shouldColor && codexEntry?.isMultiSyllable;
+                        return (
+                          <span
+                            key={charStart}
+                            className={[
+                              "grimoire-word",
+                              !shouldColor ? "grimoire-word--grey" : "",
+                              isMultiSyllable ? "word--multi-rhyme" : "",
+                            ].filter(Boolean).join(" ")}
+                            style={{ color }}
+                          >
+                            {token}
+                          </span>
+                        );
+                      })}
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
             </div>
           )}
         </div>

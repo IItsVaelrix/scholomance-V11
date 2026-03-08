@@ -100,6 +100,9 @@ const WORD_PHONEME_OVERRIDES = Object.freeze({
   DAMOCLES: ["D", "AE1", "M", "AH0", "K", "L", "IY1", "Z"],
   MYSTERY: ["M", "IH1", "S", "T", "ER0", "IY0"],
   HISTORY: ["HH", "IH1", "S", "T", "ER0", "IY0"],
+  MARTYR: ["M", "AA1", "R", "T", "ER0"],
+  CONQUER: ["K", "AA1", "NG", "K", "ER0"],
+  CONTINENT: ["K", "AA0", "N", "T", "IH1", "N", "EH0", "N", "T"],
 });
 
 
@@ -150,12 +153,12 @@ export const PhonemeEngine = {
         this.DICT_V2 = dictRaw;
         this.RULES_V2 = rulesRaw;
         await CmuPhonemeEngine.init();
-        return this.DICT_V2?.vowel_families?.length || 14;
+        return this.DICT_V2?.vowel_families?.length || 8;
       } catch (err) { 
         if (typeof window === "undefined") {
           console.error("[PhonemeEngine] Failed to load dictionaries on server:", err);
         }
-        return 14; 
+        return 8; 
       }
     })();
 

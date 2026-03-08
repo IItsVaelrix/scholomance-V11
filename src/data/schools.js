@@ -49,7 +49,7 @@ export const SCHOOLS = {
     unlockXP: 0,      // Available immediately (Level 1)
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
-    vowelAffinities: ["AO", "IH", "OW"],
+    vowelAffinities: ["AO", "IH"],
     glyph: "♩",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -67,7 +67,7 @@ export const SCHOOLS = {
     unlockXP: 250, // Level ~3
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
-    vowelAffinities: ["EY", "IY", "UW"],
+    vowelAffinities: ["EY", "IY"],
     glyph: "◬",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -85,7 +85,7 @@ export const SCHOOLS = {
     unlockXP: 1500, // Level ~10
     description: "The space between spaces, where entropy reigns",
     tracks: ["void"],
-    vowelAffinities: ["UW", "IH"],
+    vowelAffinities: ["UW"],
     glyph: "∅",
     atmosphere: {
       auroraIntensity: 0.2,
@@ -142,7 +142,7 @@ export const SCHOOLS = {
     unlockXP: 100000, // Level ~45 (Expert)
     description: "Communication with and manipulation of life force",
     tracks: [],
-    vowelAffinities: ["OY"],
+    vowelAffinities: ["OW"],
     glyph: "☠",
     atmosphere: {
       auroraIntensity: 0.8,
@@ -160,7 +160,7 @@ export const SCHOOLS = {
     unlockXP: 500000, // Level ~60 (Master)
     description: "Protective magic and negation of effects",
     tracks: [],
-    vowelAffinities: [],
+    vowelAffinities: ["IY", "UW"],
     glyph: "◇",
     atmosphere: {
       auroraIntensity: 0.6,
@@ -178,7 +178,7 @@ export const SCHOOLS = {
     unlockXP: 2000000, // Level ~80 (Godlike)
     description: "Seeing across time and space",
     tracks: [],
-    vowelAffinities: [],
+    vowelAffinities: ["EY", "IH"],
     glyph: "◉",
     atmosphere: {
       auroraIntensity: 0.9,

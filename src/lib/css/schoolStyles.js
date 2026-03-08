@@ -1,5 +1,4 @@
 import { SCHOOLS, generateSchoolColor } from "../../data/schools.js";
-import { VOWEL_COLORS } from "../../data/vowelPalette.js";
 
 /**
  * Generate CSS variables for all schools
@@ -25,11 +24,6 @@ export function generateSchoolCSSVariables() {
   // Generate angle variables
   Object.entries(SCHOOLS).forEach(([id, school]) => {
     lines.push(`  --school-${id.toLowerCase()}-angle: ${school.angle}deg;`);
-  });
-
-  // Generate vowel family variables
-  Object.entries(VOWEL_COLORS).forEach(([family, color]) => {
-    lines.push(`  --vowel-${family}: ${color};`);
   });
 
   // Active school defaults (SONIC)

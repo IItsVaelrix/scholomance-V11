@@ -54,23 +54,23 @@ export const SONORITY_HIERARCHY = {
  * Aligned with src/lib/phonology/vowelFamily.js normalization.
  */
 export const VOWEL_TO_BASE_FAMILY = {
-  'AA': 'AA',
-  'AH': 'AH',
-  'AX': 'AX',
-  'AW': 'AW',
+  'AA': 'A',
+  'AH': 'A',
+  'AX': 'A',
+  'AW': 'A',
   'AE': 'AE',
-  'EH': 'EH',
+  'EH': 'AE',
   'AO': 'AO',
   'OW': 'OW',
-  'OY': 'OY',
+  'OY': 'OW',
   'UW': 'UW',
-  'UH': 'UH',
-  'UR': 'UR',
+  'UH': 'UW',
+  'UR': 'IH',
   'IY': 'IY',
   'IH': 'IH',
-  'ER': 'ER',
+  'ER': 'IH',
   'EY': 'EY',
-  'AY': 'AY',
+  'AY': 'EY',
 };
 
 /**

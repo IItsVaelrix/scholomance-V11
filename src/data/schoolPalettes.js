@@ -171,73 +171,73 @@ const WILL_LIGHT_COLORS = {
 // ─── DIVINATION ───────────────────────────────────────────────────────────────
 // Anchor: gold/amber (oracle, prophetic sight). Glyph: ◉
 const DIVINATION_COLORS = {
-  IY: "#fffbeb",
-  UW: "#fef3c7",
-  EY: "#fde68a",
-  OW: "#fcd34d",
-  IH: "#fbbf24",
-  AO: "#f59e0b",   // anchor
-  AE: "#d97706",
-  A:  "#78350f",
+  IY: "#fffbeb",   // Starlight
+  UW: "#fef3c7",   // Luminous Gold
+  EY: "#fde68a",   // Solar Flare
+  OW: "#fcd34d",   // Amber Vision
+  IH: "#fbbf24",   // Oracle Anchor
+  AO: "#f59e0b",   // Deep Prophecy
+  AE: "#d97706",   // Bronze Secret
+  A:  "#78350f",   // Ancient Earth
 };
 
 const DIVINATION_LIGHT_COLORS = {
-  IY: "#fef3c7",
-  UW: "#fde68a",
-  EY: "#fcd34d",
-  OW: "#fbbf24",
-  IH: "#f59e0b",
-  AO: "#d97706",
-  AE: "#b45309",
+  IY: "#fde68a",
+  UW: "#fcd34d",
+  EY: "#fbbf24",
+  OW: "#f59e0b",
+  IH: "#d97706",
+  AO: "#b45309",
+  AE: "#92400e",
   A:  "#451a03",
 };
 
 // ─── NECROMANCY ───────────────────────────────────────────────────────────────
-// Anchor: forest green (decay, undeath). Glyph: ☽
+// Anchor: sickly green/teal (decay, undeath). Glyph: ☽
 const NECROMANCY_COLORS = {
-  IY: "#f0fdf4",
-  UW: "#dcfce7",
-  EY: "#bbf7d0",
-  OW: "#6ee7b7",
-  IH: "#34d399",
-  AO: "#10b981",   // anchor
-  AE: "#059669",
-  A:  "#064e3b",
+  IY: "#f0fdf4",   // Ectoplasm
+  UW: "#dcfce7",   // Ghostly Mist
+  EY: "#bbf7d0",   // Lichen
+  OW: "#86efac",   // Toxic Fume
+  IH: "#4ade80",   // Anchor (Vitality Drain)
+  AO: "#22c55e",   // Decay
+  AE: "#16a34a",   // Mossy Grave
+  A:  "#064e3b",   // Obsidian Soil
 };
 
 const NECROMANCY_LIGHT_COLORS = {
-  IY: "#dcfce7",
-  UW: "#bbf7d0",
-  EY: "#6ee7b7",
-  OW: "#34d399",
-  IH: "#10b981",
-  AO: "#059669",
-  AE: "#047857",
-  A:  "#022c22",
+  IY: "#bbf7d0",
+  UW: "#86efac",
+  EY: "#4ade80",
+  OW: "#22c55e",
+  IH: "#16a34a",
+  AO: "#15803d",
+  AE: "#166534",
+  A:  "#064e3b",
 };
 
 // ─── ABJURATION ───────────────────────────────────────────────────────────────
-// Anchor: ice blue (wards, barriers). Glyph: ⬡
+// Anchor: crystalline/ice blue (wards, barriers). Glyph: ⬡
 const ABJURATION_COLORS = {
-  IY: "#eff6ff",
-  UW: "#dbeafe",
-  EY: "#bfdbfe",
-  OW: "#93c5fd",
-  IH: "#60a5fa",
-  AO: "#3b82f6",   // anchor
-  AE: "#2563eb",
-  A:  "#1e3a8a",
+  IY: "#f0f9ff",   // Diamond White
+  UW: "#e0f2fe",   // Prism Blue
+  EY: "#bae6fd",   // Glacial
+  OW: "#7dd3fc",   // Sapphire
+  IH: "#38bdf8",   // Anchor (Shield)
+  AO: "#0ea5e9",   // Deep Ward
+  AE: "#0284c7",   // Cobalt Guard
+  A:  "#0c4a6e",   // Midnight Obsidian
 };
 
 const ABJURATION_LIGHT_COLORS = {
-  IY: "#dbeafe",
-  UW: "#bfdbfe",
-  EY: "#93c5fd",
-  OW: "#60a5fa",
-  IH: "#3b82f6",
-  AO: "#2563eb",
-  AE: "#1d4ed8",
-  A:  "#1e3a8a",
+  IY: "#bae6fd",
+  UW: "#7dd3fc",
+  EY: "#38bdf8",
+  OW: "#0ea5e9",
+  IH: "#0284c7",
+  AO: "#0369a1",
+  AE: "#075985",
+  A:  "#0c4a6e",
 };
 
 // ─── Skin Maps ────────────────────────────────────────────────────────────────

@@ -27,59 +27,59 @@ Consolidate from 16 vowel families down to 8 core families for tighter phoneme l
   - Keep existing: AA→A, AH→A, AX→A, OH→OW, OO→UW, YOO→UW, YUW→UW
 
 ### Step 2: Update vowelPalette.js - 8 Core Positions
-- [ ] Reduce VOWEL_POSITIONS to 8 entries (IY, IH, EY, AE, A, AO, OW, UW)
-- [ ] Remove: EH, AY, AW, OY, UH, ER, AA, AH (handled by aliases)
-- [ ] Adjust IPA positions for better color distribution
+- [x] Reduce VOWEL_POSITIONS to 8 entries (IY, IH, EY, AE, A, AO, OW, UW)
+- [x] Remove: EH, AY, AW, OY, UH, ER, AA, AH (handled by aliases)
+- [x] Adjust IPA positions for better color distribution
 
 ### Step 3: Update schoolPalettes.js - 5-Color Palettes
-- [ ] Reduce each palette from 16 colors to 8 colors
-- [ ] Update DEFAULT_VOWEL_COLORS (8 entries)
-- [ ] Update DEFAULT_LIGHT_COLORS (8 entries)
-- [ ] Update SONIC_COLORS (8 entries)
-- [ ] Update SONIC_LIGHT_COLORS (8 entries)
-- [ ] Update PSYCHIC_COLORS (8 entries)
-- [ ] Update PSYCHIC_LIGHT_COLORS (8 entries)
-- [ ] Update VOID_COLORS (8 entries)
-- [ ] Update VOID_LIGHT_COLORS (8 entries)
-- [ ] Update ALCHEMY_COLORS (8 entries)
-- [ ] Update ALCHEMY_LIGHT_COLORS (8 entries)
-- [ ] Update WILL_COLORS (8 entries)
-- [ ] Update WILL_LIGHT_COLORS (8 entries)
+- [x] Reduce each palette from 16 colors to 8 colors
+- [x] Update DEFAULT_VOWEL_COLORS (8 entries)
+- [x] Update DEFAULT_LIGHT_COLORS (8 entries)
+- [x] Update SONIC_COLORS (8 entries)
+- [x] Update SONIC_LIGHT_COLORS (8 entries)
+- [x] Update PSYCHIC_COLORS (8 entries)
+- [x] Update PSYCHIC_LIGHT_COLORS (8 entries)
+- [x] Update VOID_COLORS (8 entries)
+- [x] Update VOID_LIGHT_COLORS (8 entries)
+- [x] Update ALCHEMY_COLORS (8 entries)
+- [x] Update ALCHEMY_LIGHT_COLORS (8 entries)
+- [x] Update WILL_COLORS (8 entries)
+- [x] Update WILL_LIGHT_COLORS (8 entries)
 
 ### Step 4: Update phoneme.engine.js - ARPABET Mapping
-- [ ] Update ARPABET_TO_FAMILY to map to 8 core families:
+- [x] Update ARPABET_TO_FAMILY to map to 8 core families:
   - 'EH' → 'AE'
   - 'AY' → 'EY'
   - 'AW' → 'A'
   - 'OY' → 'OW'
   - 'UH' → 'UW'
   - 'ER' → 'IH'
-- [ ] Update VOWEL_FAMILY_TO_SCHOOL mapping for 8 families
-- [ ] Verify EXCEPTIONS dictionary still works with new mappings
+- [x] Update VOWEL_FAMILY_TO_SCHOOL mapping for 8 families
+- [x] Verify EXCEPTIONS dictionary still works with new mappings
 
 ### Step 5: Update schools.js - Vowel Affinities
-- [ ] Update SONIC vowelAffinities (currently: AO, IH, OW)
-- [ ] Update PSYCHIC vowelAffinities (currently: AY, IY, UW) → (EY, IY, UW)
-- [ ] Update VOID vowelAffinities (currently: UH, ER) → (UW, IH)
-- [ ] Update ALCHEMY vowelAffinities (currently: EY, A, OH) → (EY, A, OW)
-- [ ] Update WILL vowelAffinities (currently: AE, AW, EH) → (AE, A)
-- [ ] Ensure each school has appropriate vowel coverage
+- [x] Update SONIC vowelAffinities (currently: AO, IH, OW)
+- [x] Update PSYCHIC vowelAffinities (currently: AY, IY, UW) → (EY, IY, UW)
+- [x] Update VOID vowelAffinities (currently: UH, ER) → (UW, IH)
+- [x] Update ALCHEMY vowelAffinities (currently: EY, A, OH) → (EY, A, OW)
+- [x] Update WILL vowelAffinities (currently: AE, AW, EH) → (AE, A)
+- [x] Ensure each school has appropriate vowel coverage
 
 ### Step 6: Testing & Verification
-- [ ] Run phoneme.engine.test.js
-- [ ] Run colorCodex.test.js
-- [ ] Test rhyme matching for example words:
+- [x] Run phoneme.engine.test.js
+- [x] Run colorCodex.test.js
+- [x] Test rhyme matching for example words:
   - soul/cold/boulder (OW family)
   - water/slaughter/martyr (AO family)
   - machine/green/gene (IY family)
   - obelisk/continent (IH family)
-- [ ] Verify Truesight color rendering
-- [ ] Check school palette switching
+- [x] Verify Truesight color rendering
+- [x] Check school palette switching
 
 ### Step 7: Documentation
-- [ ] Update comments in affected files
-- [ ] Note breaking changes if any
-- [ ] Document the 8 core families in README or ARCH docs
+- [x] Update comments in affected files
+- [x] Note breaking changes if any
+- [x] Document the 8 core families in README or ARCH docs
 
 ## Notes
 - AO must stay distinct from OW (water vs soul)
