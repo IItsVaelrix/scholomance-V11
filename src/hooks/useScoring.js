@@ -10,6 +10,7 @@ import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_den
 import { rhymeQualityHeuristic } from '../../codex/core/heuristics/rhyme_quality.js';
 import { scrollPowerHeuristic } from '../../codex/core/heuristics/scroll_power.js';
 import { vocabularyRichnessHeuristic } from '../../codex/core/heuristics/vocabulary_richness.js';
+import { emotionalResonanceHeuristic } from '../../codex/core/heuristics/emotional_resonance.js';
 
 const HEURISTICS = [
   phonemeDensityHeuristic,
@@ -20,6 +21,7 @@ const HEURISTICS = [
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,
   phoneticHackingHeuristic,
+  emotionalResonanceHeuristic,
 ];
 
 export function useScoring(text) {

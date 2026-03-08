@@ -3,6 +3,7 @@
  * Produces unified data for rhyme/scheme, score, and vowel-family panels.
  */
 
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'path';
 import { analyzeText } from '../../core/analysis.pipeline.js';
 import { createScoringEngine } from '../../core/scoring.engine.js';
@@ -16,11 +17,13 @@ import { rhymeQualityHeuristic } from '../../core/heuristics/rhyme_quality.js';
 import { scrollPowerHeuristic } from '../../core/heuristics/scroll_power.js';
 import { vocabularyRichnessHeuristic } from '../../core/heuristics/vocabulary_richness.js';
 import { phoneticHackingHeuristic } from '../../core/heuristics/phonetic_hacking.js';
+import { emotionalResonanceHeuristic } from '../../core/heuristics/emotional_resonance.js';
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
 import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detector.js';
-import { analyzeLiteraryDevices, detectEmotion } from '../../../src/lib/literaryDevices.detector.js';
+import { analyzeLiteraryDevices, detectEmotionDetailed } from '../../../src/lib/literaryDevices.detector.js';
 import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js';
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
+import { buildHiddenHarkovSummary } from '../../../src/lib/models/harkov.model.js';
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
 import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
@@ -36,6 +39,7 @@ const SCORE_HEURISTICS = [
   literaryDeviceRichnessHeuristic,
   vocabularyRichnessHeuristic,
   phoneticHackingHeuristic,
+  emotionalResonanceHeuristic,
 ];
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
@@ -51,6 +55,7 @@ const DEFAULT_RHYME_ASTROLOGY_MIN_SCORE = 0.35;
 const DEFAULT_RHYME_ASTROLOGY_MAX_CLUSTERS = 4;
 const DEFAULT_RHYME_ASTROLOGY_BUCKET_CAP = 200;
 const DEFAULT_RHYME_ASTROLOGY_CACHE_SIZE = 500;
+const DEFAULT_RHYME_EMOTION_PRIORS_PATH = path.resolve(DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_emotion_priors.json');
 
 function parsePositiveInt(value, fallback) {
   const parsed = Number(value);
@@ -71,6 +76,25 @@ function resolveArtifactPath(rawPath, fallbackPath) {
     return path.resolve(rawPath.trim());
   }
   return fallbackPath;
+}
+
+function loadGutenbergEmotionPriors(priorsPath, log) {
+  if (!priorsPath || !existsSync(priorsPath)) return null;
+
+  try {
+    const parsed = JSON.parse(readFileSync(priorsPath, 'utf8'));
+    const emotions = parsed?.emotions;
+    if (!emotions || typeof emotions !== 'object') return null;
+
+    return {
+      version: Number(parsed?.version) || 1,
+      generatedAt: String(parsed?.generatedAt || ''),
+      emotions,
+    };
+  } catch (error) {
+    log?.warn?.({ err: error, priorsPath }, '[PanelAnalysisService] Failed to load emotion priors');
+    return null;
+  }
 }
 
 function getPrimaryStressedVowelFamily(analyzedWord) {
@@ -370,6 +394,12 @@ export function createPanelAnalysisService(options = {}) {
     options.rhymeAstrologyEdgesDbPath ?? process.env.RHYME_ASTROLOGY_EDGES_DB_PATH,
     path.join(rhymeAstrologyOutputDir, 'rhyme_edges.sqlite')
   );
+  const rhymeEmotionPriorsPath = resolveArtifactPath(
+    options.rhymeEmotionPriorsPath ?? process.env.RHYME_EMOTION_PRIORS_PATH,
+    DEFAULT_RHYME_EMOTION_PRIORS_PATH
+  );
+  const gutenbergEmotionPriors = options.gutenbergEmotionPriors
+    ?? loadGutenbergEmotionPriors(rhymeEmotionPriorsPath, log);
 
   const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
   let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
@@ -505,8 +535,13 @@ export function createPanelAnalysisService(options = {}) {
       await PhonemeEngine.ensureAuthorityBatch(uniqueWords);
 
       const analyzedDoc = analyzeText(text);
+      const syntaxLayerForEmotion = buildSyntaxLayer(analyzedDoc);
+      const syntaxLayer = enableSyntaxRhymeLayer ? syntaxLayerForEmotion : null;
+      const hhmSignals = syntaxLayerForEmotion?.enabled
+        ? buildHiddenHarkovSummary(syntaxLayerForEmotion.tokens)
+        : { summary: null, tokenStateByIdentity: null };
+
       const scoreData = await scoreEngine.calculateScore(analyzedDoc);
-      const syntaxLayer = enableSyntaxRhymeLayer ? buildSyntaxLayer(analyzedDoc) : null;
       const wordAnalyses = buildAnalysisWordProfiles(analyzedDoc, syntaxLayer);
       const lineSyllableCounts = buildLineSyllableCounts(analyzedDoc);
 
@@ -514,12 +549,17 @@ export function createPanelAnalysisService(options = {}) {
         text,
         syntaxLayer ? { syntaxLayer } : {}
       );
-      
+
       const genreProfile = LiteraryClassifier.classify(analyzedDoc, deepAnalysis);
       const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
       const meter = analyzeMeter(deepAnalysis.lines);
       const literaryDevices = analyzeLiteraryDevices(text);
-      const emotion = detectEmotion(text);
+      const emotion = detectEmotionDetailed(text, {
+        syntaxLayer: syntaxLayerForEmotion,
+        hhmSummary: hhmSignals.summary,
+        hhmTokenStateByIdentity: hhmSignals.tokenStateByIdentity,
+        gutenbergPriors: gutenbergEmotionPriors,
+      }).emotion;
       const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses);
       const scoreDataWithPlsFeatures = scoreData && rhymeAstrology?.features
         ? {

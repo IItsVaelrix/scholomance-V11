@@ -10,6 +10,14 @@ function jsonResponse(body, ok = true) {
   };
 }
 
+function makeWordSeries(prefix, count) {
+  return Array.from({ length: count }, (_, index) => {
+    const ch = String.fromCharCode(97 + (index % 26));
+    const cycle = Math.floor(index / 26);
+    return cycle > 0 ? `${prefix}${ch}${cycle}` : `${prefix}${ch}`;
+  });
+}
+
 describe('[Server] WordLookupService', () => {
   it('prefers Scholomance dictionary when available', async () => {
     const fetchMock = vi.fn(async (url) => {
@@ -96,5 +104,67 @@ describe('[Server] WordLookupService', () => {
     expect(fetchMock).not.toHaveBeenCalled();
     expect(redis.setEx).not.toHaveBeenCalled();
   });
-});
 
+  it('caps CODEx-judged suggestions at top 15 per group', async () => {
+    const synonyms = makeWordSeries('ally', 24);
+    const antonyms = makeWordSeries('foe', 24);
+    const rhymes = makeWordSeries('echo', 24);
+    const slantRhymes = makeWordSeries('near', 24);
+
+    const fetchMock = vi.fn(async (url) => {
+      const href = String(url);
+      if (href === 'http://dict.local/api/lexicon/lookup/ember') {
+        return jsonResponse({
+          definition: { text: 'A burning coal', partOfSpeech: 'noun' },
+          entries: [],
+          synonyms,
+          antonyms,
+          rhymes,
+          slantRhymes,
+        });
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    });
+
+    const service = createWordLookupService({
+      fetchImpl: fetchMock,
+      scholomanceDictApiUrl: 'http://dict.local/api/lexicon',
+    });
+
+    const result = await service.lookupWord('ember');
+    expect(result.source).toBe('scholomance-local');
+    expect(result.data?.synonyms).toHaveLength(15);
+    expect(result.data?.antonyms).toHaveLength(15);
+    expect(result.data?.rhymes).toHaveLength(15);
+    expect(result.data?.slantRhymes).toHaveLength(15);
+  });
+
+  it('uses available max when fewer than 15 suggestions exist', async () => {
+    const fetchMock = vi.fn(async (url) => {
+      const href = String(url);
+      if (href === 'http://dict.local/api/lexicon/lookup/orbit') {
+        return jsonResponse({
+          definition: { text: 'Path around a body', partOfSpeech: 'noun' },
+          entries: [],
+          synonyms: ['cycle', 'circuit', 'loop', 'arc'],
+          antonyms: ['stillness', 'stasis'],
+          rhymes: ['morbid', 'forbid', 'sorbid'],
+          slantRhymes: ['orchid'],
+        });
+      }
+      throw new Error(`Unexpected URL: ${href}`);
+    });
+
+    const service = createWordLookupService({
+      fetchImpl: fetchMock,
+      scholomanceDictApiUrl: 'http://dict.local/api/lexicon',
+    });
+
+    const result = await service.lookupWord('orbit');
+    expect(result.source).toBe('scholomance-local');
+    expect(result.data?.synonyms).toHaveLength(4);
+    expect(result.data?.antonyms).toHaveLength(2);
+    expect(result.data?.rhymes).toHaveLength(3);
+    expect(result.data?.slantRhymes).toHaveLength(1);
+  });
+});

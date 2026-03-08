@@ -4,6 +4,7 @@ import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_den
 import { meterRegularityHeuristic } from '../../codex/core/heuristics/meter_regularity.js';
 import { alliterationDensityHeuristic } from '../../codex/core/heuristics/alliteration_density.js';
 import { scrollPowerHeuristic } from '../../codex/core/heuristics/scroll_power.js';
+import { emotionalResonanceHeuristic } from '../../codex/core/heuristics/emotional_resonance.js';
 
 // Mock AnalyzedDocument
 const mockDoc = {
@@ -63,5 +64,26 @@ describe('Heuristics Integration', () => {
 
     expect(score.totalScore).toBeGreaterThan(0);
     expect(score.traces[0].heuristic).toBe('phoneme_density');
+  });
+  it('Emotional Resonance scores tonal coherence above baseline for emotive lines', () => {
+    const emotionalDoc = {
+      raw: 'I will not bow\nI rise through fire\nI rise again',
+      allWords: [
+        { text: 'I' }, { text: 'will' }, { text: 'not' }, { text: 'bow' },
+        { text: 'I' }, { text: 'rise' }, { text: 'through' }, { text: 'fire' },
+        { text: 'I' }, { text: 'rise' }, { text: 'again' },
+      ],
+      lines: [
+        { text: 'I will not bow', words: [], syllableCount: 5 },
+        { text: 'I rise through fire', words: [], syllableCount: 5 },
+        { text: 'I rise again', words: [], syllableCount: 4 },
+      ],
+      stats: { wordCount: 11 },
+      parsed: { scrollPower: { normalized: 0.1 } },
+    };
+
+    const result = emotionalResonanceHeuristic.scorer(emotionalDoc);
+    expect(result.heuristic).toBe('emotional_resonance');
+    expect(result.rawScore).toBeGreaterThan(0.2);
   });
 });

@@ -20,6 +20,25 @@ const DEFAULT_CLUSTER_LIMIT_PER_BUCKET = 6;
 const DEFAULT_STORAGE_TARGET_MB = 100;
 const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
 const MANIFEST_VERSION = 1;
+const DEFAULT_EMOTION_PRIOR_TOP_K = 180;
+const DEFAULT_EMOTION_PRIOR_MIN_COUNT = 3;
+
+const EMOTION_PRIOR_STOP_WORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'if', 'to', 'of', 'in', 'on', 'at', 'for', 'from', 'with',
+  'by', 'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'do', 'does', 'did', 'have', 'has', 'had',
+  'i', 'me', 'my', 'mine', 'we', 'us', 'our', 'you', 'your', 'he', 'him', 'his', 'she', 'her', 'they', 'them',
+  'it', 'its', 'this', 'that', 'these', 'those', 'not', 'no', 'so', 'very', 'too', 'just', 'can', 'could',
+  'would', 'should', 'will', 'shall', 'may', 'might', 'must',
+]);
+
+const EMOTION_PRIOR_SEEDS = Object.freeze({
+  Joy: new Set(['joy', 'happy', 'delight', 'love', 'smile', 'laugh', 'light', 'warm', 'hope', 'bliss']),
+  Melancholy: new Set(['sad', 'sorrow', 'grief', 'tears', 'loss', 'alone', 'empty', 'cold', 'broken', 'regret']),
+  Rage: new Set(['anger', 'rage', 'fury', 'hate', 'battle', 'war', 'burn', 'blood', 'wrath', 'strike']),
+  Defiance: new Set(['never', 'rise', 'stand', 'resist', 'defy', 'refuse', 'free', 'fearless', 'power', 'conquer']),
+  Wonder: new Set(['wonder', 'awe', 'mystery', 'magic', 'dream', 'beauty', 'stars', 'infinite', 'cosmos', 'divine']),
+  Dread: new Set(['fear', 'terror', 'dread', 'anxious', 'horror', 'doom', 'nightmare', 'haunt', 'death', 'void']),
+});
 
 function nowMs() {
   return Number(process.hrtime.bigint() / 1000000n);
@@ -803,6 +822,119 @@ function readMetaMap(dbPath) {
   }
 }
 
+function clamp01(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value < 0) return 0;
+  if (value > 1) return 1;
+  return value;
+}
+
+function buildGutenbergEmotionPriors({
+  corpusPath,
+  topK = DEFAULT_EMOTION_PRIOR_TOP_K,
+  minCount = DEFAULT_EMOTION_PRIOR_MIN_COUNT,
+}) {
+  const stageStart = nowMs();
+  const corpusDb = new Database(corpusPath, { readonly: true, fileMustExist: true });
+
+  try {
+    const tokenDocumentFrequency = new Map();
+    const emotionDocumentFrequency = Object.fromEntries(
+      Object.keys(EMOTION_PRIOR_SEEDS).map((emotion) => [emotion, new Map()])
+    );
+    const emotionSentenceCount = Object.fromEntries(
+      Object.keys(EMOTION_PRIOR_SEEDS).map((emotion) => [emotion, 0])
+    );
+
+    let sentenceCount = 0;
+    let tokenCount = 0;
+
+    const statement = corpusDb.prepare("SELECT sentence.text AS text FROM sentence INNER JOIN source ON source.id = sentence.source_id WHERE source.type = 'gutenberg'");
+
+    for (const row of statement.iterate()) {
+      const tokens = tokenize(row?.text).filter((token) => token.length >= 3);
+      if (tokens.length === 0) continue;
+      sentenceCount += 1;
+      tokenCount += tokens.length;
+
+      const unique = new Set(tokens);
+      for (const token of unique) {
+        tokenDocumentFrequency.set(token, (tokenDocumentFrequency.get(token) || 0) + 1);
+      }
+
+      const emotionHits = {};
+      for (const [emotion, seeds] of Object.entries(EMOTION_PRIOR_SEEDS)) {
+        emotionHits[emotion] = tokens.some((token) => seeds.has(token));
+      }
+
+      for (const [emotion, hit] of Object.entries(emotionHits)) {
+        if (!hit) continue;
+        emotionSentenceCount[emotion] += 1;
+        const emotionMap = emotionDocumentFrequency[emotion];
+        for (const token of unique) {
+          if (EMOTION_PRIOR_STOP_WORDS.has(token)) continue;
+          emotionMap.set(token, (emotionMap.get(token) || 0) + 1);
+        }
+      }
+    }
+
+    const emotions = {};
+    const diagnostics = {};
+
+    for (const [emotion, counts] of Object.entries(emotionDocumentFrequency)) {
+      const matchedSentenceCount = emotionSentenceCount[emotion] || 0;
+      if (matchedSentenceCount === 0) {
+        emotions[emotion] = {};
+        diagnostics[emotion] = { matchedSentenceCount: 0, retainedTokenCount: 0 };
+        continue;
+      }
+
+      let maxLift = 0;
+      const scored = [];
+      for (const [token, count] of counts.entries()) {
+        if (count < minCount) continue;
+
+        const emotionRate = count / matchedSentenceCount;
+        const baselineRate = (tokenDocumentFrequency.get(token) || 0) / Math.max(1, sentenceCount);
+        if (baselineRate <= 0) continue;
+        const lift = emotionRate / baselineRate;
+        if (lift <= 1) continue;
+        if (lift > maxLift) maxLift = lift;
+
+        scored.push({ token, count, lift });
+      }
+
+      scored.sort((a, b) => b.lift - a.lift || b.count - a.count || a.token.localeCompare(b.token));
+      const top = scored.slice(0, topK);
+      const out = {};
+      for (const row of top) {
+        const normalizedLift = maxLift > 0 ? row.lift / maxLift : 0;
+        const frequencyScale = Math.log1p(row.count) / Math.log1p(top[0]?.count || 1);
+        out[row.token] = Number(clamp01((normalizedLift * 0.7) + (frequencyScale * 0.3)).toFixed(4));
+      }
+
+      emotions[emotion] = out;
+      diagnostics[emotion] = {
+        matchedSentenceCount,
+        retainedTokenCount: Object.keys(out).length,
+      };
+    }
+
+    return {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      sourceType: 'gutenberg',
+      sentenceCount,
+      tokenCount,
+      emotions,
+      diagnostics,
+      durationMs: durationMs(stageStart),
+    };
+  } finally {
+    corpusDb.close();
+  }
+}
+
 async function main() {
   const totalStart = nowMs();
 
@@ -837,6 +969,14 @@ async function main() {
     process.env.RHYME_ASTROLOGY_STORAGE_TARGET_MB,
     DEFAULT_STORAGE_TARGET_MB
   );
+  const emotionPriorTopK = parsePositiveInteger(
+    process.env.RHYME_EMOTION_PRIOR_TOP_K,
+    DEFAULT_EMOTION_PRIOR_TOP_K
+  );
+  const emotionPriorMinCount = parsePositiveInteger(
+    process.env.RHYME_EMOTION_PRIOR_MIN_COUNT,
+    DEFAULT_EMOTION_PRIOR_MIN_COUNT
+  );
 
   if (!existsSync(dictPath)) {
     throw new Error(`Dictionary DB not found: ${dictPath}`);
@@ -851,6 +991,7 @@ async function main() {
   const edgesDbPath = path.join(outputDir, 'rhyme_edges.sqlite');
   const manifestPath = path.join(outputDir, 'rhyme_manifest.json');
   const oversizedBucketsPath = path.join(outputDir, 'rhyme_oversized_buckets.json');
+  const emotionPriorsPath = path.join(outputDir, 'rhyme_emotion_priors.json');
 
   console.log(`[rhyme-astrology:phase2] output directory: ${outputDir}`);
   console.log('[rhyme-astrology:phase2] initializing phoneme engine...');
@@ -898,10 +1039,24 @@ async function main() {
     ` ${stageC.hotEdgeCount} hot edges`
   );
 
+  console.log('[rhyme-astrology:phase2] Stage D: building rhyme_emotion_priors.json');
+  const stageD = buildGutenbergEmotionPriors({
+    corpusPath,
+    topK: emotionPriorTopK,
+    minCount: emotionPriorMinCount,
+  });
+  writeFileSync(emotionPriorsPath, `${JSON.stringify(stageD, null, 2)}\n`, 'utf8');
+  console.log(
+    `[rhyme-astrology:phase2] Stage D complete: ${stageD.sentenceCount} Gutenberg sentences` +
+    `, priors=${Object.values(stageD.emotions).reduce((sum, map) => sum + Object.keys(map || {}).length, 0)}` +
+    ` in ${stageD.durationMs}ms`
+  );
+
   const artifactStats = collectArtifactStats({
     rhymeLexiconSqlite: lexiconDbPath,
     rhymeIndexSqlite: indexDbPath,
     rhymeEdgesSqlite: edgesDbPath,
+    rhymeEmotionPriorsJson: emotionPriorsPath,
   });
   const rowCounts = collectRowCounts({ lexiconDbPath, indexDbPath, edgesDbPath });
   const lexiconMeta = readMetaMap(lexiconDbPath);
@@ -933,6 +1088,8 @@ async function main() {
       clusterLimitPerBucket,
       storageTargetMb,
       outputDir,
+      emotionPriorTopK,
+      emotionPriorMinCount,
     },
     lexiconCount: rowCounts.lexiconNode,
     signatureBuckets: rowCounts.signatureBucketStats,
@@ -955,6 +1112,11 @@ async function main() {
         durationMs: stageC.durationMs,
         truncatedCandidateBuckets: stageC.truncatedCandidateBuckets,
       },
+      stageD: {
+        durationMs: stageD.durationMs,
+        sentenceCount: stageD.sentenceCount,
+        tokenCount: stageD.tokenCount,
+      },
       timingsMs: {
         total: durationMs(totalStart),
       },
@@ -968,6 +1130,8 @@ async function main() {
       storageWithinTarget,
       oversizedBucketsPath,
       oversizedBucketCount: stageB.oversizedBuckets.length,
+      emotionPriorsPath,
+      emotionPriorsEmotionCount: Object.keys(stageD.emotions || {}).length,
     },
     meta: {
       lexicon: lexiconMeta,
@@ -995,6 +1159,7 @@ async function main() {
   }
   console.log(`[rhyme-astrology:phase2] wrote manifest: ${manifestPath}`);
   console.log(`[rhyme-astrology:phase2] wrote oversized-bucket log: ${oversizedBucketsPath}`);
+  console.log(`[rhyme-astrology:phase2] wrote emotion priors: ${emotionPriorsPath}`);
 }
 
 main().catch((error) => {

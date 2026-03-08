@@ -15,6 +15,7 @@ const HEURISTIC_LABELS = {
   literary_device_richness: 'Literary Devices',
   vocabulary_richness: 'Vocabulary',
   phonetic_hacking: 'Phonetic Hacking',
+  emotional_resonance: 'Emotional Resonance',
 };
 
 function HeuristicBar({ trace, index }) {
