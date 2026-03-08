@@ -15,6 +15,28 @@ const MAX_POS_COUNT = 5;
 const MAX_SUGGESTION_COUNT = 15;
 const DATAMUSE_FETCH_LIMIT = 50;
 const ANTONYM_AFFIXES = ['un', 'non', 'dis', 'anti', 'de', 'mis', 'in', 'im', 'il', 'ir'];
+const MANUAL_OVERRIDE_SOURCE = 'Manual Override';
+
+const MANUAL_LEXICAL_OVERRIDES = Object.freeze({
+  worcestershire: Object.freeze({
+    definition: {
+      text: 'A county in the West Midlands region of England.',
+      partOfSpeech: 'proper noun',
+      source: MANUAL_OVERRIDE_SOURCE,
+    },
+    definitions: [
+      'A county in the West Midlands region of England.',
+      'A thick fermented sauce named for Worcestershire, England.',
+    ],
+    pos: ['proper noun', 'noun'],
+    synonyms: [],
+    antonyms: [],
+    rhymes: [],
+    slantRhymes: [],
+    ipa: '/WUH-ster-sheer/',
+    etymology: 'From the English county name Worcestershire.',
+  }),
+});
 
 const suggestionJudiciary = createJudiciaryEngine();
 
@@ -219,6 +241,28 @@ function constrainLexicalEntry(entry) {
   entry.slantRhymes = rankSuggestionGroup(entry.word, entry.slantRhymes || [], 'slantRhymes');
   entry.pos = (entry.pos || []).slice(0, MAX_POS_COUNT);
   return entry;
+}
+
+function lookupFromManualOverrides(word) {
+  const normalizedWord = normalizeComparableTerm(word);
+  if (!normalizedWord) return null;
+  const template = MANUAL_LEXICAL_OVERRIDES[normalizedWord];
+  if (!template) return null;
+
+  const entry = createEmptyLexicalEntry(normalizedWord);
+  if (template.definition) entry.definition = { ...template.definition };
+  if (Array.isArray(template.definitions)) entry.definitions = [...template.definitions];
+  if (Array.isArray(template.pos)) entry.pos = [...template.pos];
+  if (Array.isArray(template.synonyms)) entry.synonyms = [...template.synonyms];
+  if (Array.isArray(template.antonyms)) entry.antonyms = [...template.antonyms];
+  if (Array.isArray(template.rhymes)) entry.rhymes = [...template.rhymes];
+  if (Array.isArray(template.slantRhymes)) entry.slantRhymes = [...template.slantRhymes];
+  if (template.ipa) entry.ipa = template.ipa;
+  if (template.etymology) entry.etymology = template.etymology;
+  entry.raw = { source: 'manual', key: normalizedWord };
+
+  const constrained = constrainLexicalEntry(entry);
+  return hasLexicalData(constrained) ? constrained : null;
 }
 
 function resolveScholomanceDictApiUrl(explicitUrl) {
@@ -457,6 +501,11 @@ export function createWordLookupService(options = {}) {
       return { word: '', data: null, source: 'none' };
     }
 
+    const manualOverride = lookupFromManualOverrides(normalizedWord);
+    if (manualOverride) {
+      return { word: normalizedWord, data: manualOverride, source: 'manual-override' };
+    }
+
     const cacheKey = `${cachePrefix}${normalizedWord}`;
     if (redis) {
       try {
@@ -523,3 +572,5 @@ export function createWordLookupService(options = {}) {
     },
   };
 }
+
+

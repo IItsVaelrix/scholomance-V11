@@ -8,7 +8,12 @@ function createAnalyzedDoc({
   uniqueWordCount = 90,
   longWordRatio = 0.05,
   stressCoherence = 0.7,
+  avgSentenceLength,
 } = {}) {
+  const computedAvgSentenceLength = Number.isFinite(avgSentenceLength)
+    ? avgSentenceLength
+    : (lineCount > 0 ? (wordCount / Math.max(1, Math.floor(lineCount / 2))) : 0);
+
   return {
     stats: {
       wordCount,
@@ -16,6 +21,7 @@ function createAnalyzedDoc({
       totalSyllables,
       uniqueWordCount,
       longWordRatio,
+      avgSentenceLength: computedAvgSentenceLength,
     },
     parsed: {
       stressProfile: {
@@ -54,7 +60,7 @@ describe('LiteraryClassifier', () => {
   it('uses analyzedDoc.parsed.stressProfile when rhyme analysis has no stress profile', () => {
     const analyzedDoc = createAnalyzedDoc({
       stressCoherence: 0.9,
-      totalSyllables: 80, // keeps cadence from adding Rap
+      totalSyllables: 80,
     });
     const rhymeAnalysis = createRhymeAnalysis();
 
@@ -72,7 +78,7 @@ describe('LiteraryClassifier', () => {
     });
     const rhymeAnalysis = createRhymeAnalysis({
       multiSyllableCount: 1,
-      endRhymeCount: 3, // below minimum sample gate
+      endRhymeCount: 3,
     });
 
     const result = LiteraryClassifier.classify(analyzedDoc, rhymeAnalysis);
@@ -86,7 +92,7 @@ describe('LiteraryClassifier', () => {
       createAnalyzedDoc({
         wordCount: 90,
         lineCount: 10,
-        totalSyllables: 130, // 13 syllables/line -> rap-leaning cadence
+        totalSyllables: 130,
         uniqueWordCount: 80,
         stressCoherence: 0.5,
       }),
@@ -97,7 +103,7 @@ describe('LiteraryClassifier', () => {
       createAnalyzedDoc({
         wordCount: 90,
         lineCount: 10,
-        totalSyllables: 60, // 6 syllables/line -> song-leaning cadence
+        totalSyllables: 60,
         uniqueWordCount: 80,
         stressCoherence: 0.7,
       }),
@@ -114,7 +120,7 @@ describe('LiteraryClassifier', () => {
     const analyzedDoc = createAnalyzedDoc({
       wordCount: 330,
       lineCount: 33,
-      totalSyllables: 280, // ~8.5 syllables/line (not rap-fast cadence)
+      totalSyllables: 280,
       uniqueWordCount: 220,
       longWordRatio: 0.08,
       stressCoherence: 0.52,
@@ -122,14 +128,62 @@ describe('LiteraryClassifier', () => {
     analyzedDoc.raw = 'i bleed in the dark, alone at night with broken scars and tears! '.repeat(30);
 
     const rhymeAnalysis = createRhymeAnalysis({
-      internalCount: 90,       // dense internal links
+      internalCount: 90,
       endRhymeCount: 30,
-      multiSyllableCount: 4,   // not enough multi-syllable pressure for rap bonus
+      multiSyllableCount: 4,
     });
 
     const result = LiteraryClassifier.classify(analyzedDoc, rhymeAnalysis);
 
     expect(result.genre).not.toBe(GENRES.RAP);
     expect(result.scores[GENRES.EMO]).toBeGreaterThan(result.scores[GENRES.RAP]);
+  });
+
+  it('prefers Pop over Prose when pop song signals are present in longer lines', () => {
+    const analyzedDoc = createAnalyzedDoc({
+      wordCount: 96,
+      lineCount: 6,
+      totalSyllables: 56,
+      uniqueWordCount: 36,
+      longWordRatio: 0.04,
+      stressCoherence: 0.72,
+      avgSentenceLength: 13,
+    });
+    analyzedDoc.raw = 'baby tonight we dance in the light and feel love forever with every heartbeat'.repeat(4);
+
+    const rhymeAnalysis = createRhymeAnalysis({
+      internalCount: 4,
+      endRhymeCount: 2,
+      multiSyllableCount: 0,
+    });
+
+    const result = LiteraryClassifier.classify(analyzedDoc, rhymeAnalysis);
+
+    expect(result.scores[GENRES.POP]).toBeGreaterThan(result.scores[GENRES.PROSE]);
+    expect([GENRES.POP, GENRES.SONG]).toContain(result.genre);
+  });
+
+  it('prefers Metal over Prose when dark/high-intensity lyric signals are present', () => {
+    const analyzedDoc = createAnalyzedDoc({
+      wordCount: 104,
+      lineCount: 8,
+      totalSyllables: 90,
+      uniqueWordCount: 64,
+      longWordRatio: 0.18,
+      stressCoherence: 0.58,
+      avgSentenceLength: 12,
+    });
+    analyzedDoc.raw = 'fire and steel rage in the storm we burn through blood and thunder with wrath! '.repeat(8);
+
+    const rhymeAnalysis = createRhymeAnalysis({
+      internalCount: 8,
+      endRhymeCount: 4,
+      multiSyllableCount: 1,
+    });
+
+    const result = LiteraryClassifier.classify(analyzedDoc, rhymeAnalysis);
+
+    expect(result.scores[GENRES.METAL]).toBeGreaterThan(result.scores[GENRES.PROSE]);
+    expect([GENRES.METAL, GENRES.EMO, GENRES.ROCK]).toContain(result.genre);
   });
 });

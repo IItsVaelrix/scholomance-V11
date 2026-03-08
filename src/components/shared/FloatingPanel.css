@@ -197,3 +197,35 @@ body.is-dragging-panel .aurora-background {
 [data-theme="light"] .panel-title {
   color: #1a1a2e;
 }
+
+.floating-panel.codex-metrics-panel {
+  background: linear-gradient(180deg, rgba(17, 18, 34, 0.96), rgba(11, 12, 24, 0.98));
+  border-color: rgba(183, 148, 84, 0.28);
+  box-shadow: var(--shadow-depth-3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.floating-panel.codex-metrics-panel .panel-header {
+  background: linear-gradient(180deg, rgba(183, 148, 84, 0.16), rgba(183, 148, 84, 0.05));
+  border-bottom-color: rgba(183, 148, 84, 0.28);
+}
+
+.floating-panel.codex-metrics-panel .drag-dots,
+.floating-panel.codex-metrics-panel .panel-title {
+  color: var(--text-secondary, #c8cce8);
+}
+
+[data-theme="light"] .floating-panel.codex-metrics-panel {
+  background: linear-gradient(180deg, rgba(248, 241, 225, 0.96), rgba(239, 230, 210, 0.98));
+  border-color: rgba(127, 95, 45, 0.28);
+  box-shadow: 0 12px 28px rgba(56, 45, 27, 0.18);
+}
+
+[data-theme="light"] .floating-panel.codex-metrics-panel .panel-header {
+  background: linear-gradient(180deg, rgba(127, 95, 45, 0.14), rgba(127, 95, 45, 0.06));
+  border-bottom-color: rgba(127, 95, 45, 0.24);
+}
+
+[data-theme="light"] .floating-panel.codex-metrics-panel .drag-dots,
+[data-theme="light"] .floating-panel.codex-metrics-panel .panel-title {
+  color: #3a3428;
+}

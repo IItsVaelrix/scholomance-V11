@@ -19,6 +19,22 @@ function makeWordSeries(prefix, count) {
 }
 
 describe('[Server] WordLookupService', () => {
+  it('returns manual override entries without network lookups', async () => {
+    const fetchMock = vi.fn();
+
+    const service = createWordLookupService({
+      fetchImpl: fetchMock,
+      scholomanceDictApiUrl: 'http://dict.local/api/lexicon',
+    });
+
+    const result = await service.lookupWord('Worcestershire');
+    expect(result.source).toBe('manual-override');
+    expect(result.word).toBe('worcestershire');
+    expect(result.data?.definitions?.[0]).toContain('West Midlands');
+    expect(result.data?.ipa).toBe('/WUH-ster-sheer/');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('prefers Scholomance dictionary when available', async () => {
     const fetchMock = vi.fn(async (url) => {
       const href = String(url);
@@ -168,3 +184,5 @@ describe('[Server] WordLookupService', () => {
     expect(result.data?.slantRhymes).toHaveLength(1);
   });
 });
+
+

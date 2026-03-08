@@ -1147,6 +1147,7 @@ export default function ReadPage() {
         <FloatingPanel
           id="score-panel"
           title="CODEx Metrics"
+          className="codex-metrics-panel"
           onClose={() => setShowScorePanel(false)}
           defaultX={window.innerWidth - 340}
           defaultY={80}
