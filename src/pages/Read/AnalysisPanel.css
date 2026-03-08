@@ -667,14 +667,66 @@
   font-family: "JetBrains Mono", monospace;
   font-size: 0.57rem;
   color: color-mix(in srgb, var(--text-color, #e2d9c8) 56%, transparent);
+  margin-bottom: 8px;
+}
+
+.analyze-council-deliberation {
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-gold, #c9a840) 5%, transparent);
+  border-left: 2px solid color-mix(in srgb, var(--accent-gold, #c9a840) 20%, transparent);
+}
+
+.analyze-council-header {
   margin-bottom: 6px;
 }
 
+.analyze-council-title {
+  font-size: 0.54rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--accent-gold, #c9a840) 60%, transparent);
+}
+
 .analyze-heuristic-explanation {
-  margin: 0;
+  margin: 0 0 8px 0;
   font-size: 0.67rem;
   line-height: 1.45;
-  color: color-mix(in srgb, var(--text-color, #e2d9c8) 74%, transparent);
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 85%, transparent);
+  font-family: Georgia, serif;
+  font-style: italic;
+}
+
+.analyze-council-citations {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.analyze-council-citation {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 4px 6px;
+  background: color-mix(in srgb, var(--text-color, #e2d9c8) 3%, transparent);
+  border-radius: 3px;
+}
+
+.analyze-cite-glyph {
+  font-size: 0.5rem;
+  color: var(--accent-gold, #c9a840);
+  margin-top: 2px;
+  opacity: 0.6;
+}
+
+.analyze-cite-text {
+  font-size: 0.62rem;
+  font-family: "JetBrains Mono", monospace;
+  color: color-mix(in srgb, var(--text-color, #e2d9c8) 70%, transparent);
+  line-height: 1.3;
 }
 
 .analyze-heuristic-note {

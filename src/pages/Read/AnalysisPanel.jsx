@@ -35,6 +35,18 @@ const HEURISTIC_LABELS = {
   emotional_resonance: "Emotional Resonance",
 };
 
+const COUNCIL_MEMBERS = {
+  phoneme_density: "The Vowel Scribe",
+  alliteration_density: "The Sibilant Weaver",
+  rhyme_quality: "The Echo Warden",
+  scroll_power: "The Kinetic Archon",
+  meter_regularity: "The Pulse Arbiter",
+  literary_device_richness: "The Device Chronicler",
+  vocabulary_richness: "The Lexicon Sage",
+  phonetic_hacking: "The Phonetic Rogue",
+  emotional_resonance: "The Emotive Oracle",
+};
+
 function formatHeuristicLabel(heuristicId) {
   if (!heuristicId) return "Heuristic";
   if (HEURISTIC_LABELS[heuristicId]) return HEURISTIC_LABELS[heuristicId];
@@ -43,6 +55,10 @@ function formatHeuristicLabel(heuristicId) {
     .filter(Boolean)
     .map((chunk) => chunk[0].toUpperCase() + chunk.slice(1))
     .join(" ");
+}
+
+function getCouncilMember(heuristicId) {
+  return COUNCIL_MEMBERS[heuristicId] || "The Arcane Observer";
 }
 
 function formatPercentFromUnit(value) {
@@ -552,9 +568,22 @@ export default function AnalysisPanel({
                         <span>Signal {formatPercentFromUnit(trace.rawScore)}</span>
                         <span>Weight {formatNumber(trace.weight, 2)}</span>
                       </div>
-                      {trace.explanation && (
-                        <p className="analyze-heuristic-explanation">{trace.explanation}</p>
-                      )}
+                      <div className="analyze-council-deliberation">
+                        <div className="analyze-council-header">
+                          <span className="analyze-council-title">Deliberation of {getCouncilMember(trace.heuristic)}</span>
+                        </div>
+                        <p className="analyze-heuristic-explanation">{trace.explanation || "No arcane justification provided."}</p>
+                        {trace.examples?.length > 0 && (
+                          <div className="analyze-council-citations">
+                            {trace.examples.slice(0, 2).map((cite, ci) => (
+                              <div key={ci} className="analyze-council-citation">
+                                <span className="analyze-cite-glyph">◈</span>
+                                <span className="analyze-cite-text">&ldquo;{cite}&rdquo;</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                       {topDiagnostic?.message && (
                         <p className="analyze-heuristic-note">Note: {topDiagnostic.message}</p>
                       )}
