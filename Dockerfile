@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y \
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
+ENV SCHOLOMANCE_CORPUS_PATH=/var/data/scholomance_corpus.sqlite
+ENV SCHOLOMANCE_DICT_PATH=/var/data/scholomance_dict.sqlite
 
 COPY --from=build /app/package.json /app/package-lock.json ./
 COPY --from=build /app/node_modules ./node_modules
