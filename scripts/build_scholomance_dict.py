@@ -47,11 +47,35 @@ VOWEL_TO_FAMILY = {
 WORD_VARIANT_RE = re.compile(r"\(\d+\)$")
 
 
-def open_maybe_gzip(path: str):
-    if path.endswith(".gz"):
-        return gzip.open(path, "rb")
-    return open(path, "rb")
+def file_text_preview(path: str, n: int = 120) -> str:
+    with open(path, "rb") as raw:
+        chunk = raw.read(n)
+    return chunk.decode("utf-8", errors="replace").replace("\\n", "\\\\n").replace("\\r", "\\\\r")
 
+
+def open_maybe_gzip(path: str):
+    with open(path, "rb") as probe:
+        head = probe.read(4)
+
+    if head.startswith(b"\x1f\x8b"):
+        return gzip.open(path, "rb")
+
+    if path.endswith(".gz") and head.lstrip().startswith(b"<"):
+        print(
+            f"Warning: {path} ends with .gz but appears to be plain XML; reading without decompression.",
+            file=sys.stderr,
+        )
+        return open(path, "rb")
+
+    if path.endswith(".gz"):
+        preview = file_text_preview(path)
+        raise SystemExit(
+            f"Expected a gzip-compressed XML file at '{path}', but it is not gzip. "
+            f"File starts with: {preview!r}. "
+            "This often means the download failed (for example: a 'Not Found' response)."
+        )
+
+    return open(path, "rb")
 
 def init_db(db_path: str, overwrite: bool) -> sqlite3.Connection:
     if os.path.exists(db_path):
