@@ -1,13 +1,30 @@
 import { useState, useEffect, useRef, useId } from 'react';
 import { ResizableBox } from 'react-resizable';
+import { motion } from 'framer-motion';
 import PropTypes from 'prop-types';
 import { Storage } from '../../lib/platform/storage';
 import './FloatingPanel.css';
 
+const MOBILE_BREAKPOINT = 640;
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(
+    () => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  return isMobile;
+}
+
 /**
- * A high-performance floating, draggable, and resizable panel.
- * Uses direct DOM manipulation and Pointer Capture for zero-latency 'sticky' dragging.
- * Persists its position and size to localStorage.
+ * A floating, draggable, and resizable panel on desktop.
+ * On mobile (<=640px), renders as a bottom sheet instead.
  */
 export default function FloatingPanel({
   id,
@@ -28,6 +45,113 @@ export default function FloatingPanel({
   modal = false,
   ariaLabel,
 }) {
+  const isMobile = useIsMobile();
+  const titleId = useId();
+
+  if (isMobile) {
+    return (
+      <MobileBottomSheet
+        id={id}
+        title={title}
+        titleId={titleId}
+        onClose={onClose}
+        className={className}
+        role={role}
+        modal={modal}
+        ariaLabel={ariaLabel}
+      >
+        {children}
+      </MobileBottomSheet>
+    );
+  }
+
+  return (
+    <DesktopPanel
+      id={id}
+      title={title}
+      titleId={titleId}
+      onClose={onClose}
+      minWidth={minWidth}
+      minHeight={minHeight}
+      maxWidth={maxWidth}
+      maxHeight={maxHeight}
+      defaultWidth={defaultWidth}
+      defaultHeight={defaultHeight}
+      defaultX={defaultX}
+      defaultY={defaultY}
+      zIndex={zIndex}
+      className={className}
+      role={role}
+      modal={modal}
+      ariaLabel={ariaLabel}
+    >
+      {children}
+    </DesktopPanel>
+  );
+}
+
+/* ========== MOBILE BOTTOM SHEET ========== */
+function MobileBottomSheet({ title, titleId, onClose, className, role, modal, ariaLabel, children }) {
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape' && onClose) {
+      e.stopPropagation();
+      onClose();
+    }
+  };
+
+  return (
+    <>
+      <motion.div
+        className="mobile-bottom-sheet-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={onClose}
+      />
+      <motion.div
+        className={`mobile-bottom-sheet ${className}`}
+        role={role}
+        aria-modal={modal ? 'true' : undefined}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabel ? undefined : titleId}
+        onKeyDown={handleKeyDown}
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+      >
+        <div className="mobile-bottom-sheet-handle" />
+        <div className="mobile-bottom-sheet-header">
+          <h3 id={titleId} className="mobile-bottom-sheet-title">{title}</h3>
+          {onClose && (
+            <button
+              type="button"
+              className="mobile-bottom-sheet-close"
+              onClick={onClose}
+              aria-label="Close panel"
+            >
+              &#x2715;
+            </button>
+          )}
+        </div>
+        <div className="mobile-bottom-sheet-body">
+          <div style={{ padding: 'var(--space-3)' }}>
+            {children}
+          </div>
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
+/* ========== DESKTOP DRAGGABLE PANEL ========== */
+function DesktopPanel({
+  id, title, titleId, children, onClose,
+  minWidth, minHeight, maxWidth, maxHeight,
+  defaultWidth, defaultHeight, defaultX, defaultY,
+  zIndex, className, role, modal, ariaLabel,
+}) {
   const [size, setSize] = useState(() => {
     const saved = Storage.getItem(`panel-size-${id}`);
     return saved ? JSON.parse(saved) : { width: defaultWidth, height: defaultHeight };
@@ -35,14 +159,10 @@ export default function FloatingPanel({
 
   const [isDragging, setIsDragging] = useState(false);
   const panelRef = useRef(null);
-  const titleId = useId();
   const dragData = useRef({
-    startX: 0,
-    startY: 0,
-    initialX: 0,
-    initialY: 0,
-    currentX: 0,
-    currentY: 0,
+    startX: 0, startY: 0,
+    initialX: 0, initialY: 0,
+    currentX: 0, currentY: 0,
   });
 
   const applyPosition = (x, y) => {
@@ -51,28 +171,24 @@ export default function FloatingPanel({
     }
   };
 
-  // Initialize position from storage or defaults
   useEffect(() => {
     const saved = Storage.getItem(`panel-pos-${id}`);
     const pos = saved ? JSON.parse(saved) : { x: defaultX, y: defaultY };
     dragData.current.currentX = pos.x;
     dragData.current.currentY = pos.y;
-
     applyPosition(pos.x, pos.y);
   }, [id, defaultX, defaultY]);
 
-  // Save size on change
   useEffect(() => {
     Storage.setItem(`panel-size-${id}`, JSON.stringify(size));
   }, [id, size]);
 
   const handlePointerDown = (e) => {
-    // Only drag on left click or touch
     if (e.button !== 0 && e.button !== undefined) return;
-    
+
     const header = e.currentTarget;
     header.setPointerCapture(e.pointerId);
-    
+
     setIsDragging(true);
     document.body.classList.add('is-dragging-panel');
 
@@ -82,18 +198,13 @@ export default function FloatingPanel({
     dragData.current.initialY = dragData.current.currentY;
 
     const handlePointerMove = (moveEvent) => {
-      if (moveEvent.cancelable) {
-        moveEvent.preventDefault();
-      }
+      if (moveEvent.cancelable) moveEvent.preventDefault();
       const deltaX = moveEvent.clientX - dragData.current.startX;
       const deltaY = moveEvent.clientY - dragData.current.startY;
-
       const nextX = dragData.current.initialX + deltaX;
       const nextY = dragData.current.initialY + deltaY;
       dragData.current.currentX = nextX;
       dragData.current.currentY = nextY;
-
-      // Keep the panel fully synchronized with the pointer at event frequency.
       applyPosition(nextX, nextY);
     };
 
@@ -104,16 +215,13 @@ export default function FloatingPanel({
       header.removeEventListener('pointermove', handlePointerMove);
       header.removeEventListener('pointerup', handlePointerUp);
       header.removeEventListener('pointercancel', handlePointerUp);
-      
+
       setIsDragging(false);
       document.body.classList.remove('is-dragging-panel');
-
       applyPosition(dragData.current.currentX, dragData.current.currentY);
-
-      // Final persistence
       Storage.setItem(`panel-pos-${id}`, JSON.stringify({
         x: dragData.current.currentX,
-        y: dragData.current.currentY
+        y: dragData.current.currentY,
       }));
     };
 
@@ -151,7 +259,7 @@ export default function FloatingPanel({
         height: size.height,
         left: 0,
         top: 0,
-        touchAction: 'none', // Critical for pointer events on mobile
+        touchAction: 'none',
       }}
     >
       <ResizableBox
@@ -163,7 +271,7 @@ export default function FloatingPanel({
         resizeHandles={['se', 'sw', 'ne', 'nw', 'e', 'w', 'n', 's']}
       >
         <div className="panel-container" style={{ width: '100%', height: '100%' }}>
-          <div 
+          <div
             className="panel-header"
             onPointerDown={handlePointerDown}
           >
@@ -176,7 +284,7 @@ export default function FloatingPanel({
                 type="button"
                 className="panel-close-btn"
                 onClick={onClose}
-                onPointerDown={(e) => e.stopPropagation()} // Don't drag when closing
+                onPointerDown={(e) => e.stopPropagation()}
                 aria-label="Close panel"
               >
                 &#x2715;

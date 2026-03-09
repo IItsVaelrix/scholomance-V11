@@ -3,6 +3,23 @@ import { memo, useMemo, useRef, useState, useEffect, useCallback } from "react";
 const VIRTUALIZE_AFTER_COUNT = 12;
 const LIST_ROW_HEIGHT = 120;
 const LIST_OVERSCAN = 6;
+const PINNED_STORAGE_KEY = "scholomance-pinned-scrolls";
+const MAX_PINS = 5;
+
+function loadPinnedIds() {
+  try {
+    const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedIds(ids) {
+  try {
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify([...ids]));
+  } catch { /* ignore quota errors */ }
+}
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -24,7 +41,37 @@ function truncate(text, maxLen = 80) {
   return text.slice(0, maxLen).trim() + "...";
 }
 
-const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDelete }) {
+/* Inline SVG icons */
+function PinIcon({ filled }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill={filled ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 17v5" />
+      <path d="M9 2h6l-1 7h4l-5 6H9l-1-6H4l5-7z" />
+    </svg>
+  );
+}
+
+function EditIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
+    </svg>
+  );
+}
+
+const ScrollItem = memo(function ScrollItem({ scroll, isActive, isPinned, onSelect, onDelete, onEdit, onTogglePin }) {
   const wordCount = Number.isFinite(scroll.wordCount) ? scroll.wordCount : 0;
   const preview = scroll.preview || truncate(scroll.content || "");
 
@@ -34,7 +81,7 @@ const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDele
 
   return (
     <div
-      className={`scroll-item ${isActive ? "scroll-item--active" : ""}`}
+      className={`scroll-item ${isActive ? "scroll-item--active" : ""}${isPinned ? " scroll-item--pinned" : ""}`}
       role="listitem"
     >
       <button
@@ -44,6 +91,7 @@ const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDele
         aria-current={isActive ? "true" : undefined}
       >
         <div className="scroll-item-title">
+          {isPinned && <span className="scroll-pin-indicator" aria-label="Pinned">&#x1F4CC;</span>}
           {scroll.title || "Untitled Scroll"}
         </div>
         <div className="scroll-item-preview">
@@ -61,20 +109,40 @@ const ScrollItem = memo(function ScrollItem({ scroll, isActive, onSelect, onDele
           </span>
         </div>
       </button>
-      <button
-        type="button"
-        className="scroll-delete-btn"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (confirm("Delete this scroll permanently?")) {
-            onDelete(scroll.id);
-          }
-        }}
-        title="Delete scroll"
-        aria-label="Delete scroll"
-      >
-        &#x2715;
-      </button>
+      <div className="scroll-item-actions">
+        <button
+          type="button"
+          className={`scroll-action-btn scroll-action-pin${isPinned ? " scroll-action-pin--active" : ""}`}
+          onClick={(e) => { e.stopPropagation(); onTogglePin(scroll.id); }}
+          title={isPinned ? "Unpin scroll" : "Pin to top"}
+          aria-label={isPinned ? "Unpin scroll" : "Pin scroll to top"}
+        >
+          <PinIcon filled={isPinned} />
+        </button>
+        <button
+          type="button"
+          className="scroll-action-btn scroll-action-edit"
+          onClick={(e) => { e.stopPropagation(); onEdit(scroll.id); }}
+          title="Edit scroll"
+          aria-label="Edit scroll"
+        >
+          <EditIcon />
+        </button>
+        <button
+          type="button"
+          className="scroll-action-btn scroll-action-delete"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (confirm("Delete this scroll permanently?")) {
+              onDelete(scroll.id);
+            }
+          }}
+          title="Delete scroll"
+          aria-label="Delete scroll"
+        >
+          <TrashIcon />
+        </button>
+      </div>
     </div>
   );
 });
@@ -85,12 +153,43 @@ const ScrollList = memo(function ScrollList({
   onSelect,
   onDelete,
   onNewScroll,
+  onEdit,
 }) {
   const listBodyRef = useRef(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
+  const [pinnedIds, setPinnedIds] = useState(loadPinnedIds);
 
-  const useVirtualization = scrolls.length >= VIRTUALIZE_AFTER_COUNT;
+  const handleTogglePin = useCallback((id) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        if (next.size >= MAX_PINS) return prev; // Enforce max
+        next.add(id);
+      }
+      savePinnedIds(next);
+      return next;
+    });
+  }, []);
+
+  // Sort scrolls: pinned first, then by original order
+  const sortedScrolls = useMemo(() => {
+    if (pinnedIds.size === 0) return scrolls;
+    const pinned = [];
+    const unpinned = [];
+    for (const s of scrolls) {
+      if (pinnedIds.has(s.id)) {
+        pinned.push(s);
+      } else {
+        unpinned.push(s);
+      }
+    }
+    return [...pinned, ...unpinned];
+  }, [scrolls, pinnedIds]);
+
+  const useVirtualization = sortedScrolls.length >= VIRTUALIZE_AFTER_COUNT;
 
   const syncViewport = useCallback(() => {
     const node = listBodyRef.current;
@@ -130,7 +229,7 @@ const ScrollList = memo(function ScrollList({
     if (!useVirtualization) {
       return {
         startIndex: 0,
-        endIndex: scrolls.length,
+        endIndex: sortedScrolls.length,
         topPadding: 0,
         bottomPadding: 0,
       };
@@ -140,7 +239,7 @@ const ScrollList = memo(function ScrollList({
     const visibleCount = Math.ceil(effectiveViewportHeight / LIST_ROW_HEIGHT);
     const startIndex = Math.max(0, Math.floor(scrollTop / LIST_ROW_HEIGHT) - LIST_OVERSCAN);
     const endIndex = Math.min(
-      scrolls.length,
+      sortedScrolls.length,
       startIndex + visibleCount + LIST_OVERSCAN * 2
     );
 
@@ -148,13 +247,13 @@ const ScrollList = memo(function ScrollList({
       startIndex,
       endIndex,
       topPadding: startIndex * LIST_ROW_HEIGHT,
-      bottomPadding: Math.max(0, (scrolls.length - endIndex) * LIST_ROW_HEIGHT),
+      bottomPadding: Math.max(0, (sortedScrolls.length - endIndex) * LIST_ROW_HEIGHT),
     };
-  }, [scrollTop, scrolls.length, useVirtualization, viewportHeight]);
+  }, [scrollTop, sortedScrolls.length, useVirtualization, viewportHeight]);
 
   const visibleScrolls = useMemo(() => {
-    return scrolls.slice(windowRange.startIndex, windowRange.endIndex);
-  }, [scrolls, windowRange.startIndex, windowRange.endIndex]);
+    return sortedScrolls.slice(windowRange.startIndex, windowRange.endIndex);
+  }, [sortedScrolls, windowRange.startIndex, windowRange.endIndex]);
 
   return (
     <div className="scroll-list">
@@ -176,7 +275,7 @@ const ScrollList = memo(function ScrollList({
       </button>
 
       <div className="scroll-list-body" role="list" ref={listBodyRef}>
-        {scrolls.length === 0 ? (
+        {sortedScrolls.length === 0 ? (
           <div className="scroll-empty">
             <div className="empty-sigil">&#x2728;</div>
             <p>No scrolls yet</p>
@@ -196,8 +295,11 @@ const ScrollList = memo(function ScrollList({
                 key={scroll.id}
                 scroll={scroll}
                 isActive={activeScrollId === scroll.id}
+                isPinned={pinnedIds.has(scroll.id)}
                 onSelect={onSelect}
                 onDelete={onDelete}
+                onEdit={onEdit}
+                onTogglePin={handleTogglePin}
               />
             ))}
           </div>

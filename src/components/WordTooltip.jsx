@@ -644,6 +644,53 @@ const WordTooltip = ({
     );
   };
 
+  const isMobileView = typeof window !== "undefined" && window.innerWidth <= 640;
+
+  if (isMobileView) {
+    return (
+      <>
+        <motion.div
+          className="mobile-bottom-sheet-backdrop"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+        />
+        <motion.div
+          ref={containerRef}
+          role="dialog"
+          aria-labelledby={titleId}
+          aria-modal="true"
+          tabIndex="-1"
+          className={`word-tooltip-mobile-sheet ${isInteracting ? "is-interacting" : ""}`}
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 30, stiffness: 300 }}
+        >
+          <div className="mobile-bottom-sheet-handle" />
+          <div className="word-tooltip-mobile-header">
+            <h3 id={titleId} className="mobile-bottom-sheet-title">
+              {wordData?.word || "Word"}
+            </h3>
+            <button
+              type="button"
+              className="mobile-bottom-sheet-close"
+              onClick={onClose}
+              aria-label="Close word card"
+            >
+              &#x2715;
+            </button>
+          </div>
+          <div className="word-tooltip-mobile-body">
+            {cardContent()}
+          </div>
+        </motion.div>
+      </>
+    );
+  }
+
   return (
     <motion.div
       ref={containerRef}

@@ -232,3 +232,47 @@
   margin-left: auto;
   font-size: 1.2rem;
 }
+
+@media (max-width: 640px) {
+  .profile-page {
+    padding-top: var(--space-8);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .profile-card {
+    position: static;
+    padding: var(--space-4);
+  }
+
+  .avatar-frame {
+    width: 80px;
+    height: 80px;
+  }
+
+  .avatar-placeholder {
+    font-size: 2rem;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .content-panel {
+    padding: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .schools-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+  }
+
+  .school-card {
+    padding: var(--space-3);
+  }
+
+  .achievement-item {
+    padding: var(--space-3);
+  }
+}

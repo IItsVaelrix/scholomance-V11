@@ -526,3 +526,20 @@
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+@media (max-width: 640px) {
+    .collab-page {
+        padding: var(--space-3);
+    }
+
+    .kanban {
+        grid-template-columns: 1fr;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+    }
+
+    .kanban-column {
+        scroll-snap-align: start;
+        min-width: 85vw;
+    }
+}

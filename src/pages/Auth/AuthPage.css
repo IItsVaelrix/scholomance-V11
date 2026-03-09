@@ -97,3 +97,24 @@
   border-color: var(--active-school-color, var(--school-sonic));
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 25%, transparent);
 }
+
+@media (max-width: 640px) {
+  .auth-page {
+    padding-top: var(--space-8);
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
+  .auth-card {
+    padding: var(--space-5);
+  }
+
+  .auth-form .input {
+    min-height: var(--tap-target, 44px);
+    font-size: 1rem;
+  }
+
+  .auth-form .btn {
+    min-height: var(--tap-target, 44px);
+  }
+}
