@@ -1,6 +1,19 @@
 /**
- * Static criticism phrase bank used by CODEx heuristic commentary.
- * Curated for deterministic offline commentary generation.
+ * Procedural commentary phrase bank for CODEx heuristic commentary.
+ *
+ * Instead of static bridge/closer sentences, each entry provides:
+ * - concept: the abstract theme label
+ * - citations: static quotes from public-domain criticism (Project Gutenberg)
+ * - aspects: noun phrases naming specific facets of the concept
+ * - criteria: noun phrases describing what the heuristic judges
+ *
+ * Shared template vocabulary (verbs, quality tiers, verdict phrases, scopes)
+ * lives in TEMPLATE_VOCAB. The commentary builder uses these ingredients to
+ * procedurally generate bridge and closer sentences, then scores candidates
+ * with a bigram Markov model.
+ *
+ * MODEL_CORPUS provides exemplar sentences for Markov model training,
+ * establishing the bigram transitions of good commentary register.
  */
 
 function freezeEntry(entry) {
@@ -10,10 +23,99 @@ function freezeEntry(entry) {
       quote: String(citation?.quote || ""),
       attribution: String(citation?.attribution || ""),
     })) : []),
-    bridges: Object.freeze(Array.isArray(entry?.bridges) ? entry.bridges.map((bridge) => String(bridge || "")) : []),
-    closers: Object.freeze(Array.isArray(entry?.closers) ? entry.closers.map((closer) => String(closer || "")) : []),
+    aspects: Object.freeze(Array.isArray(entry?.aspects) ? entry.aspects.map((a) => String(a || "")) : []),
+    criteria: Object.freeze(Array.isArray(entry?.criteria) ? entry.criteria.map((c) => String(c || "")) : []),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Shared template vocabulary — used by the builder for procedural generation
+// ---------------------------------------------------------------------------
+
+export const TEMPLATE_VOCAB = Object.freeze({
+  readingVerbs: Object.freeze([
+    "read", "measured", "interpreted", "judged", "tracked",
+  ]),
+  qualityTiers: Object.freeze({
+    high: Object.freeze([
+      "deliberate", "controlled", "structural", "governed", "disciplined",
+    ]),
+    mid: Object.freeze([
+      "present", "operative", "detectable", "functional", "moderate",
+    ]),
+    low: Object.freeze([
+      "faint", "nascent", "tentative", "emerging", "sparse",
+    ]),
+  }),
+  verdictTiers: Object.freeze({
+    high: Object.freeze([
+      "sustains itself under scrutiny",
+      "holds as deliberate craft",
+      "reads as intentional throughout",
+      "confirms structural discipline",
+      "demonstrates governed control",
+    ]),
+    mid: Object.freeze([
+      "registers above noise",
+      "shows partial control",
+      "functions intermittently",
+      "holds in places but not consistently",
+      "reads as uneven but present",
+    ]),
+    low: Object.freeze([
+      "remains underdeveloped",
+      "appears nascent at best",
+      "lacks consistent presence",
+      "does not yet sustain itself",
+      "reads as incidental rather than governed",
+    ]),
+  }),
+  scopePhrases: Object.freeze([
+    "across the line system",
+    "through the stanza",
+    "at the measured positions",
+    "across the active lines",
+    "through the stress field",
+  ]),
+});
+
+// ---------------------------------------------------------------------------
+// Markov model training corpus — exemplar sentences that establish the
+// bigram transitions of good commentary register. Citations are also
+// included at training time (extracted automatically by the builder).
+// ---------------------------------------------------------------------------
+
+export const MODEL_CORPUS = Object.freeze([
+  "The texture is read as deliberate across the line system.",
+  "The pattern here signals controlled semantic intent.",
+  "The surface reveals governed articulation through the stanza.",
+  "The reading confirms structural discipline at the measured positions.",
+  "The design sustains itself under scrutiny across the active lines.",
+  "Sonic texture here registers as intentional throughout.",
+  "The phonetic pattern holds as deliberate craft through the stress field.",
+  "The aspect is interpreted as functional rather than incidental.",
+  "Criticism measures the surface for structural presence.",
+  "The reading tracks governed control across the line system.",
+  "The texture reads as controlled rather than scattered.",
+  "The pattern in the surface reads deliberate across the stanza.",
+  "The aspect here confirms disciplined articulation.",
+  "The reading reveals intentional design through the measured positions.",
+  "The surface is judged as structural across the active lines.",
+  "The chain lands as controlled emphasis through the stress field.",
+  "The recurrence sharpens the attack across the line system.",
+  "The architecture holds as deliberate craft under scrutiny.",
+  "The coherence field sustains itself through the stanza.",
+  "The emotional arc reads as intentional throughout the active lines.",
+  "The lexical palette demonstrates governed control at the measured positions.",
+  "The echo structure confirms structural discipline across the line system.",
+  "The cadence here registers above noise through the stress field.",
+  "The resonance profile shows partial control across the stanza.",
+  "The device surface holds in places but not consistently.",
+]);
+
+// ---------------------------------------------------------------------------
+// Default entry — used when no heuristic-specific entry is found
+// ---------------------------------------------------------------------------
 
 const DEFAULT_COMMENTARY_ENTRY = freezeEntry({
   concept: "craft signal",
@@ -22,18 +124,31 @@ const DEFAULT_COMMENTARY_ENTRY = freezeEntry({
       quote: "Poetry is the spontaneous overflow of powerful feelings",
       attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
     },
+    {
+      quote: "True ease in writing comes from art, not chance",
+      attribution: "Pope, An Essay on Criticism (PG 2612)",
+    },
+    {
+      quote: "The poet nothing affirmeth, and therefore never lieth",
+      attribution: "Sidney, Defence of Poesy (PG 1265)",
+    },
   ],
-  bridges: [
-    "The critical tradition weighs form and feeling together.",
-    "Classical criticism reads technique as meaning, not decoration.",
+  aspects: [
+    "craft signal", "compositional surface", "formal reading",
+    "structural indicator", "craft posture",
   ],
-  closers: [
-    "The signal is coherent with the song's present diction.",
-    "The craft reading supports what the lyric is already doing.",
+  criteria: [
+    "deliberate technique", "formal coherence", "compositional intent",
+    "craft governance", "structural discipline",
   ],
 });
 
+// ---------------------------------------------------------------------------
+// Per-heuristic entries
+// ---------------------------------------------------------------------------
+
 export const PHRASE_BANK = Object.freeze({
+
   phoneme_density: freezeEntry({
     concept: "sonic texture",
     citations: [
@@ -45,16 +160,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Poetry is the breath and finer spirit of all knowledge",
         attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
       },
+      {
+        quote: "True ease in writing comes from art, not chance",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet, described in ideal perfection, brings the whole soul of man into activity",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
+      {
+        quote: "The effect of elevated language upon an audience is not persuasion but transport",
+        attribution: "Longinus, On the Sublime (PG 6081)",
+      },
     ],
-    bridges: [
-      "Criticism here asks whether phonetic pattern carries semantic intent.",
-      "The ear is treated as an index of line-level intelligence.",
+    aspects: [
+      "sonic texture", "phonetic pattern", "sound design",
+      "phoneme activity", "sonic surface",
     ],
-    closers: [
-      "This texture reads deliberate rather than incidental.",
-      "The sound design strengthens the line's semantic gravity.",
+    criteria: [
+      "semantic intent", "controlled articulation", "structural presence",
+      "phonetic discipline", "sonic coherence",
     ],
   }),
+
   alliteration_density: freezeEntry({
     concept: "consonant chaining",
     citations: [
@@ -66,16 +194,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Sublimity is the echo of a great soul",
         attribution: "Longinus, On the Sublime (PG 6081)",
       },
+      {
+        quote: "Expression is the dress of thought",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "Nature never set forth the earth in so rich tapestry as divers poets have done",
+        attribution: "Sidney, Defence of Poesy (PG 1265)",
+      },
+      {
+        quote: "Poetry is something more philosophic and of graver import than history",
+        attribution: "Aristotle, Poetics (PG 1974)",
+      },
     ],
-    bridges: [
-      "Repetition at line onset can be rhetorical architecture, not ornament.",
-      "Initial-consonant recurrence is read as emphasis and memory scaffolding.",
+    aspects: [
+      "consonant chain", "onset pattern", "alliterative surface",
+      "initial recurrence", "consonant architecture",
     ],
-    closers: [
-      "The chain lands as controlled emphasis.",
-      "The recurrence sharpens the lyric's attack.",
+    criteria: [
+      "rhetorical emphasis", "memory scaffolding", "rhythmic attack",
+      "onset discipline", "consonant control",
     ],
   }),
+
   rhyme_quality: freezeEntry({
     concept: "echo architecture",
     citations: [
@@ -87,16 +228,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Poetry is an imitation of action",
         attribution: "Aristotle, Poetics (PG 1974)",
       },
+      {
+        quote: "What oft was thought, but ne'er so well expressed",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet binds together by passion and knowledge the vast empire of human society",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
+      {
+        quote: "Good sense is the body of poetic genius, fancy its drapery, motion its life, and imagination the soul",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
     ],
-    bridges: [
-      "Rhyme is judged by structural coherence and meaningful return.",
-      "The pattern is strongest when recurrence advances motion, not just closure.",
+    aspects: [
+      "echo structure", "rhyme net", "return pattern",
+      "end-sound architecture", "echo surface",
     ],
-    closers: [
-      "The rhyme net supports narrative continuity.",
-      "The return pattern stays legible under close reading.",
+    criteria: [
+      "structural coherence", "meaningful return", "narrative continuity",
+      "line-ending discipline", "echo precision",
     ],
   }),
+
   meter_regularity: freezeEntry({
     concept: "metrical cadence",
     citations: [
@@ -108,16 +262,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "No man was ever yet a great poet, without being at the same time a profound philosopher",
         attribution: "Coleridge, Biographia Literaria (PG 7700)",
       },
+      {
+        quote: "True ease in writing comes from art, not chance",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet should prefer probable impossibilities to improbable possibilities",
+        attribution: "Aristotle, Poetics (PG 1974)",
+      },
+      {
+        quote: "Poetry is of all human learning the most ancient and of most fatherly antiquity",
+        attribution: "Sidney, Defence of Poesy (PG 1265)",
+      },
     ],
-    bridges: [
-      "Cadence is read as the operating tempo of thought.",
-      "Regularity is valued when it serves emotional pacing.",
+    aspects: [
+      "metrical cadence", "stress pattern", "rhythmic discipline",
+      "tempo architecture", "beat regularity",
     ],
-    closers: [
-      "The metrical discipline remains mostly stable.",
-      "The cadence control keeps the delivery intentional.",
+    criteria: [
+      "emotional pacing", "tempo governance", "stress discipline",
+      "delivery control", "cadence coherence",
     ],
   }),
+
   vocabulary_richness: freezeEntry({
     concept: "diction range",
     citations: [
@@ -129,16 +296,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Poetry is of all human learning the most ancient and of most fatherly antiquity",
         attribution: "Sidney, Defence of Poesy (PG 1265)",
       },
+      {
+        quote: "The poet, described in ideal perfection, brings the whole soul of man into activity",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
+      {
+        quote: "Poetry is the breath and finer spirit of all knowledge",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
+      {
+        quote: "Words are like leaves; and where they most abound, much fruit of sense beneath is rarely found",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
     ],
-    bridges: [
-      "Lexical choice is read for precision, freshness, and register control.",
-      "Range matters less than fit: diction should match pressure and theme.",
+    aspects: [
+      "lexical palette", "diction range", "vocabulary surface",
+      "word selection", "lexical contrast",
     ],
-    closers: [
-      "The lexical palette contributes usable contrast.",
-      "Word choice shows measured selection rather than noise.",
+    criteria: [
+      "thematic precision", "register control", "diction fit",
+      "lexical discipline", "vocabulary governance",
     ],
   }),
+
   literary_device_richness: freezeEntry({
     concept: "rhetorical layering",
     citations: [
@@ -150,16 +330,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Poetry therefore is an art of imitation",
         attribution: "Aristotle, Poetics (PG 1974)",
       },
+      {
+        quote: "Expression is the dress of thought",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "Nature never set forth the earth in so rich tapestry as divers poets have done",
+        attribution: "Sidney, Defence of Poesy (PG 1265)",
+      },
+      {
+        quote: "The effect of elevated language upon an audience is not persuasion but transport",
+        attribution: "Longinus, On the Sublime (PG 6081)",
+      },
     ],
-    bridges: [
-      "Device density is read as rhetorical layering, not mere decoration.",
-      "Patterns of figure and motif indicate intentional craft pressure.",
+    aspects: [
+      "device surface", "rhetorical texture", "figure density",
+      "motif architecture", "device interaction",
     ],
-    closers: [
-      "The device mix creates a durable interpretive surface.",
-      "The rhetorical texture sustains close analysis.",
+    criteria: [
+      "interpretive depth", "craft pressure", "structural intent",
+      "rhetorical discipline", "analytical durability",
     ],
   }),
+
   scroll_power: freezeEntry({
     concept: "coherence pressure",
     citations: [
@@ -171,16 +364,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Sublimity is the echo of a great soul",
         attribution: "Longinus, On the Sublime (PG 6081)",
       },
+      {
+        quote: "The poet, described in ideal perfection, brings the whole soul of man into activity",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
+      {
+        quote: "Poetry is something more philosophic and of graver import than history",
+        attribution: "Aristotle, Poetics (PG 1974)",
+      },
+      {
+        quote: "What oft was thought, but ne'er so well expressed",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
     ],
-    bridges: [
-      "Power is read as the coupling between formal order and emotional force.",
-      "The score tracks how cohesion and intensity reinforce each other.",
+    aspects: [
+      "coherence field", "compositional pressure", "line system",
+      "formal coupling", "force architecture",
     ],
-    closers: [
-      "The line system holds under pressure.",
-      "Form and force are aligned more often than they conflict.",
+    criteria: [
+      "formal order", "emotional intensity", "cohesion strength",
+      "pressure resolution", "compositional governance",
     ],
   }),
+
   phonetic_hacking: freezeEntry({
     concept: "vowel strategy",
     citations: [
@@ -192,16 +398,29 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Poetry is an imitation of action",
         attribution: "Aristotle, Poetics (PG 1974)",
       },
+      {
+        quote: "Poetry is the breath and finer spirit of all knowledge",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
+      {
+        quote: "The effect of elevated language upon an audience is not persuasion but transport",
+        attribution: "Longinus, On the Sublime (PG 6081)",
+      },
+      {
+        quote: "The poet nothing affirmeth, and therefore never lieth",
+        attribution: "Sidney, Defence of Poesy (PG 1265)",
+      },
     ],
-    bridges: [
-      "Vowel-family concentration is interpreted as directed resonance.",
-      "Phonetic clustering is strongest when it supports scene and tone.",
+    aspects: [
+      "vowel clustering", "resonance profile", "vowel architecture",
+      "phonetic concentration", "resonance contour",
     ],
-    closers: [
-      "The resonance profile appears intentionally steered.",
-      "The vowel logic gives the lyric a repeatable contour.",
+    criteria: [
+      "directed resonance", "vowel discipline", "phonetic strategy",
+      "resonance control", "vowel coherence",
     ],
   }),
+
   emotional_resonance: freezeEntry({
     concept: "affective continuity",
     citations: [
@@ -213,18 +432,30 @@ export const PHRASE_BANK = Object.freeze({
         quote: "Sublimity is the echo of a great soul",
         attribution: "Longinus, On the Sublime (PG 6081)",
       },
+      {
+        quote: "Character is that which reveals moral purpose",
+        attribution: "Aristotle, Poetics (PG 1974)",
+      },
+      {
+        quote: "No man was ever yet a great poet, without being at the same time a profound philosopher",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
+      {
+        quote: "The poet binds together by passion and knowledge the vast empire of human society",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
     ],
-    bridges: [
-      "Emotion is judged by continuity and escalation, not isolated intensity.",
-      "The dominant affect is strongest when repeated through structural pivots.",
+    aspects: [
+      "emotional arc", "affective surface", "emotional pressure",
+      "affect continuity", "emotional contour",
     ],
-    closers: [
-      "The emotional arc reads coherent across the stanza flow.",
-      "Affective pressure persists beyond single-line peaks.",
+    criteria: [
+      "escalation control", "continuity discipline", "affective governance",
+      "emotional coherence", "transition strength",
     ],
   }),
+
   default: DEFAULT_COMMENTARY_ENTRY,
 });
 
 export { DEFAULT_COMMENTARY_ENTRY };
-
