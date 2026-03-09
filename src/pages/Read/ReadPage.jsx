@@ -119,6 +119,11 @@ export default function ReadPage() {
     if (typeof window === "undefined") return false;
     return window.innerWidth <= 960;
   });
+  const [isMobileViewport, setIsMobileViewport] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth <= 640;
+  });
+  const [mobileActiveTab, setMobileActiveTab] = useState("EDITOR"); // EDITOR, FILES, TOOLS, SCORE
   const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
   const [, setSaveStatus] = useState("Saved");
   const [sidebarTab, setSidebarTab] = useState("FILES"); // FILES, SEARCH, TOOLS
@@ -359,6 +364,7 @@ export default function ReadPage() {
   useEffect(() => {
     const handleResize = () => {
       setIsNarrowViewport(window.innerWidth <= 960);
+      setIsMobileViewport(window.innerWidth <= 640);
     };
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -423,6 +429,17 @@ export default function ReadPage() {
     setIsEditable(true);
     setHighlightedLines([]);
   }, [activeScrollContent]);
+
+  const handleEditScrollById = useCallback((id) => {
+    const scroll = getScrollById(id);
+    if (!scroll) return;
+    setActiveScrollId(id);
+    setEditorContent(String(scroll.content || ""));
+    setIsEditing(true);
+    setIsEditable(true);
+    setHighlightedLines([]);
+    setSaveStatus("Unsaved");
+  }, [getScrollById]);
 
   const handleCancelEdit = useCallback(() => {
     if (activeScrollId) {
@@ -867,10 +884,241 @@ export default function ReadPage() {
     };
   }, [editorContent, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
 
+  /* ── Shared content blocks used in both mobile and desktop ── */
+  const editorBlock = (
+    <div className="codex-workspace">
+      <div className="document-container">
+        {activeScrollId || isEditable ? (
+          <ScrollEditor
+            ref={editorRef}
+            key={activeScrollId || "new"}
+            initialTitle={activeScroll?.title || ""}
+            initialContent={activeScroll?.content || ""}
+            onSave={handleSaveScroll}
+            onCancel={isEditing ? handleCancelEdit : undefined}
+            isEditable={isEditable}
+            disabled={false}
+            isTruesight={isTruesight}
+            isPredictive={isPredictive}
+            predict={predict}
+            getCompletions={getCompletions}
+            checkSpelling={checkSpelling}
+            getSpellingSuggestions={getSpellingSuggestions}
+            predictorReady={predictorReady}
+            plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
+            onContentChange={(content) => {
+              isTypingRef.current = true;
+              clearTimeout(typingTimeoutRef.current);
+              typingTimeoutRef.current = setTimeout(() => {
+                isTypingRef.current = false;
+                if (pendingCommitRef.current) {
+                  setCommittedColors(pendingCommitRef.current);
+                  pendingCommitRef.current = null;
+                }
+              }, 400);
+              setEditorContent(content);
+              setSaveStatus("Unsaved");
+            }}
+            analyzedWords={committedColors.analyzedWords}
+            analyzedWordsByIdentity={committedColors.analyzedWordsByIdentity}
+            analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
+            activeConnections={overlayConnections}
+            lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
+            highlightedLines={effectiveHighlightedLines}
+            pinnedLines={pinnedLines}
+            vowelColors={activeVowelColors}
+            colorMap={committedColors.colorMap}
+            syntaxLayer={deepAnalysis?.syntaxSummary}
+            analysisMode={analysisMode}
+            theme={theme}
+            onWordActivate={handleWordActivate}
+            onCursorChange={setCursorPos}
+            onScrollChange={setMinimapScrollTop}
+          />
+        ) : (
+          <div className="scroll-placeholder">
+            <button type="button" className="btn btn-primary" onClick={handleNewScroll}>
+              Begin New Scroll
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const filesBlock = (
+    <ScrollList
+      scrolls={scrolls}
+      activeScrollId={activeScrollId}
+      onSelect={(id) => { handleSelectScroll(id); if (isMobileViewport) setMobileActiveTab("EDITOR"); }}
+      onDelete={deleteScroll}
+      onNewScroll={() => { handleNewScroll(); if (isMobileViewport) setMobileActiveTab("EDITOR"); }}
+      onEdit={(id) => { handleEditScrollById(id); if (isMobileViewport) setMobileActiveTab("EDITOR"); }}
+    />
+  );
+
+  const toolsBlock = (
+    <div className="sidebar-tools">
+      <ToolsSidebar
+        isTruesight={isTruesight}
+        onToggleTruesight={handleToggleTruesight}
+        isPredictive={isPredictive}
+        onTogglePredictive={() => setIsPredictive(prev => !prev)}
+        analysisMode={analysisMode}
+        onModeChange={handleModeChange}
+        isAnalyzing={isAnalyzing}
+        showScorePanel={showScorePanel}
+        onToggleScorePanel={() => setShowScorePanel(!showScorePanel)}
+        selectedSchool={selectedSchool}
+        onSchoolChange={setSelectedSchool}
+        schoolList={schoolList}
+      />
+      {analysisMode === ANALYSIS_MODES.RHYME && (
+        <div className="sidebar-sub-panel">
+          <RhymeDiagramPanel
+            connections={overlayConnections}
+            lineCount={lineCount}
+            visible={true}
+            onPairSelect={(lines) => {
+              setPinnedLines(lines);
+              if (!lines) setHighlightedLines([]);
+              if (lines) editorRef.current?.scrollToTopSmooth?.();
+            }}
+            onConnectionClick={() => {
+              editorRef.current?.scrollToTopSmooth?.();
+            }}
+            highlightedLines={effectiveHighlightedLines}
+          />
+        </div>
+      )}
+      {isTruesight && (
+        <div className="sidebar-sub-panel">
+          <VowelFamilyPanel
+            visible={true}
+            families={vowelSummary?.families ?? []}
+            totalWords={vowelSummary?.totalWords ?? 0}
+            uniqueWords={vowelSummary?.uniqueWords ?? 0}
+            isEmbedded={true}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  const scoreBlock = scoreData ? (
+    <HeuristicScorePanel
+      scoreData={scoreData}
+      genreProfile={genreProfile}
+      visible={true}
+      isEmbedded={true}
+    />
+  ) : (
+    <div style={{ padding: "var(--space-6)", textAlign: "center", color: "var(--read-text-muted)", fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>
+      Write or select a scroll to see metrics
+    </div>
+  );
+
+  /* ── Mobile bottom tab bar icons (inline SVG) ── */
+  const MobileTabBar = () => (
+    <div className="mobile-tab-bar">
+      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "EDITOR" ? " active" : ""}`} onClick={() => setMobileActiveTab("EDITOR")}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <span className="mobile-tab-bar-label">Edit</span>
+      </button>
+      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "FILES" ? " active" : ""}`} onClick={() => setMobileActiveTab("FILES")}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span className="mobile-tab-bar-label">Files</span>
+      </button>
+      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "TOOLS" ? " active" : ""}`} onClick={() => setMobileActiveTab("TOOLS")}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        <span className="mobile-tab-bar-label">Tools</span>
+      </button>
+      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "SCORE" ? " active" : ""}`} onClick={() => setMobileActiveTab("SCORE")}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+        <span className="mobile-tab-bar-label">Score</span>
+      </button>
+    </div>
+  );
+
+  /* ── MOBILE RENDER ── */
+  if (isMobileViewport) {
+    return (
+      <div className="ide-layout-wrapper ide-layout-wrapper--mobile">
+        <TopBar
+          title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")}
+          onOpenSearch={() => { setMobileActiveTab("FILES"); }}
+          showMinimap={false}
+          onToggleMinimap={() => {}}
+          isEditable={isEditable}
+          activeScrollId={activeScrollId}
+          onEdit={handleEditScroll}
+          progression={progression}
+        />
+        <main className="ide-mobile-content">
+          {mobileActiveTab === "EDITOR" && editorBlock}
+          {mobileActiveTab === "FILES" && (
+            <div className="ide-mobile-panel">{filesBlock}</div>
+          )}
+          {mobileActiveTab === "TOOLS" && (
+            <div className="ide-mobile-panel">{toolsBlock}</div>
+          )}
+          {mobileActiveTab === "SCORE" && (
+            <div className="ide-mobile-panel">{scoreBlock}</div>
+          )}
+        </main>
+        <StatusBar
+          line={cursorPos.line}
+          col={cursorPos.col}
+          language="Scroll Language"
+          syllableCount={totalSyllables}
+          analysisError={analysisError}
+        />
+        <MobileTabBar />
+
+        <AnimatePresence>
+          {isTruesight && tooltipState.token && (
+            <WordTooltip
+              key="word-card"
+              wordData={tooltipWordData}
+              analysis={tooltipState.localAnalysis}
+              isLoading={tooltipState.pinned && isLookupLoading && !lookupOverride}
+              error={tooltipState.pinned ? lookupError : null}
+              x={tooltipState.position.x}
+              y={tooltipState.position.y}
+              onDrag={handleTooltipDrag}
+              onClose={handleCloseTooltip}
+              onSuggestionClick={handleSuggestionClick}
+              sessionHistory={sessionWords}
+              sessionIndex={sessionIndex}
+              onSessionNavigate={handleSessionNavigate}
+            />
+          )}
+        </AnimatePresence>
+
+        <div className="toast-container">
+          <AnimatePresence>
+            {toasts.map((toast) => (
+              <motion.div
+                key={toast.id}
+                initial={{ opacity: 0, x: 50, scale: 0.9 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
+                className={`toast-item toast-item--${toast.type}`}
+              >
+                {toast.message}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── DESKTOP RENDER ── */
   return (
     <div className="ide-layout-wrapper">
-      <TopBar 
-        title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")} 
+      <TopBar
+        title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")}
         onOpenSearch={() => setSidebarTab('SEARCH')}
         showMinimap={showMinimap}
         onToggleMinimap={() => setShowMinimap(!showMinimap)}
@@ -887,21 +1135,21 @@ export default function ReadPage() {
             className="ide-sidebar"
           >
             <div className="sidebar-tabs">
-              <button 
+              <button
                 className={`sidebar-tab ${sidebarTab === 'FILES' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('FILES')}
                 title="Files"
               >
                 📁
               </button>
-              <button 
+              <button
                 className={`sidebar-tab ${sidebarTab === 'SEARCH' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('SEARCH')}
                 title="Search"
               >
                 🔍
               </button>
-              <button 
+              <button
                 className={`sidebar-tab ${sidebarTab === 'TOOLS' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('TOOLS')}
                 title="Tools"
@@ -917,11 +1165,12 @@ export default function ReadPage() {
                   onSelect={handleSelectScroll}
                   onDelete={deleteScroll}
                   onNewScroll={handleNewScroll}
+                  onEdit={handleEditScrollById}
                 />
               )}
               {sidebarTab === 'SEARCH' && (
-                <SearchPanel 
-                  content={editorContent} 
+                <SearchPanel
+                  content={editorContent}
                   onJumpToLine={(line) => {
                     editorRef.current?.jumpToLine?.(line);
                   }}

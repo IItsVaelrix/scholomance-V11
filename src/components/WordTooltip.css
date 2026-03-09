@@ -1137,6 +1137,82 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   MOBILE BOTTOM SHEET MODE
+   ────────────────────────────────────────────────────────────────────────── */
+.word-tooltip-mobile-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-height: 65vh;
+  background: var(--bg-surface, #0a0a18);
+  border-top: 1px solid var(--border-soft, rgba(255, 255, 255, 0.1));
+  border-radius: var(--radius-xl, 1rem) var(--radius-xl, 1rem) 0 0;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .word-tooltip-mobile-sheet {
+  background: #ffffff;
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.word-tooltip-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+  flex-shrink: 0;
+}
+
+.word-tooltip-mobile-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Flatten the card frame inside mobile sheet — no fixed dimensions or dragging */
+.word-tooltip-mobile-body .word-card {
+  width: 100% !important;
+  height: auto !important;
+  position: static !important;
+}
+
+.word-tooltip-mobile-body .card-frame {
+  width: 100% !important;
+  height: auto !important;
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.word-tooltip-mobile-body .card-inner {
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Hide resize handles and drag handles on mobile sheet */
+.word-tooltip-mobile-body .card-resize-handle,
+.word-tooltip-mobile-body .card-corner,
+.word-tooltip-mobile-body .card-close-btn {
+  display: none !important;
+}
+
+.word-tooltip-mobile-body .card-name-banner {
+  cursor: default;
+}
+
+.word-tooltip-mobile-body .card-text-box {
+  max-height: none;
+  overflow: visible;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    LEGACY COMPAT (react-resizable handle hidden in favor of custom)
    ────────────────────────────────────────────────────────────────────────── */
 .react-resizable-handle {

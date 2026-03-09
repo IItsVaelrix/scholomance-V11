@@ -381,6 +381,33 @@
   }
 }
 
+@media (max-width: 640px) {
+  .listen-page {
+    height: auto;
+    min-height: auto;
+    padding: var(--space-3) 0;
+    overflow: visible;
+  }
+
+  .listen-shell {
+    padding: var(--space-3);
+  }
+
+  .listen-now-card {
+    min-height: 280px;
+    padding: var(--space-4);
+  }
+
+  .listen-station-panel,
+  .listen-control-panel {
+    min-width: 0;
+  }
+
+  .listen-header {
+    padding: var(--space-3);
+  }
+}
+
 [data-theme="light"] .listen-page {
   --listen-paper: #ffffff;
   --listen-paper-soft: #f7f9ff;

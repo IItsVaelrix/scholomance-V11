@@ -35,7 +35,9 @@
       "Bash(python scripts/build_scholomance_dict.py:*)",
       "Bash(python -m json.tool:*)",
       "Bash(taskkill:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(NODE_PATH=\"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules\" node \"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules/eslint/bin/eslint.js\" src/ --max-warnings=0)"
     ]
   }
 }
