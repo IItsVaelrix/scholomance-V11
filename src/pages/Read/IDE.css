@@ -1410,6 +1410,7 @@
   border-radius: var(--radius-md, 0.5rem);
 }
 
+.ide-layout-wrapper .truesight-word,
 .ide-layout-wrapper .grimoire-word {
   position: relative;
   display: inline;
@@ -1440,6 +1441,7 @@
   background: rgba(30, 32, 48, 0.6);
 }
 
+.ide-layout-wrapper .truesight-word:hover,
 .ide-layout-wrapper .grimoire-word:hover {
   background: rgba(255, 255, 255, 0.1);
 }

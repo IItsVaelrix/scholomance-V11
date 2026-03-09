@@ -234,6 +234,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   getSpellingSuggestions,
   predictorReady = false,
   onContentChange,
+  onTitleChange,
   analyzedWords = new Map(),
   analyzedWordsByIdentity = new Map(),
   analyzedWordsByCharStart = new Map(),
@@ -661,9 +662,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   }, []);
 
   useEffect(() => {
+    if (isEditable) return;
     setTitle(initialTitle);
     setContent(initialContent);
-  }, [initialTitle, initialContent]);
+  }, [initialTitle, initialContent, isEditable]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -698,6 +700,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
     return () => window.clearTimeout(timeoutId);
   }, [content, onContentChange]);
+
+  useEffect(() => {
+    onTitleChange?.(title);
+  }, [title, onTitleChange]);
 
   useEffect(() => {
     if (textareaRef.current && isEditable && !initialContent) {
@@ -1062,8 +1068,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         };
 
                         const wordClassName = [
-                          'grimoire-word',
-                          !shouldColorWord ? 'grimoire-word--grey' : '',
+                          'truesight-word',
+                          shouldColorWord ? 'grimoire-word' : 'grimoire-word--grey',
                           isMultiSyllable ? 'word--multi-rhyme' : '',
                           isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                         ].filter(Boolean).join(' ');
@@ -1143,8 +1149,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           <span
                             key={charStart}
                             className={[
-                              "grimoire-word",
-                              !shouldColor ? "grimoire-word--grey" : "",
+                              "truesight-word",
+                              shouldColor ? "grimoire-word" : "grimoire-word--grey",
                               isMultiSyllable ? "word--multi-rhyme" : "",
                             ].filter(Boolean).join(" ")}
                             style={{ color }}

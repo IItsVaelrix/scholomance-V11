@@ -110,6 +110,7 @@ export default function ReadPage() {
   const [isPredictive, setIsPredictive] = useState(false);
   const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.NONE);
   const [editorContent, setEditorContent] = useState("");
+  const [editorTitle, setEditorTitle] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
   const [pinnedLines, setPinnedLines] = useState(null);
   const effectiveHighlightedLines = pinnedLines ?? highlightedLines;
@@ -194,6 +195,19 @@ export default function ReadPage() {
     lineIndex: null,
     charStart: null,
   });
+  const autosaveInFlightRef = useRef(false);
+  const queuedAutosaveRef = useRef(null);
+  const autosaveScrollIdRef = useRef(null);
+  const autosaveContextRef = useRef(0);
+  const lastAutosaveFingerprintRef = useRef("");
+  const autosaveInputsRef = useRef({
+    isEditable: false,
+    isTruesight: false,
+    editorContent: "",
+    editorTitle: "",
+    activeScrollTitle: "",
+    activeScrollId: null,
+  });
   const [tooltipState, setTooltipState] = useState({
     visible: false,
     pinned: false,
@@ -207,6 +221,21 @@ export default function ReadPage() {
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
   const activeScrollContent = String(activeScroll?.content || "");
   const truesightContent = isEditable ? editorContent : activeScrollContent;
+
+  useEffect(() => {
+    autosaveScrollIdRef.current = activeScrollId || null;
+  }, [activeScrollId]);
+
+  useEffect(() => {
+    autosaveInputsRef.current = {
+      isEditable,
+      isTruesight,
+      editorContent,
+      editorTitle,
+      activeScrollTitle: String(activeScroll?.title || ""),
+      activeScrollId,
+    };
+  }, [isEditable, isTruesight, editorContent, editorTitle, activeScroll?.title, activeScrollId]);
 
   const lineCount = useMemo(() => {
     return truesightContent.split("\n").length;
@@ -331,6 +360,14 @@ export default function ReadPage() {
     }
   }, [deepAnalysis, analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap]);
 
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const overlayConnections = useMemo(() => {
     if (!isTruesight) {
       return [];
@@ -361,6 +398,89 @@ export default function ReadPage() {
     }
   }, [isTruesight, showScorePanel, truesightContent, analyzeDocument]);
 
+  const bumpAutosaveContext = useCallback(() => {
+    autosaveContextRef.current += 1;
+    queuedAutosaveRef.current = null;
+    autosaveScrollIdRef.current = null;
+    lastAutosaveFingerprintRef.current = "";
+  }, []);
+
+  const runTruesightAutosave = useCallback(async (draft) => {
+    if (!draft || draft.context !== autosaveContextRef.current) return;
+
+    const normalizedDraft = {
+      context: draft.context,
+      id: draft.id || autosaveScrollIdRef.current || undefined,
+      title: String(draft.title || "").trim() || "Untitled Scroll",
+      content: String(draft.content || ""),
+    };
+    const draftFingerprint = `${normalizedDraft.id || "new"}|${normalizedDraft.title}|${normalizedDraft.content}`;
+    if (draftFingerprint === lastAutosaveFingerprintRef.current) {
+      return;
+    }
+
+    if (autosaveInFlightRef.current) {
+      queuedAutosaveRef.current = normalizedDraft;
+      return;
+    }
+
+    autosaveInFlightRef.current = true;
+    try {
+      const savedScroll = await saveScroll(normalizedDraft);
+      if (!savedScroll) return;
+      if (normalizedDraft.context !== autosaveContextRef.current) return;
+
+      const savedId = String(savedScroll.id || normalizedDraft.id || "");
+      const savedTitle = String(savedScroll.title || normalizedDraft.title || "");
+      const savedContent = String(savedScroll.content || normalizedDraft.content || "");
+      lastAutosaveFingerprintRef.current = `${savedId || "new"}|${savedTitle}|${savedContent}`;
+
+      if (savedId) {
+        autosaveScrollIdRef.current = savedId;
+        setActiveScrollId((prev) => prev || savedId);
+      }
+      if (!normalizedDraft.id && savedId) {
+        setIsEditing(true);
+      }
+      setEditorTitle(savedTitle);
+      setSaveStatus("Saved");
+    } catch (error) {
+      console.error("Truesight autosave failed:", error);
+    } finally {
+      autosaveInFlightRef.current = false;
+      const queuedDraft = queuedAutosaveRef.current;
+      queuedAutosaveRef.current = null;
+      if (queuedDraft) {
+        void runTruesightAutosave({
+          ...queuedDraft,
+          id: queuedDraft.id || autosaveScrollIdRef.current || undefined,
+        });
+      }
+    }
+  }, [saveScroll]);
+
+  useEffect(() => {
+    if (!deepAnalysis) return;
+
+    const snapshot = autosaveInputsRef.current;
+    if (!snapshot.isEditable || !snapshot.isTruesight) {
+      return;
+    }
+
+    const content = String(snapshot.editorContent || "");
+    if (!content.trim()) {
+      return;
+    }
+
+    const title = String(snapshot.editorTitle || snapshot.activeScrollTitle || "").trim() || "Untitled Scroll";
+    void runTruesightAutosave({
+      context: autosaveContextRef.current,
+      id: snapshot.activeScrollId || autosaveScrollIdRef.current || undefined,
+      title,
+      content,
+    });
+  }, [deepAnalysis, runTruesightAutosave]);
+
   useEffect(() => {
     const handleResize = () => {
       setIsNarrowViewport(window.innerWidth <= 960);
@@ -372,6 +492,7 @@ export default function ReadPage() {
 
   const handleSaveScroll = useCallback(
     async (title, content) => {
+      bumpAutosaveContext();
       setSaveStatus("Saving...");
       const isUpdate = Boolean(isEditing && activeScrollId);
       const savedScroll = await saveScroll({ id: isUpdate ? activeScrollId : undefined, title, content });
@@ -398,56 +519,71 @@ export default function ReadPage() {
       setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
       setEditorContent(String(savedScroll.content || content || ""));
+      setEditorTitle(String(savedScroll.title || title || ""));
+      autosaveScrollIdRef.current = savedScroll.id || null;
+      lastAutosaveFingerprintRef.current = `${savedScroll.id || "new"}|${String(savedScroll.title || title || "")}|${String(savedScroll.content || content || "")}`;
       setIsEditing(false);
       setIsEditable(false);
     },
-    [isEditing, activeScrollId, saveScroll, addXP, addToast, scoreData]
+    [isEditing, activeScrollId, saveScroll, addXP, addToast, scoreData, bumpAutosaveContext]
   );
 
   const handleSelectScroll = useCallback((id) => {
+    bumpAutosaveContext();
     const selected = getScrollById(id);
     setActiveScrollId(id);
+    setEditorTitle(String(selected?.title || ""));
     setEditorContent(String(selected?.content || ""));
     setIsEditing(false);
     setIsEditable(false);
     setHighlightedLines([]);
     setSaveStatus("Saved");
-  }, [getScrollById]);
+  }, [getScrollById, bumpAutosaveContext]);
 
   const handleNewScroll = useCallback(() => {
+    bumpAutosaveContext();
     setActiveScrollId(null);
+    setEditorTitle("");
     setEditorContent("");
     setIsEditing(false);
     setIsEditable(true);
     setHighlightedLines([]);
     setSaveStatus("Unsaved");
-  }, []);
+  }, [bumpAutosaveContext]);
 
   const handleEditScroll = useCallback(() => {
+    bumpAutosaveContext();
+    setEditorTitle(String(activeScroll?.title || ""));
     setEditorContent(activeScrollContent);
     setIsEditing(true);
     setIsEditable(true);
     setHighlightedLines([]);
-  }, [activeScrollContent]);
+    setSaveStatus("Unsaved");
+  }, [activeScroll?.title, activeScrollContent, bumpAutosaveContext]);
 
   const handleEditScrollById = useCallback((id) => {
+    bumpAutosaveContext();
     const scroll = getScrollById(id);
     if (!scroll) return;
     setActiveScrollId(id);
+    setEditorTitle(String(scroll.title || ""));
     setEditorContent(String(scroll.content || ""));
     setIsEditing(true);
     setIsEditable(true);
     setHighlightedLines([]);
     setSaveStatus("Unsaved");
-  }, [getScrollById]);
+  }, [getScrollById, bumpAutosaveContext]);
 
   const handleCancelEdit = useCallback(() => {
+    bumpAutosaveContext();
     if (activeScrollId) {
+      setEditorTitle(String(activeScroll?.title || ""));
       setEditorContent(activeScrollContent);
       setIsEditing(false);
       setIsEditable(false);
+      setSaveStatus("Saved");
     }
-  }, [activeScrollId, activeScrollContent]);
+  }, [activeScrollId, activeScroll?.title, activeScrollContent, bumpAutosaveContext]);
 
   const handleToggleTruesight = useCallback(() => {
     setIsTruesight((prev) => !prev);
@@ -461,6 +597,27 @@ export default function ReadPage() {
     },
     []
   );
+
+  const handleEditorContentChange = useCallback((content) => {
+    isTypingRef.current = true;
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      if (pendingCommitRef.current) {
+        setCommittedColors(pendingCommitRef.current);
+        pendingCommitRef.current = null;
+      }
+    }, 400);
+    setEditorContent(content);
+    setSaveStatus("Unsaved");
+  }, []);
+
+  const handleEditorTitleChange = useCallback((title) => {
+    setEditorTitle(String(title || ""));
+    if (isEditable) {
+      setSaveStatus("Unsaved");
+    }
+  }, [isEditable]);
 
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -906,19 +1063,8 @@ export default function ReadPage() {
             getSpellingSuggestions={getSpellingSuggestions}
             predictorReady={predictorReady}
             plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
-            onContentChange={(content) => {
-              isTypingRef.current = true;
-              clearTimeout(typingTimeoutRef.current);
-              typingTimeoutRef.current = setTimeout(() => {
-                isTypingRef.current = false;
-                if (pendingCommitRef.current) {
-                  setCommittedColors(pendingCommitRef.current);
-                  pendingCommitRef.current = null;
-                }
-              }, 400);
-              setEditorContent(content);
-              setSaveStatus("Unsaved");
-            }}
+            onContentChange={handleEditorContentChange}
+            onTitleChange={handleEditorTitleChange}
             analyzedWords={committedColors.analyzedWords}
             analyzedWordsByIdentity={committedColors.analyzedWordsByIdentity}
             analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
@@ -1253,19 +1399,8 @@ export default function ReadPage() {
                     getSpellingSuggestions={getSpellingSuggestions}
                     predictorReady={predictorReady}
                     plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
-                    onContentChange={(content) => {
-                      isTypingRef.current = true;
-                      clearTimeout(typingTimeoutRef.current);
-                      typingTimeoutRef.current = setTimeout(() => {
-                        isTypingRef.current = false;
-                        if (pendingCommitRef.current) {
-                          setCommittedColors(pendingCommitRef.current);
-                          pendingCommitRef.current = null;
-                        }
-                      }, 400);
-                      setEditorContent(content);
-                      setSaveStatus("Unsaved");
-                    }}
+                    onContentChange={handleEditorContentChange}
+                    onTitleChange={handleEditorTitleChange}
                     analyzedWords={committedColors.analyzedWords}
                     analyzedWordsByIdentity={committedColors.analyzedWordsByIdentity}
                     analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
