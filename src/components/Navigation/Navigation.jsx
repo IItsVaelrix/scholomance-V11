@@ -26,7 +26,7 @@ function isAdminUser(user) {
 
 export default function Navigation() {
   const location = useLocation();
-  const activeSection = location.pathname.replace("/", "") || "watch";
+  const activeSection = location.pathname.replace("/", "") || "read";
   const [isMenuOpen, setIsMenuOpen] = useState(false); // For mobile
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
@@ -38,7 +38,7 @@ export default function Navigation() {
   return (
     <nav className="primary-nav w-full z-100" aria-label="Primary navigation">
       <div className="nav-inner flex items-center justify-between">
-        <NavLink to="/watch" className="nav-brand font-bold" aria-label="Scholomance Home">
+        <NavLink to="/read" className="nav-brand font-bold" aria-label="Scholomance Home">
           SCHOLOMANCE
         </NavLink>
 
@@ -105,3 +105,4 @@ export default function Navigation() {
     </nav>
   );
 }
+

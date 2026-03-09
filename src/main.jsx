@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Navigate, createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./lib/config/zod.config.js";
 import App from "./App.jsx";
 import "./index.css";
@@ -22,7 +22,7 @@ const router = createBrowserRouter([
     element: <App />,
     errorElement: <RouteErrorPage />,
     children: [
-      { index: true, element: <WatchPage /> },
+      { index: true, element: <Navigate to="/read" replace /> },
       { path: "watch", element: <WatchPage /> },
       { path: "listen", element: <ListenPage /> },
       { path: "read", element: <ReadPage /> },
@@ -42,3 +42,4 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </ThemeProvider>
   </React.StrictMode>
 );
+
