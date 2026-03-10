@@ -15,6 +15,7 @@ const ReadPage = lazyWithRetry(() => import("./pages/Read/ReadPage.jsx"), "read-
 const AuthPage = lazyWithRetry(() => import("./pages/Auth/AuthPage.jsx"), "auth-page");
 const CollabPage = lazyWithRetry(() => import("./pages/Collab/CollabPage.jsx"), "collab-page");
 const ProfilePage = lazyWithRetry(() => import("./pages/Profile/ProfilePage.jsx"), "profile-page");
+const CombatPage = lazyWithRetry(() => import("./pages/Combat/CombatPage.jsx"), "combat-page");
 
 const router = createBrowserRouter([
   {
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
       { path: "auth", element: <AuthPage /> },
       { path: "profile", element: <ProfilePage /> },
       { path: "collab", element: <CollabPage /> },
+      { path: "combat", element: <CombatPage /> },
     ],
   },
 ]);

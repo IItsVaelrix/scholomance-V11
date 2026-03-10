@@ -2,6 +2,7 @@
 
 > **Purpose**: Definitive architecture reference for all AI agents working on Scholomance.
 > Removes identified weaknesses. Preserves proven strengths. Assigns clear ownership per agent.
+> Archive reference only. If this document conflicts with `VAELRIX_LAW.md`, `SCHEMA_CONTRACT.md`, or any root-level agent context file, the root-level docs win.
 
 ---
 

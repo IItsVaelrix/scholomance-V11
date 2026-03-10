@@ -6,18 +6,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'path';
 import { analyzeText } from '../../core/analysis.pipeline.js';
-import { createScoringEngine } from '../../core/scoring.engine.js';
+import { createDefaultScoringEngine } from '../../core/scoring.defaults.js';
 import { buildPlsPhoneticFeatures } from '../../core/rhyme-astrology/scoring.js';
 import { PhonemeEngine } from '../../../src/lib/phonology/phoneme.engine.js';
-import { alliterationDensityHeuristic } from '../../core/heuristics/alliteration_density.js';
-import { literaryDeviceRichnessHeuristic } from '../../core/heuristics/literary_device_richness.js';
-import { meterRegularityHeuristic } from '../../core/heuristics/meter_regularity.js';
-import { phonemeDensityHeuristic } from '../../core/heuristics/phoneme_density.js';
-import { rhymeQualityHeuristic } from '../../core/heuristics/rhyme_quality.js';
-import { scrollPowerHeuristic } from '../../core/heuristics/scroll_power.js';
-import { vocabularyRichnessHeuristic } from '../../core/heuristics/vocabulary_richness.js';
-import { phoneticHackingHeuristic } from '../../core/heuristics/phonetic_hacking.js';
-import { emotionalResonanceHeuristic } from '../../core/heuristics/emotional_resonance.js';
 import { DeepRhymeEngine } from '../../../src/lib/deepRhyme.engine.js';
 import { detectScheme, analyzeMeter } from '../../../src/lib/rhymeScheme.detector.js';
 import { analyzeLiteraryDevices, detectEmotionDetailed } from '../../../src/lib/literaryDevices.detector.js';
@@ -29,18 +20,6 @@ import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
 import { createRhymeAstrologyLexiconRepo } from './rhyme-astrology/lexiconRepo.js';
 import { createRhymeAstrologyIndexRepo } from './rhyme-astrology/indexRepo.js';
-
-const SCORE_HEURISTICS = [
-  phonemeDensityHeuristic,
-  alliterationDensityHeuristic,
-  rhymeQualityHeuristic,
-  scrollPowerHeuristic,
-  meterRegularityHeuristic,
-  literaryDeviceRichnessHeuristic,
-  vocabularyRichnessHeuristic,
-  phoneticHackingHeuristic,
-  emotionalResonanceHeuristic,
-];
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -149,18 +128,6 @@ function buildAnalysisWordProfiles(analyzedDoc, syntaxLayer = null) {
 function buildLineSyllableCounts(analyzedDoc) {
   const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
   return lines.map((line) => Number(line?.syllableCount) || 0);
-}
-
-function createScoreEngine() {
-  const engine = createScoringEngine();
-  SCORE_HEURISTICS.forEach((heuristicDef) => {
-    engine.registerHeuristic({
-      name: heuristicDef.name,
-      scorer: heuristicDef.scorer,
-      weight: heuristicDef.weight,
-    });
-  });
-  return engine;
 }
 
 function toSerializableGroupEntries(value) {
@@ -359,7 +326,7 @@ export function createPanelAnalysisService(options = {}) {
     process.env.ENABLE_RHYME_ASTROLOGY,
     false
   );
-  const scoreEngine = createScoreEngine();
+  const scoreEngine = createDefaultScoringEngine();
   const deepRhymeEngine = new DeepRhymeEngine();
 
   const rhymeAstrologyAnchorLimit = parsePositiveInt(

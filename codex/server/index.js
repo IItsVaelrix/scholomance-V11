@@ -30,6 +30,7 @@ import { collabPersistence } from './collab/collab.persistence.js';
 import { collabRoutes } from './collab/collab.routes.js';
 import { wordLookupRoutes } from './routes/wordLookup.routes.js';
 import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
+import { combatRoutes } from './routes/combat.routes.js';
 import { lexiconRoutes } from './routes/lexicon.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
 import { isApiRoutePath, isStaticAssetPath, stripQueryFromUrl } from './notFound.utils.js';
@@ -698,6 +699,7 @@ fastify.register(wordLookupRoutes);
 fastify.register(panelAnalysisRoutes, {
     enableRhymeAstrology: fastify.featureFlags?.rhymeAstrology,
 });
+fastify.register(combatRoutes);
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
 fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
 if (ENABLE_RHYME_ASTROLOGY) {

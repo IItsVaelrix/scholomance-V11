@@ -1,0 +1,1325 @@
+/* ============================================================
+   CombatPage.css — Scholomance Combat Arena
+   21st Century MUD × Grimoire Visual Language
+
+   Layout: Phaser Visionglass (left) | Text Terminal (right)
+   Terminal = chronicle + status bars + action bar + inline spell input
+   School: SONIC THAUMATURGY
+   ============================================================ */
+
+/* ─── Page Shell ────────────────────────────────────────────── */
+
+.combat-page {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: calc(100vh - var(--nav-height, 60px));
+  background: #050310;
+  color: var(--text-primary, #c9a227);
+  overflow: hidden;
+  position: relative;
+}
+
+/* ─── Turn Banner ───────────────────────────────────────────── */
+
+.combat-turn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 16px;
+  background: rgba(5, 3, 16, 0.98);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.16);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  flex-shrink: 0;
+  z-index: 5;
+}
+
+.combat-school-badge {
+  color: #651fff;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+
+.combat-turn-label {
+  color: rgba(201, 162, 39, 0.45);
+  letter-spacing: 0.18em;
+}
+
+.combat-opponent-name {
+  color: #00e5ff;
+  opacity: 0.8;
+  letter-spacing: 0.08em;
+}
+
+/* ─── Main Split Layout ─────────────────────────────────────── */
+
+.combat-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Left: Visual Column (Phaser) ─────────────────────────── */
+
+.combat-visual-col {
+  flex: 0 0 42%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #040211;
+  border-right: 1px solid rgba(201, 162, 39, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── Phaser Canvas Host ───────────────────────────────────── */
+
+.combat-canvas-host {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: #050310;
+}
+
+.combat-canvas-host canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain;
+}
+
+/* Loading state */
+.combat-canvas-loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #040211;
+  color: rgba(201, 162, 39, 0.35);
+  font-family: var(--font-sans, 'Space Grotesk', sans-serif);
+  font-size: var(--text-sm, 0.85rem);
+}
+
+.loading-glyph {
+  font-size: 2.5rem;
+  animation: loading-pulse 1.8s ease-in-out infinite;
+  color: #651fff;
+}
+
+@keyframes loading-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.1); }
+}
+
+/* Error state */
+.combat-canvas-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #040211;
+  padding: 24px;
+  text-align: center;
+}
+
+.error-title {
+  font-family: var(--font-sans, 'Space Grotesk', sans-serif);
+  font-size: var(--text-lg, 1.1rem);
+  color: #cc2222;
+}
+
+.error-body {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(201, 162, 39, 0.5);
+}
+
+.error-code {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-sm, 0.85rem);
+  color: #22aa44;
+  background: rgba(34, 170, 68, 0.07);
+  padding: 5px 14px;
+  border: 1px solid rgba(34, 170, 68, 0.2);
+  border-radius: 2px;
+}
+
+/* ─── Visual Footer — Opponent HP ───────────────────────────── */
+
+.combat-visual-footer {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  background: rgba(4, 2, 10, 0.97);
+  border-top: 1px solid rgba(201, 162, 39, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.vf-opponent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vf-opponent-name {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.62rem;
+  color: #00e5ff;
+  letter-spacing: 0.1em;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.vf-opponent-hp-text {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.58rem;
+  color: rgba(201, 162, 39, 0.4);
+}
+
+.vf-hp-track {
+  height: 5px;
+  background: rgba(18, 6, 6, 0.9);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 39, 0.05);
+  position: relative;
+}
+
+.vf-hp-fill {
+  height: 100%;
+  border-radius: 2px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+/* ─── Right: Text Terminal Column ───────────────────────────── */
+
+.combat-terminal-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: #060402;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle scanlines — the terminal lives in the physical world */
+.combat-terminal-col::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.055) 2px,
+    rgba(0, 0, 0, 0.055) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+}
+
+/* ─── Status Header — HP / MP Gauges ────────────────────────── */
+
+.combat-status-header {
+  flex-shrink: 0;
+  padding: 7px 16px 6px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.09);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: rgba(6, 4, 2, 0.98);
+  z-index: 2;
+  position: relative;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stat-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.58rem;
+  color: rgba(107, 90, 42, 0.55);
+  letter-spacing: 0.14em;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.stat-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(14, 7, 7, 0.9);
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(201, 162, 39, 0.05);
+}
+
+.stat-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.45s ease, background-color 0.3s;
+}
+
+.stat-bar-fill--hp-high {
+  background: #22aa44;
+  box-shadow: 0 0 5px rgba(34, 170, 68, 0.3);
+}
+
+.stat-bar-fill--hp-mid {
+  background: #ddaa00;
+  box-shadow: 0 0 5px rgba(221, 170, 0, 0.25);
+}
+
+.stat-bar-fill--hp-low {
+  background: #cc2222;
+  box-shadow: 0 0 5px rgba(204, 34, 34, 0.35);
+}
+
+.stat-bar-fill--mp {
+  background: #4488ff;
+  box-shadow: 0 0 5px rgba(68, 136, 255, 0.25);
+}
+
+.stat-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.58rem;
+  color: rgba(201, 162, 39, 0.45);
+  width: 68px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ─── Battle Log — The Chronicle ────────────────────────────── */
+
+.battle-log {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 2;
+  position: relative;
+}
+
+.battle-log-header {
+  padding: 4px 16px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.06);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.56rem;
+  color: rgba(201, 162, 39, 0.28);
+  letter-spacing: 0.15em;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  background: rgba(6, 4, 2, 0.8);
+}
+
+.battle-log-entry-count {
+  opacity: 0.6;
+  font-size: 0.52rem;
+}
+
+.battle-log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 162, 39, 0.1) transparent;
+}
+
+.battle-log-entries::-webkit-scrollbar {
+  width: 3px;
+}
+
+.battle-log-entries::-webkit-scrollbar-thumb {
+  background: rgba(201, 162, 39, 0.12);
+  border-radius: 2px;
+}
+
+.battle-log-entry {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.log-prefix {
+  flex-shrink: 0;
+  width: 10px;
+  text-align: center;
+  margin-top: 1px;
+  opacity: 0.75;
+}
+
+.log-text {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Typewriter cursor on newest entry */
+.log-cursor {
+  display: inline-block;
+  width: 6px;
+  height: 0.82em;
+  background: currentColor;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  animation: cursor-blink 0.65s step-end infinite;
+  opacity: 0.85;
+}
+
+@keyframes cursor-blink {
+  0%, 100% { opacity: 0.85; }
+  50%       { opacity: 0; }
+}
+
+/* ─── Action Bar — MUD Command Prompt ───────────────────────── */
+
+.combat-action-bar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding: 7px 16px;
+  border-top: 1px solid rgba(201, 162, 39, 0.09);
+  background: rgba(6, 4, 2, 0.99);
+  z-index: 2;
+  position: relative;
+  align-items: center;
+}
+
+.action-prompt {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.6rem;
+  color: rgba(201, 162, 39, 0.25);
+  flex-shrink: 0;
+  animation: action-prompt-pulse 1.4s step-end infinite;
+}
+
+@keyframes action-prompt-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.08; }
+}
+
+.action-btn {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.66rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border: 1px solid;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  background: transparent;
+  outline: none;
+}
+
+.action-btn:focus-visible {
+  outline: 1px solid rgba(201, 162, 39, 0.4);
+  outline-offset: 2px;
+}
+
+.action-btn--inscribe {
+  border-color: rgba(101, 31, 255, 0.42);
+  color: rgba(201, 162, 39, 0.8);
+}
+
+.action-btn--inscribe:hover:not(:disabled) {
+  border-color: rgba(101, 31, 255, 0.75);
+  background: rgba(101, 31, 255, 0.07);
+  color: #c9a227;
+  box-shadow: 0 0 10px rgba(101, 31, 255, 0.13);
+}
+
+.action-btn--inscribe:disabled {
+  opacity: 0.22;
+  cursor: not-allowed;
+}
+
+.action-btn--flee {
+  border-color: rgba(107, 90, 42, 0.18);
+  color: rgba(107, 90, 42, 0.42);
+}
+
+.action-btn--flee:hover:not(:disabled) {
+  border-color: rgba(107, 90, 42, 0.4);
+  color: rgba(107, 90, 42, 0.7);
+}
+
+.action-kbd {
+  font-size: 0.52rem;
+  opacity: 0.38;
+  margin-left: 4px;
+}
+
+/* ─── State Indicator ───────────────────────────────────────── */
+
+.combat-state-indicator {
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-top: 1px solid rgba(201, 162, 39, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(6, 4, 2, 0.99);
+  z-index: 2;
+  position: relative;
+}
+
+.state-indicator-glyph {
+  font-size: 0.58rem;
+  color: #00e5ff;
+  opacity: 0.55;
+  animation: state-glyph-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes state-glyph-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%       { opacity: 0.15; }
+}
+
+.state-indicator-text {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.62rem;
+  color: rgba(201, 162, 39, 0.3);
+  letter-spacing: 0.04em;
+  font-style: italic;
+}
+
+/* ─── Inline Spellbook ──────────────────────────────────────── */
+
+.spellbook-inline {
+  flex-shrink: 0;
+  border-top: 1px solid rgba(101, 31, 255, 0.28);
+  background: rgba(5, 3, 13, 0.99);
+  padding: 11px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 3;
+  position: relative;
+  box-shadow: 0 -6px 28px rgba(101, 31, 255, 0.07);
+}
+
+/* Top accent line */
+.spellbook-inline::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(101, 31, 255, 0.35), transparent);
+  pointer-events: none;
+}
+
+.spellbook-inline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.spellbook-inline-title {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.6rem;
+  color: #c9a227;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.spellbook-inline-mp {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+/* Inline editor */
+.spellbook-inline-editor {
+  position: relative;
+  border: 1px solid rgba(101, 31, 255, 0.22);
+  border-radius: 2px;
+  background: rgba(3, 2, 8, 0.92);
+  overflow: hidden;
+}
+
+.spellbook-inline-editor:focus-within {
+  border-color: rgba(101, 31, 255, 0.5);
+  box-shadow: 0 0 0 1px rgba(101, 31, 255, 0.1), inset 0 0 16px rgba(101, 31, 255, 0.025);
+}
+
+.spellbook-inline-shimmer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 15% 70%, #651fff 0%, transparent 60%);
+  transition: opacity 0.3s;
+}
+
+/* Textarea z-index:1 (CLAUDE.md § Textarea Overlay Sync) */
+.spellbook-inline-textarea {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 64px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: 8px 12px;
+  font-family: Georgia, serif;
+  font-size: var(--text-base, 1rem);
+  line-height: 1.9;
+  color: #e8dfc8;
+  caret-color: #c9a227;
+}
+
+.spellbook-inline-textarea::placeholder {
+  color: rgba(107, 90, 42, 0.38);
+  font-style: italic;
+}
+
+/* Compact power row */
+.spellbook-inline-power-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spellbook-inline-power-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.56rem;
+  color: rgba(107, 90, 42, 0.45);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  width: 80px;
+}
+
+.spellbook-inline-bar-track {
+  flex: 1;
+  height: 3px;
+  background: rgba(107, 90, 42, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.spellbook-inline-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.28s ease, background-color 0.28s;
+}
+
+.spellbook-inline-power-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.6rem;
+  font-weight: 600;
+  width: 28px;
+  text-align: right;
+  flex-shrink: 0;
+  transition: color 0.28s;
+}
+
+/* Inline trace chips */
+.spellbook-inline-traces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Inline actions row */
+.spellbook-inline-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.spellbook-inline-meta {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.56rem;
+  color: rgba(107, 90, 42, 0.38);
+  letter-spacing: 0.04em;
+}
+
+.spellbook-inline-btns {
+  display: flex;
+  gap: 8px;
+}
+
+/* ─── Spellbook Modal (kept for backward compat) ─────────────── */
+
+.spellbook-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 2, 12, 0.75);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+}
+
+.spellbook-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 51;
+  width: min(580px, 94vw);
+  background: linear-gradient(180deg, #0f0c18 0%, #0a0810 100%);
+  border: 1.5px solid rgba(201, 162, 39, 0.5);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-6, 24px);
+  box-shadow:
+    0 0 60px rgba(101, 31, 255, 0.2),
+    0 20px 60px rgba(0, 0, 0, 0.8),
+    inset 0 1px 0 rgba(201, 162, 39, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+}
+
+.spellbook-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3, 12px);
+}
+
+.spellbook-glyph {
+  color: rgba(201, 162, 39, 0.4);
+  font-size: 1rem;
+}
+
+.spellbook-title {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-sm, 0.85rem);
+  color: #c9a227;
+  letter-spacing: 0.15em;
+  font-weight: 400;
+}
+
+.spellbook-subtitle {
+  font-family: Georgia, serif;
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(201, 162, 39, 0.45);
+  text-align: center;
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.spellbook-mp-cost {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  color: rgba(107, 90, 42, 0.8);
+  padding: var(--space-1, 4px) 0;
+  border-top: 1px solid rgba(201, 162, 39, 0.08);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.08);
+}
+
+.spellbook-editor-host {
+  position: relative;
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+  background: rgba(8, 6, 16, 0.8);
+}
+
+.spellbook-editor-host:focus-within {
+  border-color: rgba(101, 31, 255, 0.6);
+  box-shadow: 0 0 0 2px rgba(101, 31, 255, 0.15);
+}
+
+.spellbook-textarea {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 100px;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  padding: var(--space-3, 12px) var(--space-4, 16px);
+  font-family: Georgia, serif;
+  font-size: var(--text-base, 1rem);
+  line-height: 1.9;
+  color: #e8dfc8;
+  caret-color: #c9a227;
+}
+
+.spellbook-textarea::placeholder {
+  color: rgba(107, 90, 42, 0.5);
+  font-style: italic;
+}
+
+.spellbook-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.spellbook-affinity-shimmer {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 30% 50%, #651fff 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.spellbook-char-count {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  text-align: right;
+  letter-spacing: 0.05em;
+  transition: color 0.2s;
+}
+
+.spellbook-power-meter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.power-meter-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  letter-spacing: 0.08em;
+}
+
+.power-meter-title  { color: rgba(107, 90, 42, 0.8); }
+.power-meter-value  { font-weight: 600; transition: color 0.3s; }
+
+.power-meter-track {
+  height: 5px;
+  background: rgba(107, 90, 42, 0.15);
+  border-radius: var(--radius-full, 9999px);
+  overflow: hidden;
+}
+
+.power-meter-fill {
+  height: 100%;
+  border-radius: var(--radius-full, 9999px);
+  transition: background-color 0.3s;
+}
+
+.power-meter-traces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1, 4px);
+  margin-top: var(--space-1, 4px);
+}
+
+.power-meter-trace-chip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 4px);
+  background: rgba(201, 162, 39, 0.06);
+  border: 1px solid rgba(201, 162, 39, 0.12);
+  border-radius: var(--radius-sm, 4px);
+  padding: 1px var(--space-2, 8px);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+}
+
+.trace-name {
+  color: rgba(107, 90, 42, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.trace-val {
+  color: #c9a227;
+  font-weight: 600;
+}
+
+.spellbook-actions {
+  display: flex;
+  gap: var(--space-3, 12px);
+  justify-content: flex-end;
+}
+
+.spellbook-btn {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  letter-spacing: 0.12em;
+  padding: var(--space-2, 8px) var(--space-5, 20px);
+  border-radius: var(--radius-sm, 4px);
+  border: 1.5px solid;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.spellbook-btn:focus-visible {
+  outline: 1px solid rgba(201, 162, 39, 0.5);
+  outline-offset: 2px;
+}
+
+.spellbook-btn--cancel {
+  background: transparent;
+  border-color: rgba(107, 90, 42, 0.35);
+  color: rgba(107, 90, 42, 0.7);
+}
+
+.spellbook-btn--cancel:hover {
+  border-color: rgba(107, 90, 42, 0.6);
+  color: rgba(201, 162, 39, 0.7);
+}
+
+.spellbook-btn--cast {
+  background: rgba(101, 31, 255, 0.15);
+  border-color: rgba(101, 31, 255, 0.6);
+  color: #c9a227;
+}
+
+.spellbook-btn--cast:hover:not(:disabled) {
+  background: rgba(101, 31, 255, 0.25);
+  border-color: #651fff;
+  box-shadow: 0 0 20px rgba(101, 31, 255, 0.3);
+}
+
+.spellbook-btn--cast:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  border-color: rgba(101, 31, 255, 0.2);
+  box-shadow: none;
+}
+
+.spellbook-hint {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.65rem;
+  color: rgba(107, 90, 42, 0.45);
+  text-align: center;
+}
+
+/* ─── Score Reveal Overlay ──────────────────────────────────── */
+
+.score-reveal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 2, 12, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 52;
+}
+
+.score-reveal-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 53;
+  width: min(520px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: linear-gradient(180deg, #0f0c18 0%, #0a0810 100%);
+  border: 1.5px solid rgba(201, 162, 39, 0.45);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-5, 20px);
+  box-shadow:
+    0 0 80px rgba(201, 162, 39, 0.12),
+    0 20px 60px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  scrollbar-width: thin;
+}
+
+.score-reveal-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3, 12px);
+}
+
+.score-reveal-glyph {
+  color: rgba(201, 162, 39, 0.35);
+}
+
+.score-reveal-title {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-sm, 0.85rem);
+  color: #c9a227;
+  letter-spacing: 0.15em;
+  font-weight: 400;
+}
+
+.score-reveal-spell-text {
+  font-family: Georgia, serif;
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(232, 223, 200, 0.55);
+  font-style: italic;
+  line-height: 1.6;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-left: 2px solid rgba(101, 31, 255, 0.4);
+}
+
+.score-reveal-traces {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 8px);
+}
+
+.score-trace-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+}
+
+.trace-row-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.68rem;
+  color: rgba(107, 90, 42, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 140px;
+  flex-shrink: 0;
+}
+
+.trace-row-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(107, 90, 42, 0.12);
+  border-radius: var(--radius-full, 9999px);
+  overflow: hidden;
+}
+
+.trace-row-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full, 9999px);
+}
+
+.trace-row-value {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  font-weight: 600;
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.score-reveal-divider {
+  height: 1px;
+  background: rgba(201, 162, 39, 0.15);
+}
+
+.score-reveal-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3, 12px) 0;
+}
+
+.score-reveal-total-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  color: rgba(107, 90, 42, 0.7);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.score-reveal-total-value {
+  font-family: Georgia, serif;
+  font-size: var(--text-2xl, 1.5rem);
+  color: #c9a227;
+  text-shadow: 0 0 20px rgba(201, 162, 39, 0.4);
+  line-height: 1;
+}
+
+.score-reveal-victory-hint {
+  font-family: Georgia, serif;
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(201, 162, 39, 0.65);
+  text-align: center;
+  font-style: italic;
+}
+
+.score-reveal-continue {
+  align-self: center;
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: var(--space-3, 12px) var(--space-8, 32px);
+  background: rgba(201, 162, 39, 0.1);
+  border: 1.5px solid rgba(201, 162, 39, 0.5);
+  border-radius: var(--radius-sm, 4px);
+  color: #c9a227;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.score-reveal-continue:focus-visible {
+  outline: 1px solid rgba(201, 162, 39, 0.6);
+  outline-offset: 2px;
+}
+
+.score-reveal-continue:hover {
+  background: rgba(201, 162, 39, 0.18);
+  border-color: #c9a227;
+  box-shadow: 0 0 24px rgba(201, 162, 39, 0.2);
+}
+
+/* ─── End State Overlay ─────────────────────────────────────── */
+
+.combat-end-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(8px);
+}
+
+.combat-end-overlay--victory {
+  background: rgba(8, 4, 19, 0.9);
+}
+
+.combat-end-overlay--defeat {
+  background: rgba(4, 2, 12, 0.94);
+}
+
+.end-overlay-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5, 20px);
+  max-width: 520px;
+  width: 90vw;
+  text-align: center;
+  padding: var(--space-8, 32px);
+}
+
+.end-overlay-glyph {
+  font-size: 3.5rem;
+  color: #c9a227;
+  animation: end-glyph-pulse 2.5s ease-in-out infinite;
+}
+
+.combat-end-overlay--defeat .end-overlay-glyph {
+  color: #3d3d4a;
+  animation-name: end-glyph-void;
+}
+
+@keyframes end-glyph-pulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(201, 162, 39, 0.4); }
+  50%       { text-shadow: 0 0 50px rgba(201, 162, 39, 0.8); }
+}
+
+@keyframes end-glyph-void {
+  0%, 100% { opacity: 0.4; }
+  50%       { opacity: 0.8; }
+}
+
+.end-overlay-title {
+  font-family: Georgia, serif;
+  font-size: var(--text-xl, 1.25rem);
+  color: #c9a227;
+  letter-spacing: 0.08em;
+  font-weight: 400;
+}
+
+.combat-end-overlay--defeat .end-overlay-title {
+  color: rgba(161, 161, 170, 0.7);
+}
+
+.end-overlay-subtitle {
+  font-family: Georgia, serif;
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(201, 162, 39, 0.45);
+  font-style: italic;
+  line-height: 1.7;
+}
+
+.end-overlay-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6, 24px);
+  justify-content: center;
+}
+
+.end-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1, 4px);
+}
+
+.end-stat-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  color: rgba(107, 90, 42, 0.6);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.end-stat-value {
+  font-family: Georgia, serif;
+  font-size: var(--text-lg, 1.1rem);
+  color: #c9a227;
+}
+
+.end-stat-value--xp {
+  color: #651fff;
+  text-shadow: 0 0 12px rgba(101, 31, 255, 0.4);
+}
+
+/* Best spell block */
+.end-overlay-best-spell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.end-overlay-best-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.58rem;
+  color: rgba(107, 90, 42, 0.4);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.end-overlay-best-text {
+  font-family: Georgia, serif;
+  font-size: var(--text-sm, 0.85rem);
+  color: rgba(232, 223, 200, 0.65);
+  font-style: italic;
+  line-height: 1.6;
+  border-left: 2px solid rgba(101, 31, 255, 0.35);
+  padding-left: 12px;
+  margin: 0;
+  text-align: left;
+}
+
+.end-overlay-btn {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.7rem);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: var(--space-3, 12px) var(--space-8, 32px);
+  background: rgba(101, 31, 255, 0.12);
+  border: 1.5px solid rgba(101, 31, 255, 0.5);
+  border-radius: var(--radius-sm, 4px);
+  color: #c9a227;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.end-overlay-btn:focus-visible {
+  outline: 1px solid rgba(201, 162, 39, 0.5);
+  outline-offset: 2px;
+}
+
+.end-overlay-btn:hover {
+  background: rgba(101, 31, 255, 0.22);
+  border-color: #651fff;
+  box-shadow: 0 0 30px rgba(101, 31, 255, 0.25);
+}
+
+/* ─── Responsive ────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .combat-split {
+    flex-direction: column;
+  }
+
+  .combat-visual-col {
+    flex: 0 0 220px;
+    border-right: none;
+    border-bottom: 1px solid rgba(201, 162, 39, 0.1);
+  }
+
+  .combat-terminal-col {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .stat-value {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .combat-turn-banner {
+    font-size: 0.56rem;
+    padding: 4px 10px;
+  }
+
+  .combat-visual-col {
+    flex: 0 0 170px;
+  }
+
+  .battle-log-entry {
+    font-size: 0.65rem;
+  }
+
+  .action-btn {
+    font-size: 0.6rem;
+    padding: 3px 10px;
+  }
+
+  .action-kbd {
+    display: none;
+  }
+
+  .spellbook-inline {
+    padding: 8px 12px 10px;
+  }
+
+  .spellbook-inline-textarea {
+    min-height: 52px;
+    font-size: 0.9rem;
+  }
+}
+
+/* ─── Reduced Motion ────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-glyph,
+  .action-prompt,
+  .state-indicator-glyph,
+  .log-cursor {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .end-overlay-glyph {
+    animation: none;
+  }
+
+  .stat-bar-fill,
+  .vf-hp-fill,
+  .spellbook-inline-bar-fill {
+    transition: none;
+  }
+}

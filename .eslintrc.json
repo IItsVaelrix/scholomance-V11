@@ -52,6 +52,49 @@
     },
     {
       "files": [
+        "src/pages/**/*.js",
+        "src/pages/**/*.jsx",
+        "src/pages/**/*.ts",
+        "src/pages/**/*.tsx",
+        "src/components/**/*.js",
+        "src/components/**/*.jsx",
+        "src/components/**/*.ts",
+        "src/components/**/*.tsx",
+        "src/App.jsx",
+        "src/App.tsx",
+        "src/main.jsx",
+        "src/main.tsx",
+        "src/hooks/useAtmosphere.js",
+        "src/hooks/useAtmosphere.jsx",
+        "src/hooks/useAtmosphere.ts",
+        "src/hooks/useAtmosphere.tsx",
+        "src/hooks/useAmbientPlayer.js",
+        "src/hooks/useAmbientPlayer.jsx",
+        "src/hooks/useAmbientPlayer.ts",
+        "src/hooks/useAmbientPlayer.tsx",
+        "src/hooks/usePrefersReducedMotion.js",
+        "src/hooks/usePrefersReducedMotion.jsx",
+        "src/hooks/usePrefersReducedMotion.ts",
+        "src/hooks/usePrefersReducedMotion.tsx"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/codex/**"
+                ],
+                "message": "UI surface files may not import codex/* directly. Go through Codex-owned logic hooks, provider bridges, or src/lib adapters."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
         "**/*.ts",
         "**/*.tsx"
       ],

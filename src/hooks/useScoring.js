@@ -1,28 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
-import { createScoringEngine } from '../../codex/core/scoring.engine.js';
 import { analyzeText } from '../../codex/core/analysis.pipeline.js';
-
-import { alliterationDensityHeuristic } from '../../codex/core/heuristics/alliteration_density.js';
-import { literaryDeviceRichnessHeuristic } from '../../codex/core/heuristics/literary_device_richness.js';
-import { meterRegularityHeuristic } from '../../codex/core/heuristics/meter_regularity.js';
-import { phoneticHackingHeuristic } from '../../codex/core/heuristics/phonetic_hacking.js';
-import { phonemeDensityHeuristic } from '../../codex/core/heuristics/phoneme_density.js';
-import { rhymeQualityHeuristic } from '../../codex/core/heuristics/rhyme_quality.js';
-import { scrollPowerHeuristic } from '../../codex/core/heuristics/scroll_power.js';
-import { vocabularyRichnessHeuristic } from '../../codex/core/heuristics/vocabulary_richness.js';
-import { emotionalResonanceHeuristic } from '../../codex/core/heuristics/emotional_resonance.js';
-
-const HEURISTICS = [
-  phonemeDensityHeuristic,
-  alliterationDensityHeuristic,
-  rhymeQualityHeuristic,
-  scrollPowerHeuristic,
-  meterRegularityHeuristic,
-  literaryDeviceRichnessHeuristic,
-  vocabularyRichnessHeuristic,
-  phoneticHackingHeuristic,
-  emotionalResonanceHeuristic,
-];
+import { createDefaultScoringEngine } from '../../codex/core/scoring.defaults.js';
 
 export function useScoring(text) {
   const [scoreData, setScoreData] = useState(null);
@@ -30,15 +8,7 @@ export function useScoring(text) {
   const engineRef = useRef(null);
 
   if (!engineRef.current) {
-    const engine = createScoringEngine();
-    HEURISTICS.forEach((h) => {
-      engine.registerHeuristic({
-        heuristic: h.name,
-        scorer: h.scorer,
-        weight: h.weight,
-      });
-    });
-    engineRef.current = engine;
+    engineRef.current = createDefaultScoringEngine();
   }
 
   useEffect(() => {
