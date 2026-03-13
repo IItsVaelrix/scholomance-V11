@@ -34,7 +34,6 @@ export const LIBRARY = {
       "https://suno.com/song/e4570794-8296-40b0-8330-4dcd50ea62d3",
       "https://suno.com/song/236e9f87-4d38-43da-a98a-b39447256d21",
       "https://suno.com/song/9ff14231-c3b3-4864-8ddd-c86255b785b5",
-      "
     ],
     school: "SONIC",
   },
