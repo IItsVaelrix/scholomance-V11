@@ -269,6 +269,16 @@ export default function CombatPage() {
           {/* The Chronicle — primary MUD text surface */}
           <BattleLog entries={battleLog} />
 
+          {/* Score Reveal — inline in terminal after chronicle */}
+          <ScoreReveal
+            isVisible={isScoreRevealing}
+            scoreData={lastScoreData}
+            damage={lastPlayerDamage}
+            spellText={lastPlayerSpell}
+            opponentHP={opponentHP}
+            onContinue={continueAfterReveal}
+          />
+
           {/* Inline Spellbook — sits at terminal bottom when CASTING */}
           <Spellbook
             isVisible={isSpellbookOpen}
@@ -334,16 +344,6 @@ export default function CombatPage() {
 
         </div>
       </div>
-
-      {/* ── Score Reveal panel ── */}
-      <ScoreReveal
-        isVisible={isScoreRevealing}
-        scoreData={lastScoreData}
-        damage={lastPlayerDamage}
-        spellText={lastPlayerSpell}
-        opponentHP={opponentHP}
-        onContinue={continueAfterReveal}
-      />
 
       {/* ── Victory / Defeat overlay ── */}
       <AnimatePresence>
