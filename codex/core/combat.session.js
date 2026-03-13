@@ -1,0 +1,208 @@
+import {
+  COMBAT_ARENA_SCHOOL,
+  getFailureCastModifier,
+} from './combat.balance.js';
+import { createCombatOpponent } from './opponent.engine.js';
+
+export const COMBAT_STATES = Object.freeze({
+  INTRO: 'INTRO',
+  PLAYER_TURN: 'PLAYER_TURN',
+  CASTING: 'CASTING',
+  SPELL_FLYING: 'SPELL_FLYING',
+  SCORE_REVEAL: 'SCORE_REVEAL',
+  OPPONENT_TURN: 'OPPONENT_TURN',
+  OPPONENT_CASTING: 'OPPONENT_CASTING',
+  VICTORY: 'VICTORY',
+  DEFEAT: 'DEFEAT',
+});
+
+export const PLAYER_MAX_HP = 1000;
+export const PLAYER_MAX_MP = 100;
+export const MP_COST_PER_CAST = 10;
+export const OPPONENT_MAX_HP = 1500;
+
+export function splitCombatLines(text) {
+  return String(text || '')
+    .split(/\n+/g)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+export function createInitialCombatStats() {
+  return {
+    totalPlayerDamage: 0,
+    totalPlayerHealing: 0,
+    highestPlayerDamage: 0,
+    bestSpellText: null,
+    bestSpellSchool: null,
+    xpAwarded: 0,
+    verseEfficiency: 0,
+  };
+}
+
+export function buildSpellHistoryEntry({ text, scoreData, damage, healing, turnNumber }) {
+  return {
+    text,
+    scoreData,
+    school: scoreData?.school || COMBAT_ARENA_SCHOOL,
+    damage,
+    healing,
+    turnNumber,
+    lines: splitCombatLines(text),
+  };
+}
+
+export function updateCombatStats(prevStats, spellEntry) {
+  const totalPlayerDamage = (Number(prevStats?.totalPlayerDamage) || 0) + (Number(spellEntry?.damage) || 0);
+  const totalPlayerHealing = (Number(prevStats?.totalPlayerHealing) || 0) + (Number(spellEntry?.healing) || 0);
+  const highestPlayerDamage = Math.max(Number(prevStats?.highestPlayerDamage) || 0, Number(spellEntry?.damage) || 0);
+  const shouldReplaceBest = (Number(spellEntry?.damage) || 0) >= (Number(prevStats?.highestPlayerDamage) || 0);
+
+  return {
+    ...prevStats,
+    totalPlayerDamage,
+    totalPlayerHealing,
+    highestPlayerDamage,
+    bestSpellText: shouldReplaceBest ? spellEntry?.text || prevStats?.bestSpellText : prevStats?.bestSpellText,
+    bestSpellSchool: shouldReplaceBest ? spellEntry?.school || prevStats?.bestSpellSchool : prevStats?.bestSpellSchool,
+  };
+}
+
+export function createInitialCombatState({ opponent = createCombatOpponent(), battleLog = [] } = {}) {
+  return {
+    combatState: COMBAT_STATES.INTRO,
+    playerHP: PLAYER_MAX_HP,
+    playerMP: PLAYER_MAX_MP,
+    opponentHP: OPPONENT_MAX_HP,
+    opponent,
+    lastPlayerSpell: null,
+    lastOpponentSpell: null,
+    lastScoreData: null,
+    lastPlayerDamage: 0,
+    lastPlayerHealing: 0,
+    lastOpponentDamage: 0,
+    turnNumber: 1,
+    playerSpellHistory: [],
+    opponentDamageModifier: 1,
+    opponentStatusLabel: 'NEUTRAL',
+    combatStats: createInitialCombatStats(),
+    battleLog,
+  };
+}
+
+export function setCombatState(state, combatState, extraUpdates = {}) {
+  return {
+    ...state,
+    combatState,
+    ...extraUpdates,
+  };
+}
+
+export function applyPlayerCastPreview(state, {
+  text,
+  previewScore,
+  previewDamage,
+  previewHealing,
+  nextPlayerMP,
+  previewPlayerHP,
+  previewOpponentHP,
+}) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.SPELL_FLYING,
+    playerHP: previewPlayerHP,
+    playerMP: nextPlayerMP,
+    opponentHP: previewOpponentHP,
+    lastPlayerSpell: text,
+    lastScoreData: previewScore,
+    lastPlayerDamage: previewDamage,
+    lastPlayerHealing: previewHealing,
+  };
+}
+
+export function applyResolvedPlayerCast(state, {
+  scoreData,
+  damage,
+  healing,
+  playerHP,
+  opponentHP,
+  spellHistoryEntry,
+  failureDisposition = 'NEUTRAL',
+}) {
+  return {
+    ...state,
+    playerHP,
+    opponentHP,
+    lastScoreData: scoreData,
+    lastPlayerDamage: damage,
+    lastPlayerHealing: healing,
+    playerSpellHistory: [...state.playerSpellHistory, spellHistoryEntry],
+    combatStats: updateCombatStats(state.combatStats, spellHistoryEntry),
+    opponentDamageModifier: scoreData?.failureCast
+      ? getFailureCastModifier(failureDisposition)
+      : state.opponentDamageModifier,
+    opponentStatusLabel: scoreData?.failureCast
+      ? failureDisposition
+      : state.opponentStatusLabel,
+  };
+}
+
+export function restoreFailedPlayerCast(state, pendingCast) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.PLAYER_TURN,
+    playerHP: pendingCast.playerHPBeforeCast,
+    playerMP: pendingCast.playerMPBeforeCast,
+    opponentHP: pendingCast.opponentHPBeforeCast,
+    lastPlayerSpell: null,
+    lastScoreData: null,
+    lastPlayerDamage: 0,
+    lastPlayerHealing: 0,
+  };
+}
+
+export function startOpponentCast(state, {
+  spell,
+  damage,
+  newPlayerHP,
+}) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.OPPONENT_CASTING,
+    playerHP: newPlayerHP,
+    lastOpponentSpell: spell,
+    lastOpponentDamage: damage,
+    opponentDamageModifier: 1,
+    opponentStatusLabel: 'NEUTRAL',
+  };
+}
+
+export function completeOpponentTurn(state, { nextPlayerMP }) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.PLAYER_TURN,
+    turnNumber: state.turnNumber + 1,
+    playerMP: nextPlayerMP,
+    opponentDamageModifier: 1,
+    opponentStatusLabel: 'NEUTRAL',
+  };
+}
+
+export function markCombatVictory(state, { xpAward }) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.VICTORY,
+    combatStats: {
+      ...state.combatStats,
+      xpAwarded: state.combatStats.xpAwarded || xpAward?.amount || 0,
+      verseEfficiency: xpAward?.verseEfficiency || state.combatStats.verseEfficiency || 0,
+    },
+  };
+}
+
+export function markCombatDefeat(state) {
+  return {
+    ...state,
+    combatState: COMBAT_STATES.DEFEAT,
+  };
+}

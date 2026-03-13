@@ -15,6 +15,27 @@ export {
 } from '../../codex/core/combat.balance.js';
 
 export {
+  COMBAT_STATES,
+  MP_COST_PER_CAST,
+  OPPONENT_MAX_HP,
+  PLAYER_MAX_HP,
+  PLAYER_MAX_MP,
+  applyPlayerCastPreview,
+  applyResolvedPlayerCast,
+  buildSpellHistoryEntry,
+  completeOpponentTurn,
+  createInitialCombatState,
+  createInitialCombatStats,
+  markCombatDefeat,
+  markCombatVictory,
+  restoreFailedPlayerCast,
+  setCombatState,
+  splitCombatLines,
+  startOpponentCast,
+  updateCombatStats,
+} from '../../codex/core/combat.session.js';
+
+export {
   buildCombatProfile,
   createCorpusRankMap,
   tokenizeCombatWords,
