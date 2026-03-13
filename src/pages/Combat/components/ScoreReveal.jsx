@@ -137,14 +137,15 @@ export function ScoreReveal({ scoreData, damage, spellText, opponentHP, onContin
             aria-hidden="true"
           />
 
-          <motion.div
-            className="score-reveal-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Spell score breakdown"
-            {...motionProps}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          >
+          <div className="score-reveal-shell">
+            <motion.div
+              className="score-reveal-panel"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Spell score breakdown"
+              {...motionProps}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+            >
             {/* Header */}
             <div className="score-reveal-header">
               <span className="score-reveal-glyph" aria-hidden="true">⚔</span>
@@ -216,7 +217,8 @@ export function ScoreReveal({ scoreData, damage, spellText, opponentHP, onContin
                 </motion.button>
               )}
             </AnimatePresence>
-          </motion.div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>
