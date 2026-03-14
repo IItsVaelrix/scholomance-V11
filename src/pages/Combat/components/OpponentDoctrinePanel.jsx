@@ -153,6 +153,15 @@ export function OpponentDoctrinePanel({
     stolenTokens: '',
   });
 
+  const hasDetail = Boolean(
+    resolvedTelegraph
+    || resolvedMoveLabel
+    || resolvedPhase
+    || resolvedArenaCondition
+    || resolvedStatuses.length
+    || resolvedStolenTokens.length
+  );
+
   useEffect(() => {
     const previous = previousRef.current;
     const nextMessages = [];
@@ -233,143 +242,121 @@ export function OpponentDoctrinePanel({
         {announcement}
       </div>
 
-      <div className="combat-doctrine-header">
-        <div className="combat-doctrine-copy">
-          <div className="combat-doctrine-kickers">
-            {resolvedProfileType && (
-              <span className="combat-doctrine-kicker">
-                PROFILE
-                <strong>{resolvedProfileType}</strong>
-              </span>
-            )}
-            {schoolName && (
-              <span className="combat-doctrine-kicker">
-                SCHOOL
-                <strong>{schoolName}</strong>
-              </span>
-            )}
-          </div>
-
-          <div className="combat-doctrine-name-row">
-            <h2 className="combat-doctrine-name">{opponentName}</h2>
-            {resolvedPassive && (
-              <span className="combat-doctrine-passive">
-                PASSIVE
-                <strong>{resolvedPassive}</strong>
-              </span>
-            )}
-          </div>
-
-          {resolvedDoctrine && (
-            <p className="combat-doctrine-subtitle">{resolvedDoctrine}</p>
+      {/* ── Identity strip: always visible, single compact row ── */}
+      <div className="combat-doctrine-identity">
+        <h2 className="combat-doctrine-name">{opponentName}</h2>
+        {resolvedDoctrine && (
+          <span className="combat-doctrine-subtitle">{resolvedDoctrine}</span>
+        )}
+        <div className="combat-doctrine-tags">
+          {resolvedProfileType && (
+            <span className="combat-doctrine-tag">
+              <abbr title="Profile type">{resolvedProfileType}</abbr>
+            </span>
+          )}
+          {schoolName && (
+            <span className="combat-doctrine-tag combat-doctrine-tag--school">
+              {schoolName}
+            </span>
+          )}
+          {resolvedPassive && (
+            <span className="combat-doctrine-tag combat-doctrine-tag--passive" title="Passive ability">
+              {resolvedPassive}
+            </span>
+          )}
+          {resolvedPhase && (
+            <span className="combat-doctrine-tag combat-doctrine-tag--phase" aria-label={`Phase: ${resolvedPhase}`}>
+              {resolvedPhase}
+            </span>
           )}
         </div>
       </div>
 
-      <AnimatePresence initial={false} mode="popLayout">
-        {resolvedTelegraph && (
-          <motion.div
-            key={`telegraph-${resolvedTelegraphKey || resolvedTelegraph}`}
-            className="combat-doctrine-banner combat-doctrine-banner--telegraph"
-            role="status"
-            aria-live="polite"
-            initial={prefersReduced ? {} : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={prefersReduced ? {} : { opacity: 0, y: -4 }}
-            transition={{ duration: prefersReduced ? 0 : 0.26, ease: 'easeOut' }}
-          >
-            <span className="combat-doctrine-banner-label">Telegraph</span>
-            <span className="combat-doctrine-banner-text">{resolvedTelegraph}</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="combat-doctrine-grid">
-        {resolvedPhase && (
+      {/* ── Live combat detail: telegraph, move, statuses — scrolls internally ── */}
+      {hasDetail && (
+        <div className="combat-doctrine-detail">
           <AnimatePresence initial={false} mode="popLayout">
-            <motion.div
-              key={`phase-${resolvedPhase}`}
-              className="combat-doctrine-banner combat-doctrine-banner--phase"
-              role="status"
-              aria-live="polite"
-              initial={prefersReduced ? {} : { opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={prefersReduced ? {} : { opacity: 0, x: -6 }}
-              transition={{ duration: prefersReduced ? 0 : 0.24, ease: 'easeOut' }}
-            >
-              <span className="combat-doctrine-banner-label">Phase</span>
-              <span className="combat-doctrine-banner-text">{resolvedPhase}</span>
-            </motion.div>
-          </AnimatePresence>
-        )}
-
-        {resolvedArenaCondition && (
-          <div className="combat-doctrine-meta-card">
-            <span className="combat-doctrine-card-label">Arena Condition</span>
-            <strong className="combat-doctrine-card-title">{resolvedArenaCondition.label}</strong>
-            {resolvedArenaCondition.detail && (
-              <span className="combat-doctrine-card-detail">{resolvedArenaCondition.detail}</span>
+            {resolvedTelegraph && (
+              <motion.div
+                key={`telegraph-${resolvedTelegraphKey || resolvedTelegraph}`}
+                className="combat-doctrine-banner combat-doctrine-banner--telegraph"
+                role="status"
+                aria-live="polite"
+                initial={prefersReduced ? {} : { opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReduced ? {} : { opacity: 0, y: -3 }}
+                transition={{ duration: prefersReduced ? 0 : 0.22, ease: 'easeOut' }}
+              >
+                <span className="combat-doctrine-banner-label">Telegraph</span>
+                <span className="combat-doctrine-banner-text">{resolvedTelegraph}</span>
+              </motion.div>
             )}
-          </div>
-        )}
-
-        {resolvedMoveLabel && (
-          <AnimatePresence initial={false} mode="popLayout">
-            <motion.div
-              key={`move-${resolvedMoveId || resolvedMoveLabel}`}
-              className="combat-doctrine-meta-card combat-doctrine-meta-card--move"
-              role="status"
-              aria-live="polite"
-              initial={prefersReduced ? {} : { opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={prefersReduced ? {} : { opacity: 0, scale: 0.98 }}
-              transition={{ duration: prefersReduced ? 0 : 0.22, ease: 'easeOut' }}
-            >
-              <span className="combat-doctrine-card-label">Move Reveal</span>
-              <strong className="combat-doctrine-card-title">{resolvedMoveLabel}</strong>
-              {resolvedMoveSchool && (
-                <span className="combat-doctrine-card-detail">{resolvedMoveSchool}</span>
-              )}
-            </motion.div>
           </AnimatePresence>
-        )}
-      </div>
 
-      {resolvedStatuses.length > 0 && (
-        <div className="combat-doctrine-chip-block">
-          <span className="combat-doctrine-section-label">Status Marks</span>
-          <div className="combat-doctrine-chip-row" role="list" aria-label="Opponent statuses">
-            {resolvedStatuses.map((status) => (
-              <span
-                key={status.id}
-                className="combat-doctrine-chip"
-                role="listitem"
-                aria-label={status.detail ? `${status.label}: ${status.detail}` : status.label}
-              >
-                <strong>{status.label}</strong>
-                {status.detail && <span>{status.detail}</span>}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+          {resolvedArenaCondition && (
+            <div className="combat-doctrine-inline-card">
+              <span className="combat-doctrine-card-label">Arena</span>
+              <strong className="combat-doctrine-card-title">{resolvedArenaCondition.label}</strong>
+              {resolvedArenaCondition.detail && (
+                <span className="combat-doctrine-card-detail">{resolvedArenaCondition.detail}</span>
+              )}
+            </div>
+          )}
 
-      {resolvedStolenTokens.length > 0 && (
-        <div className="combat-doctrine-chip-block">
-          <span className="combat-doctrine-section-label">Stolen Tokens</span>
-          <div className="combat-doctrine-chip-row" role="list" aria-label="Stolen tokens">
-            {resolvedStolenTokens.map((token) => (
-              <span
-                key={token.id}
-                className="combat-doctrine-chip combat-doctrine-chip--stolen"
-                role="listitem"
-                aria-label={token.detail ? `${token.label}: ${token.detail}` : token.label}
+          <AnimatePresence initial={false} mode="popLayout">
+            {resolvedMoveLabel && (
+              <motion.div
+                key={`move-${resolvedMoveId || resolvedMoveLabel}`}
+                className="combat-doctrine-inline-card combat-doctrine-inline-card--move"
+                role="status"
+                aria-live="polite"
+                initial={prefersReduced ? {} : { opacity: 0, scale: 0.97 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={prefersReduced ? {} : { opacity: 0, scale: 0.98 }}
+                transition={{ duration: prefersReduced ? 0 : 0.2, ease: 'easeOut' }}
               >
-                <strong>{token.label}</strong>
-                {token.detail && <span>{token.detail}</span>}
-              </span>
-            ))}
-          </div>
+                <span className="combat-doctrine-card-label">Move</span>
+                <strong className="combat-doctrine-card-title">{resolvedMoveLabel}</strong>
+                {resolvedMoveSchool && (
+                  <span className="combat-doctrine-card-detail">{resolvedMoveSchool}</span>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {resolvedStatuses.length > 0 && (
+            <div className="combat-doctrine-chip-row" role="list" aria-label="Opponent statuses">
+              <span className="combat-doctrine-chip-label">Status</span>
+              {resolvedStatuses.map((status) => (
+                <span
+                  key={status.id}
+                  className="combat-doctrine-chip"
+                  role="listitem"
+                  aria-label={status.detail ? `${status.label}: ${status.detail}` : status.label}
+                >
+                  <strong>{status.label}</strong>
+                  {status.detail && <span>{status.detail}</span>}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {resolvedStolenTokens.length > 0 && (
+            <div className="combat-doctrine-chip-row" role="list" aria-label="Stolen tokens">
+              <span className="combat-doctrine-chip-label">Stolen</span>
+              {resolvedStolenTokens.map((token) => (
+                <span
+                  key={token.id}
+                  className="combat-doctrine-chip combat-doctrine-chip--stolen"
+                  role="listitem"
+                  aria-label={token.detail ? `${token.label}: ${token.detail}` : token.label}
+                >
+                  <strong>{token.label}</strong>
+                  {token.detail && <span>{token.detail}</span>}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>
