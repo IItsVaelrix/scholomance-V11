@@ -341,6 +341,256 @@
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
+.combat-doctrine-panel {
+  --combat-doctrine-accent: rgba(101, 31, 255, 0.72);
+  --combat-doctrine-soft: rgba(101, 31, 255, 0.14);
+  --combat-doctrine-glow: rgba(101, 31, 255, 0.18);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+  padding: 12px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-bottom: 1px solid rgba(201, 162, 39, 0.08);
+  background:
+    radial-gradient(circle at top left, var(--combat-doctrine-glow), transparent 58%),
+    linear-gradient(180deg, rgba(10, 6, 20, 0.98), rgba(7, 4, 13, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgba(201, 162, 39, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+  overflow: hidden;
+}
+
+.combat-doctrine-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(201, 162, 39, 0.05), transparent 38%),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 11px,
+      rgba(201, 162, 39, 0.02) 11px,
+      rgba(201, 162, 39, 0.02) 12px
+    );
+  pointer-events: none;
+}
+
+.combat-doctrine-panel[data-school="SONIC"] {
+  --combat-doctrine-accent: rgba(101, 31, 255, 0.78);
+  --combat-doctrine-soft: rgba(101, 31, 255, 0.16);
+  --combat-doctrine-glow: rgba(101, 31, 255, 0.22);
+}
+
+.combat-doctrine-panel[data-school="PSYCHIC"] {
+  --combat-doctrine-accent: rgba(0, 229, 255, 0.74);
+  --combat-doctrine-soft: rgba(0, 229, 255, 0.16);
+  --combat-doctrine-glow: rgba(0, 229, 255, 0.18);
+}
+
+.combat-doctrine-panel[data-school="VOID"] {
+  --combat-doctrine-accent: rgba(148, 163, 184, 0.75);
+  --combat-doctrine-soft: rgba(148, 163, 184, 0.14);
+  --combat-doctrine-glow: rgba(71, 85, 105, 0.2);
+}
+
+.combat-doctrine-panel[data-school="ALCHEMY"] {
+  --combat-doctrine-accent: rgba(255, 77, 166, 0.78);
+  --combat-doctrine-soft: rgba(255, 77, 166, 0.16);
+  --combat-doctrine-glow: rgba(255, 77, 166, 0.18);
+}
+
+.combat-doctrine-panel[data-school="WILL"] {
+  --combat-doctrine-accent: rgba(255, 159, 67, 0.76);
+  --combat-doctrine-soft: rgba(255, 159, 67, 0.16);
+  --combat-doctrine-glow: rgba(255, 159, 67, 0.18);
+}
+
+.combat-doctrine-header,
+.combat-doctrine-grid,
+.combat-doctrine-chip-block {
+  position: relative;
+  z-index: 1;
+}
+
+.combat-doctrine-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.combat-doctrine-kickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combat-doctrine-kicker,
+.combat-doctrine-passive {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 9px;
+  border: 1px solid color-mix(in srgb, var(--combat-doctrine-accent) 58%, rgba(201, 162, 39, 0.22));
+  background: color-mix(in srgb, var(--combat-doctrine-soft) 78%, rgba(5, 3, 12, 0.74));
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.52rem;
+  line-height: 1.2;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(201, 162, 39, 0.58);
+}
+
+.combat-doctrine-kicker strong,
+.combat-doctrine-passive strong {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: #f1ead6;
+}
+
+.combat-doctrine-name-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.combat-doctrine-name {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 1.15rem;
+  line-height: 1.15;
+  font-weight: 400;
+  color: #f3e8c6;
+  letter-spacing: 0.03em;
+}
+
+.combat-doctrine-subtitle {
+  margin: 0;
+  font-family: Georgia, serif;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: rgba(232, 223, 200, 0.76);
+  font-style: italic;
+}
+
+.combat-doctrine-banner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--combat-doctrine-accent);
+  background: linear-gradient(90deg, var(--combat-doctrine-soft), rgba(5, 3, 12, 0.45));
+  box-shadow: inset 0 1px 0 rgba(201, 162, 39, 0.05);
+}
+
+.combat-doctrine-banner--phase {
+  min-height: 100%;
+}
+
+.combat-doctrine-banner-label,
+.combat-doctrine-card-label,
+.combat-doctrine-section-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.54rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(201, 162, 39, 0.5);
+}
+
+.combat-doctrine-banner-text {
+  font-family: Georgia, serif;
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #f3e8c6;
+}
+
+.combat-doctrine-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+}
+
+.combat-doctrine-meta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(201, 162, 39, 0.12);
+  background: rgba(6, 4, 10, 0.74);
+}
+
+.combat-doctrine-meta-card--move {
+  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 54%, rgba(201, 162, 39, 0.24));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.combat-doctrine-card-title {
+  font-family: var(--font-sans, 'Space Grotesk', sans-serif);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0.04em;
+  color: #f3e8c6;
+}
+
+.combat-doctrine-card-detail {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.64rem;
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--combat-doctrine-accent) 72%, #f3e8c6);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.combat-doctrine-chip-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.combat-doctrine-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.combat-doctrine-chip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border: 1px solid rgba(201, 162, 39, 0.12);
+  background: rgba(10, 7, 12, 0.74);
+  min-width: 110px;
+}
+
+.combat-doctrine-chip--stolen {
+  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 50%, rgba(201, 162, 39, 0.2));
+  background: color-mix(in srgb, var(--combat-doctrine-soft) 45%, rgba(10, 7, 12, 0.82));
+}
+
+.combat-doctrine-chip strong {
+  font-family: var(--font-sans, 'Space Grotesk', sans-serif);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #f3e8c6;
+}
+
+.combat-doctrine-chip span {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.58rem;
+  line-height: 1.45;
+  color: rgba(201, 162, 39, 0.52);
+  letter-spacing: 0.04em;
+}
+
 /* ─── Battle Log — The Chronicle ────────────────────────────── */
 
 .battle-log {
@@ -1334,6 +1584,15 @@
   .stat-value {
     display: none;
   }
+
+  .combat-doctrine-name-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .combat-doctrine-passive {
+    align-self: flex-start;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1366,6 +1625,20 @@
   .spellbook-inline-textarea {
     min-height: 52px;
     font-size: 0.9rem;
+  }
+
+  .combat-doctrine-panel {
+    padding: 10px 12px 12px;
+    gap: 8px;
+  }
+
+  .combat-doctrine-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .combat-doctrine-chip {
+    min-width: calc(50% - 4px);
+    flex: 1 1 120px;
   }
 }
 
