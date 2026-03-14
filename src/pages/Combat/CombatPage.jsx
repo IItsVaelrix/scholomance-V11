@@ -20,6 +20,7 @@ import { combatBridge } from './combatBridge.js';
 import { Spellbook } from './components/Spellbook.jsx';
 import { ScoreReveal } from './components/ScoreReveal.jsx';
 import { BattleLog } from './components/BattleLog.jsx';
+import { OpponentDoctrinePanel } from './components/OpponentDoctrinePanel.jsx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.js';
 import './CombatPage.css';
 
@@ -70,10 +71,23 @@ export default function CombatPage() {
     opponentHP, maxOpponentHP,
     opponent,
     lastScoreData,
+    lastOpponentSpell,
     lastPlayerSpell,
     lastPlayerDamage,
     battleLog,
     turnNumber,
+    profileType,
+    doctrine,
+    passiveLabel,
+    phase,
+    telegraph,
+    telegraphKey,
+    moveId,
+    moveLabel,
+    moveSchool,
+    statusesApplied,
+    stolenTokens,
+    arenaCondition,
     castPlayerSpell,
     continueAfterReveal,
     cancelCasting,
@@ -181,8 +195,21 @@ export default function CombatPage() {
   const isEndState       = isVictory || isDefeat;
   const isPlayerTurn     = combatState === 'PLAYER_TURN';
   const opponentHPPct    = Math.max(0, Math.min(100, (opponentHP / maxOpponentHP) * 100));
-
   const opponentHPColor = opponentHPPct > 50 ? '#22aa44' : opponentHPPct > 25 ? '#ddaa00' : '#cc2222';
+  const doctrineSurface = {
+    profileType: profileType ?? opponent?.profileType ?? null,
+    doctrine: doctrine ?? opponent?.doctrine ?? opponent?.subtitle ?? null,
+    passiveLabel: passiveLabel ?? opponent?.passiveLabel ?? null,
+    phase: phase ?? opponent?.phase ?? null,
+    telegraph: telegraph ?? opponent?.telegraph ?? null,
+    telegraphKey: telegraphKey ?? opponent?.telegraphKey ?? null,
+    moveId: moveId ?? opponent?.moveId ?? lastOpponentSpell ?? null,
+    moveLabel: moveLabel ?? opponent?.moveLabel ?? null,
+    moveSchool: moveSchool ?? opponent?.moveSchool ?? null,
+    statusesApplied: statusesApplied ?? opponent?.statusesApplied ?? [],
+    stolenTokens: stolenTokens ?? opponent?.stolenTokens ?? [],
+    arenaCondition: arenaCondition ?? opponent?.arenaCondition ?? null,
+  };
 
   // State label shown in the terminal footer when not player turn
   const stateLabel = {
@@ -267,6 +294,22 @@ export default function CombatPage() {
           </div>
 
           {/* The Chronicle — primary MUD text surface */}
+          <OpponentDoctrinePanel
+            opponent={opponent}
+            profileType={doctrineSurface.profileType}
+            doctrine={doctrineSurface.doctrine}
+            passiveLabel={doctrineSurface.passiveLabel}
+            phase={doctrineSurface.phase}
+            telegraph={doctrineSurface.telegraph}
+            telegraphKey={doctrineSurface.telegraphKey}
+            moveId={doctrineSurface.moveId}
+            moveLabel={doctrineSurface.moveLabel}
+            moveSchool={doctrineSurface.moveSchool}
+            statusesApplied={doctrineSurface.statusesApplied}
+            stolenTokens={doctrineSurface.stolenTokens}
+            arenaCondition={doctrineSurface.arenaCondition}
+            prefersReduced={prefersReduced}
+          />
           <BattleLog entries={battleLog} />
 
           {/* Inline Spellbook — sits at terminal bottom when CASTING */}
@@ -404,7 +447,7 @@ export default function CombatPage() {
                 <div className="end-overlay-best-spell">
                   <span className="end-overlay-best-label" aria-hidden="true">BEST VERSE</span>
                   <blockquote className="end-overlay-best-text">
-                    "{combatStats.bestSpellText.slice(0, 80)}{combatStats.bestSpellText.length > 80 ? '…' : ''}"
+                    &ldquo;{combatStats.bestSpellText.slice(0, 80)}{combatStats.bestSpellText.length > 80 ? '…' : ''}&rdquo;
                   </blockquote>
                 </div>
               )}
