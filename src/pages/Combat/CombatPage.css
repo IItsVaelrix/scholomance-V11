@@ -307,6 +307,8 @@
   flex-shrink: 0;
 }
 
+/* ─── Doctrine Panel — compact identity strip + scrollable detail ── */
+
 .combat-doctrine-panel {
   --combat-doctrine-accent: rgba(101, 31, 255, 0.72);
   --combat-doctrine-soft: rgba(101, 31, 255, 0.14);
@@ -314,10 +316,8 @@
   flex-shrink: 0;
   position: relative;
   z-index: 2;
-  padding: 12px 16px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
   border-bottom: 1px solid rgba(201, 162, 39, 0.08);
   background:
     radial-gradient(circle at top left, var(--combat-doctrine-glow), transparent 58%),
@@ -326,6 +326,8 @@
     inset 0 1px 0 rgba(201, 162, 39, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.18);
   overflow: hidden;
+  /* Cap total panel height so chronicle stays dominant */
+  max-height: 180px;
 }
 
 .combat-doctrine-panel::before {
@@ -374,176 +376,193 @@
   --combat-doctrine-glow: rgba(255, 159, 67, 0.18);
 }
 
-.combat-doctrine-header,
-.combat-doctrine-grid,
-.combat-doctrine-chip-block {
+/* ── Identity strip: always visible, tight single row ── */
+
+.combat-doctrine-identity {
   position: relative;
   z-index: 1;
-}
-
-.combat-doctrine-copy {
+  flex-shrink: 0;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.combat-doctrine-kickers {
-  display: flex;
+  align-items: baseline;
   flex-wrap: wrap;
-  gap: 8px;
-}
-
-.combat-doctrine-kicker,
-.combat-doctrine-passive {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 6px 9px;
-  border: 1px solid color-mix(in srgb, var(--combat-doctrine-accent) 58%, rgba(201, 162, 39, 0.22));
-  background: color-mix(in srgb, var(--combat-doctrine-soft) 78%, rgba(5, 3, 12, 0.74));
-  font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.52rem;
-  line-height: 1.2;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: rgba(201, 162, 39, 0.58);
-}
-
-.combat-doctrine-kicker strong,
-.combat-doctrine-passive strong {
-  font-size: 0.68rem;
-  letter-spacing: 0.08em;
-  color: #f1ead6;
-}
-
-.combat-doctrine-name-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 4px 10px;
+  padding: 7px 16px;
 }
 
 .combat-doctrine-name {
   margin: 0;
   font-family: Georgia, serif;
-  font-size: 1.15rem;
-  line-height: 1.15;
+  font-size: 0.92rem;
+  line-height: 1.2;
   font-weight: 400;
   color: #f3e8c6;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
 }
 
 .combat-doctrine-subtitle {
   margin: 0;
   font-family: Georgia, serif;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: rgba(232, 223, 200, 0.76);
+  font-size: 0.76rem;
+  line-height: 1.2;
+  color: rgba(232, 223, 200, 0.58);
   font-style: italic;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.combat-doctrine-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-left: auto;
+}
+
+.combat-doctrine-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid color-mix(in srgb, var(--combat-doctrine-accent) 45%, rgba(201, 162, 39, 0.15));
+  background: color-mix(in srgb, var(--combat-doctrine-soft) 60%, rgba(5, 3, 12, 0.78));
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.52rem;
+  line-height: 1.3;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(201, 162, 39, 0.65);
+}
+
+.combat-doctrine-tag--school {
+  color: color-mix(in srgb, var(--combat-doctrine-accent) 85%, #f3e8c6);
+}
+
+.combat-doctrine-tag--passive {
+  border-style: dashed;
+  color: rgba(232, 223, 200, 0.55);
+}
+
+.combat-doctrine-tag--phase {
+  background: color-mix(in srgb, var(--combat-doctrine-accent) 18%, rgba(5, 3, 12, 0.82));
+  color: color-mix(in srgb, var(--combat-doctrine-accent) 72%, #f3e8c6);
+  font-weight: 600;
+}
+
+/* ── Detail zone: telegraph / move / status — scrollable ── */
+
+.combat-doctrine-detail {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 16px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 162, 39, 0.1) transparent;
+}
+
+.combat-doctrine-detail::-webkit-scrollbar {
+  width: 3px;
+}
+
+.combat-doctrine-detail::-webkit-scrollbar-thumb {
+  background: rgba(201, 162, 39, 0.12);
+  border-radius: 2px;
+}
+
+/* ── Banners (telegraph, etc.) ── */
 
 .combat-doctrine-banner {
   position: relative;
-  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 2px;
+  padding: 6px 10px;
   border-left: 3px solid var(--combat-doctrine-accent);
   background: linear-gradient(90deg, var(--combat-doctrine-soft), rgba(5, 3, 12, 0.45));
-  box-shadow: inset 0 1px 0 rgba(201, 162, 39, 0.05);
-}
-
-.combat-doctrine-banner--phase {
-  min-height: 100%;
 }
 
 .combat-doctrine-banner-label,
 .combat-doctrine-card-label,
-.combat-doctrine-section-label {
+.combat-doctrine-chip-label {
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.54rem;
+  font-size: 0.5rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(201, 162, 39, 0.5);
+  color: rgba(201, 162, 39, 0.45);
+  flex-shrink: 0;
 }
 
 .combat-doctrine-banner-text {
   font-family: Georgia, serif;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.35;
   color: #f3e8c6;
 }
 
-.combat-doctrine-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 10px;
-}
+/* ── Inline cards (arena condition, move reveal) ── */
 
-.combat-doctrine-meta-card {
+.combat-doctrine-inline-card {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-height: 100%;
-  padding: 10px 12px;
-  border: 1px solid rgba(201, 162, 39, 0.12);
-  background: rgba(6, 4, 10, 0.74);
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  border: 1px solid rgba(201, 162, 39, 0.1);
+  background: rgba(6, 4, 10, 0.65);
 }
 
-.combat-doctrine-meta-card--move {
-  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 54%, rgba(201, 162, 39, 0.24));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+.combat-doctrine-inline-card--move {
+  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 45%, rgba(201, 162, 39, 0.18));
 }
 
 .combat-doctrine-card-title {
   font-family: var(--font-sans, 'Space Grotesk', sans-serif);
-  font-size: 0.84rem;
+  font-size: 0.76rem;
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1.2;
   letter-spacing: 0.04em;
   color: #f3e8c6;
 }
 
 .combat-doctrine-card-detail {
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.64rem;
-  line-height: 1.45;
+  font-size: 0.56rem;
+  line-height: 1.2;
   color: color-mix(in srgb, var(--combat-doctrine-accent) 72%, #f3e8c6);
   text-transform: uppercase;
   letter-spacing: 0.09em;
 }
 
-.combat-doctrine-chip-block {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
+/* ── Chip rows (statuses, stolen tokens) ── */
 
 .combat-doctrine-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 5px;
 }
 
 .combat-doctrine-chip {
   display: inline-flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 8px 10px;
-  border: 1px solid rgba(201, 162, 39, 0.12);
-  background: rgba(10, 7, 12, 0.74);
-  min-width: 110px;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid rgba(201, 162, 39, 0.1);
+  background: rgba(10, 7, 12, 0.65);
 }
 
 .combat-doctrine-chip--stolen {
-  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 50%, rgba(201, 162, 39, 0.2));
-  background: color-mix(in srgb, var(--combat-doctrine-soft) 45%, rgba(10, 7, 12, 0.82));
+  border-color: color-mix(in srgb, var(--combat-doctrine-accent) 42%, rgba(201, 162, 39, 0.16));
+  background: color-mix(in srgb, var(--combat-doctrine-soft) 35%, rgba(10, 7, 12, 0.78));
 }
 
 .combat-doctrine-chip strong {
   font-family: var(--font-sans, 'Space Grotesk', sans-serif);
-  font-size: 0.75rem;
+  font-size: 0.66rem;
   font-weight: 500;
   line-height: 1.2;
   color: #f3e8c6;
@@ -551,9 +570,9 @@
 
 .combat-doctrine-chip span {
   font-family: var(--font-mono, 'JetBrains Mono', monospace);
-  font-size: 0.58rem;
-  line-height: 1.45;
-  color: rgba(201, 162, 39, 0.52);
+  font-size: 0.52rem;
+  line-height: 1.2;
+  color: rgba(201, 162, 39, 0.48);
   letter-spacing: 0.04em;
 }
 
@@ -1530,13 +1549,13 @@
     display: none;
   }
 
-  .combat-doctrine-name-row {
+  .combat-doctrine-identity {
     flex-direction: column;
-    align-items: stretch;
+    align-items: flex-start;
   }
 
-  .combat-doctrine-passive {
-    align-self: flex-start;
+  .combat-doctrine-tags {
+    margin-left: 0;
   }
 }
 
@@ -1573,17 +1592,15 @@
   }
 
   .combat-doctrine-panel {
-    padding: 10px 12px 12px;
-    gap: 8px;
+    max-height: 150px;
   }
 
-  .combat-doctrine-grid {
-    grid-template-columns: 1fr;
+  .combat-doctrine-identity {
+    padding: 6px 12px;
   }
 
-  .combat-doctrine-chip {
-    min-width: calc(50% - 4px);
-    flex: 1 1 120px;
+  .combat-doctrine-detail {
+    padding: 0 12px 6px;
   }
 }
 
