@@ -996,6 +996,175 @@
   gap: 8px;
 }
 
+/* ─── Spellbook — Editor header row (label + sub + badge) ─────── */
+
+.spellbook-inline-editor-header {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 12px 3px;
+  border-bottom: 1px solid rgba(101, 31, 255, 0.1);
+}
+
+.spellbook-inline-label {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.52rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.spellbook-inline-label--verse {
+  color: rgba(101, 31, 255, 0.75);
+}
+
+.spellbook-inline-label--weave {
+  color: rgba(0, 229, 255, 0.72);
+}
+
+.spellbook-inline-label-sub {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  color: rgba(107, 90, 42, 0.38);
+  text-transform: uppercase;
+}
+
+/* ─── Spellbook — Syntactic Integrity Badge ───────────────────── */
+
+.spellbook-integrity-badge {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: 0.46rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  transition: color 0.2s, opacity 0.2s;
+}
+
+.spellbook-integrity-badge--green {
+  color: #22aa44;
+  text-shadow: 0 0 8px rgba(34, 170, 68, 0.45);
+}
+
+.spellbook-integrity-badge--yellow {
+  color: #ddaa00;
+  text-shadow: 0 0 8px rgba(221, 170, 0, 0.35);
+}
+
+.spellbook-integrity-badge--red {
+  color: #cc2222;
+  text-shadow: 0 0 8px rgba(204, 34, 34, 0.35);
+  animation: integrity-pulse 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes integrity-pulse {
+  from { opacity: 0.75; }
+  to   { opacity: 1; }
+}
+
+/* ─── Spellbook — Weave editor visual differentiation ────────── */
+
+.spellbook-weave-editor {
+  border-color: rgba(0, 229, 255, 0.16);
+  background: rgba(0, 18, 22, 0.92);
+}
+
+.spellbook-weave-editor:focus-within {
+  border-color: rgba(0, 229, 255, 0.42);
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.08), inset 0 0 16px rgba(0, 229, 255, 0.025);
+}
+
+.spellbook-weave-editor[data-integrity="GREEN"] {
+  border-color: rgba(34, 170, 68, 0.42);
+  box-shadow: 0 0 8px rgba(34, 170, 68, 0.08);
+}
+
+.spellbook-weave-editor[data-integrity="YELLOW"] {
+  border-color: rgba(221, 170, 0, 0.38);
+}
+
+.spellbook-weave-editor[data-integrity="RED"] {
+  border-color: rgba(204, 34, 34, 0.5);
+  box-shadow: 0 0 12px rgba(204, 34, 34, 0.12);
+}
+
+.spellbook-weave-textarea {
+  caret-color: #00e5ff;
+  color: rgba(200, 240, 245, 0.88);
+  min-height: 48px;
+}
+
+.spellbook-weave-textarea::placeholder {
+  color: rgba(0, 100, 120, 0.38);
+  font-style: italic;
+}
+
+/* ─── Spellbook — Bridge Connector + Beam VFX ────────────────── */
+
+.spellbook-bridge-connector {
+  position: relative;
+  height: 10px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  margin: -4px 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.spellbook-bridge-line {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(101, 31, 255, 0.18) 20%,
+    rgba(0, 229, 255, 0.18) 80%,
+    transparent 100%
+  );
+  transition: opacity 0.2s;
+}
+
+/* Bridge beam flash — fires on GREEN cast */
+.spellbook-bridge-connector--flash .spellbook-bridge-line {
+  animation: bridge-beam-flash 0.45s ease-out forwards;
+}
+
+@keyframes bridge-beam-flash {
+  0% {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(101, 31, 255, 0.8) 30%,
+      rgba(0, 229, 255, 0.9) 50%,
+      rgba(34, 170, 68, 0.8) 70%,
+      transparent 100%
+    );
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.6), 0 0 20px rgba(101, 31, 255, 0.4);
+    opacity: 1;
+  }
+  60% {
+    height: 3px;
+    opacity: 0.85;
+  }
+  100% {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(101, 31, 255, 0.18) 20%,
+      rgba(0, 229, 255, 0.18) 80%,
+      transparent 100%
+    );
+    box-shadow: none;
+    opacity: 1;
+  }
+}
+
 /* ─── Spellbook Modal (kept for backward compat) ─────────────── */
 
 .spellbook-backdrop {
