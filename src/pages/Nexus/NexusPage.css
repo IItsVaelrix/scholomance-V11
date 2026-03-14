@@ -1,0 +1,25 @@
+.nexus-page-root {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.nexus-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.nexus-header h1 {
+  font-size: 48px;
+  letter-spacing: 8px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(101, 31, 255, 0.4);
+  margin-bottom: 8px;
+}
+
+.nexus-header .subtitle {
+  color: #888;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}

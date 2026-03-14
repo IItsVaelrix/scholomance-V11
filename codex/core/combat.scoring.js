@@ -7,6 +7,7 @@ import {
   getSchoolEffectiveness,
 } from './combat.balance.js';
 import { buildCombatProfile } from './combat.profile.js';
+import { calculateSyntacticBridge } from './spellweave.engine.js';
 
 const SCORE_TO_DAMAGE_MULTIPLIER = 1.1;
 const SCORE_TO_DAMAGE_OFFSET = 6;
@@ -66,6 +67,7 @@ function isFailureCast(profile) {
 
 export function calculateCombatScore({
   text = '',
+  weave = '',
   scoreData = null,
   arenaSchool = COMBAT_ARENA_SCHOOL,
   defenderSchool = null,
@@ -88,6 +90,13 @@ export function calculateCombatScore({
     fallbackSchool,
   });
 
+  // Calculate Syntactic Bridge (Weave)
+  const bridge = calculateSyntacticBridge({
+    verse: text,
+    weave: weave,
+    dominantSchool: profile.school
+  });
+
   const baseDamage = computeBaseDamage(totalScore);
   const arenaResonanceMultiplier = computeArenaResonanceMultiplier({
     dominantSchool: profile.school,
@@ -99,6 +108,7 @@ export function calculateCombatScore({
   const terrainMultiplier = profile.intent.terrain ? 1.08 : 1;
   const supportPenalty = profile.intent.healing ? 0.72 : 1;
   const syntaxControlMultiplier = computeSyntaxControl(profile);
+  const weaveResonanceMultiplier = bridge.resonance;
 
   const rawDamage = baseDamage
     * arenaResonanceMultiplier
@@ -106,12 +116,13 @@ export function calculateCombatScore({
     * densityMultiplier
     * terrainMultiplier
     * syntaxControlMultiplier
+    * weaveResonanceMultiplier
     * (profile.rarity?.totalMultiplier ?? 1)
     * supportPenalty;
 
   const damage = Math.max(computeDamageFloor(profile), Math.round(rawDamage));
   const healing = computeHealingAmount(profile, damage);
-  const failureCast = isFailureCast(profile);
+  const failureCast = isFailureCast(profile) || bridge.collapsed;
 
   return {
     totalScore,
@@ -119,19 +130,21 @@ export function calculateCombatScore({
     explainTrace: traces,
     damage,
     healing,
-    school: profile.school,
+    school: bridge.school || profile.school,
     schoolDensity: profile.schoolDensity,
     arenaSchool,
     opponentSchool: defenderSchool || null,
     arenaResonanceMultiplier,
     schoolAffinityMultiplier,
     syntaxControlMultiplier,
+    weaveResonanceMultiplier,
+    bridge,
     rarity: profile.rarity,
-    intent: profile.intent,
+    intent: bridge.intent || profile.intent,
     cohesionScore: profile.cohesionScore,
     statusEffect: profile.statusEffect,
     failureCast,
-    commentary: profile.commentary || profile.rarity?.praise || '',
+    commentary: bridge.collapsed ? "Syntactic Collapse: The Weave has frayed." : (profile.commentary || profile.rarity?.praise || ''),
   };
 }
 

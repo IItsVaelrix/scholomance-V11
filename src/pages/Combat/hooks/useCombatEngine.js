@@ -43,7 +43,7 @@ function createBattleLogEntry(type, text, id) {
 export { scoreDataToDamage } from '../../../lib/combatScoring.js';
 
 export function useCombatEngine() {
-  const { addXP } = useProgression();
+  const { addXP, recordWordUse } = useProgression();
   const battleLogIdRef = useRef(0);
   const playerCastSequenceRef = useRef(0);
   const pendingPlayerCastRef = useRef(null);
@@ -197,6 +197,17 @@ export function useCombatEngine() {
         failureDisposition,
       } = pendingCast.resolution;
 
+      // Record word use for the Nexus
+      if (pendingCast.text && serverScore) {
+        const tokens = pendingCast.text.toLowerCase().match(/\b(\w+)\b/g) || [];
+        const uniqueTokens = [...new Set(tokens)];
+        uniqueTokens.forEach(word => {
+          if (word.length > 2) { 
+            recordWordUse(word, serverScore);
+          }
+        });
+      }
+
       updateState((prev) => setCombatState(
         applyResolvedPlayerCast(prev, {
           scoreData: serverScore,
@@ -347,7 +358,7 @@ export function useCombatEngine() {
     updateState,
   ]);
 
-  const castPlayerSpell = useCallback((text, scoreData) => {
+  const castPlayerSpell = useCallback((text, weave, scoreData) => {
     const {
       combatState,
       playerHP,
@@ -361,7 +372,7 @@ export function useCombatEngine() {
 
     const previewScore = calculateCombatScore({
       text,
-      scoreData,
+      weave,
       arenaSchool: COMBAT_ARENA_SCHOOL,
       defenderSchool: opponent?.school,
     });
@@ -421,6 +432,7 @@ export function useCombatEngine() {
       damage: previewDamage,
       school: previewScore.school,
       text,
+      weave,
     });
     emitStateUpdate(COMBAT_STATES.SPELL_FLYING, {
       playerHP: previewPlayerHP,
@@ -430,6 +442,7 @@ export function useCombatEngine() {
 
     void scoreCombatScroll({
       scrollText: text,
+      weave: weave,
       arenaSchool: COMBAT_ARENA_SCHOOL,
       opponentSchool: opponent?.school,
     })

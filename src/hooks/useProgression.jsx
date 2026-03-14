@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, u
 import { z } from "zod";
 import { SCHOOLS, getSchoolsByUnlock } from "../data/schools";
 import { getLevelFromXp, getLevelProgress, getTierForLevel } from "../lib/progressionUtils";
+import { MASTERY_LEVELS } from "../../codex/core/nexus.registry";
 
 const ProgressionContext = createContext(null);
 
@@ -12,7 +13,11 @@ const defaultProgression = {
   unlockedSchools: ["SONIC"],
   lastUpdated: Date.now(),
   achievements: [],
-  discoveryHistory: []
+  discoveryHistory: [],
+  nexus: {
+    discoveredWords: {},
+    activeSynergies: []
+  }
 };
 
 const ProgressionPayloadSchema = z.object({
@@ -20,7 +25,21 @@ const ProgressionPayloadSchema = z.object({
   unlockedSchools: z.array(z.string()).optional(),
   lastUpdated: z.number().optional(),
   achievements: z.array(z.string()).optional(),
-  discoveryHistory: z.array(z.string()).optional()
+  discoveryHistory: z.array(z.string()).optional(),
+  nexus: z.object({
+    discoveredWords: z.record(z.object({
+      word: z.string(),
+      level: z.number(),
+      exp: z.number(),
+      unlockedSynergies: z.array(z.string()),
+      stats: z.object({
+        count: z.number(),
+        schools: z.array(z.string()),
+        maxScore: z.number()
+      })
+    })).optional(),
+    activeSynergies: z.array(z.string()).optional()
+  }).optional()
 }).passthrough();
 
 const CSRF_HEADER = "x-csrf-token";
@@ -296,18 +315,71 @@ export function ProgressionProvider({ children, authReady = true, isAuthenticate
 
   const currentLevelInfo = useMemo(() => getLevelProgress(progression.xp), [progression.xp]);
 
+  const recordWordUse = useCallback((word, profile) => {
+    setProgression(prev => {
+      const upperWord = word.toUpperCase();
+      const currentNexus = prev.nexus || { discoveredWords: {}, activeSynergies: [] };
+      const currentWordMastery = currentNexus.discoveredWords[upperWord] || {
+        word: upperWord,
+        level: 1,
+        exp: 0,
+        unlockedSynergies: [],
+        stats: { count: 0, schools: [], maxScore: 0 }
+      };
+
+      // Import logic from nexus registry (in a real app, you might use a separate hook or helper)
+      const xpGained = 10; // Placeholder for calculateWordMasteryXP logic
+      const newExp = currentWordMastery.exp + xpGained;
+      const nextLevel = MASTERY_LEVELS.find(l => l.expRequired > newExp)?.level || 5;
+      const newLevel = nextLevel > currentWordMastery.level ? nextLevel - 1 : currentWordMastery.level;
+
+      const newWordMastery = {
+        ...currentWordMastery,
+        exp: newExp,
+        level: newLevel,
+        stats: {
+          count: currentWordMastery.stats.count + 1,
+          schools: [...new Set([...currentWordMastery.stats.schools, profile.school])],
+          maxScore: Math.max(currentWordMastery.stats.maxScore, profile.totalScore || 0)
+        }
+      };
+
+      // Achievement for first discovery
+      const newAchievements = [...prev.achievements];
+      if (currentWordMastery.stats.count === 0) {
+        newAchievements.push(`word-discovered-${upperWord.toLowerCase()}`);
+        emitXPEvent("word-discovered", { word: upperWord });
+      }
+
+      return {
+        ...prev,
+        achievements: [...new Set(newAchievements)],
+        nexus: {
+          ...currentNexus,
+          discoveredWords: {
+            ...currentNexus.discoveredWords,
+            [upperWord]: newWordMastery
+          }
+        }
+      };
+    });
+  }, []);
+
   const value = useMemo(() => ({
     progression,
     addXP,
+    recordWordUse,
     resetProgression,
     checkUnlocked,
     getNextUnlock,
     levelInfo: currentLevelInfo,
     availableSchools: progression.unlockedSchools,
     totalSchools: Object.keys(SCHOOLS).length,
+    nexus: progression.nexus || { discoveredWords: {}, activeSynergies: [] }
   }), [
     progression,
     addXP,
+    recordWordUse,
     resetProgression,
     checkUnlocked,
     getNextUnlock,

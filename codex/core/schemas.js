@@ -171,6 +171,21 @@ export function mergeLexicalEntries(base, overlay) {
   };
 }
 
+/**
+ * @typedef {Object} WordMastery
+ * @property {string} word - The normalized word.
+ * @property {number} level - Current mastery level (1-5).
+ * @property {number} exp - Experience points toward next level.
+ * @property {string[]} unlockedSynergies - List of synergy IDs unlocked for this word.
+ * @property {Object} stats - Usage stats (count, schools used in, max score contribution).
+ */
+
+/**
+ * @typedef {Object} NexusState
+ * @property {Object.<string, WordMastery>} discoveredWords - Map of word to mastery data.
+ * @property {string[]} activeSynergies - List of currently active global synergies.
+ */
+
 // This is just for type definitions, so we export an empty object.
 export const schemas = {};
 

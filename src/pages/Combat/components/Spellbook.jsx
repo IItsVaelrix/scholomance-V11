@@ -99,12 +99,15 @@ function PowerMeterModal({ scoreData, isScoring }) {
 
 export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, mode = 'modal' }) {
   const [text, setText]     = useState('');
+  const [weave, setWeave]   = useState('');
   const textareaRef         = useRef(null);
+  const weaveRef            = useRef(null);
   const prefersReduced      = usePrefersReducedMotion();
   const { scoreData, isScoring } = useScoring(text);
 
-  const charsLeft  = MAX_CHARS - text.length;
-  const canCast    = text.trim().length > 0 && playerMP >= mpCost;
+  const charsLeft  = 300 - text.length;
+  const weaveCharsLeft = 100 - weave.length;
+  const canCast    = text.trim().length > 0 && weave.trim().length > 0 && playerMP >= mpCost;
   const isNearLimit = charsLeft <= 15;
   const isAtLimit   = charsLeft <= 0;
 
@@ -115,19 +118,26 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
       return () => clearTimeout(t);
     } else {
       setText('');
+      setWeave('');
     }
   }, [isVisible]);
 
   const handleChange = useCallback((e) => {
     const val = e.target.value;
-    if (val.length <= MAX_CHARS) setText(val);
+    if (val.length <= 300) setText(val);
+  }, []);
+
+  const handleWeaveChange = useCallback((e) => {
+    const val = e.target.value;
+    if (val.length <= 100) setWeave(val);
   }, []);
 
   const handleCast = useCallback(() => {
     if (!canCast) return;
-    onCast(text, scoreData);
+    onCast(text, weave, scoreData);
     setText('');
-  }, [canCast, text, scoreData, onCast]);
+    setWeave('');
+  }, [canCast, text, weave, scoreData, onCast]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -172,6 +182,7 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
 
             {/* Editor — textarea + shimmer overlay */}
             <div className="spellbook-inline-editor">
+              <span className="spellbook-inline-label">VERSE (BODY)</span>
               {/* Shimmer overlay (z:2, aria-hidden) */}
               {text && (
                 <div
@@ -188,11 +199,28 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                placeholder="Write your scroll… (100 chars)"
-                maxLength={MAX_CHARS}
+                placeholder="The poetry of power… (300 chars)"
+                maxLength={300}
                 rows={3}
-                aria-label="Spell input — 100 character limit"
+                aria-label="Verse input — 300 character limit"
                 aria-describedby="inline-spellbook-meta"
+                spellCheck={false}
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="spellbook-inline-editor">
+              <span className="spellbook-inline-label">WEAVE (INTENT)</span>
+              <textarea
+                ref={weaveRef}
+                className="spellbook-inline-textarea spellbook-weave-textarea"
+                value={weave}
+                onChange={handleWeaveChange}
+                onKeyDown={handleKeyDown}
+                placeholder="The command of force… (e.g. Mend the flesh) (100 chars)"
+                maxLength={100}
+                rows={2}
+                aria-label="Weave input — 100 character limit"
                 spellCheck={false}
                 autoComplete="off"
               />
