@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { analyzeText } from '../../codex/core/analysis.pipeline.js';
-import { createDefaultScoringEngine } from '../../codex/core/scoring.defaults.js';
+import { createCombatScoringEngine } from '../../codex/core/scoring.defaults.js';
 
 export function useScoring(text) {
   const [scoreData, setScoreData] = useState(null);
@@ -8,7 +8,7 @@ export function useScoring(text) {
   const engineRef = useRef(null);
 
   if (!engineRef.current) {
-    engineRef.current = createDefaultScoringEngine();
+    engineRef.current = createCombatScoringEngine();
   }
 
   useEffect(() => {

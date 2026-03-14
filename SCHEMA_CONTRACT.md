@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.3** | Last updated: 2026-03-10
+**Version: 1.4** | Last updated: 2026-03-14
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -14,11 +14,11 @@
 ## SCHEMA CHANGE NOTICE
 
 - Schema: Core combat, lexical, and runtime bus contract
-- Version: 1.2 -> 1.3
-- Changed fields: expanded `CombatScoreRequest` with arena/opponent school context; expanded `CombatScoreResponse` with school, rarity, affinity, healing, and intent metadata; published `OpponentSpell`
+- Version: 1.3 -> 1.4
+- Changed fields: expanded `CombatIntent` to carry `statusEffect`; expanded `CombatScoreResponse` with `cohesionScore` and `statusEffect`; published `CombatStatusEffect`
 - Breaking: no
-- Claude impact: combat UI can now consume authoritative school/rarity/healing metadata without re-deriving it in the client
-- Blackbox impact: update endpoint fixtures for the richer combat payload and add opponent-engine fixtures if tests reach into hook state
+- Claude impact: combat UI can now render authoritative cohesion/status trays and battle-log praise without client-side re-derivation
+- Blackbox impact: update combat score fixtures for the richer payload and cover status duration/tier persistence across session turns
 
 ---
 
@@ -126,6 +126,7 @@ interface CombatIntent {
   buff: boolean;
   debuff: boolean;
   failureDisposition: "BUFF" | "DEBUFF" | "NEUTRAL";
+  statusEffect?: CombatStatusEffect | null;
 }
 
 interface CombatRarity {
@@ -147,6 +148,21 @@ interface CombatSchoolDensity {
   WILL: number;
 }
 
+interface CombatStatusEffect {
+  school: School;
+  chainId: string;
+  label: string;
+  tier: 1 | 2 | 3 | 4 | 5;
+  turns: number;
+  turnsRemaining: number;
+  magnitude: number;
+  sourceBonus: string | null;
+  disposition: "BUFF" | "DEBUFF";
+  averageRarity: number;
+  hitCount: number;
+  matchedKeywords: string[];
+}
+
 interface CombatScoreResponse {
   damage: number;
   healing: number;
@@ -158,8 +174,10 @@ interface CombatScoreResponse {
   arenaResonanceMultiplier: number;
   schoolAffinityMultiplier: number;
   syntaxControlMultiplier: number;
+  cohesionScore: number;
   rarity: CombatRarity;
   intent: CombatIntent;
+  statusEffect: CombatStatusEffect | null;
   failureCast: boolean;
   commentary: string;
   traces: ScoreTrace[];
@@ -335,6 +353,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.1 | 2026-03-10 | Aligned combat/runtime contract to implemented types and current event-bus behavior | no |
 | 1.2 | 2026-03-10 | Added `POST /api/combat/score` request/response contract for server-authoritative combat scoring | no |
 | 1.3 | 2026-03-10 | Expanded combat scoring payload with school/rarity/healing metadata and published `OpponentSpell` | no |
+| 1.4 | 2026-03-14 | Added semantic status-effect payloads and cohesion metadata to authoritative combat scoring | no |
 
 ---
 

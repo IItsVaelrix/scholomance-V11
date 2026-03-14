@@ -97,6 +97,14 @@ export const COMBAT_RARITY_TIERS = Object.freeze([
   }),
 ]);
 
+export const STATUS_TIER_DEFINITIONS = Object.freeze([
+  Object.freeze({ tier: 1, turns: 1, magnitude: 0.05 }),
+  Object.freeze({ tier: 2, turns: 2, magnitude: 0.10 }),
+  Object.freeze({ tier: 3, turns: 3, magnitude: 0.15 }),
+  Object.freeze({ tier: 4, turns: 4, magnitude: 0.20 }),
+  Object.freeze({ tier: 5, turns: 5, magnitude: 0.25 }),
+]);
+
 export function clamp01(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;
@@ -145,6 +153,21 @@ export function getCombatRarityByScore(score) {
   }
 
   return selected;
+}
+
+export function getStatusTierDefinition(tier, options = {}) {
+  const safeTier = clampNumber(Math.floor(Number(tier) || 0), 1, STATUS_TIER_DEFINITIONS.length);
+  const base = STATUS_TIER_DEFINITIONS[safeTier - 1];
+  const rarityId = String(options?.rarityId || '').toUpperCase();
+  const school = String(options?.school || '').toUpperCase() || null;
+  const sourceBonus = safeTier === STATUS_TIER_DEFINITIONS.length && rarityId === 'SOURCE'
+    ? `${school || 'ARCANE'}_SOURCE`
+    : null;
+
+  return {
+    ...base,
+    sourceBonus,
+  };
 }
 
 export function getOpponentMemoryWindow(intelligence) {

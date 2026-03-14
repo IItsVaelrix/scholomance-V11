@@ -18,7 +18,9 @@ function normalizeKeyword(keyword) {
   return String(keyword || '')
     .trim()
     .toLowerCase()
-    .replace(/[^a-z'-]/g, '');
+    .replace(/[^a-z' -]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[' -]+|[' -]+$/g, '');
 }
 
 function normalizeTierLabel(label, index) {
@@ -74,7 +76,47 @@ export function createSemanticRegistry(seed = {}) {
   return Object.freeze(registry);
 }
 
-export const SEMANTICS_REGISTRY = createSemanticRegistry();
+const SEMANTIC_REGISTRY_SEED = Object.freeze({
+  ALCHEMY: Object.freeze({
+    IGNITE: Object.freeze({
+      keywords: ['ignite', 'singe', 'blaze', 'conflagration', 'supernova'],
+      tierLabels: ['Singe', 'Ignite', 'Blaze', 'Conflagration', 'Supernova'],
+      powerRating: 1,
+    }),
+  }),
+  SONIC: Object.freeze({
+    REVERB: Object.freeze({
+      keywords: ['reverb', 'echo', 'resonance', 'harmonic tear', 'shatterpoint'],
+      tierLabels: ['Echo', 'Reverb', 'Resonance', 'Harmonic Tear', 'Shatterpoint'],
+      powerRating: 1,
+    }),
+  }),
+  VOID: Object.freeze({
+    ATROPHY: Object.freeze({
+      keywords: ['atrophy', 'fade', 'wither', 'nullification', 'oblivion'],
+      tierLabels: ['Fade', 'Wither', 'Atrophy', 'Nullification', 'Oblivion'],
+      powerRating: 1,
+    }),
+  }),
+  PSYCHIC: Object.freeze({
+    AMNESIA: Object.freeze({
+      keywords: ['amnesia', 'haze', 'blur', 'fracture', 'ego death'],
+      tierLabels: ['Haze', 'Blur', 'Amnesia', 'Fracture', 'Ego Death'],
+      powerRating: 1,
+    }),
+  }),
+  WILL: Object.freeze({
+    BULWARK: Object.freeze({
+      keywords: ['bulwark', 'stiffen', 'guard', 'iron citadel', 'invulnerability'],
+      tierLabels: ['Stiffen', 'Guard', 'Bulwark', 'Iron Citadel', 'Invulnerability'],
+      powerRating: 1,
+    }),
+  }),
+});
+
+export const SEMANTIC_REGISTRY_SEED_DATA = SEMANTIC_REGISTRY_SEED;
+export const SEMANTICS_REGISTRY = createSemanticRegistry(SEMANTIC_REGISTRY_SEED);
+export const SEEDED_SEMANTICS_REGISTRY = SEMANTICS_REGISTRY;
 
 export function getSemanticSchoolRegistry(school) {
   return SEMANTICS_REGISTRY?.[school] || null;
@@ -89,7 +131,11 @@ export function getSemanticChain(school, chainId) {
 export function getSemanticTierLabel(school, chainId, tier) {
   const chain = getSemanticChain(school, chainId);
   if (!chain) return null;
-  const tierIndex = Math.max(0, Math.min(SEMANTIC_TIER_COUNT - 1, Math.floor(Number(tier) || 0)));
+  const numericTier = Math.floor(Number(tier) || 0);
+  const tierIndex = Math.max(
+    0,
+    Math.min(SEMANTIC_TIER_COUNT - 1, numericTier >= 1 ? numericTier - 1 : 0)
+  );
   return chain.tierLabels[tierIndex] || null;
 }
 

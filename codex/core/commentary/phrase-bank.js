@@ -285,6 +285,40 @@ export const PHRASE_BANK = Object.freeze({
     ],
   }),
 
+  syntactic_cohesion: freezeEntry({
+    concept: "logical progression",
+    citations: [
+      {
+        quote: "True wit is nature to advantage dressed",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "What oft was thought, but ne'er so well expressed",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet should prefer probable impossibilities to improbable possibilities",
+        attribution: "Aristotle, Poetics (PG 1974)",
+      },
+      {
+        quote: "No man was ever yet a great poet, without being at the same time a profound philosopher",
+        attribution: "Coleridge, Biographia Literaria (PG 7700)",
+      },
+      {
+        quote: "Expression is the dress of thought",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+    ],
+    aspects: [
+      "logical progression", "connective pressure", "sentence weave",
+      "argument structure", "syntactic command",
+    ],
+    criteria: [
+      "prose stability", "structural complexity", "transitional force",
+      "argument coherence", "defensive penetration",
+    ],
+  }),
+
   vocabulary_richness: freezeEntry({
     concept: "diction range",
     citations: [

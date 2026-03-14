@@ -40,6 +40,66 @@ export function createInitialCombatStats() {
   };
 }
 
+function normalizeStatusEffect(statusEffect) {
+  if (!statusEffect || typeof statusEffect !== 'object') return null;
+
+  const turns = Math.max(1, Number(statusEffect.turnsRemaining ?? statusEffect.turns) || 1);
+  const tier = Math.max(1, Number(statusEffect.tier) || 1);
+
+  return {
+    ...statusEffect,
+    tier,
+    turns: Math.max(1, Number(statusEffect.turns) || turns),
+    turnsRemaining: turns,
+    magnitude: Math.max(0, Number(statusEffect.magnitude) || 0),
+  };
+}
+
+function upsertStatusEffect(statusList, statusEffect) {
+  const normalizedStatus = normalizeStatusEffect(statusEffect);
+  if (!normalizedStatus) {
+    return Array.isArray(statusList) ? statusList : [];
+  }
+
+  const entries = Array.isArray(statusList) ? [...statusList] : [];
+  const existingIndex = entries.findIndex((entry) => (
+    entry?.school === normalizedStatus.school
+    && entry?.chainId === normalizedStatus.chainId
+    && entry?.disposition === normalizedStatus.disposition
+  ));
+
+  if (existingIndex < 0) {
+    entries.push(normalizedStatus);
+    return entries;
+  }
+
+  const existing = normalizeStatusEffect(entries[existingIndex]) || normalizedStatus;
+  entries[existingIndex] = {
+    ...existing,
+    ...normalizedStatus,
+    tier: Math.max(existing.tier, normalizedStatus.tier),
+    turns: Math.max(existing.turns, normalizedStatus.turns),
+    turnsRemaining: Math.max(existing.turnsRemaining, normalizedStatus.turnsRemaining),
+    magnitude: Math.max(existing.magnitude, normalizedStatus.magnitude),
+  };
+  return entries;
+}
+
+function tickStatusEffects(statusList) {
+  if (!Array.isArray(statusList) || statusList.length === 0) {
+    return [];
+  }
+
+  return statusList
+    .map((statusEffect) => normalizeStatusEffect(statusEffect))
+    .filter(Boolean)
+    .map((statusEffect) => ({
+      ...statusEffect,
+      turnsRemaining: Math.max(0, statusEffect.turnsRemaining - 1),
+    }))
+    .filter((statusEffect) => statusEffect.turnsRemaining > 0);
+}
+
 export function buildSpellHistoryEntry({ text, scoreData, damage, healing, turnNumber }) {
   return {
     text,
@@ -83,6 +143,8 @@ export function createInitialCombatState({ opponent = createCombatOpponent(), ba
     lastOpponentDamage: 0,
     turnNumber: 1,
     playerSpellHistory: [],
+    playerStatusEffects: [],
+    opponentStatusEffects: [],
     opponentDamageModifier: 1,
     opponentStatusLabel: 'NEUTRAL',
     combatStats: createInitialCombatStats(),
@@ -129,6 +191,14 @@ export function applyResolvedPlayerCast(state, {
   spellHistoryEntry,
   failureDisposition = 'NEUTRAL',
 }) {
+  const statusEffect = normalizeStatusEffect(scoreData?.statusEffect);
+  const playerStatusEffects = statusEffect?.disposition === 'BUFF'
+    ? upsertStatusEffect(state.playerStatusEffects, statusEffect)
+    : state.playerStatusEffects;
+  const opponentStatusEffects = statusEffect?.disposition === 'DEBUFF'
+    ? upsertStatusEffect(state.opponentStatusEffects, statusEffect)
+    : state.opponentStatusEffects;
+
   return {
     ...state,
     playerHP,
@@ -137,6 +207,8 @@ export function applyResolvedPlayerCast(state, {
     lastPlayerDamage: damage,
     lastPlayerHealing: healing,
     playerSpellHistory: [...state.playerSpellHistory, spellHistoryEntry],
+    playerStatusEffects,
+    opponentStatusEffects,
     combatStats: updateCombatStats(state.combatStats, spellHistoryEntry),
     opponentDamageModifier: scoreData?.failureCast
       ? getFailureCastModifier(failureDisposition)
@@ -183,6 +255,8 @@ export function completeOpponentTurn(state, { nextPlayerMP }) {
     combatState: COMBAT_STATES.PLAYER_TURN,
     turnNumber: state.turnNumber + 1,
     playerMP: nextPlayerMP,
+    playerStatusEffects: tickStatusEffects(state.playerStatusEffects),
+    opponentStatusEffects: tickStatusEffects(state.opponentStatusEffects),
     opponentDamageModifier: 1,
     opponentStatusLabel: 'NEUTRAL',
   };

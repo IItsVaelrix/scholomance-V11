@@ -4,7 +4,15 @@ import {
   COMBAT_SCHOOLS,
   clamp01,
   getCombatRarityByScore,
+  getStatusTierDefinition,
 } from './combat.balance.js';
+import { calculateCohesionScore } from './heuristics/cohesion.js';
+import {
+  SEMANTIC_TIER_COUNT,
+  getSemanticSchoolRegistry,
+  getSemanticTierLabel,
+  normalizeSemanticKeyword,
+} from './semantics.registry.js';
 import { WORD_REGEX_GLOBAL } from '../../src/lib/wordTokenization.js';
 import { normalizeVowelFamily } from '../../src/lib/phonology/vowelFamily.js';
 import { VOWEL_FAMILY_TO_SCHOOL } from '../../src/data/schools.js';
@@ -48,6 +56,14 @@ const DEBUFF_KEYWORDS = new Set([
   'blind', 'break', 'curse', 'dim', 'drain', 'fray', 'freeze', 'hex', 'rot',
   'shatter', 'silence', 'slow', 'split', 'sunder', 'weaken', 'wilt',
 ]);
+
+const STATUS_DISPOSITION_BY_SCHOOL = Object.freeze({
+  ALCHEMY: 'DEBUFF',
+  SONIC: 'DEBUFF',
+  VOID: 'DEBUFF',
+  PSYCHIC: 'DEBUFF',
+  WILL: 'BUFF',
+});
 
 function toFiniteNumber(value, fallback = 0) {
   const numeric = Number(value);
@@ -161,6 +177,34 @@ function computeCorpusRarity(tokens, corpusRanks) {
   return counted > 0 ? clamp01(total / counted) : 0;
 }
 
+function computeTokenRarity(token, corpusRanks) {
+  const normalizedToken = normalizeToken(token);
+  if (!normalizedToken) return 0;
+  if (!(corpusRanks instanceof Map) || corpusRanks.size === 0) {
+    return 0;
+  }
+
+  const maxRank = Math.max(1, corpusRanks.size - 1);
+  if (!corpusRanks.has(normalizedToken)) {
+    return normalizedToken.length >= 6 ? 0.96 : 0.82;
+  }
+
+  const rank = corpusRanks.get(normalizedToken);
+  return clamp01(1 - (rank / maxRank));
+}
+
+function computeKeywordRarity(keyword, corpusRanks) {
+  const parts = String(keyword || '')
+    .split(/\s+/g)
+    .map((token) => normalizeToken(token))
+    .filter(Boolean);
+
+  if (parts.length === 0) return 0;
+
+  const total = parts.reduce((sum, token) => sum + computeTokenRarity(token, corpusRanks), 0);
+  return clamp01(total / parts.length);
+}
+
 function detectSpellIntent(tokens) {
   let healHits = 0;
   let bodyHits = 0;
@@ -194,6 +238,151 @@ function detectSpellIntent(tokens) {
     buff,
     debuff,
     failureDisposition,
+  };
+}
+
+function buildSemanticKeywordIndex(school) {
+  const schoolRegistry = getSemanticSchoolRegistry(school);
+  const keywordMap = new Map();
+  let maxKeywordLength = 1;
+
+  if (!schoolRegistry) {
+    return {
+      keywordMap,
+      maxKeywordLength,
+    };
+  }
+
+  for (const [chainId, chain] of Object.entries(schoolRegistry)) {
+    const keywords = Array.isArray(chain?.keywords) ? chain.keywords : [];
+    for (const keyword of keywords) {
+      const normalizedKeyword = normalizeSemanticKeyword(keyword);
+      if (!normalizedKeyword) continue;
+      const keywordLength = normalizedKeyword.split(/\s+/g).filter(Boolean).length || 1;
+      maxKeywordLength = Math.max(maxKeywordLength, keywordLength);
+      if (!keywordMap.has(normalizedKeyword)) {
+        keywordMap.set(normalizedKeyword, []);
+      }
+      keywordMap.get(normalizedKeyword).push({
+        chainId,
+        chain,
+        keyword: normalizedKeyword,
+        keywordLength,
+      });
+    }
+  }
+
+  return {
+    keywordMap,
+    maxKeywordLength,
+  };
+}
+
+function selectSemanticChain(hitsByChain) {
+  return [...hitsByChain.values()]
+    .sort((left, right) => {
+      const leftAverageRarity = left.hitCount > 0 ? left.rarityTotal / left.hitCount : 0;
+      const rightAverageRarity = right.hitCount > 0 ? right.rarityTotal / right.hitCount : 0;
+      if (right.hitCount !== left.hitCount) return right.hitCount - left.hitCount;
+      if (rightAverageRarity !== leftAverageRarity) return rightAverageRarity - leftAverageRarity;
+      if (right.longestMatch !== left.longestMatch) return right.longestMatch - left.longestMatch;
+      return String(left.chainId).localeCompare(String(right.chainId));
+    })[0] || null;
+}
+
+function detectStatusEffect({
+  tokens,
+  dominantSchool,
+  corpusRanks,
+  rarity,
+}) {
+  const normalizedTokens = Array.isArray(tokens)
+    ? tokens.map((token) => normalizeToken(token)).filter(Boolean)
+    : [];
+
+  if (normalizedTokens.length === 0 || !COMBAT_SCHOOLS.includes(dominantSchool)) {
+    return null;
+  }
+
+  const {
+    keywordMap,
+    maxKeywordLength,
+  } = buildSemanticKeywordIndex(dominantSchool);
+
+  if (keywordMap.size === 0) {
+    return null;
+  }
+
+  const hitsByChain = new Map();
+
+  for (let index = 0; index < normalizedTokens.length; index += 1) {
+    let matchedEntries = null;
+    let matchedLength = 0;
+    let matchedKeyword = '';
+
+    for (let length = Math.min(maxKeywordLength, normalizedTokens.length - index); length >= 1; length -= 1) {
+      const candidate = normalizeSemanticKeyword(normalizedTokens.slice(index, index + length).join(' '));
+      if (!candidate || !keywordMap.has(candidate)) continue;
+      matchedEntries = keywordMap.get(candidate);
+      matchedLength = length;
+      matchedKeyword = candidate;
+      break;
+    }
+
+    if (!matchedEntries || matchedLength <= 0) {
+      continue;
+    }
+
+    const hitRarity = computeKeywordRarity(matchedKeyword, corpusRanks);
+    for (const entry of matchedEntries) {
+      const existing = hitsByChain.get(entry.chainId) || {
+        chainId: entry.chainId,
+        chain: entry.chain,
+        hitCount: 0,
+        rarityTotal: 0,
+        longestMatch: 0,
+        matchedKeywords: [],
+      };
+      existing.hitCount += 1;
+      existing.rarityTotal += hitRarity;
+      existing.longestMatch = Math.max(existing.longestMatch, matchedLength);
+      existing.matchedKeywords.push(matchedKeyword);
+      hitsByChain.set(entry.chainId, existing);
+    }
+
+    index += matchedLength - 1;
+  }
+
+  const selected = selectSemanticChain(hitsByChain);
+  if (!selected) {
+    return null;
+  }
+
+  const averageRarity = selected.hitCount > 0
+    ? clamp01(selected.rarityTotal / selected.hitCount)
+    : 0;
+  const tier = Math.max(
+    1,
+    Math.min(SEMANTIC_TIER_COUNT, Math.floor(averageRarity * SEMANTIC_TIER_COUNT))
+  );
+  const tierDefinition = getStatusTierDefinition(tier, {
+    school: dominantSchool,
+    rarityId: rarity?.id,
+  });
+
+  return {
+    school: dominantSchool,
+    chainId: selected.chainId,
+    label: getSemanticTierLabel(dominantSchool, selected.chainId, tier) || selected.chainId,
+    tier,
+    turns: tierDefinition.turns,
+    turnsRemaining: tierDefinition.turns,
+    magnitude: tierDefinition.magnitude,
+    sourceBonus: tierDefinition.sourceBonus,
+    disposition: STATUS_DISPOSITION_BY_SCHOOL[dominantSchool] || 'DEBUFF',
+    averageRarity: Number(averageRarity.toFixed(3)),
+    hitCount: selected.hitCount,
+    matchedKeywords: [...new Set(selected.matchedKeywords)],
   };
 }
 
@@ -240,6 +429,32 @@ function buildRarityPraise(rarity, dominantSchool) {
   return `CODEx judges the spell as common but coherent.`;
 }
 
+function buildCombatCommentary({
+  rarity,
+  dominantSchool,
+  cohesionScore,
+  statusEffect,
+}) {
+  const parts = [buildRarityPraise(rarity, dominantSchool)];
+
+  if (cohesionScore >= 0.75) {
+    parts.push('Your prose is unassailable. The verse bypasses the enemy guard.');
+  } else if (cohesionScore >= 0.55) {
+    parts.push('The syntax holds as a disciplined breach through the defense.');
+  }
+
+  if (statusEffect) {
+    parts.push(
+      `A ${String(rarity?.label || 'Common').toUpperCase()} ${dominantSchool} chain manifests: ${statusEffect.label.toUpperCase()}.`
+    );
+    if (statusEffect.sourceBonus) {
+      parts.push('Source pressure floods the chain beyond mortal control.');
+    }
+  }
+
+  return parts.join(' ');
+}
+
 export function buildCombatProfile({
   text = '',
   scoreData = null,
@@ -252,8 +467,8 @@ export function buildCombatProfile({
   const doc = analyzedDoc || analyzeText(normalizedText);
   const tokens = tokenizeCombatWords(normalizedText);
   const schoolDensity = buildSchoolDensity(doc);
-  const intent = detectSpellIntent(tokens);
-  const school = resolveDominantSchool({ schoolDensity, intent, fallbackSchool });
+  const baseIntent = detectSpellIntent(tokens);
+  const school = resolveDominantSchool({ schoolDensity, intent: baseIntent, fallbackSchool });
   const dominantDensity = clamp01(schoolDensity[school] ?? 0);
   const totalScore = toFiniteNumber(scoreData?.totalScore ?? scoreData?.score, 0);
   const lexicalDiversity = clamp01(doc?.stats?.lexicalDiversity ?? 0);
@@ -263,7 +478,12 @@ export function buildCombatProfile({
   const vocabularySignal = getTraceSignal(scoreData, 'vocabulary_richness');
   const phonemeSignal = getTraceSignal(scoreData, 'phoneme_density');
   const hackingSignal = getTraceSignal(scoreData, 'phonetic_hacking');
-  const scrollPowerSignal = getTraceSignal(scoreData, 'scroll_power');
+  const cohesionSignal = scoreData
+    ? getTraceSignal(scoreData, 'syntactic_cohesion')
+    : calculateCohesionScore(doc);
+  const cohesionScore = scoreData
+    ? clamp01(cohesionSignal || calculateCohesionScore(doc))
+    : calculateCohesionScore(doc);
 
   const rarityScore = clamp01(
     (corpusRarity * 0.4)
@@ -271,9 +491,25 @@ export function buildCombatProfile({
     + (clamp01(avgWordLength / 10) * 0.1)
     + (scoreSignal * 0.15)
     + (vocabularySignal * 0.1)
-    + (((phonemeSignal + hackingSignal + scrollPowerSignal) / 3) * 0.1)
+    + (((phonemeSignal + hackingSignal + cohesionScore) / 3) * 0.1)
   );
   const rarity = getCombatRarityByScore(rarityScore);
+  const statusEffect = detectStatusEffect({
+    tokens,
+    dominantSchool: school,
+    corpusRanks,
+    rarity,
+  });
+  const commentary = buildCombatCommentary({
+    rarity,
+    dominantSchool: school,
+    cohesionScore,
+    statusEffect,
+  });
+  const intent = {
+    ...baseIntent,
+    statusEffect,
+  };
 
   return {
     text: normalizedText,
@@ -288,17 +524,21 @@ export function buildCombatProfile({
     totalScore,
     lexicalDiversity,
     avgWordLength,
+    corpusRarity,
+    cohesionScore,
     traceSignals: {
       phonemeDensity: phonemeSignal,
       phoneticHacking: hackingSignal,
       vocabulary: vocabularySignal,
-      scrollPower: scrollPowerSignal,
+      cohesion: cohesionScore,
     },
     rarity: {
       ...rarity,
       score: rarityScore,
       praise: buildRarityPraise(rarity, school),
     },
+    statusEffect,
+    commentary,
     intent,
   };
 }

@@ -33,13 +33,15 @@ function computeBaseDamage(totalScore) {
 }
 
 function computeSyntaxControl(profile) {
-  const signals = profile?.traceSignals || {};
-  const blend = (
-    (Number(signals.phonemeDensity) || 0)
-    + (Number(signals.phoneticHacking) || 0)
-    + (Number(signals.scrollPower) || 0)
-  ) / 3;
-  return 0.92 + (clamp01(blend) * 0.18);
+  const cohesionScore = clamp01(profile?.cohesionScore ?? profile?.traceSignals?.cohesion ?? 0);
+  const dominantDensity = getDominantDensity(profile);
+  return 0.9 + (cohesionScore * 0.18) + (dominantDensity * 0.06);
+}
+
+function computeDamageFloor(profile) {
+  const cohesionScore = clamp01(profile?.cohesionScore ?? profile?.traceSignals?.cohesion ?? 0);
+  const statusTier = Math.max(0, Number(profile?.statusEffect?.tier) || 0);
+  return MIN_COMBAT_DAMAGE + Math.round((cohesionScore * 4) + Math.min(3, statusTier * 0.5));
 }
 
 function computeHealingAmount(profile, damage) {
@@ -107,7 +109,7 @@ export function calculateCombatScore({
     * (profile.rarity?.totalMultiplier ?? 1)
     * supportPenalty;
 
-  const damage = Math.max(MIN_COMBAT_DAMAGE, Math.round(rawDamage));
+  const damage = Math.max(computeDamageFloor(profile), Math.round(rawDamage));
   const healing = computeHealingAmount(profile, damage);
   const failureCast = isFailureCast(profile);
 
@@ -126,8 +128,10 @@ export function calculateCombatScore({
     syntaxControlMultiplier,
     rarity: profile.rarity,
     intent: profile.intent,
+    cohesionScore: profile.cohesionScore,
+    statusEffect: profile.statusEffect,
     failureCast,
-    commentary: profile.rarity?.praise || '',
+    commentary: profile.commentary || profile.rarity?.praise || '',
   };
 }
 

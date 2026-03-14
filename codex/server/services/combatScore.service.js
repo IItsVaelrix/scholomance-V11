@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'path';
 import { normalizeCombatScore } from '../../core/combat.scoring.js';
 import { createCorpusRankMap } from '../../core/combat.profile.js';
-import { createDefaultScoringEngine } from '../../core/scoring.defaults.js';
+import { createCombatScoringEngine } from '../../core/scoring.defaults.js';
 
 function normalizeCombatText(rawText) {
   if (typeof rawText === 'string') return rawText;
@@ -26,7 +26,7 @@ function loadCorpusRanks(corpusPath = DEFAULT_CORPUS_PATH) {
 }
 
 export function createCombatScoreService(options = {}) {
-  const scoringEngine = options.scoringEngine || createDefaultScoringEngine();
+  const scoringEngine = options.scoringEngine || createCombatScoringEngine();
   const corpusRanks = options.corpusRanks || loadCorpusRanks(options.corpusPath);
 
   async function scoreScroll(rawText, context = {}) {
