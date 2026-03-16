@@ -34,6 +34,7 @@ export function createCombatScoreService(options = {}) {
     const scoreData = await scoringEngine.calculateScore(scrollText);
     return normalizeCombatScore(scoreData, {
       scrollText,
+      weave: context.weave,
       arenaSchool: context.arenaSchool,
       opponentSchool: context.opponentSchool,
       corpusRanks,

@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.4** | Last updated: 2026-03-14
+**Version: 1.5** | Last updated: 2026-03-16
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -14,11 +14,11 @@
 ## SCHEMA CHANGE NOTICE
 
 - Schema: Core combat, lexical, and runtime bus contract
-- Version: 1.3 -> 1.4
-- Changed fields: expanded `CombatIntent` to carry `statusEffect`; expanded `CombatScoreResponse` with `cohesionScore` and `statusEffect`; published `CombatStatusEffect`
+- Version: 1.4 -> 1.5
+- Changed fields: expanded `CombatScoreRequest` with optional `weave`; aligned server-authoritative combat scoring to consume the Weave / Syntactic Bridge input
 - Breaking: no
-- Claude impact: combat UI can now render authoritative cohesion/status trays and battle-log praise without client-side re-derivation
-- Blackbox impact: update combat score fixtures for the richer payload and cover status duration/tier persistence across session turns
+- Claude impact: combat casts can submit the existing Spellbook Weave field without tripping route validation; server-authoritative damage now matches the UI's Syntactic Bridge input
+- Blackbox impact: update combat request fixtures to include optional `weave` and cover server/client parity when a Weave changes resonance
 
 ---
 
@@ -115,6 +115,7 @@ interface LexicalEntry {
 
 interface CombatScoreRequest {
   scrollText: string;
+  weave?: string;
   playerId?: string;
   arenaSchool?: School;
   opponentSchool?: School;
@@ -300,6 +301,7 @@ response body: CombatScoreResponse
 
 Notes:
 - `scrollText` is capped to 100 characters at the route boundary for MVP combat.
+- `weave` is optional and capped to 100 characters. When present, it feeds the authoritative Syntactic Bridge / spellweave calculation.
 - `playerId` is optional metadata. The current authoritative response does not depend on client-submitted damage or trace values.
 - `arenaSchool` and `opponentSchool` are optional context values that let the server apply arena resonance and defender affinity consistently.
 - `traces` is the canonical combat breakdown array. `explainTrace` is returned as an alias for existing consumers that still read the older field name.
@@ -354,6 +356,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.2 | 2026-03-10 | Added `POST /api/combat/score` request/response contract for server-authoritative combat scoring | no |
 | 1.3 | 2026-03-10 | Expanded combat scoring payload with school/rarity/healing metadata and published `OpponentSpell` | no |
 | 1.4 | 2026-03-14 | Added semantic status-effect payloads and cohesion metadata to authoritative combat scoring | no |
+| 1.5 | 2026-03-16 | Added optional `weave` to `CombatScoreRequest` and aligned authoritative combat scoring with Spellweave input | no |
 
 ---
 

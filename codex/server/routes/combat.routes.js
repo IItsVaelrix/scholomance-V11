@@ -6,6 +6,7 @@ const SchoolSchema = z.enum(['SONIC', 'PSYCHIC', 'VOID', 'ALCHEMY', 'WILL']);
 
 const combatScoreBodySchema = z.object({
   scrollText: z.string().max(MAX_SCROLL_TEXT_LENGTH),
+  weave: z.string().max(MAX_SCROLL_TEXT_LENGTH).optional(),
   playerId: z.string().trim().min(1).max(128).optional(),
   arenaSchool: SchoolSchema.optional(),
   opponentSchool: SchoolSchema.optional(),
@@ -28,6 +29,7 @@ export async function combatRoutes(fastify, opts = {}) {
       }
 
       return combatScoreService.scoreScroll(parsed.data.scrollText, {
+        weave: parsed.data.weave,
         arenaSchool: parsed.data.arenaSchool,
         opponentSchool: parsed.data.opponentSchool,
       });

@@ -167,6 +167,7 @@ export function scoreDataToDamage(scoreData, options = {}) {
 export function normalizeCombatScore(scoreData, options = {}) {
   return calculateCombatScore({
     text: options.scrollText || scoreData?.scrollText || '',
+    weave: options.weave || scoreData?.weave || '',
     scoreData,
     arenaSchool: options.arenaSchool,
     defenderSchool: options.opponentSchool,

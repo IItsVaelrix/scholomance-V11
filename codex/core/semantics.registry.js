@@ -13,6 +13,8 @@ export const INTENTS = {
   DISRUPTION: "DISRUPTION"
 };
 
+export const SEMANTIC_TIER_COUNT = 5;
+
 export const PREDICATES = {
   // --- ALCHEMY (TRANSFORMATION/HEALING) ---
   MEND: { intent: INTENTS.HEALING, school: "ALCHEMY", power: 1.0 },
@@ -54,6 +56,41 @@ export const OBJECTS = {
   AIR: { category: "ELEMENTAL", multiplier: 0.8 },
   FIRE: { category: "ELEMENTAL", multiplier: 1.1 }
 };
+
+const EMPTY_SCHOOL_REGISTRY = Object.freeze({});
+
+function normalizeSchoolId(school) {
+  return String(school || '').trim().toUpperCase();
+}
+
+export function normalizeSemanticKeyword(keyword) {
+  return String(keyword || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9'\s-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function getSemanticSchoolRegistry(school) {
+  const normalizedSchool = normalizeSchoolId(school);
+  if (!normalizedSchool) {
+    return EMPTY_SCHOOL_REGISTRY;
+  }
+
+  // Rich chain registries can be layered in later without changing the combat
+  // profile contract. For now, missing registries degrade to "no status chain"
+  // instead of crashing the authoritative scorer.
+  return EMPTY_SCHOOL_REGISTRY;
+}
+
+export function getSemanticTierLabel(school, chainId, tier) {
+  const normalizedSchool = normalizeSchoolId(school);
+  const normalizedChain = String(chainId || '').trim().toUpperCase();
+  const normalizedTier = Math.max(1, Number(tier) || 1);
+  if (!normalizedSchool || !normalizedChain) return null;
+  return `${normalizedSchool} ${normalizedChain} ${normalizedTier}`;
+}
 
 /**
  * Maps a word to a predicate or object if it exists.

@@ -4,7 +4,7 @@
  * Resolves the relationship between the Verse (energy) and the Weave (form).
  */
 
-import { lookupSemanticToken, INTENTS } from './semantics.registry';
+import { lookupSemanticToken, INTENTS } from './semantics.registry.js';
 
 /**
  * @typedef {Object} BridgeResult
