@@ -33,6 +33,7 @@ import { panelAnalysisRoutes } from './routes/panelAnalysis.routes.js';
 import { combatRoutes } from './routes/combat.routes.js';
 import { lexiconRoutes } from './routes/lexicon.routes.js';
 import { authRoutes } from './routes/auth.routes.js';
+import { worldRoutes } from './routes/world.routes.js';
 import { isApiRoutePath, isStaticAssetPath, stripQueryFromUrl } from './notFound.utils.js';
 import { createOpsMetrics } from './observability.metrics.js';
 import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
@@ -701,6 +702,7 @@ fastify.register(panelAnalysisRoutes, {
 });
 fastify.register(combatRoutes);
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
+fastify.register(worldRoutes, { prefix: '/api/world', adapter: lexiconAdapter, persistence });
 fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
 if (ENABLE_RHYME_ASTROLOGY) {
     fastify.register(rhymeAstrologyRoutes, {

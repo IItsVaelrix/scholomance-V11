@@ -3,6 +3,10 @@ import { mkdirSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { applySqlitePragmas, runSqliteMigrations } from './db/sqlite.migrations.js';
+import {
+  DEFAULT_WORLD_ENTITIES,
+  DEFAULT_WORLD_ROOMS,
+} from '../core/world.entity.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +86,51 @@ const USER_MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 6,
+    name: 'create_world_rooms_table',
+    up(database) {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS world_rooms (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT NOT NULL,
+          school TEXT,
+          state_json TEXT NOT NULL DEFAULT '{}',
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+    },
+  },
+  {
+    version: 7,
+    name: 'create_world_entities_table',
+    up(database) {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS world_entities (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          lexeme TEXT NOT NULL,
+          roomId TEXT,
+          ownerUserId INTEGER,
+          seed TEXT NOT NULL,
+          actions_json TEXT NOT NULL DEFAULT '["inspect"]',
+          state_json TEXT NOT NULL DEFAULT '{}',
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          inspect_count INTEGER NOT NULL DEFAULT 0,
+          last_inspected_at DATETIME,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (roomId) REFERENCES world_rooms (id),
+          FOREIGN KEY (ownerUserId) REFERENCES users (id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_world_entities_room ON world_entities(roomId, updatedAt DESC);
+        CREATE INDEX IF NOT EXISTS idx_world_entities_owner ON world_entities(ownerUserId, updatedAt DESC);
+        CREATE INDEX IF NOT EXISTS idx_world_entities_lexeme ON world_entities(lexeme);
+      `);
+    },
+  },
 ];
 
 let db;
@@ -91,6 +140,98 @@ let dbState = {
   pragmas: null,
 };
 let isClosed = false;
+
+function parseJsonObject(value) {
+  if (!value || typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseJsonArray(value) {
+  if (!value || typeof value !== 'string') return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normalizeWorldRoomRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    state: parseJsonObject(row.state_json),
+  };
+}
+
+function normalizeWorldEntityRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    actions: parseJsonArray(row.actions_json),
+    state: parseJsonObject(row.state_json),
+    metadata: parseJsonObject(row.metadata_json),
+    inspectCount: Number(row.inspect_count) || 0,
+  };
+}
+
+function ensureWorldSeedData(database) {
+  const upsertRoomStmt = database.prepare(`
+    INSERT INTO world_rooms (id, name, description, school, state_json, createdAt, updatedAt)
+    VALUES (:id, :name, :description, :school, :state_json, datetime('now'), datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      description = excluded.description,
+      school = excluded.school,
+      state_json = excluded.state_json,
+      updatedAt = datetime('now')
+  `);
+  const upsertEntityStmt = database.prepare(`
+    INSERT INTO world_entities (
+      id, kind, lexeme, roomId, ownerUserId, seed, actions_json, state_json, metadata_json,
+      inspect_count, createdAt, updatedAt
+    )
+    VALUES (
+      :id, :kind, :lexeme, :roomId, :ownerUserId, :seed, :actions_json, :state_json, :metadata_json,
+      :inspect_count, datetime('now'), datetime('now')
+    )
+    ON CONFLICT(id) DO NOTHING
+  `);
+
+  const applySeeds = database.transaction(() => {
+    for (const room of DEFAULT_WORLD_ROOMS) {
+      upsertRoomStmt.run({
+        id: room.id,
+        name: room.name,
+        description: room.description,
+        school: room.school || null,
+        state_json: JSON.stringify(room.state || {}),
+      });
+    }
+
+    for (const entity of DEFAULT_WORLD_ENTITIES) {
+      upsertEntityStmt.run({
+        id: entity.id,
+        kind: entity.kind,
+        lexeme: entity.lexeme,
+        roomId: entity.roomId || null,
+        ownerUserId: entity.ownerUserId ?? null,
+        seed: entity.seed,
+        actions_json: JSON.stringify(entity.actions || ['inspect']),
+        state_json: JSON.stringify(entity.state || {}),
+        metadata_json: JSON.stringify(entity.metadata || {}),
+        inspect_count: Number(entity.inspectCount) || 0,
+      });
+    }
+  });
+
+  applySeeds();
+}
 
 try {
   mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -107,6 +248,7 @@ try {
     ...dbState,
     ...migrationResult,
   };
+  ensureWorldSeedData(db);
 
   console.log(
     `[DB:user] Connected. version=${dbState.currentVersion}, journal=${dbState.pragmas.journalMode}, foreign_keys=${dbState.pragmas.foreignKeys}, busy_timeout=${dbState.pragmas.busyTimeout}`,
@@ -198,6 +340,59 @@ function resetProgression(userId) {
   return saveProgression(userId, { xp: 0, unlockedSchools: ['SONIC'] });
 }
 
+// --- World ---
+function getWorldRoom(roomId) {
+  const row = db.prepare(`
+    SELECT id, name, description, school, state_json, createdAt, updatedAt
+    FROM world_rooms
+    WHERE id = ?
+  `).get(roomId);
+  return normalizeWorldRoomRow(row);
+}
+
+function getWorldRooms() {
+  const rows = db.prepare(`
+    SELECT id, name, description, school, state_json, createdAt, updatedAt
+    FROM world_rooms
+    ORDER BY id ASC
+  `).all();
+  return rows.map(normalizeWorldRoomRow).filter(Boolean);
+}
+
+function getWorldEntity(entityId) {
+  const row = db.prepare(`
+    SELECT id, kind, lexeme, roomId, ownerUserId, seed, actions_json, state_json, metadata_json,
+           inspect_count, last_inspected_at, createdAt, updatedAt
+    FROM world_entities
+    WHERE id = ?
+  `).get(entityId);
+  return normalizeWorldEntityRow(row);
+}
+
+function getWorldEntitiesByRoom(roomId) {
+  const rows = db.prepare(`
+    SELECT id, kind, lexeme, roomId, ownerUserId, seed, actions_json, state_json, metadata_json,
+           inspect_count, last_inspected_at, createdAt, updatedAt
+    FROM world_entities
+    WHERE roomId = ?
+    ORDER BY createdAt ASC, id ASC
+  `).all(roomId);
+  return rows.map(normalizeWorldEntityRow).filter(Boolean);
+}
+
+function recordWorldEntityInspect(entityId) {
+  const stmt = db.prepare(`
+    UPDATE world_entities
+    SET inspect_count = inspect_count + 1,
+        last_inspected_at = datetime('now'),
+        updatedAt = datetime('now')
+    WHERE id = ?
+  `);
+  const result = stmt.run(entityId);
+  if (result.changes === 0) return null;
+  return getWorldEntity(entityId);
+}
+
 // --- Scrolls ---
 function getScrolls(userId) {
   const stmt = db.prepare(
@@ -258,6 +453,13 @@ export const persistence = {
     save: saveProgression,
     reset: resetProgression,
   },
+  world: {
+    getRoom: getWorldRoom,
+    getRooms: getWorldRooms,
+    getEntity: getWorldEntity,
+    getEntitiesByRoom: getWorldEntitiesByRoom,
+    recordInspect: recordWorldEntityInspect,
+  },
   scrolls: {
     getAll: getScrolls,
     getOne: getScroll,
@@ -268,4 +470,3 @@ export const persistence = {
   close: closeDatabase,
   getStatus,
 };
-

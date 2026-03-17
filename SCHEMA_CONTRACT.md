@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.5** | Last updated: 2026-03-16
+**Version: 1.6** | Last updated: 2026-03-16
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Core combat, lexical, and runtime bus contract
-- Version: 1.4 -> 1.5
-- Changed fields: expanded `CombatScoreRequest` with optional `weave`; aligned server-authoritative combat scoring to consume the Weave / Syntactic Bridge input
+- Schema: Core combat, lexical, runtime bus, and world inspection contract
+- Version: 1.5 -> 1.6
+- Changed fields: published `WorldEntityRef`, `WorldRoomSnapshot`, `InspectableEntity`, and `InspectWorldEntityActionResponse`; added world inspection HTTP routes
 - Breaking: no
-- Claude impact: combat casts can submit the existing Spellbook Weave field without tripping route validation; server-authoritative damage now matches the UI's Syntactic Bridge input
-- Blackbox impact: update combat request fixtures to include optional `weave` and cover server/client parity when a Weave changes resonance
+- Claude impact: UI can render a room snapshot and inspect clicked world objects through one authoritative payload instead of splitting lexicon lookup from world-state lookup
+- Blackbox impact: add fixtures for seeded room/entity inspection and ensure inspect actions increment persistent inspect counts without mutating CODEx lexical fields
 
 ---
 
@@ -111,6 +111,80 @@ interface LexicalEntry {
   ipa?: string;
   lore?: Record<string, unknown>;
   raw?: unknown;
+}
+
+interface WorldEntityRef {
+  entityId: string;
+  kind: "item" | "npc" | "location" | "glyph";
+  lexeme?: string | null;
+  roomId?: string | null;
+  instanceId?: string | null;
+}
+
+interface WorldRoom {
+  id: string;
+  name: string;
+  description: string;
+  school: School | null;
+  state: Record<string, unknown>;
+}
+
+interface WorldRoomEntitySummary {
+  entityId: string;
+  kind: "item" | "npc" | "location" | "glyph";
+  lexeme: string | null;
+  name: string;
+  summary: string;
+  roomId: string | null;
+  actions: string[];
+  school: School | null;
+  rarity: string;
+  inspectCount: number;
+}
+
+interface WorldRoomSnapshot {
+  room: WorldRoom | null;
+  entities: WorldRoomEntitySummary[];
+}
+
+interface InspectableEntity {
+  ref: WorldEntityRef;
+  title: string;
+  summary: string | null;
+  codex: {
+    word: string | null;
+    headword: string;
+    definition: string | null;
+    partOfSpeech: string | string[] | null;
+    ipa: string | null;
+    etymology: string | null;
+    synonyms: string[];
+    antonyms: string[];
+    rhymes: string[];
+    rhymeFamily: string | null;
+    tags: string[];
+    school: School | null;
+    loreSeed: string | null;
+  };
+  mud: {
+    entityType: string;
+    rarity: string;
+    school: School | null;
+    roomId: string | null;
+    roomName: string | null;
+    actions: string[];
+    state: Record<string, unknown>;
+    ownership: string | number | null;
+    inspectCount: number;
+    flavorText: string;
+  };
+  room: WorldRoom | null;
+}
+
+interface InspectWorldEntityActionResponse {
+  action: "inspect";
+  entity: InspectableEntity;
+  performedAt: string;
 }
 
 interface CombatScoreRequest {
@@ -308,6 +382,31 @@ Notes:
 - `healing` is authoritative and may accompany offensive damage for alchemical/supportive casts.
 - `commentary` carries CODEx rarity praise for powerful spells.
 
+```ts
+GET /api/world/rooms/:roomId
+
+response body: WorldRoomSnapshot
+
+GET /api/world/entities/:entityId
+
+response body: InspectableEntity
+
+POST /api/world/entities/:entityId/actions/inspect
+
+request body: {
+  roomId?: string;
+}
+
+response body: InspectWorldEntityActionResponse
+```
+
+Notes:
+- World routes require the same session gate as lexicon browsing: an authenticated user session or a guest session established through `/auth/csrf-token`.
+- `POST /api/world/entities/:entityId/actions/inspect` also requires the standard CSRF header once that session is established.
+- The `codex` block describes what the object is linguistically and semantically.
+- The `mud` block describes what the object is in the world right now, including inspect count, actions, and room presence.
+- `GET /api/world/entities/:entityId` is non-mutating state fetch. `POST .../actions/inspect` is the authoritative interaction that increments persistent inspect count.
+
 ---
 
 ## Handoff Matrix
@@ -357,6 +456,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.3 | 2026-03-10 | Expanded combat scoring payload with school/rarity/healing metadata and published `OpponentSpell` | no |
 | 1.4 | 2026-03-14 | Added semantic status-effect payloads and cohesion metadata to authoritative combat scoring | no |
 | 1.5 | 2026-03-16 | Added optional `weave` to `CombatScoreRequest` and aligned authoritative combat scoring with Spellweave input | no |
+| 1.6 | 2026-03-16 | Added authoritative world room/entity inspection schemas and HTTP contracts | no |
 
 ---
 
