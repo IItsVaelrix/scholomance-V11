@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.6** | Last updated: 2026-03-16
+**Version: 1.7** | Last updated: 2026-03-17
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Core combat, lexical, runtime bus, and world inspection contract
-- Version: 1.5 -> 1.6
-- Changed fields: published `WorldEntityRef`, `WorldRoomSnapshot`, `InspectableEntity`, and `InspectWorldEntityActionResponse`; added world inspection HTTP routes
+- Schema: Core combat, lexical, runtime bus, world inspection, and combat speaking contract
+- Version: 1.6 -> 1.7
+- Changed fields: added `CombatSpeakingAnalysis`, `VoiceProfileSnapshot`, speaking-derived combat multipliers, and speech-intent metadata to combat payloads; published opponent speaking surfaces
 - Breaking: no
-- Claude impact: UI can render a room snapshot and inspect clicked world objects through one authoritative payload instead of splitting lexicon lookup from world-state lookup
-- Blackbox impact: add fixtures for seeded room/entity inspection and ensure inspect actions increment persistent inspect counts without mutating CODEx lexical fields
+- Claude impact: combat UI can render speech-act, cadence, harmony, and voice-resonance data from one authoritative payload for player and opponent casts
+- Blackbox impact: update combat score and opponent spell fixtures to cover additive speaking fields and session-backed voice-profile snapshots
 
 ---
 
@@ -201,7 +201,147 @@ interface CombatIntent {
   buff: boolean;
   debuff: boolean;
   failureDisposition: "BUFF" | "DEBUFF" | "NEUTRAL";
+  speechAct?: CombatSpeechAct | null;
+  intonationTag?: string | null;
+  cadenceTag?: CombatCadenceTag | null;
+  bridgeIntent?: string | null;
   statusEffect?: CombatStatusEffect | null;
+}
+
+type CombatSpeechAct =
+  | "COMMAND"
+  | "INVOCATION"
+  | "THREAT"
+  | "PLEA"
+  | "DECLARATION"
+  | "TAUNT"
+  | "QUESTION"
+  | "BANISHMENT"
+  | "CURSE"
+  | "BLESSING";
+
+type CombatCadenceTag =
+  | "RESOLVED"
+  | "SUSPENDED"
+  | "CLIPPED"
+  | "FALLING"
+  | "RISING"
+  | "LEVEL"
+  | "SURGING"
+  | "WITHHELD";
+
+interface WeightedCombatLabel {
+  label: string;
+  weight: number;
+}
+
+interface WeightedSpeechAct {
+  act: CombatSpeechAct;
+  weight: number;
+}
+
+interface SubemotionSignal {
+  id: string;
+  label: string;
+  school: School | null;
+  weight: number;
+}
+
+interface VoiceProfileSnapshot {
+  version: number;
+  speakerId: string;
+  speakerType: "PLAYER" | "OPPONENT";
+  school: School;
+  samples: number;
+  preferredSpeechAct: CombatSpeechAct;
+  preferredCadence: CombatCadenceTag;
+  preferredFoot: string;
+  preferredSeverity: string;
+  contourAverages: {
+    opening: number;
+    crest: number;
+    closure: number;
+    volatility: number;
+  };
+}
+
+interface CombatSpeakingAnalysis {
+  school: School | null;
+  speechAct: {
+    primary: CombatSpeechAct;
+    confidence: number;
+    topActs: WeightedSpeechAct[];
+  };
+  prosody: {
+    dominantFoot: string;
+    metricalGrid: string;
+    meterName: string;
+    feetPerLine: number;
+    beatAlignment: number;
+    controlledVariance: number;
+    closureScore: number;
+    deviation?: number;
+    cadence: {
+      dominantTag: CombatCadenceTag;
+      lineTags: Array<{
+        lineIndex: number;
+        tag: CombatCadenceTag;
+        beatAlignment: number;
+      }>;
+    };
+  };
+  intonation: {
+    mode: string;
+    primaryTag: CombatSpeechAct;
+    contour: {
+      opening: number;
+      crest: number;
+      closure: number;
+      volatility: number;
+    };
+    punctuation: {
+      questionCount: number;
+      exclamationCount: number;
+      commaCount: number;
+    };
+  };
+  affect: {
+    primaryEmotion: string;
+    scores: Array<{
+      emotion: string;
+      weight: number;
+    }>;
+    subemotions: SubemotionSignal[];
+  };
+  harmony: {
+    score: number;
+    adjacentLineScore: number;
+    coupletScore: number;
+    stanzaScore: number;
+    alliterationScore: number;
+    dominantVowel: string | null;
+  };
+  severity: {
+    ladderId: School | null;
+    label: string | null;
+    topLexeme: string | null;
+    tierIndex: number;
+    severityScore: number;
+    rarityAmplifier: number;
+    potency: number;
+    matches: Array<{
+      token: string;
+      label: string;
+      tierIndex: number;
+      rarity: number;
+    }>;
+  };
+  voice: {
+    speakerId: string;
+    speakerType: "PLAYER" | "OPPONENT";
+    resonance: number;
+    profile: VoiceProfileSnapshot;
+  };
 }
 
 interface CombatRarity {
@@ -249,9 +389,16 @@ interface CombatScoreResponse {
   arenaResonanceMultiplier: number;
   schoolAffinityMultiplier: number;
   syntaxControlMultiplier: number;
+  speechActMultiplier: number;
+  prosodyMultiplier: number;
+  harmonyMultiplier: number;
+  severityMultiplier: number;
+  voiceResonanceMultiplier: number;
   cohesionScore: number;
   rarity: CombatRarity;
   intent: CombatIntent;
+  speaking: CombatSpeakingAnalysis | null;
+  voiceProfile: VoiceProfileSnapshot | null;
   statusEffect: CombatStatusEffect | null;
   failureCast: boolean;
   commentary: string;
@@ -269,6 +416,9 @@ interface OpponentSpell {
   schoolAffinityMultiplier: number;
   memoryLinesUsed: number;
   counterTokens: string[];
+  speaking?: CombatSpeakingAnalysis | null;
+  voiceProfile?: VoiceProfileSnapshot | null;
+  voiceResonance?: number;
 }
 ```
 
@@ -457,6 +607,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.4 | 2026-03-14 | Added semantic status-effect payloads and cohesion metadata to authoritative combat scoring | no |
 | 1.5 | 2026-03-16 | Added optional `weave` to `CombatScoreRequest` and aligned authoritative combat scoring with Spellweave input | no |
 | 1.6 | 2026-03-16 | Added authoritative world room/entity inspection schemas and HTTP contracts | no |
+| 1.7 | 2026-03-17 | Added combat speaking analysis, voice-profile snapshots, and speaking multipliers to combat payloads | no |
 
 ---
 

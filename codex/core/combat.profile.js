@@ -13,6 +13,7 @@ import {
   getSemanticTierLabel,
   normalizeSemanticKeyword,
 } from './semantics.registry.js';
+import { analyzeSpeaking } from './speaking/index.js';
 import { WORD_REGEX_GLOBAL } from '../../src/lib/wordTokenization.js';
 import { normalizeVowelFamily } from '../../src/lib/phonology/vowelFamily.js';
 import { VOWEL_FAMILY_TO_SCHOOL } from '../../src/data/schools.js';
@@ -386,6 +387,34 @@ function detectStatusEffect({
   };
 }
 
+function amplifyStatusEffect(statusEffect, speaking) {
+  if (!statusEffect) {
+    return null;
+  }
+
+  const potency = clamp01(speaking?.severity?.potency ?? 0);
+  const harmony = clamp01(speaking?.harmony?.score ?? 0);
+  const act = String(speaking?.speechAct?.primary || '');
+  const actBonus = act === 'CURSE' || act === 'BANISHMENT'
+    ? 0.12
+    : act === 'BLESSING' || act === 'INVOCATION'
+      ? 0.1
+      : act === 'COMMAND' || act === 'THREAT'
+        ? 0.06
+        : 0;
+  const magnitudeMultiplier = 1 + (potency * 0.35) + (harmony * 0.18) + actBonus;
+  const extraTurn = potency >= 0.62 || harmony >= 0.68 || act === 'BANISHMENT' || act === 'BLESSING'
+    ? 1
+    : 0;
+
+  return {
+    ...statusEffect,
+    turns: statusEffect.turns + extraTurn,
+    turnsRemaining: statusEffect.turnsRemaining + extraTurn,
+    magnitude: Number((statusEffect.magnitude * magnitudeMultiplier).toFixed(3)),
+  };
+}
+
 function resolveDominantSchool({
   schoolDensity,
   intent,
@@ -434,6 +463,7 @@ function buildCombatCommentary({
   dominantSchool,
   cohesionScore,
   statusEffect,
+  speaking,
 }) {
   const parts = [buildRarityPraise(rarity, dominantSchool)];
 
@@ -452,6 +482,22 @@ function buildCombatCommentary({
     }
   }
 
+  if (speaking?.speechAct?.primary) {
+    parts.push(
+      `${String(speaking.speechAct.primary).toUpperCase()} delivery settles into ${String(speaking?.prosody?.cadence?.dominantTag || 'LEVEL').toLowerCase()} cadence.`
+    );
+  }
+
+  if (speaking?.severity?.label && speaking?.severity?.topLexeme) {
+    parts.push(
+      `${String(speaking.severity.topLexeme).toUpperCase()} carries ${String(speaking.severity.label).toUpperCase()} severity through the weave.`
+    );
+  }
+
+  if ((Number(speaking?.harmony?.score) || 0) >= 0.55) {
+    parts.push('Vowel harmony locks the cast into a higher resonance band.');
+  }
+
   return parts.join(' ');
 }
 
@@ -462,6 +508,9 @@ export function buildCombatProfile({
   arenaSchool = COMBAT_ARENA_SCHOOL,
   corpusRanks = null,
   fallbackSchool = arenaSchool,
+  speakerId = 'speaker:unknown',
+  speakerType = 'PLAYER',
+  speakerProfile = null,
 } = {}) {
   const normalizedText = normalizeCombatText(text);
   const doc = analyzedDoc || analyzeText(normalizedText);
@@ -494,21 +543,48 @@ export function buildCombatProfile({
     + (((phonemeSignal + hackingSignal + cohesionScore) / 3) * 0.1)
   );
   const rarity = getCombatRarityByScore(rarityScore);
-  const statusEffect = detectStatusEffect({
+  const speaking = analyzeSpeaking({
+    text: normalizedText,
+    analyzedDoc: doc,
+    school,
+    corpusRanks,
+    rarityScore,
+    speakerId,
+    speakerType,
+    speakerProfile,
+  });
+  const statusEffect = amplifyStatusEffect(detectStatusEffect({
     tokens,
     dominantSchool: school,
     corpusRanks,
     rarity,
-  });
+  }), speaking);
+  const speechAct = String(speaking?.speechAct?.primary || '');
+  const healing = baseIntent.healing || (school === 'ALCHEMY' && (speechAct === 'BLESSING' || speechAct === 'PLEA'));
+  const buff = baseIntent.buff || speechAct === 'BLESSING';
+  const debuff = baseIntent.debuff || speechAct === 'CURSE' || speechAct === 'BANISHMENT' || speechAct === 'THREAT' || speechAct === 'TAUNT';
+  const failureDisposition = debuff
+    ? 'DEBUFF'
+    : buff
+      ? 'BUFF'
+      : baseIntent.failureDisposition;
   const commentary = buildCombatCommentary({
     rarity,
     dominantSchool: school,
     cohesionScore,
     statusEffect,
+    speaking,
   });
   const intent = {
     ...baseIntent,
+    healing,
+    buff,
+    debuff,
+    failureDisposition,
     statusEffect,
+    speechAct,
+    intonationTag: speaking?.intonation?.mode || null,
+    cadenceTag: speaking?.prosody?.cadence?.dominantTag || null,
   };
 
   return {
@@ -537,6 +613,10 @@ export function buildCombatProfile({
       score: rarityScore,
       praise: buildRarityPraise(rarity, school),
     },
+    speaking,
+    voiceProfile: speaking?.voice?.profile || null,
+    nextVoiceProfile: speaking?.voice?.nextProfile || null,
+    voiceResonance: Number(speaking?.voice?.resonance) || 0,
     statusEffect,
     commentary,
     intent,

@@ -63,6 +63,7 @@ body::before {
   /* Typography */
   --font-sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-display: 'Cinzel', 'Palatino Linotype', Georgia, serif;
   
   /* Font Sizes - Fluid Scale */
   --text-xs: clamp(0.6875rem, 0.75vw, 0.75rem);
@@ -149,23 +150,23 @@ body::before {
 
 /* === BASE COLORS - UNIFIED SYSTEM === */
 :root {
-  /* Deep Background */
-  --bg-void: #030308;
-  --bg-deep: #050510;
-  --bg-surface: #0a0a18;
-  --bg-elevated: #101025;
-  
-  /* Text */
-  --text-primary: #f8f9ff;
-  --text-secondary: #c8cce8;
-  --text-tertiary: #9aa4c0;
-  --text-muted: #6b7699;
-  
-  /* Borders */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-soft: rgba(255, 255, 255, 0.1);
-  --border-bold: rgba(255, 255, 255, 0.15);
-  --border-glow: rgba(255, 255, 255, 0.2);
+  /* Deep Background — indigo-void scale */
+  --bg-void: #090916;
+  --bg-deep: #0d0d20;
+  --bg-surface: #131328;
+  --bg-elevated: #1c1c38;
+
+  /* Text — warm parchment for legibility */
+  --text-primary: #ede8d4;
+  --text-secondary: #cdc5a8;
+  --text-tertiary: #a89d80;
+  --text-muted: #7a6f55;
+
+  /* Borders — indigo-tinted (replaces near-invisible rgba white) */
+  --border-subtle: rgba(100, 90, 160, 0.20);
+  --border-soft: rgba(100, 90, 160, 0.32);
+  --border-bold: rgba(100, 90, 160, 0.50);
+  --border-glow: rgba(201, 168, 64, 0.40);
   
   /* Gradients */
   --gradient-primary: linear-gradient(135deg, var(--school-sonic), var(--school-psychic));
@@ -191,20 +192,20 @@ body::before {
 
 /* === LIGHT MODE THEME === */
 [data-theme="light"] {
-  --bg-void: #ffffff;
-  --bg-deep: #f8f8f8;
-  --bg-surface: #f0f0f0;
-  --bg-elevated: #e8e8e8;
+  --bg-void: #faf6ee;
+  --bg-deep: #f3ede0;
+  --bg-surface: #ebe3d0;
+  --bg-elevated: #e0d5bc;
 
-  --text-primary: #0c0c1a;
-  --text-secondary: #2a2a40;
-  --text-tertiary: #4a4a60;
-  --text-muted: #6a6a80;
+  --text-primary: #1a1410;
+  --text-secondary: #3a3020;
+  --text-tertiary: #5a4e38;
+  --text-muted: #7a6e58;
 
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-soft: rgba(0, 0, 0, 0.10);
-  --border-bold: rgba(0, 0, 0, 0.15);
-  --border-glow: rgba(0, 0, 0, 0.20);
+  --border-subtle: rgba(80, 60, 20, 0.10);
+  --border-soft: rgba(80, 60, 20, 0.16);
+  --border-bold: rgba(80, 60, 20, 0.24);
+  --border-glow: rgba(160, 120, 40, 0.30);
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
@@ -635,10 +636,10 @@ a:focus-visible {
   background: transparent !important;
   border: 0 !important;
   box-shadow: none !important;
-  font-family: var(--font-mono);
+  font-family: var(--font-display);
   font-size: var(--text-sm);
-  font-weight: 700;
-  letter-spacing: 0.2em;
+  font-weight: 600;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-primary);
 }

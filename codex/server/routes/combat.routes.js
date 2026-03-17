@@ -32,6 +32,7 @@ export async function combatRoutes(fastify, opts = {}) {
         weave: parsed.data.weave,
         arenaSchool: parsed.data.arenaSchool,
         opponentSchool: parsed.data.opponentSchool,
+        session: request.session,
       });
     },
   });

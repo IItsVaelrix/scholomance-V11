@@ -2,7 +2,7 @@
   --metrics-ink: var(--text-primary, #f8f9ff);
   --metrics-muted: var(--text-muted, #8b93b1);
   --metrics-soft: var(--text-secondary, #c8cce8);
-  --metrics-brass: #b79454;
+  --metrics-brass: #c9a840;
   --metrics-line: rgba(183, 148, 84, 0.28);
   --metrics-line-soft: rgba(183, 148, 84, 0.16);
   --metrics-sheet: linear-gradient(180deg, rgba(16, 17, 33, 0.9), rgba(12, 12, 24, 0.94));
@@ -65,7 +65,7 @@
 }
 
 .score-label {
-  font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  font-family: var(--font-display, 'Cinzel', 'Palatino Linotype', Georgia, serif);
   font-size: 0.86rem;
   font-weight: 700;
   letter-spacing: 0.08em;

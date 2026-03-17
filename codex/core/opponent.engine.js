@@ -9,6 +9,7 @@ import {
   getSchoolEffectiveness,
 } from './combat.balance.js';
 import { buildCombatProfile, tokenizeCombatWords } from './combat.profile.js';
+import { createSpeakerVoiceProfile } from './speaking/index.js';
 
 const SCHOOL_DISPLAY_NAMES = Object.freeze({
   SONIC: 'Sonic Thaumaturgy',
@@ -78,6 +79,29 @@ const COUNTER_TEMPLATES = Object.freeze([
   (token) => `I answer ${token} with a harder grammar`,
   (token) => `the name ${token} collapses under counter-pressure`,
 ]);
+
+const OPPONENT_VOICE_STYLE = Object.freeze({
+  SONIC: Object.freeze({
+    openers: Object.freeze(['Hear the chamber answer', 'Listen closely', 'Hush now']),
+    punctuation: '!',
+  }),
+  PSYCHIC: Object.freeze({
+    openers: Object.freeze(['Do you feel it', 'Tell me this', 'Consider the fracture']),
+    punctuation: '?',
+  }),
+  VOID: Object.freeze({
+    openers: Object.freeze(['Be gone', 'Witness the hollow', 'Nothing remains']),
+    punctuation: '.',
+  }),
+  ALCHEMY: Object.freeze({
+    openers: Object.freeze(['By transmutation', 'Observe the change', 'I distill the line']),
+    punctuation: ';',
+  }),
+  WILL: Object.freeze({
+    openers: Object.freeze(['Stand and receive it', 'Mark this decree', 'By force of will']),
+    punctuation: '.',
+  }),
+});
 
 function stableHash(value) {
   const text = String(value || '');
@@ -240,13 +264,20 @@ export function createCombatOpponent(options = {}) {
   const intelligence = Number.isFinite(Number(options.int))
     ? Number(options.int)
     : (4 + Math.floor(random() * 17));
+  const name = String(options.name || pickOne(random, bank.names) || 'The Cryptonym');
+  const subtitle = String(options.subtitle || pickOne(random, bank.subtitles) || 'Counter-Sorcerer');
 
   return {
-    name: String(options.name || pickOne(random, bank.names) || 'The Cryptonym'),
-    subtitle: String(options.subtitle || pickOne(random, bank.subtitles) || 'Counter-Sorcerer'),
+    name,
+    subtitle,
     school,
     schoolName: SCHOOL_DISPLAY_NAMES[school] || school,
     int: intelligence,
+    voiceProfile: options.voiceProfile || createSpeakerVoiceProfile({
+      speakerId: `opponent:${name}`,
+      speakerType: 'OPPONENT',
+      school,
+    }),
   };
 }
 
@@ -272,6 +303,7 @@ export function generateOpponentSpell({
   ].join('|'));
   const random = createSeededRandom(seed);
   const bank = OPPONENT_BANK[attackSchool] || OPPONENT_BANK.VOID;
+  const voiceStyle = OPPONENT_VOICE_STYLE[attackSchool] || OPPONENT_VOICE_STYLE.VOID;
   const focusTokens = collectFocusTokens(memoryLines, safeOpponent.int, random);
   const directFragments = buildCounterFragments(random, focusTokens);
   const flavorCount = safeOpponent.int >= 12 ? 2 : 1;
@@ -282,7 +314,10 @@ export function generateOpponentSpell({
   const rawSpell = fragments.length > 0
     ? fragments.join(', ')
     : String(pickOne(random, bank.flavor) || 'The counter-verse arrives without warning');
-  const spell = `${rawSpell.charAt(0).toUpperCase()}${rawSpell.slice(1).trim().replace(/[,. ]+$/, '')}.`;
+  const opener = safeOpponent.int >= 9 ? pickOne(random, voiceStyle.openers) : null;
+  const styledSpell = opener ? `${opener}, ${rawSpell}` : rawSpell;
+  const terminalPunctuation = String(voiceStyle.punctuation || '.');
+  const spell = `${styledSpell.charAt(0).toUpperCase()}${styledSpell.slice(1).trim().replace(/[,.!?;: ]+$/, '')}${terminalPunctuation}`;
 
   const intSignal = getIntelligenceSignal(safeOpponent.int);
   const schoolEffect = getSchoolEffectiveness(attackSchool, playerSchool);
@@ -307,6 +342,9 @@ export function generateOpponentSpell({
     },
     arenaSchool,
     fallbackSchool: attackSchool,
+    speakerId: `opponent:${safeOpponent.name}`,
+    speakerType: 'OPPONENT',
+    speakerProfile: safeOpponent.voiceProfile,
   });
   const damage = Math.max(
     24,
@@ -315,6 +353,9 @@ export function generateOpponentSpell({
       * schoolEffect
       * (1 + (memorySignal * 0.12))
       * (1 + (tokenSignal * 0.08))
+      * (1 + ((Number(profile?.speaking?.severity?.potency) || 0) * 0.14))
+      * (1 + ((Number(profile?.speaking?.harmony?.score) || 0) * 0.1))
+      * (1 + ((Number(profile?.voiceResonance) || 0) * 0.08))
       * Math.min(1.38, 0.86 + ((profile.rarity.totalMultiplier + rarity.totalMultiplier) * 0.12))
     )
   );
@@ -339,5 +380,8 @@ export function generateOpponentSpell({
     schoolAffinityMultiplier: schoolEffect,
     memoryLinesUsed: memoryLines.length,
     counterTokens: focusTokens,
+    speaking: profile.speaking,
+    voiceProfile: profile.voiceProfile,
+    voiceResonance: profile.voiceResonance,
   };
 }

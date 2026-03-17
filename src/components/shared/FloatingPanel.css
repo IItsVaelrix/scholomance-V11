@@ -1,8 +1,8 @@
 .floating-panel {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, rgba(10, 11, 30, 0.95), rgba(8, 9, 24, 0.98));
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: linear-gradient(180deg, rgba(13, 13, 32, 0.97), rgba(9, 9, 22, 0.99));
+  border: 1px solid var(--border-soft, rgba(100, 90, 160, 0.32));
   border-radius: var(--radius-xl, 1rem);
   box-shadow: var(--shadow-depth-3, 0 12px 24px rgba(0, 0, 0, 0.5));
   overflow: hidden;

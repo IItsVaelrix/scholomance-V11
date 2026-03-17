@@ -7,6 +7,40 @@ import {
   getAmbientPlayerService,
 } from "../lib/ambient/ambientPlayer.service";
 
+// ── Aurora level singleton ────────────────────────────────────────────────────
+// 0 = OFF, 1 = DIM, 2 = FULL
+const AURORA_STORAGE_KEY = 'scholomance-aurora-level';
+const AURORA_FACTORS = [0, 0.3, 1.0];
+
+function readStoredAuroraLevel() {
+  try {
+    const stored = localStorage.getItem(AURORA_STORAGE_KEY);
+    const parsed = parseInt(stored ?? '2', 10);
+    return (parsed >= 0 && parsed <= 2) ? parsed : 2;
+  } catch {
+    return 2;
+  }
+}
+
+let _auroraLevel = readStoredAuroraLevel();
+const _auroraListeners = new Set();
+
+export function cycleAuroraLevel() {
+  // FULL(2) → DIM(1) → OFF(0) → FULL(2)
+  _auroraLevel = _auroraLevel === 2 ? 1 : _auroraLevel === 1 ? 0 : 2;
+  try { localStorage.setItem(AURORA_STORAGE_KEY, String(_auroraLevel)); } catch { /* noop */ }
+  _auroraListeners.forEach(fn => fn(_auroraLevel));
+}
+
+export function useAuroraLevel() {
+  const [level, setLevel] = useState(_auroraLevel);
+  useEffect(() => {
+    _auroraListeners.add(setLevel);
+    return () => { _auroraListeners.delete(setLevel); };
+  }, []);
+  return level;
+}
+
 /**
  * Drives school-themed CSS variables on <html>.
  *
@@ -18,7 +52,14 @@ export function useAtmosphere() {
   const { currentSong } = useCurrentSong();
   const location = useLocation();
   const [ambientState, setAmbientState] = useState({ schoolId: null, isActive: false });
+  const [auroraLevelState, setAuroraLevelState] = useState(_auroraLevel);
   const prevSchoolRef = useRef(null);
+
+  // Subscribe to aurora level changes so CSS var re-applies on cycle.
+  useEffect(() => {
+    _auroraListeners.add(setAuroraLevelState);
+    return () => { _auroraListeners.delete(setAuroraLevelState); };
+  }, []);
 
   // Subscribe directly to the service singleton for state changes.
   useEffect(() => {
@@ -70,18 +111,18 @@ export function useAtmosphere() {
     };
   }, []);
 
-  // Apply school-specific CSS variables when the song OR ambient school changes.
+  // Apply school-specific CSS variables when the song, ambient school, or aurora level changes.
   useEffect(() => {
     const { schoolId: ambientSchoolId, isActive } = ambientState;
-    
+
     // Priority: Active ambient station > Active song (Watch) > Last selected ambient > Default
-    const activeSchoolId = (isActive && ambientSchoolId) 
-      || currentSong?.school 
-      || ambientSchoolId 
+    const activeSchoolId = (isActive && ambientSchoolId)
+      || currentSong?.school
+      || ambientSchoolId
       || "SONIC";
 
     const school = SCHOOLS[activeSchoolId];
-    if (!school || school.id === prevSchoolRef.current) return;
+    if (!school) return;
     prevSchoolRef.current = school.id;
 
     const root = document.documentElement;
@@ -93,9 +134,9 @@ export function useAtmosphere() {
     root.style.setProperty("--active-school-s", `${s}%`);
     root.style.setProperty("--active-school-l", `${l}%`);
     root.style.setProperty("--active-school-glow", `hsla(${h}, ${s}%, ${l}%, 0.4)`);
-    root.style.setProperty("--active-aurora-intensity", String(atmo.auroraIntensity));
+    root.style.setProperty("--active-aurora-intensity", String(atmo.auroraIntensity * AURORA_FACTORS[_auroraLevel]));
     root.style.setProperty("--active-saturation", `${atmo.saturation}%`);
     root.style.setProperty("--active-vignette-strength", String(atmo.vignetteStrength));
     root.style.setProperty("--active-scanline-opacity", String(atmo.scanlineOpacity));
-  }, [currentSong?.school, ambientState]);
+  }, [currentSong?.school, ambientState, auroraLevelState]);
 }

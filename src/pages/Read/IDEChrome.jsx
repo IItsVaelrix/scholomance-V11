@@ -73,6 +73,9 @@ function GearIcon() {
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 
+const AURORA_LABELS = ['◉ ATMOS', '◈ ATMOS', '◈ ATMOS'];
+const AURORA_TITLES = ['Aurora: Off', 'Aurora: Dim', 'Aurora: Full'];
+
 export function TopBar({
   title,
   onOpenSearch,
@@ -82,6 +85,8 @@ export function TopBar({
   activeScrollId,
   onEdit,
   progression,
+  auroraLevel = 2,
+  onCycleAuroraLevel,
 }) {
   return (
     <div className="ide-topbar">
@@ -109,13 +114,14 @@ export function TopBar({
 
       <div className="ide-topbar-right">
         {!isEditable && activeScrollId && (
-          <button className="ide-icon-btn" title="Edit Scroll" onClick={onEdit}>
+          <button className="ide-icon-btn" title="Edit Scroll" onClick={onEdit} aria-label="Edit Scroll">
             <EditIcon />
           </button>
         )}
         <button
           className={`ide-icon-btn ${showMinimap ? 'active' : ''}`}
           title="Toggle Minimap"
+          aria-label="Toggle Minimap"
           onClick={onToggleMinimap}
         >
           <MapIcon />
@@ -123,11 +129,23 @@ export function TopBar({
         <button
           className="ide-icon-btn"
           title="Search (Ctrl+F)"
+          aria-label="Search"
           onClick={onOpenSearch}
         >
           <SearchIcon />
         </button>
-        <button className="ide-icon-btn" title="Settings">
+        {onCycleAuroraLevel && (
+          <button
+            className={`ide-icon-btn ide-atmos-btn ide-atmos-btn--level-${auroraLevel}`}
+            title={AURORA_TITLES[auroraLevel]}
+            aria-label={AURORA_TITLES[auroraLevel]}
+            aria-pressed={auroraLevel > 0}
+            onClick={onCycleAuroraLevel}
+          >
+            {AURORA_LABELS[auroraLevel]}
+          </button>
+        )}
+        <button className="ide-icon-btn" title="Settings" aria-label="Settings">
           <GearIcon />
         </button>
       </div>

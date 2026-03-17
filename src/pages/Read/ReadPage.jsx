@@ -19,6 +19,7 @@ import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
 import { getCachedWord, setCachedWord, pruneOldCaches } from "../../lib/platform/wordCache.js";
+import { useAuroraLevel, cycleAuroraLevel } from "../../hooks/useAtmosphere.js";
 
 import AnalysisPanel from "./AnalysisPanel.jsx";
 import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
@@ -101,6 +102,7 @@ function applyMatchCase(sourceWord, replacement) {
 
 export default function ReadPage() {
   const { theme } = useTheme();
+  const auroraLevel = useAuroraLevel();
   const { scrolls, saveScroll, deleteScroll, getScrollById } = useScrolls();
   const { addXP, progression } = useProgression();
   const [activeScrollId, setActiveScrollId] = useState(null);
@@ -1199,6 +1201,8 @@ export default function ReadPage() {
           activeScrollId={activeScrollId}
           onEdit={handleEditScroll}
           progression={progression}
+          auroraLevel={auroraLevel}
+          onCycleAuroraLevel={cycleAuroraLevel}
         />
         <main className="ide-mobile-content">
           {mobileActiveTab === "EDITOR" && editorBlock}
@@ -1272,6 +1276,8 @@ export default function ReadPage() {
         activeScrollId={activeScrollId}
         onEdit={handleEditScroll}
         progression={progression}
+        auroraLevel={auroraLevel}
+        onCycleAuroraLevel={cycleAuroraLevel}
       />
       <main className="ide-main-content">
         <PanelGroup direction={isNarrowViewport ? "vertical" : "horizontal"}>
