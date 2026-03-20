@@ -251,6 +251,40 @@ export const PHRASE_BANK = Object.freeze({
     ],
   }),
 
+  multisyllabic_rhyme: freezeEntry({
+    concept: "resonance chaining",
+    citations: [
+      {
+        quote: "The sound must seem an echo to the sense",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "Sublimity is the echo of a great soul",
+        attribution: "Longinus, On the Sublime (PG 6081)",
+      },
+      {
+        quote: "What oft was thought, but ne'er so well expressed",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet binds together by passion and knowledge the vast empire of human society",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
+      {
+        quote: "True ease in writing comes from art, not chance",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+    ],
+    aspects: [
+      "resonance chain", "terminal echo braid", "multisyllabic tail-lock",
+      "syllabic return", "echo ladder",
+    ],
+    criteria: [
+      "tiered echo pressure", "distinct-root craft", "terminal discipline",
+      "syllabic continuity", "chain authority",
+    ],
+  }),
+
   meter_regularity: freezeEntry({
     concept: "metrical cadence",
     citations: [

@@ -81,7 +81,7 @@ async function scoreRhymeQuality(doc) {
     return {
       heuristic: 'rhyme_quality',
       rawScore: 0,
-      weight: 0.25,
+      weight: 0.10,
       contribution: 0,
       explanation: 'No text to analyze.',
       diagnostics: []
@@ -102,7 +102,7 @@ async function scoreRhymeQuality(doc) {
     return {
       heuristic: 'rhyme_quality',
       rawScore: 0,
-      weight: 0.25,
+      weight: 0.10,
       contribution: 0,
       explanation: `No rhymes detected in ${lineCount} line${lineCount !== 1 ? 's' : ''}.`,
       diagnostics: []
@@ -116,8 +116,7 @@ async function scoreRhymeQuality(doc) {
   for (const connection of allConnections) {
     const typeWeight = TYPE_WEIGHT[connection.type] || 0.6;
     const baseScore = clamp01(connection.score || 0);
-    const syllableBonus = connection.syllablesMatched >= 2 ? 1.08 : 1.0;
-    weightedQualitySum += baseScore * typeWeight * syllableBonus;
+    weightedQualitySum += baseScore * typeWeight;
 
     if (connection.syllablesMatched >= 2) {
       multiSyllableCount += 1;
@@ -135,10 +134,9 @@ async function scoreRhymeQuality(doc) {
   const endRhymeBalance = clamp01(endRhymeRatio / 0.7);
 
   const rawScore = clamp01(
-    averageConnectionQuality * 0.45 +
-    lineCoverage * 0.20 +
+    averageConnectionQuality * 0.50 +
+    lineCoverage * 0.25 +
     schemeCoherence * 0.20 +
-    multiSyllableRatio * 0.10 +
     endRhymeBalance * 0.05
   );
 
@@ -154,7 +152,7 @@ async function scoreRhymeQuality(doc) {
       `avg strength ${toPercent(averageConnectionQuality)}`,
       `line coverage ${toPercent(lineCoverage)}`,
       `scheme ${scheme}`,
-      `multisyllabic ${toPercent(multiSyllableRatio)}`,
+      `multisyllabic seen ${toPercent(multiSyllableRatio)} (scored separately)`,
     ].join(', ') + '.',
     diagnostics
   };
@@ -163,5 +161,5 @@ async function scoreRhymeQuality(doc) {
 export const rhymeQualityHeuristic = {
   name: 'rhyme_quality',
   scorer: scoreRhymeQuality,
-  weight: 0.25,
+  weight: 0.10,
 };
