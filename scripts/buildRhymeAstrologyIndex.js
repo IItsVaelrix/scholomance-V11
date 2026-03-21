@@ -15,7 +15,7 @@ const DEFAULT_TARGET_LEXICON_SIZE = 50000;
 const DEFAULT_HOT_EDGE_WORD_LIMIT = 10000;
 const DEFAULT_HOT_EDGE_TOP_K = 50;
 const DEFAULT_OVERSIZED_BUCKET_THRESHOLD = 500;
-const DEFAULT_BUCKET_CANDIDATE_CAP = 600;
+const DEFAULT_BUCKET_CANDIDATE_CAP = 200;
 const DEFAULT_CLUSTER_LIMIT_PER_BUCKET = 6;
 const DEFAULT_STORAGE_TARGET_MB = 100;
 const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
@@ -253,6 +253,7 @@ function createIndexSchema(db) {
       syllable_count INTEGER NOT NULL,
       stress_pattern TEXT NOT NULL,
       dominant_vowel_family TEXT NOT NULL,
+      onset_signature TEXT NOT NULL,
       phonemes_json TEXT NOT NULL,
       vowel_skeleton_json TEXT NOT NULL,
       consonant_skeleton_json TEXT NOT NULL,
@@ -497,10 +498,10 @@ function stageB_buildIndex({
     const insertBucketStmt = indexDb.prepare(`
       INSERT INTO signature_bucket (
         ending_signature, node_id, token, frequency_score, syllable_count, stress_pattern,
-        dominant_vowel_family, phonemes_json, vowel_skeleton_json, consonant_skeleton_json
+        dominant_vowel_family, onset_signature, phonemes_json, vowel_skeleton_json, consonant_skeleton_json
       ) VALUES (
         @endingSignature, @nodeId, @token, @frequencyScore, @syllableCount, @stressPattern,
-        @dominantVowelFamily, @phonemesJson, @vowelSkeletonJson, @consonantSkeletonJson
+        @dominantVowelFamily, @onsetSignature, @phonemesJson, @vowelSkeletonJson, @consonantSkeletonJson
       )
     `);
     const insertBucketStatsStmt = indexDb.prepare(`
@@ -577,6 +578,7 @@ function stageB_buildIndex({
             syllableCount: member.syllableCount,
             stressPattern: member.stressPattern,
             dominantVowelFamily: member.dominantVowelFamily,
+            onsetSignature: member.onsetSignature,
             phonemesJson: JSON.stringify(member.phonemes),
             vowelSkeletonJson: JSON.stringify(member.vowelSkeleton),
             consonantSkeletonJson: JSON.stringify(member.consonantSkeleton),

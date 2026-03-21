@@ -1,0 +1,402 @@
+/**
+ * SpellCastEffect.css
+ *
+ * School-specific spell effect animations.
+ * All effects: pointer-events none, fixed overlay, self-expiring via JS timeout.
+ *
+ * CSS SVG geometry animation (r, stroke-dasharray) requires Chrome 62+,
+ * Firefox 57+, Safari 13.1+ — all modern browsers.
+ */
+
+/* ── Overlay shell ─────────────────────────────────────────────────────────── */
+
+.sce-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  overflow: hidden;
+  animation: sce-overlay-fade 1.05s ease-out forwards;
+}
+
+@keyframes sce-overlay-fade {
+  0%   { opacity: 0; }
+  12%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.sce-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   SONIC — Purple: concentric ripple rings + twin sine waves
+   World-law: sound radiates as pressure differentials through space
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.sce--sonic {
+  background: radial-gradient(
+    circle at 50% 50%,
+    hsla(258, 100%, 50%, 0.09) 0%,
+    transparent 65%
+  );
+}
+
+.sce-sonic-ring {
+  fill: none;
+  stroke: #651fff;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sce-sonic-ring--0 { stroke-width: 0.85; animation: sce-sonic-ring 1.0s ease-out 0.00s both; }
+.sce-sonic-ring--1 { stroke-width: 0.65; animation: sce-sonic-ring 1.0s ease-out 0.10s both; stroke: #8050ff; }
+.sce-sonic-ring--2 { stroke-width: 0.50; animation: sce-sonic-ring 1.0s ease-out 0.20s both; stroke: #9f78ff; }
+.sce-sonic-ring--3 { stroke-width: 0.40; animation: sce-sonic-ring 1.0s ease-out 0.30s both; stroke: #b898ff; }
+.sce-sonic-ring--4 { stroke-width: 0.30; animation: sce-sonic-ring 1.0s ease-out 0.40s both; stroke: #cdb8ff; }
+
+@keyframes sce-sonic-ring {
+  0%   { r: 2;  opacity: 0.95; }
+  100% { r: 62; opacity: 0;    }
+}
+
+.sce-sonic-wave {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 0.7;
+}
+
+.sce-sonic-wave--a {
+  stroke: #651fff;
+  animation: sce-sonic-wave 0.9s ease-out 0.05s both;
+}
+.sce-sonic-wave--b {
+  stroke: #9370ff;
+  animation: sce-sonic-wave 0.9s ease-out 0.18s both;
+}
+
+@keyframes sce-sonic-wave {
+  0%   { opacity: 0; stroke-dasharray: 0 220; }
+  18%  { opacity: 0.9; }
+  100% { opacity: 0; stroke-dasharray: 220 220; }
+}
+
+.sce-sonic-core {
+  fill: #651fff;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-sonic-core-burst 0.55s ease-out both;
+}
+
+@keyframes sce-sonic-core-burst {
+  0%   { opacity: 0; transform: scale(1);   }
+  20%  { opacity: 1; transform: scale(2.8); }
+  100% { opacity: 0; transform: scale(5);   }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   PSYCHIC — Cyan: radial scan rays + rotating hex lattice + dashed halo
+   World-law: psychic force radiates as geometric interference patterns
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.sce--psychic {
+  background: radial-gradient(
+    circle at 50% 50%,
+    hsla(191, 100%, 50%, 0.06) 0%,
+    transparent 65%
+  );
+}
+
+.sce-psychic-ray {
+  stroke: #00e5ff;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.sce-psychic-ray--0 { stroke-width: 0.55; animation: sce-psychic-ray 0.80s ease-out 0.00s forwards; }
+.sce-psychic-ray--1 { stroke-width: 0.40; animation: sce-psychic-ray 0.80s ease-out 0.06s forwards; stroke: #55eeff; }
+.sce-psychic-ray--2 { stroke-width: 0.30; animation: sce-psychic-ray 0.80s ease-out 0.12s forwards; stroke: #99f5ff; }
+.sce-psychic-ray--3 { stroke-width: 0.42; animation: sce-psychic-ray 0.80s ease-out 0.18s forwards; stroke: #22e8ff; }
+
+@keyframes sce-psychic-ray {
+  0%   { opacity: 0; stroke-dasharray: 0 90; }
+  15%  { opacity: 0.95; }
+  80%  { opacity: 0.35; stroke-dasharray: 65 90; }
+  100% { opacity: 0;    stroke-dasharray: 90 90; }
+}
+
+.sce-psychic-hex {
+  fill: none;
+  stroke: #00e5ff;
+  stroke-width: 0.75;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-psychic-hex 1.0s ease-out both;
+}
+
+@keyframes sce-psychic-hex {
+  0%   { opacity: 0; transform: scale(0.2) rotate(0deg);   }
+  20%  { opacity: 1; transform: scale(1.1) rotate(45deg);  }
+  65%  { opacity: 0.5; transform: scale(2.6) rotate(120deg); }
+  100% { opacity: 0; transform: scale(4.2) rotate(185deg); }
+}
+
+.sce-psychic-halo {
+  fill: none;
+  stroke: #00e5ff;
+  stroke-width: 0.28;
+  stroke-dasharray: 4.5 2.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-psychic-halo 1.0s ease-out both;
+}
+
+@keyframes sce-psychic-halo {
+  0%   { opacity: 0; transform: scale(0.5) rotate(0deg);   }
+  22%  { opacity: 0.75; transform: scale(1) rotate(40deg); }
+  100% { opacity: 0; transform: scale(2.8) rotate(185deg); }
+}
+
+.sce-psychic-core {
+  fill: #00e5ff;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-psychic-core 0.6s ease-out both;
+}
+
+@keyframes sce-psychic-core {
+  0%   { opacity: 0; transform: scale(0); }
+  18%  { opacity: 1; transform: scale(2.5); }
+  100% { opacity: 0; transform: scale(4.5); }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   ALCHEMY — Magenta: counter-rotating vortex arms + orbiting particles
+   World-law: transmutation is matter rewriting itself under phonemic pressure
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.sce--alchemy {
+  background: radial-gradient(
+    circle at 50% 50%,
+    hsla(291, 100%, 50%, 0.08) 0%,
+    transparent 62%
+  );
+}
+
+.sce-alchemy-vortex {
+  fill: none;
+  stroke-linecap: round;
+  stroke-width: 1.0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.sce-alchemy-vortex--a {
+  stroke: #d500f9;
+  animation: sce-alchemy-vortex-cw 1.0s ease-in-out 0.00s both;
+}
+.sce-alchemy-vortex--b {
+  stroke: #ff55ff;
+  animation: sce-alchemy-vortex-ccw 1.0s ease-in-out 0.12s both;
+}
+
+@keyframes sce-alchemy-vortex-cw {
+  0%   { opacity: 0; transform: scale(0.15) rotate(0deg);    stroke-dasharray: 0 220;   }
+  25%  { opacity: 1; transform: scale(1.0)  rotate(90deg);   stroke-dasharray: 90 220;  }
+  70%  { opacity: 0.6; transform: scale(1.9) rotate(220deg); stroke-dasharray: 160 220; }
+  100% { opacity: 0; transform: scale(2.6)  rotate(300deg);  stroke-dasharray: 220 220; }
+}
+
+@keyframes sce-alchemy-vortex-ccw {
+  0%   { opacity: 0; transform: scale(0.15) rotate(0deg);     stroke-dasharray: 0 220;   }
+  25%  { opacity: 1; transform: scale(1.0)  rotate(-90deg);   stroke-dasharray: 90 220;  }
+  70%  { opacity: 0.6; transform: scale(1.9) rotate(-220deg); stroke-dasharray: 160 220; }
+  100% { opacity: 0; transform: scale(2.6)  rotate(-300deg);  stroke-dasharray: 220 220; }
+}
+
+.sce-alchemy-orb {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation-duration: 0.95s;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+.sce-alchemy-orb--0 { fill: #d500f9; animation-name: sce-alchemy-orb-rise;  animation-delay: 0.05s; }
+.sce-alchemy-orb--1 { fill: #ff00ff; animation-name: sce-alchemy-orb-sink;  animation-delay: 0.12s; }
+.sce-alchemy-orb--2 { fill: #aa00cc; animation-name: sce-alchemy-orb-rise;  animation-delay: 0.22s; }
+.sce-alchemy-orb--3 { fill: #ff88ff; animation-name: sce-alchemy-orb-sink;  animation-delay: 0.08s; }
+
+@keyframes sce-alchemy-orb-rise {
+  0%   { opacity: 0; transform: scale(0)   translateY(0);    }
+  28%  { opacity: 1; transform: scale(2.2) translateY(-4px); }
+  100% { opacity: 0; transform: scale(0.4) translateY(-20px);}
+}
+
+@keyframes sce-alchemy-orb-sink {
+  0%   { opacity: 0; transform: scale(0)   translateY(0);   }
+  28%  { opacity: 1; transform: scale(1.8) translateY(4px); }
+  100% { opacity: 0; transform: scale(0.4) translateY(20px);}
+}
+
+.sce-alchemy-sigil {
+  fill: none;
+  stroke: #d500f9;
+  stroke-width: 0.85;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-alchemy-sigil 1.0s ease-out both;
+}
+
+@keyframes sce-alchemy-sigil {
+  0%   { opacity: 0; transform: scale(0)   rotate(0deg);   }
+  20%  { opacity: 1; transform: scale(1.0) rotate(45deg);  }
+  62%  { opacity: 0.7; transform: scale(1.6) rotate(90deg);}
+  100% { opacity: 0; transform: scale(3.2) rotate(185deg); }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   WILL — Orange: horizontal force lines + 8-point starburst + impact core
+   World-law: willpower is unmediated intent — it travels in straight lines
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.sce--will {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsla(33, 100%, 50%, 0.13) 42%,
+    hsla(33, 100%, 55%, 0.16) 50%,
+    hsla(33, 100%, 50%, 0.13) 58%,
+    transparent 100%
+  );
+}
+
+.sce-will-force {
+  stroke: #ff8a00;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.sce-will-force--0 { stroke-width: 0.30; animation: sce-will-force-shoot 0.65s ease-out 0.00s both; }
+.sce-will-force--1 { stroke-width: 0.55; animation: sce-will-force-shoot 0.65s ease-out 0.02s both; }
+.sce-will-force--2 { stroke-width: 0.85; stroke: #ffaa44; animation: sce-will-force-shoot 0.65s ease-out 0.00s both; }
+.sce-will-force--3 { stroke-width: 0.55; animation: sce-will-force-shoot 0.65s ease-out 0.02s both; }
+.sce-will-force--4 { stroke-width: 0.30; animation: sce-will-force-shoot 0.65s ease-out 0.04s both; }
+
+@keyframes sce-will-force-shoot {
+  0%   { opacity: 0; stroke-dasharray: 0 220; }
+  10%  { opacity: 1; stroke-dasharray: 30 220; }
+  55%  { opacity: 0.85; stroke-dasharray: 150 220; }
+  100% { opacity: 0; stroke-dasharray: 220 220; }
+}
+
+.sce-will-burst {
+  stroke: #ff8a00;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.sce-will-burst--0 { stroke-width: 0.75; animation: sce-will-burst-extend 0.60s ease-out 0.05s both; }
+.sce-will-burst--1 { stroke-width: 0.50; stroke: #ffcc66; animation: sce-will-burst-extend 0.60s ease-out 0.10s both; }
+.sce-will-burst--2 { stroke-width: 0.45; stroke: #ff6600; animation: sce-will-burst-extend 0.60s ease-out 0.00s both; }
+
+@keyframes sce-will-burst-extend {
+  0%   { opacity: 0; stroke-dasharray: 0 55; }
+  22%  { opacity: 1; stroke-dasharray: 18 55; }
+  100% { opacity: 0; stroke-dasharray: 55 55; }
+}
+
+.sce-will-core {
+  fill: #ff8a00;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-will-impact 0.75s ease-out both;
+}
+
+@keyframes sce-will-impact {
+  0%   { opacity: 0; transform: scale(0);   }
+  14%  { opacity: 1; transform: scale(3.2); }
+  45%  { opacity: 0.6; transform: scale(2); }
+  100% { opacity: 0; transform: scale(5.5); }
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   VOID — Zinc: glitch displacement bars + radial cracks + collapsing maw
+   World-law: void is the anti-word — it tears syntax rather than weaving it
+   ──────────────────────────────────────────────────────────────────────────── */
+
+.sce--void {
+  background: radial-gradient(
+    circle at 50% 50%,
+    transparent 28%,
+    hsla(0, 0%, 2%, 0.38) 100%
+  );
+}
+
+.sce-void-glitch {
+  opacity: 0;
+}
+
+.sce-void-glitch--0 { fill: hsla(0, 0%, 82%, 0.26); animation: sce-void-glitch-a 1.05s steps(1, end) 0.00s both; }
+.sce-void-glitch--1 { fill: hsla(0, 0%, 62%, 0.20); animation: sce-void-glitch-b 1.05s steps(1, end) 0.04s both; }
+.sce-void-glitch--2 { fill: hsla(0, 0%, 88%, 0.22); animation: sce-void-glitch-a 1.05s steps(1, end) 0.09s both; }
+
+@keyframes sce-void-glitch-a {
+  0%   { opacity: 0;    transform: translateX(0);    }
+  5%   { opacity: 0.85; transform: translateX(9px);  }
+  10%  { opacity: 0.55; transform: translateX(-14px); }
+  16%  { opacity: 0.9;  transform: translateX(7px);  }
+  26%  { opacity: 0.45; transform: translateX(-10px); }
+  36%  { opacity: 0.70; transform: translateX(12px);  }
+  50%  { opacity: 0.30; transform: translateX(-6px);  }
+  68%  { opacity: 0.18; transform: translateX(4px);   }
+  100% { opacity: 0;    transform: translateX(0);    }
+}
+
+@keyframes sce-void-glitch-b {
+  0%   { opacity: 0;    transform: translateX(0);    }
+  6%   { opacity: 0.65; transform: translateX(-12px); }
+  16%  { opacity: 0.82; transform: translateX(9px);   }
+  28%  { opacity: 0.48; transform: translateX(-8px);  }
+  42%  { opacity: 0.38; transform: translateX(11px);  }
+  62%  { opacity: 0.20; transform: translateX(-4px);  }
+  100% { opacity: 0;    transform: translateX(0);    }
+}
+
+.sce-void-crack {
+  fill: none;
+  stroke: #a1a1aa;
+  stroke-linecap: round;
+  opacity: 0;
+}
+
+.sce-void-crack--0 { stroke-width: 0.50; animation: sce-void-crack-draw 1.05s ease-out 0.05s both; }
+.sce-void-crack--1 { stroke-width: 0.40; stroke: #c2c2cc; animation: sce-void-crack-draw 1.05s ease-out 0.10s both; }
+.sce-void-crack--2 { stroke-width: 0.40; stroke: #888898; animation: sce-void-crack-draw 1.05s ease-out 0.15s both; }
+.sce-void-crack--3 { stroke-width: 0.32; stroke: #b4b4bc; animation: sce-void-crack-draw 1.05s ease-out 0.00s both; }
+
+@keyframes sce-void-crack-draw {
+  0%   { opacity: 0; stroke-dasharray: 0 110; }
+  14%  { opacity: 0.9; stroke-dasharray: 28 110; }
+  52%  { opacity: 0.68; stroke-dasharray: 75 110; }
+  100% { opacity: 0;   stroke-dasharray: 110 110; }
+}
+
+.sce-void-maw {
+  fill: hsla(0, 0%, 3%, 0.88);
+  stroke: #a1a1aa;
+  stroke-width: 0.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sce-void-maw-collapse 1.05s ease-out both;
+}
+
+@keyframes sce-void-maw-collapse {
+  0%   { opacity: 0; transform: scale(0);   }
+  18%  { opacity: 1; transform: scale(1.5); }
+  58%  { opacity: 0.8; transform: scale(2); }
+  100% { opacity: 0; transform: scale(0.2); }
+}

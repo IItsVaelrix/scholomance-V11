@@ -106,3 +106,4 @@ nul
 # Large data files (keep local only, use LFS if needed)
 english-wordnet-2025.xml
 *test-output.txt
+.blackboxcli/

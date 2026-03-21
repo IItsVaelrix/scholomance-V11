@@ -18,8 +18,8 @@ import { buildHiddenHarkovSummary } from '../../../src/lib/models/harkov.model.j
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
 import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
-import { createRhymeAstrologyLexiconRepo } from './rhyme-astrology/lexiconRepo.js';
-import { createRhymeAstrologyIndexRepo } from './rhyme-astrology/indexRepo.js';
+import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
+import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],

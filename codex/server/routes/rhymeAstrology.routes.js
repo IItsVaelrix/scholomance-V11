@@ -5,8 +5,8 @@ import {
   validateRhymeAstrologyResult,
 } from '../../core/rhyme-astrology/contracts.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
-import { createRhymeAstrologyLexiconRepo } from '../services/rhyme-astrology/lexiconRepo.js';
-import { createRhymeAstrologyIndexRepo } from '../services/rhyme-astrology/indexRepo.js';
+import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
+import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
 
 const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
 const DEFAULT_CACHE_SIZE = 500;
@@ -145,4 +145,3 @@ export async function rhymeAstrologyRoutes(fastify, options = {}) {
     });
   }
 }
-

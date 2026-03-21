@@ -22,6 +22,7 @@ import { ScoreReveal } from './components/ScoreReveal.jsx';
 import { BattleLog } from './components/BattleLog.jsx';
 import { OpponentDoctrinePanel } from './components/OpponentDoctrinePanel.jsx';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.js';
+import { SpellCastEffect } from './components/SpellCastEffect.jsx';
 import './CombatPage.css';
 
 const MP_COST = 10;
@@ -387,6 +388,9 @@ export default function CombatPage() {
 
         </div>
       </div>
+
+      {/* ── Spell cast effect overlay ── */}
+      <SpellCastEffect combatState={combatState} prefersReduced={prefersReduced} />
 
       {/* ── Victory / Defeat overlay ── */}
       <AnimatePresence>
