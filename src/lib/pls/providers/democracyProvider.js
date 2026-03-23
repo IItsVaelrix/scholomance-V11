@@ -103,16 +103,24 @@ export async function democracyProvider(context, engines, candidates) {
     }
   });
 
-  // 3. Batch score all candidates using Judiciary's standardized multi-winner logic
+  // 3. Score legacy endorsements, then let the graph judiciary arbitrate path-aware winners.
   const allScores = pipelineJudiciary.calculateAllScores(judiciaryCandidates, syntaxContext || null);
+  const graphScores = new Map(
+    pipelineJudiciary
+      .rankGraphCandidates(pipelineJudiciary.adaptLegacyScoresToGraphCandidates(allScores))
+      .map((candidate) => [candidate.token, candidate.totalScore])
+  );
 
   return candidates.map(candidate => {
     const scoreData = allScores.get(candidate.token);
+    const graphScore = graphScores.get(candidate.token) ?? 0;
     return {
       ...candidate,
       scores: {
         ...candidate.scores,
-        democracy: scoreData ? Math.min(1.0, scoreData.total) : 0
+        democracy: scoreData
+          ? Math.min(1.0, Math.max(scoreData.total, graphScore))
+          : graphScore
       }
     };
   });

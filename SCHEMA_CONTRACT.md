@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.7** | Last updated: 2026-03-17
+**Version: 1.8** | Last updated: 2026-03-21
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Core combat, lexical, runtime bus, world inspection, and combat speaking contract
-- Version: 1.6 -> 1.7
-- Changed fields: added `CombatSpeakingAnalysis`, `VoiceProfileSnapshot`, speaking-derived combat multipliers, and speech-intent metadata to combat payloads; published opponent speaking surfaces
+- Schema: Core combat, lexical, runtime bus, world inspection, combat speaking, and phonosemantic graph contract
+- Version: 1.7 -> 1.8
+- Changed fields: added `TokenGraphNode`, `TokenGraphEdge`, `ContextActivation`, and `GraphCandidate` for graph-backed prediction, judiciary arbitration, lexical ranking, and spellweave alignment
 - Breaking: no
-- Claude impact: combat UI can render speech-act, cadence, harmony, and voice-resonance data from one authoritative payload for player and opponent casts
-- Blackbox impact: update combat score and opponent spell fixtures to cover additive speaking fields and session-backed voice-profile snapshots
+- Claude impact: no immediate UI payload change; bridge hooks can now consume graph-ranked predictor candidates without inventing local shapes
+- Blackbox impact: predictor, judiciary, and lexical suggestion fixtures should cover graph-backed ranking and backward-compatible legacy facade behavior
 
 ---
 
@@ -111,6 +111,68 @@ interface LexicalEntry {
   ipa?: string;
   lore?: Record<string, unknown>;
   raw?: unknown;
+}
+
+interface TokenGraphNode {
+  id: string;
+  token: string;
+  normalized: string;
+  nodeType: "LEXEME" | "SCROLL_TOKEN" | "SCHOOL_ANCHOR" | "SEMANTIC_ANCHOR";
+  schoolBias: Partial<Record<School, number>>;
+  phoneticSignature?: {
+    phonemes: string[];
+    vowelSkeleton: string[];
+    consonantSkeleton: string[];
+    endingSignature: string;
+    onsetSignature: string;
+    stressPattern: string;
+    syllableCount: number;
+  };
+  semanticTags?: string[];
+  frequencyScore?: number;
+}
+
+interface TokenGraphEdge {
+  id: string;
+  fromId: string;
+  toId: string;
+  relation:
+    | "PHONETIC_SIMILARITY"
+    | "SEMANTIC_ASSOCIATION"
+    | "SYNTACTIC_COMPATIBILITY"
+    | "SCHOOL_RESONANCE"
+    | "MEMORY_AFFINITY"
+    | "SEQUENTIAL_LIKELIHOOD";
+  weight: number;
+  evidence: string[];
+  dimensions?: Record<string, number>;
+}
+
+interface ContextActivation {
+  anchorNodeIds: string[];
+  currentSchool: School | null;
+  syntaxContext: {
+    role?: string;
+    lineRole?: string;
+    stressRole?: string;
+    rhymePolicy?: string;
+  } | null;
+  decay: number;
+  maxDepth: number;
+  maxFanout: number;
+}
+
+interface GraphCandidate {
+  nodeId: string;
+  token: string;
+  activationScore: number;
+  legalityScore: number;
+  semanticScore: number;
+  phoneticScore: number;
+  schoolScore: number;
+  noveltyScore: number;
+  totalScore: number;
+  trace: ScoreTrace[];
 }
 
 interface WorldEntityRef {
@@ -608,6 +670,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.5 | 2026-03-16 | Added optional `weave` to `CombatScoreRequest` and aligned authoritative combat scoring with Spellweave input | no |
 | 1.6 | 2026-03-16 | Added authoritative world room/entity inspection schemas and HTTP contracts | no |
 | 1.7 | 2026-03-17 | Added combat speaking analysis, voice-profile snapshots, and speaking multipliers to combat payloads | no |
+| 1.8 | 2026-03-21 | Added phonosemantic token-graph node/edge, activation, and graph-candidate contracts for prediction and judiciary traversal | no |
 
 ---
 

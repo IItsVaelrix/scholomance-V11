@@ -2,6 +2,12 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { TriePredictor } from '../../codex/core/trie.js';
 import { Spellchecker } from '../../codex/core/spellchecker.js';
 import { createJudiciaryEngine } from '../../codex/core/judiciary.js';
+import { buildTokenGraph, createGraphNode } from '../../codex/core/token-graph/build.js';
+import { buildContextActivation } from '../../codex/core/token-graph/activation.js';
+import { traverseTokenGraph } from '../../codex/core/token-graph/traverse.js';
+import { scoreGraphCandidates } from '../../codex/core/token-graph/score.js';
+import { createTokenGraphSemanticRepo } from '../../codex/services/token-graph/semantic.repo.js';
+import { createTokenGraphSequenceRepo } from '../../codex/services/token-graph/sequence.repo.js';
 import { PhonemeEngine } from '../lib/phonology/phoneme.engine.js';
 import { PoeticLanguageServer } from '../lib/poeticLanguageServer.js';
 import { ScholomanceDictionaryAPI } from '../lib/scholomanceDictionary.api.js';
@@ -92,6 +98,94 @@ function normalizeCorpusPayload(rawPayload) {
   });
 
   return { dictionary, sequences };
+}
+
+function clampPredictionScore(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  if (numeric <= 0) return 0;
+  if (numeric >= 1) return 1;
+  return numeric;
+}
+
+function createPredictionLexemeNode(token, analysis, rankWeight = 0) {
+  const normalized = normalizeCorpusWord(token);
+  if (!normalized) return null;
+
+  const school = analysis?.vowelFamily
+    ? PhonemeEngine.getSchoolFromVowelFamily(analysis.vowelFamily)
+    : null;
+
+  return createGraphNode({
+    id: `lexeme:${normalized}`,
+    token: normalized,
+    normalized,
+    nodeType: 'LEXEME',
+    schoolBias: school
+      ? { [school]: clampPredictionScore(0.52 + (rankWeight * 0.36)) }
+      : {},
+    frequencyScore: Math.max(1, Math.round((1 - clampPredictionScore(rankWeight)) * 100)),
+    phoneticSignature: analysis
+      ? {
+        phonemes: Array.isArray(analysis.phonemes) ? [...analysis.phonemes] : [],
+        vowelSkeleton: analysis.vowelFamily ? [analysis.vowelFamily] : [],
+        consonantSkeleton: analysis.coda ? [analysis.coda] : [],
+        endingSignature: analysis.rhymeKey || '',
+        onsetSignature: Array.isArray(analysis.phonemes) && analysis.phonemes.length > 0
+          ? String(analysis.phonemes[0]).replace(/[0-9]/g, '')
+          : '',
+        stressPattern: '',
+        syllableCount: Number(analysis.syllableCount) || 0,
+      }
+      : undefined,
+  });
+}
+
+function buildLocalPhoneticEdges(anchorToken, candidateTokens, analysisByToken) {
+  const normalizedAnchor = normalizeCorpusWord(anchorToken);
+  if (!normalizedAnchor) return [];
+  const anchorAnalysis = analysisByToken.get(normalizedAnchor);
+  if (!anchorAnalysis) return [];
+
+  const edges = [];
+  candidateTokens.forEach((token) => {
+    const normalizedToken = normalizeCorpusWord(token);
+    if (!normalizedToken || normalizedToken === normalizedAnchor) return;
+    const candidateAnalysis = analysisByToken.get(normalizedToken);
+    if (!candidateAnalysis) return;
+
+    let weight = 0;
+    const evidence = [];
+    if (anchorAnalysis.rhymeKey && anchorAnalysis.rhymeKey === candidateAnalysis.rhymeKey) {
+      weight = 0.76;
+      evidence.push('shared_rhyme_key');
+    } else if (anchorAnalysis.vowelFamily && anchorAnalysis.vowelFamily === candidateAnalysis.vowelFamily) {
+      weight = 0.58;
+      evidence.push('shared_vowel_family');
+    } else if (anchorAnalysis.coda && anchorAnalysis.coda === candidateAnalysis.coda) {
+      weight = 0.46;
+      evidence.push('shared_coda');
+    }
+
+    if (weight <= 0) return;
+
+    edges.push({
+      fromId: `lexeme:${normalizedAnchor}`,
+      toId: `lexeme:${normalizedToken}`,
+      relation: 'PHONETIC_SIMILARITY',
+      weight,
+      evidence,
+    });
+    edges.push({
+      fromId: `lexeme:${normalizedToken}`,
+      toId: `lexeme:${normalizedAnchor}`,
+      relation: 'PHONETIC_SIMILARITY',
+      weight,
+      evidence,
+    });
+  });
+
+  return edges;
 }
 
 function createBatchedDictionaryValidator(dictionaryAPI, {
@@ -187,6 +281,8 @@ export function usePredictor() {
   const [model] = useState(() => new TriePredictor());
   const [spellchecker] = useState(() => new Spellchecker());
   const [judiciary] = useState(() => createJudiciaryEngine());
+  const [semanticGraphRepo] = useState(() => createTokenGraphSemanticRepo());
+  const [sequenceGraphRepo] = useState(() => createTokenGraphSequenceRepo({ trie: model }));
   const [isReady, setIsReady] = useState(false);
   const [isDictionaryConnected, setIsDictionaryConnected] = useState(false);
   const plsRef = useRef(null);
@@ -256,7 +352,7 @@ export function usePredictor() {
             if (!isDisposed) setIsDictionaryConnected(true);
           } else {
             const baseUrl = ScholomanceDictionaryAPI.getBaseUrl();
-            console.warn(`[Predictor] Scholomance Dictionary API unreachable at ${baseUrl} — running in offline mode.`);
+            console.warn(`[Predictor] Scholomance Dictionary API unreachable at ${baseUrl} - running in offline mode.`);
             if (!isDisposed) setIsDictionaryConnected(false);
           }
         } else if (!isDisposed) {
@@ -313,52 +409,104 @@ export function usePredictor() {
    */
   const predict = useCallback((prefix, contextWord = null, limit = 5) => {
     if (!isReady) return [];
-    const normalizedPrefix = String(prefix || '').toLowerCase();
-    const normalizedContextWord = String(contextWord || '').toLowerCase();
+    const normalizedPrefix = normalizeCorpusWord(prefix);
+    const normalizedContextWord = normalizeCorpusWord(contextWord);
+    const queryLimit = Math.max(limit * 6, 24);
 
-    // If we have a prefix (user currently typing), use Trie prefix lookup
-    if (normalizedPrefix.length > 0) {
-      const queryLimit = Math.max(limit * 4, 20);
-      const prefixMatches = model.predict(normalizedPrefix, queryLimit);
-      const contextMatches = normalizedContextWord
-        ? model.predictNext(normalizedContextWord, queryLimit).filter((token) => String(token || '').startsWith(normalizedPrefix))
-        : [];
+    const prefixEntries = normalizedPrefix
+      ? sequenceGraphRepo.getPrefixCandidates(normalizedPrefix, queryLimit)
+      : [];
+    const transitionEntries = normalizedContextWord
+      ? sequenceGraphRepo.getTransitions(normalizedContextWord, queryLimit)
+      : [];
 
-      if (contextMatches.length === 0) {
-        return prefixMatches.slice(0, limit);
-      }
-
-      const scoreByToken = new Map();
-      const applyScore = (token, score) => {
-        const normalizedToken = String(token || '').toLowerCase();
-        if (!normalizedToken) return;
-        const current = scoreByToken.get(normalizedToken) || 0;
-        if (score > current) scoreByToken.set(normalizedToken, score);
-      };
-
-      prefixMatches.forEach((token, index) => {
-        applyScore(token, 1 - (index / Math.max(prefixMatches.length, 1)));
-      });
-      contextMatches.forEach((token, index) => {
-        const normalizedToken = String(token || '').toLowerCase();
-        const contextualScore = 1 - (index / Math.max(contextMatches.length, 1));
-        const prefixScore = scoreByToken.get(normalizedToken) || 0;
-        applyScore(token, (prefixScore * 0.58) + (contextualScore * 0.42));
-      });
-
-      return [...scoreByToken.entries()]
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, limit)
-        .map(([token]) => token);
+    const candidateTokens = new Set();
+    prefixEntries.forEach((entry) => {
+      if (entry?.word) candidateTokens.add(entry.word);
+    });
+    transitionEntries.forEach((entry) => {
+      if (entry?.to) candidateTokens.add(entry.to);
+    });
+    if (normalizedContextWord) {
+      candidateTokens.add(normalizedContextWord);
     }
 
-    // If no prefix but we have a previous word, use Bigram prediction
+    const rankedTokens = [...candidateTokens];
+    if (rankedTokens.length === 0) return [];
+
+    const analysisByToken = new Map();
+    const allNodes = [];
+    const rankWeightByToken = new Map();
+
+    prefixEntries.forEach((entry) => {
+      if (!entry?.word) return;
+      rankWeightByToken.set(entry.word, Math.max(rankWeightByToken.get(entry.word) || 0, entry.normalizedWeight || 0));
+    });
+    transitionEntries.forEach((entry) => {
+      if (!entry?.to) return;
+      rankWeightByToken.set(entry.to, Math.max(rankWeightByToken.get(entry.to) || 0, entry.normalizedWeight || 0));
+    });
+
+    rankedTokens.forEach((token) => {
+      const analysis = PhonemeEngine.analyzeWord(token);
+      analysisByToken.set(token, analysis);
+      const node = createPredictionLexemeNode(token, analysis, rankWeightByToken.get(token) || 0);
+      if (node) allNodes.push(node);
+    });
+
+    const sequenceNeighborhood = normalizedContextWord
+      ? sequenceGraphRepo.buildNeighborhood([normalizedContextWord], { limit: queryLimit })
+      : { nodes: [], edges: [] };
+    const semanticNeighborhood = semanticGraphRepo.buildNeighborhood({
+      tokens: rankedTokens,
+    });
+
+    const localPhoneticEdges = normalizedContextWord
+      ? buildLocalPhoneticEdges(normalizedContextWord, rankedTokens, analysisByToken)
+      : [];
+
+    const graph = buildTokenGraph({
+      nodes: [
+        ...allNodes,
+        ...(sequenceNeighborhood.nodes || []),
+        ...(semanticNeighborhood.nodes || []),
+      ],
+      edges: [
+        ...(sequenceNeighborhood.edges || []),
+        ...(semanticNeighborhood.edges || []),
+        ...localPhoneticEdges,
+      ],
+    });
+
+    const activation = buildContextActivation(graph, {
+      prefix: normalizedPrefix,
+      prevToken: normalizedContextWord,
+      anchorTokens: prefixEntries.map((entry) => ({
+        token: entry.word,
+        weight: 0.55 + ((entry.normalizedWeight || 0) * 0.45),
+      })),
+    });
+    const traversed = traverseTokenGraph(graph, activation);
+    const scored = scoreGraphCandidates(graph, traversed, activation);
+    const ranked = judiciary.rankGraphCandidates(scored);
+
+    if (ranked.length > 0) {
+      const filteredRanked = ranked.filter((candidate) => (
+        normalizedPrefix || candidate.token !== normalizedContextWord
+      ));
+      if (filteredRanked.length > 0) {
+        return filteredRanked.slice(0, limit).map((candidate) => candidate.token);
+      }
+    }
+
+    if (normalizedPrefix) {
+      return model.predict(normalizedPrefix, limit);
+    }
     if (normalizedContextWord) {
       return model.predictNext(normalizedContextWord, limit);
     }
-
     return [];
-  }, [isReady, model]);
+  }, [isReady, judiciary, model, semanticGraphRepo, sequenceGraphRepo]);
 
   /**
    * PLS-powered completions with rhyme, meter, color, and ghost-line support.

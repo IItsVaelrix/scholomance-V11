@@ -5,6 +5,11 @@
 
 import { createEmptyLexicalEntry } from '../../core/schemas.js';
 import { createJudiciaryEngine } from '../../core/judiciary.js';
+import { buildTokenGraph } from '../../core/token-graph/build.js';
+import { buildContextActivation } from '../../core/token-graph/activation.js';
+import { traverseTokenGraph } from '../../core/token-graph/traverse.js';
+import { scoreGraphCandidates } from '../../core/token-graph/score.js';
+import { createTokenGraphSemanticRepo } from '../../services/token-graph/semantic.repo.js';
 import { coalescedLookup } from './wordLookupCoalescer.js';
 
 const DEFAULT_CACHE_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
@@ -39,6 +44,7 @@ const MANUAL_LEXICAL_OVERRIDES = Object.freeze({
 });
 
 const suggestionJudiciary = createJudiciaryEngine();
+const suggestionSemanticRepo = createTokenGraphSemanticRepo();
 
 function toNonEmptyString(value) {
   if (typeof value !== 'string') return null;
@@ -165,6 +171,90 @@ function rankSuggestionGroup(sourceWord, values, category) {
 
   if (uniqueSuggestions.length === 0) return [];
 
+  const lexicalEntriesByToken = {};
+  if (category === 'synonyms' || category === 'antonyms') {
+    lexicalEntriesByToken[normalizedSource] = {
+      [category]: uniqueSuggestions,
+    };
+  }
+  const semanticNeighborhood = suggestionSemanticRepo.buildNeighborhood({
+    tokens: [normalizedSource, ...uniqueSuggestions],
+    lexicalEntriesByToken,
+  });
+
+  const graphEdges = [];
+  uniqueSuggestions.forEach((suggestion, index) => {
+    const normalizedSuggestion = normalizeComparableTerm(suggestion);
+    if (!normalizedSuggestion) return;
+    const signals = computeSuggestionSignals(
+      normalizedSource,
+      suggestion,
+      index,
+      uniqueSuggestions.length,
+      category,
+    );
+    graphEdges.push({
+      fromId: `lexeme:${normalizedSource}`,
+      toId: `lexeme:${normalizedSuggestion}`,
+      relation: 'SEQUENTIAL_LIKELIHOOD',
+      weight: signals.predictor,
+      evidence: [`category:${category}`],
+    });
+    graphEdges.push({
+      fromId: `lexeme:${normalizedSource}`,
+      toId: `lexeme:${normalizedSuggestion}`,
+      relation: 'SYNTACTIC_COMPATIBILITY',
+      weight: signals.syntax,
+      evidence: ['lexical_group_rank'],
+    });
+
+    if (category === 'rhymes' || category === 'slantRhymes') {
+      graphEdges.push({
+        fromId: `lexeme:${normalizedSource}`,
+        toId: `lexeme:${normalizedSuggestion}`,
+        relation: 'PHONETIC_SIMILARITY',
+        weight: signals.phoneme,
+        evidence: ['lexical_rhyme_signal'],
+      });
+    } else {
+      graphEdges.push({
+        fromId: `lexeme:${normalizedSource}`,
+        toId: `lexeme:${normalizedSuggestion}`,
+        relation: 'SEMANTIC_ASSOCIATION',
+        weight: category === 'antonyms'
+          ? Math.max(0.4, signals.predictor * 0.7)
+          : Math.max(0.68, signals.predictor),
+        evidence: [`lexical_${category}`],
+      });
+    }
+  });
+
+  const graph = buildTokenGraph({
+    nodes: semanticNeighborhood.nodes || [],
+    edges: [...(semanticNeighborhood.edges || []), ...graphEdges],
+  });
+  const graphActivation = buildContextActivation(graph, {
+    prevToken: normalizedSource,
+    syntaxContext: (category === 'rhymes' || category === 'slantRhymes')
+      ? {
+        role: 'content',
+        lineRole: 'line_end',
+        stressRole: 'primary',
+        rhymePolicy: 'allow',
+      }
+      : {
+        role: 'content',
+        lineRole: 'line_mid',
+        stressRole: 'primary',
+        rhymePolicy: 'suppress',
+      },
+  });
+  const graphScores = new Map(
+    suggestionJudiciary
+      .rankGraphCandidates(scoreGraphCandidates(graph, traverseTokenGraph(graph, graphActivation), graphActivation))
+      .map((candidate) => [normalizeComparableTerm(candidate.token), candidate.totalScore])
+  );
+
   const scored = uniqueSuggestions.map((suggestion, index) => {
     const signals = computeSuggestionSignals(
       normalizedSource,
@@ -185,12 +275,20 @@ function rankSuggestionGroup(sourceWord, values, category) {
       },
       { word: suggestion, layer: 'SPELLCHECK', confidence: signals.spellcheck, category },
     ];
-    const score = suggestionJudiciary.calculateAllScores(candidateLayers).get(suggestion)?.total ?? 0;
-    return { suggestion, index, score };
+    const flatScore = suggestionJudiciary.calculateAllScores(candidateLayers).get(suggestion)?.total ?? 0;
+    const graphScore = graphScores.get(normalizeComparableTerm(suggestion)) ?? 0;
+    return {
+      suggestion,
+      index,
+      score: Math.max(flatScore, graphScore),
+      flatScore,
+      graphScore,
+    };
   });
 
   scored.sort((a, b) =>
     (b.score - a.score) ||
+    (b.graphScore - a.graphScore) ||
     (a.index - b.index) ||
     a.suggestion.localeCompare(b.suggestion)
   );

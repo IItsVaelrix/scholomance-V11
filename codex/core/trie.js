@@ -93,6 +93,25 @@ export class TriePredictor {
   }
 
   /**
+   * Predicts words starting with the prefix and keeps frequency metadata.
+   * @param {string} prefix
+   * @param {number} limit
+   * @returns {Array<{word: string, frequency: number}>}
+   */
+  predictEntries(prefix, limit = 5) {
+    const node = this.findNode(prefix);
+    if (!node) return [];
+
+    const results = [];
+    this.traverse(node, results);
+
+    return results
+      .sort((a, b) => b.frequency - a.frequency || a.word.localeCompare(b.word))
+      .slice(0, limit)
+      .map((item) => ({ word: item.word, frequency: item.frequency }));
+  }
+
+  /**
    * Predicts the next word based on an exact word match (Bigram).
    * @param {string} word 
    * @param {number} limit 
@@ -106,6 +125,22 @@ export class TriePredictor {
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)
       .map(entry => entry[0]);
+  }
+
+  /**
+   * Predicts the next word and keeps N-gram weight metadata.
+   * @param {string} word
+   * @param {number} limit
+   * @returns {Array<{word: string, weight: number}>}
+   */
+  predictNextEntries(word, limit = 5) {
+    const node = this.findNode(word);
+    if (!node || !node.isEndOfWord) return [];
+
+    return Array.from(node.ngrams.entries())
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit)
+      .map(([nextWord, weight]) => ({ word: nextWord, weight }));
   }
 
   traverse(node, results) {

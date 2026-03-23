@@ -107,3 +107,4 @@ nul
 english-wordnet-2025.xml
 *test-output.txt
 .blackboxcli/
+.claude/worktrees/

@@ -1,3 +1,10 @@
+import { HHM_LOGIC_ORDER, HHM_STAGE_WEIGHTS } from '../../src/lib/models/harkov.model.js';
+import {
+  arbitrateGraphCandidates,
+  rankGraphCandidates as rankTokenGraphCandidates,
+} from './token-graph/judiciary.js';
+import { clamp01 } from './token-graph/types.js';
+
 /**
  * CODEx Judiciary (Democracy System)
  * Orchestrates multiple analysis layers to reach a consensus choice.
@@ -12,19 +19,64 @@ const FUNCTION_WORDS = new Set([
   'do', 'does', 'did', 'have', 'has', 'had', 'done',
   'to', 'of', 'in', 'on', 'at', 'for', 'from', 'with', 'by', 'as',
   'not', 'no', 'so', 'too', 'very', 'just', 'can', 'could', 'would', 'should',
-  'will', 'shall', 'might', 'may', 'must'
+  'will', 'shall', 'might', 'may', 'must',
 ]);
 
 const TIE_BREAK_DELTA = 0.05;
+const MAX_LEGACY_TOTAL = 1.35;
 
 const DEFAULT_LAYERS = {
   SYNTAX: { weight: 0.35, name: 'Syntax Analyzer' },
   PREDICTOR: { weight: 0.30, name: 'Predictor' },
-  PHONEME: { weight: 0.25, name: 'Phoneme Engine' },
-  SPELLCHECK: { weight: 0.10, name: 'Spellchecker' }
+  PHONEME: { weight: 0.40, name: 'Phoneme Engine' },
+  SPELLCHECK: { weight: 0.10, name: 'Spellchecker' },
 };
 
 const DEFAULT_CONSENSUS_THRESHOLD = 0.65;
+
+function normalizeHhmStageWeights(stageWeights) {
+  if (!stageWeights || typeof stageWeights !== 'object') {
+    return { ...HHM_STAGE_WEIGHTS };
+  }
+
+  const merged = { ...HHM_STAGE_WEIGHTS };
+  let total = 0;
+  HHM_LOGIC_ORDER.forEach((stage) => {
+    const raw = Number(stageWeights?.[stage]);
+    if (Number.isFinite(raw) && raw > 0) {
+      merged[stage] = raw;
+    }
+    total += merged[stage];
+  });
+
+  if (total <= 0) {
+    return { ...HHM_STAGE_WEIGHTS };
+  }
+
+  const normalized = {};
+  HHM_LOGIC_ORDER.forEach((stage) => {
+    normalized[stage] = merged[stage] / total;
+  });
+  return normalized;
+}
+
+function getStageSignal(hhm, stage) {
+  const signalRaw = Number(hhm?.stageScores?.[stage]?.signal);
+  if (!Number.isFinite(signalRaw)) return 1;
+  return Math.max(0.05, Math.min(1.6, signalRaw));
+}
+
+function getOrderBonus(logicOrder, stage) {
+  const index = logicOrder.indexOf(stage);
+  if (index < 0) return 1;
+  return Math.max(0.9, 1.08 - (index * 0.04));
+}
+
+function normalizeGraphCandidateScore(value, fallback = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return clamp01(fallback);
+  return clamp01(numeric);
+}
 
 export class JudiciaryEngine {
   constructor(config = {}) {
@@ -35,34 +87,48 @@ export class JudiciaryEngine {
   /**
    * Resolves a choice among conflicting suggestions.
    * @param {Array<{word: string, layer: string, confidence: number, isRhyme?: boolean, reason?: string, type?: string, category?: string, strategy?: string, source?: string}>} candidates
-   * @param {{role?: string, lineRole?: string, stressRole?: string, rhymePolicy?: string} | null} [syntaxContext=null]
-   * @returns {{word: string, confidence: number, consensus: boolean, breakdown: object}}
+   * @param {{role?: string, lineRole?: string, stressRole?: string, rhymePolicy?: string, hhm?: object} | null} [syntaxContext=null]
+   * @returns {{word: string, confidence: number, consensus: boolean, breakdown: object} | null}
    */
   vote(candidates, syntaxContext = null) {
-    const scores = this.calculateAllScores(candidates, syntaxContext);
-    const sorted = Array.from(scores.entries()).sort((a, b) => b[1].total - a[1].total);
-
-    if (sorted.length === 0) return null;
-
-    const [winner, scoreData] = sorted[0];
-
-    if (sorted.length > 1 && Math.abs(sorted[0][1].total - sorted[1][1].total) < TIE_BREAK_DELTA) {
-      const phonemeChoice = (Array.isArray(candidates) ? candidates : []).find(
-        (candidate) => candidate?.layer === 'PHONEME'
-      );
-      if (
-        phonemeChoice &&
-        (phonemeChoice.word === sorted[0][0] || phonemeChoice.word === sorted[1][0])
-      ) {
-        const pWord = phonemeChoice.word;
-        const pScore = scores.get(pWord);
-        if (pScore) {
-          return this.formatResult(pWord, pScore.total, pScore.breakdown);
-        }
-      }
+    if (this.looksLikeGraphCandidateList(candidates)) {
+      return this.voteGraph(candidates, syntaxContext);
     }
 
-    return this.formatResult(winner, scoreData.total, scoreData.breakdown);
+    const scores = this.calculateAllScores(candidates, syntaxContext);
+    if (scores.size === 0) return null;
+
+    const graphCandidates = this.adaptLegacyScoresToGraphCandidates(scores);
+    const winner = arbitrateGraphCandidates(graphCandidates, { tieDelta: TIE_BREAK_DELTA });
+    if (!winner) return null;
+
+    const scoreData = scores.get(winner.token);
+    if (!scoreData) return null;
+
+    return this.formatResult(winner.token, scoreData.total, scoreData.breakdown);
+  }
+
+  voteGraph(candidates, _syntaxContext = null) {
+    const ranked = this.rankGraphCandidates(candidates);
+    const winner = ranked[0];
+    if (!winner) return null;
+
+    const breakdown = {
+      [winner.token]: Array.isArray(winner.trace)
+        ? winner.trace.map((trace) => ({
+          layer: trace.heuristic,
+          score: trace.contribution,
+          syntaxModifier: 1,
+        }))
+        : [],
+    };
+
+    return {
+      word: winner.token,
+      confidence: normalizeGraphCandidateScore(winner.totalScore),
+      consensus: normalizeGraphCandidateScore(winner.totalScore) >= this.CONSENSUS_THRESHOLD,
+      breakdown,
+    };
   }
 
   /**
@@ -71,6 +137,10 @@ export class JudiciaryEngine {
    */
   calculateAllScores(candidates, syntaxContext = null) {
     if (!Array.isArray(candidates) || candidates.length === 0) return new Map();
+
+    if (this.looksLikeGraphCandidateList(candidates)) {
+      return this.calculateGraphScores(candidates);
+    }
 
     const seedCandidates = candidates.filter((candidate) =>
       candidate &&
@@ -90,7 +160,8 @@ export class JudiciaryEngine {
       if (!layerMeta) return;
 
       const syntaxModifier = this.getSyntaxModifier(candidate, syntaxContext);
-      const weightedScore = candidate.confidence * layerMeta.weight * syntaxModifier;
+      const hhmData = this.getHhmModifier(candidate, syntaxContext);
+      const weightedScore = candidate.confidence * layerMeta.weight * syntaxModifier * hhmData.modifier;
 
       if (!scores.has(candidate.word)) {
         scores.set(candidate.word, { total: 0, breakdown: [] });
@@ -102,10 +173,37 @@ export class JudiciaryEngine {
         layer: candidate.layer,
         score: weightedScore,
         syntaxModifier,
+        hhmStage: hhmData.stage,
+        hhmModifier: hhmData.modifier,
       });
     });
 
     return scores;
+  }
+
+  calculateGraphScores(graphCandidates = []) {
+    const scores = new Map();
+
+    graphCandidates.forEach((candidate) => {
+      if (!candidate || typeof candidate.token !== 'string') return;
+      scores.set(candidate.token, {
+        total: normalizeGraphCandidateScore(candidate.totalScore),
+        breakdown: Array.isArray(candidate.trace)
+          ? candidate.trace.map((trace) => ({
+            layer: trace.heuristic,
+            score: trace.contribution,
+            syntaxModifier: 1,
+          }))
+          : [],
+        candidate,
+      });
+    });
+
+    return scores;
+  }
+
+  rankGraphCandidates(graphCandidates = []) {
+    return rankTokenGraphCandidates(graphCandidates, { tieDelta: TIE_BREAK_DELTA });
   }
 
   getSyntaxModifier(candidate, syntaxContext) {
@@ -132,11 +230,59 @@ export class JudiciaryEngine {
       modifier *= 1.15;
     }
 
-    if (syntaxContext.stressRole === 'unstressed' && syntaxContext.role === 'function') {
+    if (
+      syntaxContext.stressRole === 'unstressed'
+      && syntaxContext.role === 'function'
+      && candidate.layer !== 'SPELLCHECK'
+    ) {
       modifier *= 0.8;
     }
 
     return modifier;
+  }
+
+  getHhmModifier(candidate, syntaxContext) {
+    const fallbackStage = this.layers[candidate?.layer] ? candidate.layer : 'JUDICIARY';
+    const hhm = syntaxContext?.hhm && typeof syntaxContext.hhm === 'object'
+      ? syntaxContext.hhm
+      : null;
+
+    if (!hhm) {
+      return {
+        stage: fallbackStage,
+        modifier: 1,
+      };
+    }
+
+    const stageWeights = normalizeHhmStageWeights(hhm.stageWeights);
+    const logicOrder = Array.isArray(hhm.logicOrder) && hhm.logicOrder.length > 0
+      ? hhm.logicOrder
+      : HHM_LOGIC_ORDER;
+    const tokenWeightRaw = Number(hhm.tokenWeight);
+    const tokenWeight = Number.isFinite(tokenWeightRaw)
+      ? Math.max(0.05, Math.min(1.5, tokenWeightRaw))
+      : 1;
+    const stageSignal = getStageSignal(hhm, fallbackStage);
+    const orderBonus = getOrderBonus(logicOrder, fallbackStage);
+    const stageWeight = Number(stageWeights[fallbackStage]) || 0;
+    const defaultStageWeight = Number(HHM_STAGE_WEIGHTS[fallbackStage]) || 0.1;
+    const weightRatio = stageWeight > 0 && defaultStageWeight > 0
+      ? stageWeight / defaultStageWeight
+      : 1;
+
+    const modifier = Math.max(
+      0.2,
+      Math.min(2.8, tokenWeight * stageSignal * orderBonus * weightRatio),
+    );
+
+    return {
+      stage: fallbackStage,
+      modifier,
+      tokenWeight,
+      stageSignal,
+      orderBonus,
+      stageWeight,
+    };
   }
 
   buildSyntaxCandidates(candidates, syntaxContext) {
@@ -162,7 +308,7 @@ export class JudiciaryEngine {
       word: endorsedWord,
       layer: 'SYNTAX',
       confidence: 0.9,
-      reason: 'syntax_line_end_content_endorsement'
+      reason: 'syntax_line_end_content_endorsement',
     });
 
     const leadingWord = rankedWords[0][0];
@@ -181,12 +327,77 @@ export class JudiciaryEngine {
           word,
           layer: 'SYNTAX',
           confidence,
-          reason: 'syntax_line_end_content_preference'
+          reason: 'syntax_line_end_content_preference',
         });
       });
     }
 
     return syntaxCandidates;
+  }
+
+  looksLikeGraphCandidateList(candidates) {
+    return Array.isArray(candidates)
+      && candidates.length > 0
+      && typeof candidates[0]?.token === 'string'
+      && Number.isFinite(candidates[0]?.totalScore);
+  }
+
+  adaptLegacyScoresToGraphCandidates(scores) {
+    return Array.from(scores.entries()).map(([word, scoreData]) => {
+      const breakdown = Array.isArray(scoreData?.breakdown) ? scoreData.breakdown : [];
+      const phonemeScore = breakdown
+        .filter((entry) => entry.layer === 'PHONEME')
+        .reduce((sum, entry) => sum + (entry.score || 0), 0);
+      const syntaxScore = breakdown
+        .filter((entry) => entry.layer === 'SYNTAX')
+        .reduce((sum, entry) => sum + (entry.score || 0), 0);
+      const predictorScore = breakdown
+        .filter((entry) => entry.layer === 'PREDICTOR')
+        .reduce((sum, entry) => sum + (entry.score || 0), 0);
+      const spellcheckScore = breakdown
+        .filter((entry) => entry.layer === 'SPELLCHECK')
+        .reduce((sum, entry) => sum + (entry.score || 0), 0);
+      const syntaxModifierAverage = breakdown.length > 0
+        ? breakdown.reduce((sum, entry) => sum + (Number(entry.syntaxModifier) || 1), 0) / breakdown.length
+        : 1;
+
+      const totalScore = clamp01((Number(scoreData?.total) || 0) / MAX_LEGACY_TOTAL);
+      const legalityScore = clamp01(
+        ((syntaxScore / DEFAULT_LAYERS.SYNTAX.weight) * 0.65)
+        + (((syntaxModifierAverage - 1) + 1) * 0.2)
+        + (this.isLikelyContentWord(word) ? 0.15 : 0.05),
+      );
+      const semanticScore = clamp01(
+        ((predictorScore / DEFAULT_LAYERS.PREDICTOR.weight) * 0.45)
+        + ((spellcheckScore / DEFAULT_LAYERS.SPELLCHECK.weight) * 0.4)
+        + (this.isLikelyContentWord(word) ? 0.15 : 0.05),
+      );
+      const phoneticComponent = clamp01(phonemeScore / DEFAULT_LAYERS.PHONEME.weight);
+
+      return {
+        token: word,
+        totalScore,
+        activationScore: totalScore,
+        legalityScore,
+        semanticScore,
+        phoneticScore: phoneticComponent,
+        schoolScore: 0,
+        noveltyScore: this.isLikelyContentWord(word) ? 0.6 : 0.18,
+        connectedness: clamp01(breakdown.length / 4),
+        pathCoherence: clamp01(
+          breakdown.length > 0
+            ? breakdown.reduce((sum, entry) => sum + clamp01((entry.score || 0) / (Number(scoreData?.total) || 1)), 0) / breakdown.length
+            : 0,
+        ),
+        trace: breakdown.map((entry) => ({
+          heuristic: `legacy_${String(entry.layer || '').toLowerCase()}`,
+          rawScore: clamp01(entry.score || 0),
+          weight: 1,
+          contribution: clamp01(entry.score || 0),
+          explanation: `${entry.layer} contributed ${(Number(entry.score || 0)).toFixed(3)}.`,
+        })),
+      };
+    });
   }
 
   isRhymeCandidate(candidate) {
@@ -198,7 +409,7 @@ export class JudiciaryEngine {
       candidate?.type,
       candidate?.category,
       candidate?.strategy,
-      candidate?.source
+      candidate?.source,
     ]
       .filter((value) => typeof value === 'string')
       .map((value) => value.toLowerCase());
@@ -223,14 +434,14 @@ export class JudiciaryEngine {
 
   formatResult(word, confidence, breakdown) {
     const breakdownObj = {
-      [word]: Array.isArray(breakdown) ? breakdown : []
+      [word]: Array.isArray(breakdown) ? breakdown : [],
     };
 
     return {
       word,
       confidence: Math.min(1, confidence),
       consensus: confidence >= this.CONSENSUS_THRESHOLD,
-      breakdown: breakdownObj
+      breakdown: breakdownObj,
     };
   }
 }
