@@ -234,10 +234,10 @@ export default function CombatPage() {
       </div>
 
       {/* ── Main Split ── */}
-      <div className="combat-split">
+      <div className={`combat-split ${phaserError ? 'combat-split--text-only' : ''}`}>
 
-        {/* LEFT — Phaser visionglass */}
-        <div className="combat-visual-col">
+        {/* LEFT — Phaser visionglass (collapses on error per UI_SPEC §6.3) */}
+        <div className={`combat-visual-col ${phaserError ? 'combat-visual-col--fallback' : ''}`}>
 
           {/* Phaser canvas */}
           <div
@@ -253,9 +253,9 @@ export default function CombatPage() {
             )}
             {phaserError && (
               <div className="combat-canvas-error" role="alert">
-                <p className="error-title">Arena Unavailable</p>
-                <p className="error-body">{phaserError}</p>
-                <code className="error-code">npm install phaser</code>
+                <div className="error-glyph" aria-hidden="true">⚔</div>
+                <p className="error-title">Text-Only Mode</p>
+                <p className="error-body">The visionglass could not be summoned. Combat continues through the chronicle.</p>
               </div>
             )}
           </div>
