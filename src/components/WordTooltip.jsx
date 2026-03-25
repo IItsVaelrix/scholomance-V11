@@ -705,7 +705,7 @@ const WordTooltip = ({
         left: pos.x,
         width: size.width,
         height: size.height,
-        zIndex: 1000,
+        zIndex: 1300, /* Layer 4 — Interactive Chrome (UI_SPEC §3) */
         touchAction: "none"
       }}
       initial={{ opacity: 0, scale: 0.95 }}

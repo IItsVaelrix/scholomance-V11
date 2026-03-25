@@ -1,4 +1,5 @@
 import React from 'react';
+import './ErrorBoundary.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -7,23 +8,23 @@ class ErrorBoundary extends React.Component {
   }
 
   static getDerivedStateFromError(error) {
-    // Update state so the next render will show the fallback UI.
     return { hasError: true, error };
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
     console.error("Uncaught error:", error, errorInfo);
   }
 
   render() {
     if (this.state.hasError) {
-      // You can render any custom fallback UI
       return (
-        <div style={{ padding: '20px', textAlign: 'center' }}>
-          <h1>Something went wrong.</h1>
-          <p>We&apos;re sorry for the inconvenience. Please try refreshing the page.</p>
-          {!import.meta.env.PROD && this.state.error && <pre style={{ whiteSpace: 'pre-wrap' }}>{this.state.error.toString()}</pre>}
+        <div className="error-boundary" role="alert">
+          <span className="error-boundary-glyph" aria-hidden="true">&#x2736;</span>
+          <h1 className="error-boundary-title">The rite was interrupted.</h1>
+          <p className="error-boundary-message">A disturbance in the weave has disrupted this surface. Please refresh to restore the binding.</p>
+          {!import.meta.env.PROD && this.state.error && (
+            <pre className="error-boundary-details">{this.state.error.toString()}</pre>
+          )}
         </div>
       );
     }

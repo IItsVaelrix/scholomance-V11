@@ -1,0 +1,48 @@
+/* ErrorBoundary — UI_SPEC §6.1 */
+
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  min-height: 40vh;
+  gap: 12px;
+}
+
+.error-boundary-glyph {
+  font-size: 2.5rem;
+  color: var(--active-school-color, rgba(201, 162, 39, 0.3));
+  opacity: 0.4;
+}
+
+.error-boundary-title {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: var(--text-lg, 1.25rem);
+  color: var(--text-primary, #ede8d4);
+  font-weight: 400;
+}
+
+.error-boundary-message {
+  font-family: var(--font-sans, 'Space Grotesk', sans-serif);
+  font-size: var(--text-sm, 0.875rem);
+  color: rgba(201, 162, 39, 0.5);
+  max-width: 420px;
+  line-height: 1.6;
+}
+
+.error-boundary-details {
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  font-size: var(--text-xs, 0.75rem);
+  color: rgba(204, 34, 34, 0.7);
+  background: rgba(204, 34, 34, 0.05);
+  border: 1px solid rgba(204, 34, 34, 0.15);
+  border-radius: 4px;
+  padding: 12px 16px;
+  max-width: 600px;
+  width: 100%;
+  white-space: pre-wrap;
+  text-align: left;
+  overflow-x: auto;
+}

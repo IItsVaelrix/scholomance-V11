@@ -11,9 +11,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.js';
 
 const TYPE_STYLES = {
-  system:   { color: '#6b5a2a', prefix: '—' },
-  player:   { color: '#c9a227', prefix: '▶' },
-  opponent: { color: '#00e5ff', prefix: '◀' },
+  system:   { color: 'var(--combat-log-system, #6b5a2a)', prefix: '—' },
+  player:   { color: 'var(--combat-log-player, #c9a227)', prefix: '▶' },
+  opponent: { color: 'var(--combat-log-opponent, #00e5ff)', prefix: '◀' },
 };
 
 const TYPEWRITER_SPEED_MS = 16; // ms per character
@@ -80,6 +80,12 @@ export function BattleLog({ entries = [] }) {
       </div>
 
       <div className="battle-log-entries" role="log">
+        {entries.length === 0 && (
+          <div className="battle-log-empty" aria-label="No chronicle entries yet">
+            <span className="battle-log-empty-glyph" aria-hidden="true">&#x266B;</span>
+            <span className="battle-log-empty-text">The chronicle awaits your first verse...</span>
+          </div>
+        )}
         <AnimatePresence initial={false}>
           {entries.map((entry, i) => {
             const style    = TYPE_STYLES[entry.type] ?? TYPE_STYLES.system;
