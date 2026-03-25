@@ -1054,6 +1054,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? (codexEntry?.opacity ?? undefined)
                           : undefined;
                         const isMultiSyllable = shouldColorWord && codexEntry?.isMultiSyllable;
+                        const isRichMultiSyllable = shouldColorWord && (codexEntry?.syllablesMatched >= 3 || false);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordPayload = {
@@ -1071,6 +1072,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           'truesight-word',
                           shouldColorWord ? 'grimoire-word' : 'grimoire-word--grey',
                           isMultiSyllable ? 'word--multi-rhyme' : '',
+                          isRichMultiSyllable ? 'word--multi-rhyme--rich' : '',
                           isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                         ].filter(Boolean).join(' ');
 
@@ -1145,6 +1147,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? (codexEntry?.color || activeColors[wordVowelFamily] || undefined)
                           : undefined;
                         const isMultiSyllable = shouldColor && codexEntry?.isMultiSyllable;
+                        const isRichMultiSyllable = shouldColor && (codexEntry?.syllablesMatched >= 3 || false);
                         return (
                           <span
                             key={charStart}
@@ -1152,6 +1155,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                               "truesight-word",
                               shouldColor ? "grimoire-word" : "grimoire-word--grey",
                               isMultiSyllable ? "word--multi-rhyme" : "",
+                              isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
                             style={{ color }}
                           >

@@ -1406,7 +1406,8 @@
 }
 
 .ide-layout-wrapper .truesight-overlay--editing .word--multi-rhyme {
-  text-shadow: none;
+  /* Preserve the glow even in editing mode — this is the whole point */
+  text-shadow: 0 0 8px currentColor;
 }
 
 .ide-layout-wrapper .truesight-overlay--editing .grimoire-word--rhyme-highlight::after {
@@ -1497,7 +1498,17 @@
 }
 
 .ide-layout-wrapper .word--multi-rhyme {
-  text-shadow: 0 0 10px currentColor;
+  /* Feminine rhyme (2 syllables matched) — visible glow */
+  text-shadow: 0 0 10px currentColor, 0 0 20px currentColor;
+}
+
+.ide-layout-wrapper .word--multi-rhyme--rich {
+  /* Dactylic/extended (3+ syllables) — vivid double-pulse glow */
+  text-shadow:
+    0 0 8px currentColor,
+    0 0 18px currentColor,
+    0 0 35px currentColor;
+  filter: brightness(1.15);
 }
 
 .ide-layout-wrapper .grimoire-word--rhyme-highlight::after {
@@ -2152,6 +2163,12 @@
   background: rgba(192, 96, 80, 0.1);
   border-color: rgba(192, 96, 80, 0.2);
   color: #c06050;
+}
+
+.intellisense-tag--recommend {
+  background: rgba(80, 180, 200, 0.1);
+  border-color: rgba(80, 180, 200, 0.2);
+  color: #50b4c8;
 }
 
 /* Per-item PLS badge tags */

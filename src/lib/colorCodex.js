@@ -419,8 +419,15 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
     );
 
     const isMultiSyllable = bestConn ? bestConn.syllablesMatched >= 2 : false;
-    if (isMultiSyllable) {
-      baseColor = boostLightness(baseColor, 0.06);
+    const isRichMultiSyllable = bestConn ? bestConn.syllablesMatched >= 3 : false;
+    if (isRichMultiSyllable) {
+      // Dactylic/extended: vivid boost — clearly distinct from monosyllabic
+      const { h, s, l } = hexToHsl(baseColor);
+      baseColor = hslToHex(h, Math.min(1, s + 0.18), Math.min(1, l + 0.22));
+    } else if (isMultiSyllable) {
+      // Feminine: moderate boost — visibly brighter than monosyllabic
+      const { h, s, l } = hexToHsl(baseColor);
+      baseColor = hslToHex(h, Math.min(1, s + 0.10), Math.min(1, l + 0.13));
     }
 
     const lineIndex = Number.isInteger(profile?.lineIndex) ? profile.lineIndex : -1;
@@ -477,6 +484,7 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
       groupId: entry.hasCluster ? String(entry.root) : null,
       rhymeType: entry.bestConn ? entry.bestConn.type : null,
       isMultiSyllable: entry.isMultiSyllable,
+      syllablesMatched: entry.bestConn ? (entry.bestConn.syllablesMatched || 0) : 0,
       bestScore: entry.bestScore,
       phoneticWeight: entry.phoneticWeight,
       salience: entry.salience,

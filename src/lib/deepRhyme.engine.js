@@ -89,10 +89,11 @@ export class DeepRhymeEngine {
 
     const endRhymeConnections = this.findEndRhymeConnections(lines);
     const internalRhymeConnections = lines.flatMap(l => l.internalRhymes);
+    const crossLineAssonanceConnections = this.findCrossLineAssonanceConnections(lines, endRhymeConnections);
     const { rhymeGroups, schemePattern } = this.buildRhymeGroups(lines, endRhymeConnections);
     this.assignGroupLabels(endRhymeConnections, rhymeGroups);
 
-    const allConnections = [...endRhymeConnections, ...internalRhymeConnections];
+    const allConnections = [...endRhymeConnections, ...internalRhymeConnections, ...crossLineAssonanceConnections];
     const result = {
       lines,
       endRhymeConnections,
@@ -165,6 +166,89 @@ export class DeepRhymeEngine {
       if (groupWords.length < 2) continue;
       this.collectGroupConnections(groupWords, connections, seenPairs);
     }
+    return connections;
+  }
+
+  /**
+   * Finds cross-line assonance connections for interior (non-end) words.
+   * These are words that share stressed vowel families across different lines
+   * but are not at the end of their lines, so they're invisible to
+   * findEndRhymeConnections and findInternalRhymes.
+   *
+   * Only 2+ syllable words are considered as source anchors to avoid noise.
+   * Monosyllabic words can be targets if paired with a multisyllabic anchor.
+   */
+  findCrossLineAssonanceConnections(lines, existingEndConnections = []) {
+    const connections = [];
+
+    // Track which charStarts are line-end words so we can skip already-covered pairs.
+    const endWordCharStarts = new Set();
+    for (const line of lines) {
+      const lastWord = line.words[line.words.length - 1];
+      if (lastWord) endWordCharStarts.add(lastWord.charStart);
+    }
+
+    // Build a set of already-evaluated pair keys from end-rhyme connections.
+    const existingPairKeys = new Set();
+    for (const conn of existingEndConnections) {
+      existingPairKeys.add(this.getPairKey(conn.wordA, conn.wordB));
+    }
+
+    // Collect all words from all lines as candidates.
+    // Only 2+ syllable words are eligible as anchors to reduce noise.
+    const multiSylWords = [];
+    const allWords = [];
+    for (const line of lines) {
+      for (const word of line.words) {
+        if (!word.analysis) continue;
+        allWords.push(word);
+        if ((word.analysis.syllableCount || 1) >= 2) multiSylWords.push(word);
+      }
+    }
+
+    if (multiSylWords.length < 2) return connections;
+
+    // Build stressed-vowel family buckets from multisyllabic anchor words.
+    const stressBuckets = new Map();
+    for (const word of multiSylWords) {
+      const family = this.getPrimaryStressedVowelFamily(word.analysis);
+      if (!family) continue;
+      if (!stressBuckets.has(family)) stressBuckets.set(family, []);
+      stressBuckets.get(family).push(word);
+    }
+
+    // Also add monosyllabic content words into the buckets as secondary targets.
+    for (const word of allWords) {
+      if ((word.analysis.syllableCount || 1) >= 2) continue; // already added
+      const family = this.getPrimaryStressedVowelFamily(word.analysis);
+      if (!family) continue;
+      if (stressBuckets.has(family)) stressBuckets.get(family).push(word);
+    }
+
+    const seenPairs = new Set(existingPairKeys);
+
+    for (const [, groupWords] of stressBuckets) {
+      if (groupWords.length < 2) continue;
+      for (let i = 0; i < groupWords.length; i++) {
+        for (let j = i + 1; j < groupWords.length; j++) {
+          const wA = groupWords[i], wB = groupWords[j];
+
+          // Skip same-line pairs — already handled by findInternalRhymes.
+          if (wA.lineIndex === wB.lineIndex) continue;
+
+          // Skip if BOTH are end-words — already handled by findEndRhymeConnections.
+          if (endWordCharStarts.has(wA.charStart) && endWordCharStarts.has(wB.charStart)) continue;
+
+          // Require at least one word to have 2+ syllables (the anchor).
+          const aMulti = (wA.analysis.syllableCount || 1) >= 2;
+          const bMulti = (wB.analysis.syllableCount || 1) >= 2;
+          if (!aMulti && !bMulti) continue;
+
+          this.pushConnectionIfValid(wA, wB, connections, seenPairs);
+        }
+      }
+    }
+
     return connections;
   }
 
