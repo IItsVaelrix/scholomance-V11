@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.8** | Last updated: 2026-03-21
+**Version: 1.9** | Last updated: 2026-03-26
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Core combat, lexical, runtime bus, world inspection, combat speaking, and phonosemantic graph contract
-- Version: 1.7 -> 1.8
-- Changed fields: added `TokenGraphNode`, `TokenGraphEdge`, `ContextActivation`, and `GraphCandidate` for graph-backed prediction, judiciary arbitration, lexical ranking, and spellweave alignment
+- Schema: Truesight compiler bridge contract
+- Version: 1.8 -> 1.9
+- Changed fields: added `TruesightCompilerDescriptor`, `VerseLineIR`, `VerseTokenIR`, `SyllableWindowIR`, and `VerseIR`; panel-analysis payloads may now include optional `analysis.compiler`
 - Breaking: no
-- Claude impact: no immediate UI payload change; bridge hooks can now consume graph-ranked predictor candidates without inventing local shapes
-- Blackbox impact: predictor, judiciary, and lexical suggestion fixtures should cover graph-backed ranking and backward-compatible legacy facade behavior
+- Claude impact: no required UI change; optional compiler metadata is now available for future Truesight mode/version display, and VerseIR offsets now explicitly preserve raw whitespace and line breaks
+- Blackbox impact: panel-analysis fixtures can optionally assert `analysis.compiler`; compiler regression coverage should include CRLF, trailing spaces, and terminal blank-line fidelity
 
 ---
 
@@ -173,6 +173,91 @@ interface GraphCandidate {
   noveltyScore: number;
   totalScore: number;
   trace: ScoreTrace[];
+}
+
+interface TruesightCompilerDescriptor {
+  verseIRVersion: string;
+  mode: TruesightAnalysisMode;
+  tokenCount: number;
+  lineCount: number;
+  syllableWindowCount: number;
+  lineBreakStyle: LineBreakStyle;
+  whitespaceFidelity: boolean;
+}
+
+interface VerseLineIR {
+  lineIndex: number;
+  text: string;
+  normalizedText: string;
+  tokenIds: number[];
+  charStart: number;
+  charEnd: number;
+  lineBreak: string;
+  lineBreakStart: number;
+  lineBreakEnd: number;
+  rawSlice: string;
+  isTerminalLine: boolean;
+}
+
+interface VerseTokenIR {
+  id: number;
+  text: string;
+  normalized: string;
+  normalizedUpper: string;
+  lineIndex: number;
+  tokenIndexInLine: number;
+  globalTokenIndex: number;
+  charStart: number;
+  charEnd: number;
+  syllableCount: number;
+  phonemes: string[];
+  stressPattern: string;
+  onset: string[];
+  nucleus: string[];
+  coda: string[];
+  vowelFamily: string[];
+  primaryStressedVowelFamily: string | null;
+  terminalVowelFamily: string | null;
+  rhymeTailSignature: string;
+  consonantSkeleton: string;
+  extendedRhymeKeys: string[];
+  flags: {
+    isLineStart: boolean;
+    isLineEnd: boolean;
+    isStopWordLike: boolean;
+    unknownPhonetics: boolean;
+  };
+}
+
+interface SyllableWindowIR {
+  id: number;
+  tokenSpan: [number, number];
+  lineSpan: [number, number];
+  charStart: number;
+  charEnd: number;
+  syllableLength: number;
+  phonemeSpan: string[];
+  vowelSequence: string[];
+  stressContour: string;
+  codaContour: string;
+  signature: string;
+}
+
+interface VerseIR {
+  version: string;
+  rawText: string;
+  normalizedText: string;
+  lines: VerseLineIR[];
+  tokens: VerseTokenIR[];
+  syllableWindows: SyllableWindowIR[];
+  metadata: {
+    mode: TruesightAnalysisMode;
+    lineBreakStyle: LineBreakStyle;
+    tokenCount: number;
+    lineCount: number;
+    syllableWindowCount: number;
+    whitespaceFidelity: boolean;
+  };
 }
 
 interface WorldEntityRef {
@@ -499,6 +584,10 @@ type VowelFamily =
 type School = "SONIC" | "PSYCHIC" | "VOID" | "ALCHEMY" | "WILL";
 
 type DiagnosticSeverity = "info" | "warning" | "error" | "success";
+
+type TruesightAnalysisMode = "live_fast" | "balanced" | "deep_truesight";
+
+type LineBreakStyle = "lf" | "crlf" | "cr" | "mixed" | "none";
 ```
 
 ---
@@ -671,6 +760,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.6 | 2026-03-16 | Added authoritative world room/entity inspection schemas and HTTP contracts | no |
 | 1.7 | 2026-03-17 | Added combat speaking analysis, voice-profile snapshots, and speaking multipliers to combat payloads | no |
 | 1.8 | 2026-03-21 | Added phonosemantic token-graph node/edge, activation, and graph-candidate contracts for prediction and judiciary traversal | no |
+| 1.9 | 2026-03-26 | Added VerseIR compiler contracts, whitespace-fidelity line metadata, syllable windows, and optional Truesight compiler metadata for panel analysis | no |
 
 ---
 

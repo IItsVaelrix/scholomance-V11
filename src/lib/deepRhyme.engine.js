@@ -8,6 +8,7 @@ import { PhonemeEngine } from "./phonology/phoneme.engine.js";
 import { RHYME_TYPES } from "../data/rhymeScheme.patterns.js";
 import { normalizeVowelFamily } from "./phonology/vowelFamily.js";
 import { WORD_REGEX_GLOBAL } from "./wordTokenization.js";
+import { compileVerseToIR } from "./truesight/compiler/compileVerseToIR.js";
 
 /**
  * @typedef {object} WordPosition
@@ -25,7 +26,6 @@ import { WORD_REGEX_GLOBAL } from "./wordTokenization.js";
  * @typedef {object} DocumentAnalysis
  */
 
-const WORD_REGEX = WORD_REGEX_GLOBAL;
 const RHYME_THRESHOLD = 0.60;
 const ASSONANCE_THRESHOLD = 0.5;
 const STRESSED_ASSONANCE_SCORE = 0.62;
@@ -37,6 +37,10 @@ const SYNTAX_GATES = Object.freeze({
   ALLOW_WEAK: 'allow_weak',
   SUPPRESS: 'suppress',
 });
+
+function createWordRegex() {
+  return new RegExp(WORD_REGEX_GLOBAL.source, WORD_REGEX_GLOBAL.flags);
+}
 
 /**
  * Deep Rhyme Analysis Engine
@@ -61,14 +65,12 @@ export class DeepRhymeEngine {
     }
 
     const syntaxLayer = options?.syntaxLayer?.enabled ? options.syntaxLayer : null;
-    const cacheKey = `${text.slice(0, 100)}${text.length}${syntaxLayer ? '|syntax:1' : '|syntax:0'}`;
+    const cacheKey = `${String(options?.mode || 'balanced')}|syntax:${syntaxLayer ? '1' : '0'}|${text}`;
     if (this.analysisCache.has(cacheKey)) {
       return this.analysisCache.get(cacheKey);
     }
 
-    // --- BATCH TOKENIZATION & AUTHORITY LOADING ---
-    // Extract all unique words to pre-fetch their authority data in one go.
-    const allUniqueWords = [...new Set(text.match(WORD_REGEX) || [])];
+    const allUniqueWords = [...new Set(text.match(createWordRegex()) || [])];
     if (typeof this.engine.ensureAuthorityBatch === 'function') {
       await this.engine.ensureAuthorityBatch(allUniqueWords);
     }
@@ -76,16 +78,11 @@ export class DeepRhymeEngine {
     this.syntaxLayerContext = syntaxLayer;
     this.syntaxGateCounters = { enabled: Boolean(syntaxLayer), totalCandidates: 0, suppressedPairs: 0, weakenedPairs: 0, keptPairs: 0 };
 
-    const rawLines = text.split('\n');
-    const lines = [];
-    let charOffset = 0;
-
-    for (let i = 0; i < rawLines.length; i++) {
-      const lineText = rawLines[i];
-      const lineAnalysis = this.analyzeLine(lineText, i, charOffset);
-      lines.push(lineAnalysis);
-      charOffset += lineText.length + 1;
-    }
+    const verseIR = compileVerseToIR(text, {
+      phonemeEngine: this.engine,
+      mode: options?.mode,
+    });
+    const lines = verseIR.lines.map((lineIR) => this.buildLineAnalysisFromIRLine(lineIR, verseIR.tokens));
 
     const endRhymeConnections = this.findEndRhymeConnections(lines);
     const internalRhymeConnections = lines.flatMap(l => l.internalRhymes);
@@ -102,6 +99,15 @@ export class DeepRhymeEngine {
       rhymeGroups,
       schemePattern,
       syntaxSummary: syntaxLayer?.syntaxSummary || null,
+      compiler: {
+        verseIRVersion: verseIR.version,
+        mode: verseIR.metadata?.mode || 'balanced',
+        tokenCount: Number(verseIR.metadata?.tokenCount) || verseIR.tokens.length,
+        lineCount: Number(verseIR.metadata?.lineCount) || verseIR.lines.length,
+        syllableWindowCount: Number(verseIR.metadata?.syllableWindowCount) || verseIR.syllableWindows.length,
+        lineBreakStyle: verseIR.metadata?.lineBreakStyle || 'none',
+        whitespaceFidelity: Boolean(verseIR.metadata?.whitespaceFidelity),
+      },
       statistics: this.computeStatistics(lines, allConnections, this.syntaxGateCounters),
     };
 
@@ -112,26 +118,79 @@ export class DeepRhymeEngine {
   }
 
   analyzeLine(lineText, lineIndex, charOffset = 0) {
-    const words = [];
-    const wordMatches = [...lineText.matchAll(WORD_REGEX)];
-    let totalSyllables = 0;
-    let stressPatterns = [];
+    const verseIR = compileVerseToIR(lineText, { phonemeEngine: this.engine });
+    const lineIR = verseIR.lines[0] || {
+      lineIndex: 0,
+      text: lineText,
+      tokenIds: [],
+    };
 
-    for (let i = 0; i < wordMatches.length; i++) {
-      const match = wordMatches[i];
-      const word = match[0];
-      const charStart = charOffset + match.index;
-      const deepAnalysis = this.engine.analyzeDeep(word);
-      if (deepAnalysis) {
-        totalSyllables += deepAnalysis.syllableCount;
-        stressPatterns.push(deepAnalysis.stressPattern);
-      }
-      words.push({ word, lineIndex, wordIndex: i, charStart, charEnd: charStart + word.length, analysis: deepAnalysis, syntaxToken: this.getSyntaxToken(lineIndex, i, charStart) });
-    }
+    const shiftedWords = lineIR.tokenIds.map((tokenId) => {
+      const token = verseIR.tokens[tokenId];
+      const shiftedCharStart = charOffset + token.charStart;
+      return this.createLineWordFromToken(token, lineIndex, shiftedCharStart);
+    });
 
+    const internalRhymes = this.findInternalRhymes(shiftedWords);
+    const totalSyllables = shiftedWords.reduce((sum, word) => sum + (Number(word?.syllableCount) || 0), 0);
+    const stressPattern = shiftedWords
+      .map((word) => String(word?.stressPattern || '').trim())
+      .filter(Boolean)
+      .join(' ');
+    const endWord = shiftedWords.length > 0 ? shiftedWords[shiftedWords.length - 1] : null;
+
+    return {
+      lineIndex,
+      text: lineText,
+      words: shiftedWords,
+      syllableTotal: totalSyllables,
+      stressPattern,
+      internalRhymes,
+      endRhymeKey: endWord?.rhymeKey || null,
+      endWord: endWord?.analysis || null,
+    };
+  }
+
+  buildLineAnalysisFromIRLine(lineIR, tokens) {
+    const words = lineIR.tokenIds.map((tokenId) => this.createLineWordFromToken(tokens[tokenId]));
     const internalRhymes = this.findInternalRhymes(words);
+    const totalSyllables = words.reduce((sum, word) => sum + (Number(word?.syllableCount) || 0), 0);
+    const stressPattern = words
+      .map((word) => String(word?.stressPattern || '').trim())
+      .filter(Boolean)
+      .join(' ');
     const endWord = words.length > 0 ? words[words.length - 1] : null;
-    return { lineIndex, text: lineText, words, syllableTotal: totalSyllables, stressPattern: stressPatterns.join(' '), internalRhymes, endRhymeKey: endWord?.analysis?.rhymeKey || null, endWord: endWord?.analysis || null };
+
+    return {
+      lineIndex: lineIR.lineIndex,
+      text: lineIR.text,
+      words,
+      syllableTotal: totalSyllables,
+      stressPattern,
+      internalRhymes,
+      endRhymeKey: endWord?.rhymeKey || null,
+      endWord: endWord?.analysis || null,
+    };
+  }
+
+  createLineWordFromToken(token, overrideLineIndex = token.lineIndex, overrideCharStart = token.charStart) {
+    const analysis = token?.analysis || null;
+    const charEnd = overrideCharStart + String(token?.text || '').length;
+
+    return {
+      word: token.text,
+      normalizedWord: String(token.normalizedUpper || token.normalized || '').toUpperCase(),
+      vowelFamily: token.primaryStressedVowelFamily || token.terminalVowelFamily || null,
+      rhymeKey: analysis?.rhymeKey || token.rhymeTailSignature || null,
+      syllableCount: Number(token.syllableCount) || 0,
+      stressPattern: String(token.stressPattern || ''),
+      lineIndex: overrideLineIndex,
+      wordIndex: token.tokenIndexInLine,
+      charStart: overrideCharStart,
+      charEnd,
+      analysis,
+      syntaxToken: this.getSyntaxToken(overrideLineIndex, token.tokenIndexInLine, overrideCharStart),
+    };
   }
 
   getSyntaxToken(lineIndex, wordIndex, charStart) {
@@ -458,7 +517,7 @@ export class DeepRhymeEngine {
     return stats;
   }
 
-  emptyDocumentAnalysis() { return { lines: [], endRhymeConnections: [], internalRhymeConnections: [], allConnections: [], rhymeGroups: new Map(), schemePattern: '', syntaxSummary: null, statistics: { totalLines: 0, totalWords: 0, totalSyllables: 0, perfectCount: 0, nearCount: 0, slantCount: 0, internalCount: 0, multiSyllableCount: 0, endRhymeCount: 0, syntaxGating: { enabled: false, totalCandidates: 0, suppressedPairs: 0, weakenedPairs: 0, keptPairs: 0 } } }; }
+  emptyDocumentAnalysis() { return { lines: [], endRhymeConnections: [], internalRhymeConnections: [], allConnections: [], rhymeGroups: new Map(), schemePattern: '', syntaxSummary: null, compiler: null, statistics: { totalLines: 0, totalWords: 0, totalSyllables: 0, perfectCount: 0, nearCount: 0, slantCount: 0, internalCount: 0, multiSyllableCount: 0, endRhymeCount: 0, syntaxGating: { enabled: false, totalCandidates: 0, suppressedPairs: 0, weakenedPairs: 0, keptPairs: 0 } } }; }
   clearCache() { this.analysisCache.clear(); }
 }
 
