@@ -43,6 +43,8 @@ import ToolsSidebar from "./ToolsSidebar.jsx";
 import SearchPanel from "./SearchPanel.jsx";
 import Minimap from "./Minimap.jsx";
 import FloatingPanel from "../../components/shared/FloatingPanel.jsx";
+import IDEAmbientCanvas from "./IDEAmbientCanvas.jsx";
+import KeystrokeSparksCanvas from "./KeystrokeSparksCanvas.jsx";
 import "./IDE.css";
 
 const SCHOOL_GLYPHS = {
@@ -182,6 +184,11 @@ export default function ReadPage() {
       setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
   }, []);
+
+  const schoolColorHex = useMemo(
+    () => SCHOOLS[selectedSchool]?.color ?? '#c8a84b',
+    [selectedSchool]
+  );
 
   const schoolList = useMemo(
     () => [
@@ -1325,7 +1332,9 @@ export default function ReadPage() {
         onCycleAuroraLevel={cycleAuroraLevel}
       />
       <main className="ide-main-content">
-        <PanelGroup 
+        <IDEAmbientCanvas schoolColor={schoolColorHex} />
+        <PanelGroup
+          className="ide-panel-group"
           direction={isNarrowViewport ? "vertical" : "horizontal"}
           onLayout={handleLayoutChange}
         >
@@ -1455,6 +1464,7 @@ export default function ReadPage() {
           />
           <Panel defaultSize={settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60)} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
+              <KeystrokeSparksCanvas schoolColor={schoolColorHex} isTruesight={isTruesight} />
               <div className="document-container">
                 {activeScrollId || isEditable ? (
                   <ScrollEditor

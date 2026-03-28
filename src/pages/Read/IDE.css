@@ -16,6 +16,8 @@
   height: calc(100vh - 48px);
   color: var(--read-text-strong);
   background: var(--bg-void, #090916);
+  box-shadow: inset 0 0 calc(var(--is-music-active, 0) * (20px + var(--active-signal-level, 0) * 40px)) var(--active-school-glow);
+  transition: box-shadow 1.5s ease;
 }
 
 [data-theme="light"] .ide-layout-wrapper {
@@ -263,10 +265,39 @@
 }
 
 .ide-main-content {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+/* ── Phaser sweetener layers ────────────────────────────────────────────── */
+
+/* Full-bleed ambient background: motes, bloom, corner arcs */
+.ide-ambient-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Editor-scoped sparks overlay: keystroke bursts + Truesight bloom */
+.ide-sparks-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Ensure the panel group renders above the ambient canvas */
+.ide-panel-group {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
 }
 
 .ide-sidebar {
@@ -2072,12 +2103,14 @@
     0 2px 8px rgba(0, 0, 0, 0.3),
     0 0 0 1px rgba(255, 255, 255, 0.04),
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 0 30px rgba(201, 168, 76, 0.03);
+    inset 0 0 30px rgba(201, 168, 76, 0.03),
+    0 0 calc(var(--is-music-active, 0) * (8px + var(--active-signal-level, 0) * 12px)) var(--active-school-glow);
   backdrop-filter: blur(20px) saturate(1.2);
   overflow: hidden;
   min-width: 220px;
   display: flex;
   flex-direction: column;
+  transition: box-shadow 0.8s ease;
 }
 
 /* Gold leaf gilding — top decorative edge */

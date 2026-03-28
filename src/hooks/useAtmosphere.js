@@ -75,6 +75,11 @@ export function useAtmosphere() {
         }
         return { schoolId: state.schoolId, isActive };
       });
+
+      document.documentElement.style.setProperty(
+        "--is-music-active",
+        isActive ? "1" : "0"
+      );
     });
     return unsubscribe;
   }, []);

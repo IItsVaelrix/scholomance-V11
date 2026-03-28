@@ -540,7 +540,7 @@ a:focus-visible {
   perspective: 1000px;
   pointer-events: none;
   z-index: -1;
-  filter: saturate(calc(var(--active-saturation) * (1 + var(--active-signal-level) * 0.3)));
+  filter: saturate(calc(var(--active-saturation) * (1 + var(--active-signal-level) * 0.3 + var(--is-music-active, 0) * 0.2)));
   /* filter changes instantly — no per-frame repaint during school transitions */
   transition: filter 0s;
   will-change: transform;
@@ -616,18 +616,40 @@ a:focus-visible {
   z-index: 1000;
 }
 
+/* === MAGICAL RESONANCE — Audio Reactive UI === */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2000;
+  /* Inner viewport glow that pulses with audio frequency */
+  box-shadow: inset 0 0 calc(var(--is-music-active, 0) * (25px + var(--active-signal-level, 0) * 50px)) var(--active-school-glow);
+  opacity: calc(var(--is-music-active, 0) * (0.06 + var(--active-signal-level, 0) * 0.12));
+  mix-blend-mode: plus-lighter;
+  transition: opacity 1.2s ease;
+  will-change: box-shadow, opacity;
+}
+
+[data-theme="light"] body::after {
+  mix-blend-mode: multiply;
+  opacity: calc(var(--is-music-active, 0) * (0.03 + var(--active-signal-level, 0) * 0.06));
+}
+
 /* === PRIMARY NAV (Minimal IDE Style) === */
 .primary-nav {
   background: rgba(10, 11, 30, 0.8);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-subtle);
+  box-shadow: 0 1px calc(var(--is-music-active, 0) * (4px + var(--active-signal-level, 0) * 12px)) var(--active-school-glow);
   height: 48px;
   position: sticky;
   top: 0;
   z-index: 1200;
   display: flex;
   align-items: center;
+  transition: box-shadow 0.8s ease;
 }
 
 [data-theme="light"] .primary-nav {
@@ -697,6 +719,8 @@ a:focus-visible {
 
 .nav-link.active {
   color: var(--text-primary);
+  text-shadow: 0 0 calc(var(--is-music-active, 0) * 8px) var(--active-school-glow);
+  transition: text-shadow 0.8s ease;
 }
 
 .nav-toggle {
