@@ -83,10 +83,10 @@ function createOffsetTranslator(rawText) {
     return Object.freeze({
       graphemeAware: Boolean(GRAPHEME_SEGMENTER),
       graphemeCount: 0,
-      toGraphemeStart(offset) {
+      toGraphemeStart(_offset) {
         return 0;
       },
-      toGraphemeEnd(offset) {
+      toGraphemeEnd(_offset) {
         return 0;
       },
     });
