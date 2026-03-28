@@ -43,6 +43,20 @@ describe('rhyme-astrology contracts', () => {
         rawText: 'flame',
         tokens: ['flame'],
         resolvedNodes: [],
+        compiler: {
+          verseIRVersion: '1.0.0',
+          mode: 'live_fast',
+          tokenCount: 1,
+          lineCount: 1,
+          syllableWindowCount: 1,
+          lineBreakStyle: 'none',
+          whitespaceFidelity: true,
+          source: 'compiled',
+          anchorTokenId: 0,
+          anchorLineIndex: 0,
+          activeTokenIds: [0],
+          activeWindowIds: [0],
+        },
       },
       topMatches: [
         {
@@ -73,6 +87,6 @@ describe('rhyme-astrology contracts', () => {
 
     expect(result.topMatches[0].token).toBe('frame');
     expect(result.diagnostics.cacheHit).toBe(true);
+    expect(result.query.compiler?.verseIRVersion).toBe('1.0.0');
   });
 });
-

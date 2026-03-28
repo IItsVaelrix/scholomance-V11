@@ -138,6 +138,24 @@ describe('usePanelAnalysis hook', () => {
                     charStart: 0,
                     charEnd: 5,
                     sign: 'EY1M',
+                    tokenId: 0,
+                    activeWindowIds: [7],
+                    compilerRef: {
+                      tokenId: 0,
+                      lineIndex: 0,
+                      tokenIndexInLine: 0,
+                      tokenSpan: [0, 0],
+                      activeWindowIds: [7],
+                      charStart: 0,
+                      charEnd: 5,
+                      syllableCount: 1,
+                      stressPattern: '1',
+                      rhymeTailSignature: 'EY1-M',
+                      primaryStressedVowelFamily: 'EY',
+                      terminalVowelFamily: 'EY',
+                      isLineStart: true,
+                      isLineEnd: false,
+                    },
                     topMatches: [{ token: 'name', overallScore: 0.92 }],
                     constellations: [],
                     diagnostics: { queryTimeMs: 2.3, cacheHit: false, candidateCount: 12 },
@@ -154,6 +172,41 @@ describe('usePanelAnalysis hook', () => {
                     densityScore: 0.63,
                     cohesionScore: 0.71,
                     membersCount: 8,
+                  },
+                ],
+                windows: [
+                  {
+                    id: 7,
+                    lineIndex: 0,
+                    lineSpan: [0, 0],
+                    tokenIds: [0, 1],
+                    tokenSpan: [0, 1],
+                    charStart: 0,
+                    charEnd: 10,
+                    syllableLength: 2,
+                    signature: '2:EY/EY:M/M:11',
+                    stressContour: '11',
+                    codaContour: 'M/M',
+                    vowelSequence: ['EY', 'EY'],
+                    occurrenceCount: 2,
+                    repeated: true,
+                    anchorTokenIds: [0],
+                    anchorWords: ['FLAME'],
+                  },
+                ],
+                spans: [
+                  {
+                    id: 'anchor:0',
+                    kind: 'anchor_token',
+                    lineIndex: 0,
+                    charStart: 0,
+                    charEnd: 5,
+                    tokenIds: [0],
+                    anchorTokenId: 0,
+                    windowId: null,
+                    label: 'Flame',
+                    sign: 'EY1M',
+                    clusterIds: ['ey1m-a'],
                   },
                 ],
               },
@@ -207,6 +260,9 @@ describe('usePanelAnalysis hook', () => {
     expect(result.current.scoreData?.plsPhoneticFeatures?.rhymeAffinityScore).toBe(0.82);
     expect(result.current.rhymeAstrology?.enabled).toBe(true);
     expect(result.current.rhymeAstrology?.inspector?.anchors?.[0]?.sign).toBe('EY1M');
+    expect(result.current.rhymeAstrology?.inspector?.anchors?.[0]?.compilerRef?.tokenId).toBe(0);
+    expect(result.current.rhymeAstrology?.inspector?.windows?.[0]?.signature).toBe('2:EY/EY:M/M:11');
+    expect(result.current.rhymeAstrology?.inspector?.spans?.[0]?.kind).toBe('anchor_token');
     expect(result.current.rhymeAstrology?.inspector?.clusters?.[0]?.label).toBe('Burning Choir');
   });
 

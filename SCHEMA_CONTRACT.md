@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.9** | Last updated: 2026-03-26
+**Version: 1.10** | Last updated: 2026-03-28
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Truesight compiler bridge contract
-- Version: 1.8 -> 1.9
-- Changed fields: added `TruesightCompilerDescriptor`, `VerseLineIR`, `VerseTokenIR`, `SyllableWindowIR`, and `VerseIR`; panel-analysis payloads may now include optional `analysis.compiler`
+- Schema: Rhyme astrology compiler bridge contract
+- Version: 1.9 -> 1.10
+- Changed fields: added `RhymeAstrologyQueryCompilerContext`, `RhymeAstrologyQueryPattern`, `RhymeAstrologyMatch`, `RhymeAstrologyConstellation`, `RhymeAstrologyResult`, `RhymeAstrologyAnchorCompilerRef`, `RhymeAstrologyInspectorAnchor`, `RhymeAstrologyWindowSummary`, `RhymeAstrologySpan`, and `RhymeAstrologyPanelPayload`; panel-analysis payloads may now include compiler-native rhyme-astrology anchors, windows, and spans
 - Breaking: no
-- Claude impact: no required UI change; optional compiler metadata is now available for future Truesight mode/version display, and VerseIR offsets now explicitly preserve raw whitespace and line breaks
-- Blackbox impact: panel-analysis fixtures can optionally assert `analysis.compiler`; compiler regression coverage should include CRLF, trailing spaces, and terminal blank-line fidelity
+- Claude impact: optional `rhymeAstrology.inspector.windows` and `rhymeAstrology.inspector.spans` are now available for Truesight overlays and future compiler-grounded highlighting; anchor rows can now carry `compilerRef`
+- Blackbox impact: panel-analysis fixtures can now assert compiler-native rhyme-astrology payloads; route/runtime coverage should include VerseIR-backed anchor metadata and span/window serialization
 
 ---
 
@@ -257,6 +257,171 @@ interface VerseIR {
     lineCount: number;
     syllableWindowCount: number;
     whitespaceFidelity: boolean;
+  };
+}
+
+interface RhymeAstrologyQueryCompilerContext {
+  verseIRVersion: string;
+  mode: TruesightAnalysisMode | string;
+  tokenCount: number;
+  lineCount: number;
+  syllableWindowCount: number;
+  lineBreakStyle: LineBreakStyle | string;
+  whitespaceFidelity: boolean;
+  source: "provided" | "compiled";
+  anchorTokenId?: number | null;
+  anchorLineIndex?: number | null;
+  activeTokenIds?: number[];
+  activeWindowIds?: number[];
+}
+
+interface RhymeAstrologyQueryPattern {
+  rawText: string;
+  tokens: string[];
+  resolvedNodes: Array<{
+    id: string;
+    token: string;
+    normalized: string;
+    endingSignature: string;
+    onsetSignature: string;
+    stressPattern: string;
+    syllableCount: number;
+    frequencyScore: number;
+  }>;
+  lineEndingSignature?: string;
+  internalPattern?: string[];
+  stressContour?: string;
+  compiler?: RhymeAstrologyQueryCompilerContext;
+}
+
+interface RhymeAstrologyMatch {
+  nodeId: string;
+  token: string;
+  overallScore: number;
+  reasons: string[];
+}
+
+interface RhymeAstrologyConstellation {
+  id: string;
+  anchorId: string;
+  label: string;
+  dominantVowelFamily: string[];
+  dominantStressPattern: string;
+  members: string[];
+  densityScore: number;
+  cohesionScore: number;
+}
+
+interface RhymeAstrologyResult {
+  query: RhymeAstrologyQueryPattern;
+  topMatches: RhymeAstrologyMatch[];
+  constellations: RhymeAstrologyConstellation[];
+  diagnostics: {
+    queryTimeMs: number;
+    cacheHit: boolean;
+    candidateCount: number;
+  };
+}
+
+interface RhymeAstrologyAnchorCompilerRef {
+  tokenId: number;
+  lineIndex: number;
+  tokenIndexInLine: number;
+  tokenSpan: [number, number];
+  activeWindowIds: number[];
+  charStart: number;
+  charEnd: number;
+  syllableCount: number;
+  stressPattern: string;
+  rhymeTailSignature: string;
+  primaryStressedVowelFamily: string | null;
+  terminalVowelFamily: string | null;
+  isLineStart: boolean;
+  isLineEnd: boolean;
+}
+
+interface RhymeAstrologyInspectorAnchor {
+  word: string;
+  normalizedWord: string;
+  lineIndex: number;
+  wordIndex: number;
+  charStart: number;
+  charEnd: number;
+  sign: string;
+  dominantVowelFamily: string;
+  tokenId: number;
+  activeWindowIds: number[];
+  compilerRef: RhymeAstrologyAnchorCompilerRef | null;
+  topMatches: RhymeAstrologyMatch[];
+  constellations: RhymeAstrologyConstellation[];
+  diagnostics: {
+    queryTimeMs: number;
+    cacheHit: boolean;
+    candidateCount: number;
+  };
+}
+
+interface RhymeAstrologyWindowSummary {
+  id: number;
+  lineIndex: number;
+  lineSpan: [number, number];
+  tokenIds: number[];
+  tokenSpan: [number, number];
+  charStart: number;
+  charEnd: number;
+  syllableLength: number;
+  signature: string;
+  stressContour: string;
+  codaContour: string;
+  vowelSequence: string[];
+  occurrenceCount: number;
+  repeated: boolean;
+  anchorTokenIds: number[];
+  anchorWords: string[];
+}
+
+interface RhymeAstrologySpan {
+  id: string;
+  kind: "anchor_token" | "syllable_window";
+  lineIndex: number;
+  charStart: number;
+  charEnd: number;
+  tokenIds: number[];
+  anchorTokenId: number | null;
+  windowId: number | null;
+  label: string;
+  sign: string | null;
+  clusterIds: string[];
+}
+
+interface RhymeAstrologyPanelPayload {
+  enabled: boolean;
+  features: {
+    rhymeAffinityScore: number;
+    constellationDensity: number;
+    internalRecurrenceScore: number;
+    phoneticNoveltyScore: number;
+  } | null;
+  inspector: {
+    anchors: RhymeAstrologyInspectorAnchor[];
+    clusters: Array<{
+      id: string;
+      label: string;
+      anchorWord: string;
+      sign: string;
+      dominantVowelFamily: string[];
+      dominantStressPattern: string;
+      densityScore: number;
+      cohesionScore: number;
+      membersCount: number;
+    }>;
+    windows: RhymeAstrologyWindowSummary[];
+    spans: RhymeAstrologySpan[];
+  };
+  diagnostics: {
+    anchorCount: number;
+    cacheHitCount: number;
+    averageQueryTimeMs: number;
   };
 }
 
@@ -684,6 +849,49 @@ Notes:
 - `commentary` carries CODEx rarity praise for powerful spells.
 
 ```ts
+GET /api/rhyme-astrology/query
+
+query params:
+  text: string
+  mode?: "word" | "line"
+  limit?: number
+  minScore?: number
+  includeConstellations?: boolean
+  includeDiagnostics?: boolean
+
+response body: RhymeAstrologyResult
+```
+
+Notes:
+- The public route remains text-query based and backward compatible.
+- Runtime implementations may internally compile a VerseIR substrate to resolve anchors and line/window context deterministically.
+- `query.compiler` is optional and may appear when the runtime used VerseIR-backed context resolution.
+
+```ts
+POST /api/analysis/panels
+
+request body: {
+  text: string;
+}
+
+response body: {
+  source: "server-analysis";
+  data: {
+    analysis: {
+      compiler?: TruesightCompilerDescriptor | null;
+      [key: string]: unknown;
+    } | null;
+    rhymeAstrology: RhymeAstrologyPanelPayload | null;
+    [key: string]: unknown;
+  };
+}
+```
+
+Notes:
+- `rhymeAstrology` is optional and feature-flag gated.
+- When enabled, inspector anchors/windows/spans are decorative client guidance only; the server remains authoritative for scoring and persistence.
+
+```ts
 GET /api/world/rooms/:roomId
 
 response body: WorldRoomSnapshot
@@ -761,6 +969,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.7 | 2026-03-17 | Added combat speaking analysis, voice-profile snapshots, and speaking multipliers to combat payloads | no |
 | 1.8 | 2026-03-21 | Added phonosemantic token-graph node/edge, activation, and graph-candidate contracts for prediction and judiciary traversal | no |
 | 1.9 | 2026-03-26 | Added VerseIR compiler contracts, whitespace-fidelity line metadata, syllable windows, and optional Truesight compiler metadata for panel analysis | no |
+| 1.10 | 2026-03-28 | Added compiler-aware rhyme astrology query/panel payload contracts, including VerseIR-backed anchors, windows, and spans | no |
 
 ---
 

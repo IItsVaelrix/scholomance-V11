@@ -222,17 +222,91 @@ function normalizeInputText(rawText) {
   return String(rawText);
 }
 
-function buildRhymeAstrologyAnchorCandidates(wordAnalyses, maxAnchors) {
-  const profiles = Array.isArray(wordAnalyses) ? wordAnalyses : [];
-  if (profiles.length === 0) return [];
-
-  const byLine = new Map();
-  for (const profile of profiles) {
+function buildWordProfileIndexes(wordAnalyses) {
+  const byIdentity = new Map();
+  const byCharStart = new Map();
+  for (const profile of Array.isArray(wordAnalyses) ? wordAnalyses : []) {
     const lineIndex = Number(profile?.lineIndex);
-    if (!Number.isInteger(lineIndex)) continue;
-    if (!byLine.has(lineIndex)) byLine.set(lineIndex, []);
-    byLine.get(lineIndex).push(profile);
+    const wordIndex = Number(profile?.wordIndex);
+    const charStart = Number(profile?.charStart);
+    if (Number.isInteger(lineIndex) && Number.isInteger(wordIndex) && Number.isInteger(charStart)) {
+      byIdentity.set(`${lineIndex}:${wordIndex}:${charStart}`, profile);
+      byCharStart.set(charStart, profile);
+    }
   }
+  return {
+    byIdentity,
+    byCharStart,
+  };
+}
+
+function buildWindowIdsByTokenId(verseIR) {
+  const windows = Array.isArray(verseIR?.syllableWindows) ? verseIR.syllableWindows : [];
+  const map = new Map();
+  for (const window of windows) {
+    const tokenSpan = Array.isArray(window?.tokenSpan) ? window.tokenSpan : [];
+    if (tokenSpan.length !== 2) continue;
+    const start = Number(tokenSpan[0]);
+    const end = Number(tokenSpan[1]);
+    if (!Number.isInteger(start) || !Number.isInteger(end)) continue;
+    for (let tokenId = start; tokenId <= end; tokenId += 1) {
+      if (!map.has(tokenId)) map.set(tokenId, []);
+      map.get(tokenId).push(Number(window.id));
+    }
+  }
+  return map;
+}
+
+function buildAnchorCompilerRef(token, activeWindowIds = []) {
+  const tokenId = Number.isInteger(Number(token?.id)) ? Number(token.id) : -1;
+  return {
+    tokenId,
+    lineIndex: Number.isInteger(Number(token?.lineIndex)) ? Number(token.lineIndex) : -1,
+    tokenIndexInLine: Number.isInteger(Number(token?.tokenIndexInLine)) ? Number(token.tokenIndexInLine) : -1,
+    tokenSpan: [tokenId, tokenId],
+    activeWindowIds: activeWindowIds.filter((value) => Number.isInteger(Number(value))).map(Number),
+    charStart: Number.isInteger(Number(token?.charStart)) ? Number(token.charStart) : -1,
+    charEnd: Number.isInteger(Number(token?.charEnd)) ? Number(token.charEnd) : -1,
+    syllableCount: Number(token?.syllableCount) || 0,
+    stressPattern: String(token?.stressPattern || ''),
+    rhymeTailSignature: String(token?.rhymeTailSignature || ''),
+    primaryStressedVowelFamily: normalizeVowelFamily(token?.primaryStressedVowelFamily) || null,
+    terminalVowelFamily: normalizeVowelFamily(token?.terminalVowelFamily) || null,
+    isLineStart: Boolean(token?.flags?.isLineStart),
+    isLineEnd: Boolean(token?.flags?.isLineEnd),
+  };
+}
+
+function buildRhymeAstrologyAnchorCandidates(wordAnalyses, verseIR, maxAnchors) {
+  const tokens = Array.isArray(verseIR?.tokens) ? verseIR.tokens : [];
+  if (tokens.length === 0) return [];
+
+  const { byIdentity, byCharStart } = buildWordProfileIndexes(wordAnalyses);
+  const windowIdsByTokenId = buildWindowIdsByTokenId(verseIR);
+  const tokenProfiles = tokens.map((token) => {
+    const identity = `${Number(token?.lineIndex)}:${Number(token?.tokenIndexInLine)}:${Number(token?.charStart)}`;
+    const profile = byIdentity.get(identity) || byCharStart.get(Number(token?.charStart)) || null;
+    const activeWindowIds = windowIdsByTokenId.get(Number(token?.id)) || [];
+    return {
+      word: String(profile?.word || token?.text || ''),
+      normalizedWord: String(profile?.normalizedWord || token?.normalizedUpper || token?.normalized || '').toUpperCase(),
+      lineIndex: Number.isInteger(Number(token?.lineIndex)) ? Number(token.lineIndex) : -1,
+      wordIndex: Number.isInteger(Number(token?.tokenIndexInLine)) ? Number(token.tokenIndexInLine) : -1,
+      charStart: Number.isInteger(Number(token?.charStart)) ? Number(token.charStart) : -1,
+      charEnd: Number.isInteger(Number(token?.charEnd)) ? Number(token.charEnd) : -1,
+      vowelFamily: getPrimaryStressedVowelFamily(profile?.analysis, profile?.vowelFamily || token?.primaryStressedVowelFamily || token?.terminalVowelFamily) || null,
+      syllableCount: Number(profile?.syllableCount) || Number(token?.syllableCount) || 0,
+      rhymeKey: profile?.rhymeKey || token?.rhymeTailSignature || null,
+      stressPattern: String(profile?.stressPattern || token?.stressPattern || ''),
+      role: String(profile?.role || ''),
+      lineRole: String(profile?.lineRole || (token?.flags?.isLineEnd ? 'line_end' : token?.flags?.isLineStart ? 'line_start' : 'line_mid')),
+      stressRole: String(profile?.stressRole || ''),
+      rhymePolicy: String(profile?.rhymePolicy || ''),
+      tokenId: Number.isInteger(Number(token?.id)) ? Number(token.id) : -1,
+      activeWindowIds,
+      compilerRef: buildAnchorCompilerRef(token, activeWindowIds),
+    };
+  });
 
   /** @type {Array<any>} */
   const anchors = [];
@@ -248,6 +322,14 @@ function buildRhymeAstrologyAnchorCandidates(wordAnalyses, maxAnchors) {
     anchors.push(profile);
   };
 
+  const byLine = new Map();
+  for (const profile of tokenProfiles) {
+    const lineIndex = Number(profile?.lineIndex);
+    if (!Number.isInteger(lineIndex)) continue;
+    if (!byLine.has(lineIndex)) byLine.set(lineIndex, []);
+    byLine.get(lineIndex).push(profile);
+  }
+
   const sortedLineEntries = [...byLine.entries()].sort((a, b) => a[0] - b[0]);
   for (const [, lineWords] of sortedLineEntries) {
     const sortedWords = [...lineWords].sort(
@@ -258,7 +340,7 @@ function buildRhymeAstrologyAnchorCandidates(wordAnalyses, maxAnchors) {
   }
 
   if (anchors.length < maxAnchors) {
-    const internalCandidates = profiles
+    const internalCandidates = tokenProfiles
       .filter((profile) => Number(profile?.syllableCount) >= 2)
       .sort((a, b) => {
         const syllableDiff = (Number(b?.syllableCount) || 0) - (Number(a?.syllableCount) || 0);
@@ -274,6 +356,147 @@ function buildRhymeAstrologyAnchorCandidates(wordAnalyses, maxAnchors) {
   }
 
   return anchors.slice(0, maxAnchors);
+}
+
+function buildRhymeAstrologyWindowSummaries(verseIR, anchors, maxWindows = DEFAULT_RHYME_ASTROLOGY_WINDOW_LIMIT) {
+  const windows = Array.isArray(verseIR?.syllableWindows) ? verseIR.syllableWindows : [];
+  const tokens = Array.isArray(verseIR?.tokens) ? verseIR.tokens : [];
+  if (windows.length === 0 || tokens.length === 0) return [];
+
+  const anchorTokenIds = new Set(
+    (Array.isArray(anchors) ? anchors : [])
+      .map((anchor) => Number(anchor?.tokenId))
+      .filter(Number.isInteger)
+  );
+  const occurrencesBySignature = new Map();
+  for (const window of windows) {
+    const signature = String(window?.signature || '');
+    if (!signature) continue;
+    occurrencesBySignature.set(signature, (occurrencesBySignature.get(signature) || 0) + 1);
+  }
+
+  return windows
+    .map((window) => {
+      const tokenSpan = Array.isArray(window?.tokenSpan) ? window.tokenSpan : [];
+      if (tokenSpan.length !== 2) return null;
+      const start = Number(tokenSpan[0]);
+      const end = Number(tokenSpan[1]);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) return null;
+      const tokenIds = [];
+      for (let tokenId = start; tokenId <= end; tokenId += 1) {
+        tokenIds.push(tokenId);
+      }
+      const attachedAnchorTokenIds = tokenIds.filter((tokenId) => anchorTokenIds.has(tokenId));
+      const signature = String(window?.signature || '');
+      const occurrenceCount = occurrencesBySignature.get(signature) || 0;
+      return {
+        id: Number(window?.id),
+        lineIndex: Array.isArray(window?.lineSpan) ? Number(window.lineSpan[0]) : -1,
+        lineSpan: Array.isArray(window?.lineSpan) ? window.lineSpan.map(Number) : [],
+        tokenIds,
+        tokenSpan: tokenSpan.map(Number),
+        charStart: Number.isInteger(Number(window?.charStart)) ? Number(window.charStart) : -1,
+        charEnd: Number.isInteger(Number(window?.charEnd)) ? Number(window.charEnd) : -1,
+        syllableLength: Number(window?.syllableLength) || 0,
+        signature,
+        stressContour: String(window?.stressContour || ''),
+        codaContour: String(window?.codaContour || ''),
+        vowelSequence: Array.isArray(window?.vowelSequence) ? window.vowelSequence.map((value) => String(value || '')) : [],
+        occurrenceCount,
+        repeated: occurrenceCount > 1,
+        anchorTokenIds: attachedAnchorTokenIds,
+        anchorWords: attachedAnchorTokenIds
+          .map((tokenId) => String(tokens[tokenId]?.normalizedUpper || tokens[tokenId]?.text || '').toUpperCase())
+          .filter(Boolean)
+          .slice(0, 4),
+      };
+    })
+    .filter((window) => window && (window.repeated || window.anchorTokenIds.length > 0 || window.syllableLength >= 3))
+    .sort((first, second) => {
+      if (Boolean(second.repeated) !== Boolean(first.repeated)) {
+        return Number(Boolean(second.repeated)) - Number(Boolean(first.repeated));
+      }
+      if ((second.occurrenceCount || 0) !== (first.occurrenceCount || 0)) {
+        return (second.occurrenceCount || 0) - (first.occurrenceCount || 0);
+      }
+      if ((second.syllableLength || 0) !== (first.syllableLength || 0)) {
+        return (second.syllableLength || 0) - (first.syllableLength || 0);
+      }
+      return (first.charStart || 0) - (second.charStart || 0);
+    })
+    .slice(0, maxWindows);
+}
+
+function buildRhymeAstrologySpans(anchors, windows) {
+  const spans = [];
+  const seen = new Set();
+  const anchorRows = Array.isArray(anchors) ? anchors : [];
+  const windowRows = Array.isArray(windows) ? windows : [];
+  const clusterIdsByTokenId = new Map();
+
+  for (const anchor of anchorRows) {
+    const tokenId = Number(anchor?.tokenId);
+    if (!Number.isInteger(tokenId)) continue;
+    const constellationIds = Array.isArray(anchor?.constellations)
+      ? anchor.constellations
+        .map((constellation) => String(constellation?.id || ''))
+        .filter(Boolean)
+      : [];
+    clusterIdsByTokenId.set(tokenId, constellationIds);
+    const id = `anchor:${tokenId}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    spans.push({
+      id,
+      kind: 'anchor_token',
+      lineIndex: Number(anchor?.lineIndex) || 0,
+      charStart: Number(anchor?.charStart) || 0,
+      charEnd: Number(anchor?.charEnd) || 0,
+      tokenIds: [tokenId],
+      anchorTokenId: tokenId,
+      windowId: null,
+      label: String(anchor?.word || anchor?.normalizedWord || ''),
+      sign: typeof anchor?.sign === 'string' && anchor.sign ? anchor.sign : null,
+      clusterIds: constellationIds,
+    });
+  }
+
+  for (const window of windowRows) {
+    const windowId = Number(window?.id);
+    if (!Number.isInteger(windowId)) continue;
+    const id = `window:${windowId}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const tokenIds = Array.isArray(window?.tokenIds) ? window.tokenIds.map(Number).filter(Number.isInteger) : [];
+    const clusterIds = [...new Set(
+      tokenIds.flatMap((tokenId) => clusterIdsByTokenId.get(tokenId) || [])
+    )];
+    spans.push({
+      id,
+      kind: 'syllable_window',
+      lineIndex: Number(window?.lineIndex) || 0,
+      charStart: Number(window?.charStart) || 0,
+      charEnd: Number(window?.charEnd) || 0,
+      tokenIds,
+      anchorTokenId: Array.isArray(window?.anchorTokenIds) && window.anchorTokenIds.length > 0
+        ? Number(window.anchorTokenIds[0])
+        : null,
+      windowId,
+      label: `${Number(window?.syllableLength) || 0}-syllable window`,
+      sign: null,
+      clusterIds,
+    });
+  }
+
+  return spans.sort((first, second) => {
+    if ((first.lineIndex || 0) !== (second.lineIndex || 0)) {
+      return (first.lineIndex || 0) - (second.lineIndex || 0);
+    }
+    if ((first.charStart || 0) !== (second.charStart || 0)) {
+      return (first.charStart || 0) - (second.charStart || 0);
+    }
+    return String(first.id || '').localeCompare(String(second.id || ''));
+  });
 }
 
 function buildRhymeAstrologyClusterSummary(anchors, maxClusters) {
@@ -397,9 +620,14 @@ export function createPanelAnalysisService(options = {}) {
     });
   }
 
-  async function buildRhymeAstrologyPayload(wordAnalyses) {
+  async function buildRhymeAstrologyPayload(wordAnalyses, verseIR) {
     if (!enableRhymeAstrology || !rhymeAstrologyQueryEngine) return null;
-    const anchors = buildRhymeAstrologyAnchorCandidates(wordAnalyses, rhymeAstrologyAnchorLimit);
+    const anchors = buildRhymeAstrologyAnchorCandidates(wordAnalyses, verseIR, rhymeAstrologyAnchorLimit);
+    const windows = buildRhymeAstrologyWindowSummaries(
+      verseIR,
+      anchors,
+      Math.max(DEFAULT_RHYME_ASTROLOGY_WINDOW_LIMIT, rhymeAstrologyMaxClusters * 3)
+    );
     if (anchors.length === 0) {
       return {
         enabled: true,
@@ -407,6 +635,8 @@ export function createPanelAnalysisService(options = {}) {
         inspector: {
           anchors: [],
           clusters: [],
+          windows,
+          spans: [],
         },
         diagnostics: {
           anchorCount: 0,
@@ -424,6 +654,10 @@ export function createPanelAnalysisService(options = {}) {
           const result = await rhymeAstrologyQueryEngine.query({
             text: word,
             mode: 'word',
+            verseIR,
+            anchorTokenId: Number.isInteger(Number(anchor?.tokenId)) ? Number(anchor.tokenId) : undefined,
+            anchorLineIndex: Number.isInteger(Number(anchor?.lineIndex)) ? Number(anchor.lineIndex) : undefined,
+            anchorWindowIds: Array.isArray(anchor?.activeWindowIds) ? anchor.activeWindowIds : undefined,
             limit: rhymeAstrologyMatchLimit,
             minScore: rhymeAstrologyMinScore,
             includeConstellations: true,
@@ -442,6 +676,18 @@ export function createPanelAnalysisService(options = {}) {
             charEnd: Number.isInteger(anchor?.charEnd) ? anchor.charEnd : -1,
             sign: String(resolvedAnchor?.endingSignature || ''),
             dominantVowelFamily: String(anchor?.vowelFamily || ''),
+            tokenId: Number.isInteger(Number(anchor?.tokenId)) ? Number(anchor.tokenId) : -1,
+            activeWindowIds: Array.isArray(result?.query?.compiler?.activeWindowIds)
+              ? result.query.compiler.activeWindowIds.map(Number).filter(Number.isInteger)
+              : (Array.isArray(anchor?.activeWindowIds) ? anchor.activeWindowIds : []),
+            compilerRef: anchor?.compilerRef
+              ? {
+                ...anchor.compilerRef,
+                activeWindowIds: Array.isArray(result?.query?.compiler?.activeWindowIds)
+                  ? result.query.compiler.activeWindowIds.map(Number).filter(Number.isInteger)
+                  : (Array.isArray(anchor.compilerRef.activeWindowIds) ? anchor.compilerRef.activeWindowIds : []),
+              }
+              : null,
             topMatches: Array.isArray(result?.topMatches) ? result.topMatches : [],
             constellations: Array.isArray(result?.constellations) ? result.constellations : [],
             diagnostics: result?.diagnostics || {
@@ -484,6 +730,8 @@ export function createPanelAnalysisService(options = {}) {
       inspector: {
         anchors: anchorResults,
         clusters: buildRhymeAstrologyClusterSummary(anchorResults, rhymeAstrologyMaxClusters),
+        windows,
+        spans: buildRhymeAstrologySpans(anchorResults, windows),
       },
       diagnostics: {
         anchorCount: anchorResults.length,
@@ -515,6 +763,10 @@ export function createPanelAnalysisService(options = {}) {
         text,
         syntaxLayer ? { syntaxLayer } : {}
       );
+      const verseIR = compileVerseToIR(text, {
+        phonemeEngine: PhonemeEngine,
+        mode: deepAnalysis?.compiler?.mode || 'balanced',
+      });
       const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer);
       const lineSyllableCounts = buildLineSyllableCounts(deepAnalysis);
 
@@ -528,7 +780,7 @@ export function createPanelAnalysisService(options = {}) {
         hhmTokenStateByIdentity: hhmSignals.tokenStateByIdentity,
         gutenbergPriors: gutenbergEmotionPriors,
       }).emotion;
-      const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses);
+      const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses, verseIR);
       const scoreDataWithPlsFeatures = scoreData && rhymeAstrology?.features
         ? {
           ...scoreData,

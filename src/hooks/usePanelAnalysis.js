@@ -20,6 +20,8 @@ const EMPTY_VOWEL_SUMMARY = Object.freeze({
 const EMPTY_RHYME_ASTROLOGY_INSPECTOR = Object.freeze({
   anchors: [],
   clusters: [],
+  windows: [],
+  spans: [],
 });
 
 function toFiniteNumber(value, fallback = 0) {
@@ -215,6 +217,32 @@ function normalizeRhymeAstrology(value) {
           charEnd: Number.isInteger(Number(anchor.charEnd)) ? Number(anchor.charEnd) : -1,
           sign: String(anchor.sign || ""),
           dominantVowelFamily: String(anchor.dominantVowelFamily || ""),
+          tokenId: Number.isInteger(Number(anchor.tokenId)) ? Number(anchor.tokenId) : -1,
+          activeWindowIds: Array.isArray(anchor.activeWindowIds)
+            ? anchor.activeWindowIds.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          compilerRef: anchor.compilerRef && typeof anchor.compilerRef === "object"
+            ? {
+              tokenId: Number.isInteger(Number(anchor.compilerRef.tokenId)) ? Number(anchor.compilerRef.tokenId) : -1,
+              lineIndex: Number.isInteger(Number(anchor.compilerRef.lineIndex)) ? Number(anchor.compilerRef.lineIndex) : -1,
+              tokenIndexInLine: Number.isInteger(Number(anchor.compilerRef.tokenIndexInLine)) ? Number(anchor.compilerRef.tokenIndexInLine) : -1,
+              tokenSpan: Array.isArray(anchor.compilerRef.tokenSpan)
+                ? anchor.compilerRef.tokenSpan.map((value) => Number(value)).filter(Number.isInteger)
+                : [],
+              activeWindowIds: Array.isArray(anchor.compilerRef.activeWindowIds)
+                ? anchor.compilerRef.activeWindowIds.map((value) => Number(value)).filter(Number.isInteger)
+                : [],
+              charStart: Number.isInteger(Number(anchor.compilerRef.charStart)) ? Number(anchor.compilerRef.charStart) : -1,
+              charEnd: Number.isInteger(Number(anchor.compilerRef.charEnd)) ? Number(anchor.compilerRef.charEnd) : -1,
+              syllableCount: toFiniteNumber(anchor.compilerRef.syllableCount, 0),
+              stressPattern: String(anchor.compilerRef.stressPattern || ""),
+              rhymeTailSignature: String(anchor.compilerRef.rhymeTailSignature || ""),
+              primaryStressedVowelFamily: String(anchor.compilerRef.primaryStressedVowelFamily || ""),
+              terminalVowelFamily: String(anchor.compilerRef.terminalVowelFamily || ""),
+              isLineStart: Boolean(anchor.compilerRef.isLineStart),
+              isLineEnd: Boolean(anchor.compilerRef.isLineEnd),
+            }
+            : null,
           topMatches: Array.isArray(anchor.topMatches) ? anchor.topMatches : [],
           constellations: Array.isArray(anchor.constellations) ? anchor.constellations : [],
           diagnostics: {
@@ -222,6 +250,69 @@ function normalizeRhymeAstrology(value) {
             cacheHit: Boolean(anchor?.diagnostics?.cacheHit),
             candidateCount: toFiniteNumber(anchor?.diagnostics?.candidateCount, 0),
           },
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  const windows = Array.isArray(rawInspector.windows)
+    ? rawInspector.windows
+      .map((window) => {
+        if (!window || typeof window !== "object") return null;
+        return {
+          id: Number.isInteger(Number(window.id)) ? Number(window.id) : -1,
+          lineIndex: Number.isInteger(Number(window.lineIndex)) ? Number(window.lineIndex) : -1,
+          lineSpan: Array.isArray(window.lineSpan)
+            ? window.lineSpan.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          tokenIds: Array.isArray(window.tokenIds)
+            ? window.tokenIds.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          tokenSpan: Array.isArray(window.tokenSpan)
+            ? window.tokenSpan.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          charStart: Number.isInteger(Number(window.charStart)) ? Number(window.charStart) : -1,
+          charEnd: Number.isInteger(Number(window.charEnd)) ? Number(window.charEnd) : -1,
+          syllableLength: toFiniteNumber(window.syllableLength, 0),
+          signature: String(window.signature || ""),
+          stressContour: String(window.stressContour || ""),
+          codaContour: String(window.codaContour || ""),
+          vowelSequence: Array.isArray(window.vowelSequence)
+            ? window.vowelSequence.map((entry) => String(entry || ""))
+            : [],
+          occurrenceCount: toFiniteNumber(window.occurrenceCount, 0),
+          repeated: Boolean(window.repeated),
+          anchorTokenIds: Array.isArray(window.anchorTokenIds)
+            ? window.anchorTokenIds.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          anchorWords: Array.isArray(window.anchorWords)
+            ? window.anchorWords.map((entry) => String(entry || ""))
+            : [],
+        };
+      })
+      .filter(Boolean)
+    : [];
+
+  const spans = Array.isArray(rawInspector.spans)
+    ? rawInspector.spans
+      .map((span) => {
+        if (!span || typeof span !== "object") return null;
+        return {
+          id: String(span.id || ""),
+          kind: String(span.kind || ""),
+          lineIndex: Number.isInteger(Number(span.lineIndex)) ? Number(span.lineIndex) : -1,
+          charStart: Number.isInteger(Number(span.charStart)) ? Number(span.charStart) : -1,
+          charEnd: Number.isInteger(Number(span.charEnd)) ? Number(span.charEnd) : -1,
+          tokenIds: Array.isArray(span.tokenIds)
+            ? span.tokenIds.map((value) => Number(value)).filter(Number.isInteger)
+            : [],
+          anchorTokenId: Number.isInteger(Number(span.anchorTokenId)) ? Number(span.anchorTokenId) : null,
+          windowId: Number.isInteger(Number(span.windowId)) ? Number(span.windowId) : null,
+          label: String(span.label || ""),
+          sign: typeof span.sign === "string" ? span.sign : null,
+          clusterIds: Array.isArray(span.clusterIds)
+            ? span.clusterIds.map((entry) => String(entry || "")).filter(Boolean)
+            : [],
         };
       })
       .filter(Boolean)
@@ -254,6 +345,8 @@ function normalizeRhymeAstrology(value) {
     inspector: {
       anchors,
       clusters,
+      windows,
+      spans,
     },
     diagnostics: {
       anchorCount: toFiniteNumber(value?.diagnostics?.anchorCount, 0),

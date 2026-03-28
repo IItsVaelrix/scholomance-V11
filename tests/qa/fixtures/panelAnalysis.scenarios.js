@@ -181,6 +181,75 @@ export const COLOR_CODEX_SCENARIOS = {
   },
 };
 
+// --- Rhyme analysis scenario words ---
+
+const CAT = createWordAnalysis({
+  word: "cat", normalizedWord: "CAT", lineIndex: 0, wordIndex: 0,
+  charStart: 0, charEnd: 3, vowelFamily: "AE", rhymeKey: "AE-T",
+});
+
+const HAT = createWordAnalysis({
+  word: "hat", normalizedWord: "HAT", lineIndex: 1, wordIndex: 0,
+  charStart: 4, charEnd: 7, vowelFamily: "AE", rhymeKey: "AE-T",
+});
+
+const MAP = createWordAnalysis({
+  word: "map", normalizedWord: "MAP", lineIndex: 1, wordIndex: 0,
+  charStart: 4, charEnd: 7, vowelFamily: "AE", rhymeKey: "AE-P",
+});
+
+const DOG = createWordAnalysis({
+  word: "dog", normalizedWord: "DOG", lineIndex: 1, wordIndex: 0,
+  charStart: 4, charEnd: 7, vowelFamily: "AO", rhymeKey: "AO-G",
+});
+
+const LOG = createWordAnalysis({
+  word: "log", normalizedWord: "LOG", lineIndex: 3, wordIndex: 0,
+  charStart: 12, charEnd: 15, vowelFamily: "AO", rhymeKey: "AO-G",
+});
+
+const BEAUTIFUL = createWordAnalysis({
+  word: "beautiful", normalizedWord: "BEAUTIFUL", lineIndex: 0, wordIndex: 0,
+  charStart: 0, charEnd: 9, vowelFamily: "UH", syllableCount: 3, rhymeKey: "UH-L",
+});
+
+const DUTIFUL = createWordAnalysis({
+  word: "dutiful", normalizedWord: "DUTIFUL", lineIndex: 1, wordIndex: 0,
+  charStart: 10, charEnd: 17, vowelFamily: "UH", syllableCount: 3, rhymeKey: "UH-L",
+});
+
+const BIRD = createWordAnalysis({
+  word: "bird", normalizedWord: "BIRD", lineIndex: 2, wordIndex: 0,
+  charStart: 8, charEnd: 12, vowelFamily: "ER", rhymeKey: "ER-D",
+});
+
+// --- Vowel color mapping scenario words ---
+
+const SOUL = createWordAnalysis({
+  word: "soul", normalizedWord: "SOUL", lineIndex: 0, wordIndex: 0,
+  charStart: 0, charEnd: 4, vowelFamily: "OW", rhymeKey: "OW-L",
+});
+
+const HOLE = createWordAnalysis({
+  word: "hole", normalizedWord: "HOLE", lineIndex: 0, wordIndex: 1,
+  charStart: 5, charEnd: 9, vowelFamily: "OW", rhymeKey: "OW-L",
+});
+
+const FLAME = createWordAnalysis({
+  word: "flame", normalizedWord: "FLAME", lineIndex: 0, wordIndex: 0,
+  charStart: 0, charEnd: 5, vowelFamily: "EY", rhymeKey: "EY-M",
+});
+
+const NAME = createWordAnalysis({
+  word: "name", normalizedWord: "NAME", lineIndex: 0, wordIndex: 1,
+  charStart: 6, charEnd: 10, vowelFamily: "EY", rhymeKey: "EY-M",
+});
+
+const WYRM = createWordAnalysis({
+  word: "wyrm", normalizedWord: "WYRM", lineIndex: 0, wordIndex: 0,
+  charStart: 0, charEnd: 4, vowelFamily: "ZZ", rhymeKey: "ZZ-M",
+});
+
 export const PANEL_ANALYSIS_SCENARIOS = {
   stopWordPromotion: {
     text: "the tone meta",
@@ -195,5 +264,82 @@ export const PANEL_ANALYSIS_SCENARIOS = {
     connections: [createConnection(THE, ALPHA)],
     rhymeGroups: [],
     schemePattern: "",
+  },
+};
+
+export const RHYME_ANALYSIS_SCENARIOS = {
+  perfectRhyme: {
+    text: "cat\nhat",
+    wordAnalyses: [CAT, HAT],
+    connections: [createConnection(CAT, HAT, { type: "perfect", score: 1.0, syllablesMatched: 1 })],
+    rhymeGroups: [["A", [0, 1]]],
+    schemePattern: "AA",
+    scheme: {
+      id: "COUPLET", name: "Couplet", pattern: "AA",
+      confidence: 1.0, groups: [["A", [0, 1]]],
+    },
+  },
+  feminineRhyme: {
+    text: "beautiful\ndutiful",
+    wordAnalyses: [BEAUTIFUL, DUTIFUL],
+    connections: [createConnection(BEAUTIFUL, DUTIFUL, { type: "feminine", score: 0.95, syllablesMatched: 2 })],
+    rhymeGroups: [["A", [0, 1]]],
+    schemePattern: "AA",
+    scheme: {
+      id: "COUPLET", name: "Couplet", pattern: "AA",
+      confidence: 0.95, groups: [["A", [0, 1]]],
+    },
+  },
+  assonance: {
+    text: "cat\nmap",
+    wordAnalyses: [CAT, MAP],
+    connections: [createConnection(CAT, MAP, { type: "assonance", score: 0.6, syllablesMatched: 1 })],
+    rhymeGroups: [["A", [0, 1]]],
+    schemePattern: "AA",
+  },
+  schemeABAB: {
+    text: "cat\ndog\nhat\nlog",
+    wordAnalyses: [
+      { ...CAT, lineIndex: 0 },
+      { ...DOG, lineIndex: 1 },
+      { ...HAT, lineIndex: 2, charStart: 8, charEnd: 11 },
+      { ...LOG, lineIndex: 3 },
+    ],
+    connections: [
+      createConnection({ ...CAT, lineIndex: 0 }, { ...HAT, lineIndex: 2 }, { type: "perfect", score: 1.0, syllablesMatched: 1 }),
+      createConnection({ ...DOG, lineIndex: 1 }, { ...LOG, lineIndex: 3 }, { type: "perfect", score: 1.0, syllablesMatched: 1 }),
+    ],
+    rhymeGroups: [["A", [0, 2]], ["B", [1, 3]]],
+    schemePattern: "ABAB",
+    scheme: {
+      id: "ALTERNATE", name: "Alternate Rhyme", pattern: "ABAB",
+      confidence: 1.0, groups: [["A", [0, 2]], ["B", [1, 3]]],
+    },
+  },
+  noRhymes: {
+    text: "cat\ndog\nbird",
+    wordAnalyses: [CAT, DOG, BIRD],
+    connections: [],
+    rhymeGroups: [],
+    schemePattern: "",
+    scheme: null,
+  },
+};
+
+export const VOWEL_COLOR_SCENARIOS = {
+  owFamily: {
+    text: "soul hole",
+    wordAnalyses: [SOUL, HOLE],
+    connections: [createConnection(SOUL, HOLE, { type: "perfect", score: 1.0, syllablesMatched: 1 })],
+  },
+  eyFamily: {
+    text: "flame name",
+    wordAnalyses: [FLAME, NAME],
+    connections: [createConnection(FLAME, NAME, { type: "perfect", score: 1.0, syllablesMatched: 1 })],
+  },
+  unknownFamily: {
+    text: "wyrm",
+    wordAnalyses: [WYRM],
+    connections: [],
   },
 };

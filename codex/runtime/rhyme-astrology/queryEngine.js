@@ -114,15 +114,42 @@ function toRuntimeNode(node, fallbackToken) {
 
 /**
  * @param {any} token
+ * @param {any} lexiconNode
  * @returns {import('../../core/rhyme-astrology/types.js').PhoneticSignature}
  */
-function buildVerseTokenSignature(token) {
-  const derived = buildPhoneticSignature(Array.isArray(token?.phonemes) ? token.phonemes : []);
+function buildVerseTokenSignature(token, lexiconNode = null) {
+  const hasTokenPhonemes = Array.isArray(token?.phonemes) && token.phonemes.length > 0;
+  const phonemes = hasTokenPhonemes
+    ? token.phonemes
+    : (Array.isArray(lexiconNode?.phonemes) ? lexiconNode.phonemes : []);
+  const derived = buildPhoneticSignature(phonemes);
   return {
     ...derived,
-    endingSignature: String(token?.rhymeTailSignature || derived.endingSignature || ''),
-    stressPattern: String(token?.stressPattern || derived.stressPattern || ''),
-    syllableCount: Number(token?.syllableCount) || derived.syllableCount,
+    endingSignature: String(
+      (hasTokenPhonemes ? token?.rhymeTailSignature : null)
+      || lexiconNode?.endingSignature
+      || token?.rhymeTailSignature
+      || derived.endingSignature
+      || ''
+    ),
+    onsetSignature: String(
+      (hasTokenPhonemes ? token?.onsetSignature : null)
+      || lexiconNode?.onsetSignature
+      || token?.onsetSignature
+      || derived.onsetSignature
+      || ''
+    ),
+    stressPattern: String(
+      (hasTokenPhonemes ? token?.stressPattern : null)
+      || lexiconNode?.stressPattern
+      || token?.stressPattern
+      || derived.stressPattern
+      || ''
+    ),
+    syllableCount: Number(hasTokenPhonemes ? token?.syllableCount : null)
+      || Number(lexiconNode?.syllableCount)
+      || Number(token?.syllableCount)
+      || derived.syllableCount,
   };
 }
 
@@ -131,7 +158,7 @@ function buildVerseTokenSignature(token) {
  * @param {any} lexiconNode
  */
 function toRuntimeNodeFromVerseToken(token, lexiconNode = null) {
-  const signature = buildVerseTokenSignature(token);
+  const signature = buildVerseTokenSignature(token, lexiconNode);
   const tokenText = normalizeToken(token?.text || lexiconNode?.token || '');
   const normalized = normalizeToken(token?.normalized || lexiconNode?.normalized || tokenText);
   return {
@@ -148,8 +175,12 @@ function toRuntimeNodeFromVerseToken(token, lexiconNode = null) {
     frequencyScore: Number(lexiconNode?.frequencyScore) || 0,
     signature,
     verseTokenId: toIntegerOrNull(token?.id),
-    primaryStressedVowelFamily: normalizeVowelFamily(token?.primaryStressedVowelFamily) || null,
-    terminalVowelFamily: normalizeVowelFamily(token?.terminalVowelFamily) || null,
+    primaryStressedVowelFamily: normalizeVowelFamily(token?.primaryStressedVowelFamily)
+      || normalizeVowelFamily(lexiconNode?.primaryStressedVowelFamily)
+      || extractSignatureVowelFamily(signature),
+    terminalVowelFamily: normalizeVowelFamily(token?.terminalVowelFamily)
+      || normalizeVowelFamily(lexiconNode?.terminalVowelFamily)
+      || extractSignatureVowelFamily(signature),
   };
 }
 
@@ -378,6 +409,11 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
 
     const tokens = verseIR.tokens;
     const lines = Array.isArray(verseIR.lines) ? verseIR.lines : [];
+    const tokenById = new Map(
+      tokens
+        .map((token) => [Number(token?.id), token])
+        .filter(([tokenId]) => Number.isInteger(tokenId))
+    );
     let anchorTokenId = Number.isInteger(Number(input?.anchorTokenId))
       ? Number(input.anchorTokenId)
       : null;
@@ -385,12 +421,12 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
       ? Number(input.anchorLineIndex)
       : null;
 
-    if (anchorTokenId !== null && !tokens[anchorTokenId]) {
+    if (anchorTokenId !== null && !tokenById.has(anchorTokenId)) {
       anchorTokenId = null;
     }
 
     if (anchorLineIndex === null && anchorTokenId !== null) {
-      anchorLineIndex = Number(tokens[anchorTokenId]?.lineIndex);
+      anchorLineIndex = Number(tokenById.get(anchorTokenId)?.lineIndex);
     }
 
     if (input.mode === 'line') {
@@ -412,17 +448,17 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
         anchorTokenId = Number(tokens[tokens.length - 1]?.id);
       }
       if (anchorLineIndex === null && anchorTokenId !== null) {
-        anchorLineIndex = Number(tokens[anchorTokenId]?.lineIndex);
+        anchorLineIndex = Number(tokenById.get(anchorTokenId)?.lineIndex);
       }
     }
 
-    if (anchorTokenId !== null && !tokens[anchorTokenId]) {
+    if (anchorTokenId !== null && !tokenById.has(anchorTokenId)) {
       anchorTokenId = null;
     }
 
     const activeTokens = input.mode === 'line'
       ? tokens.filter((token) => Number(token?.lineIndex) === anchorLineIndex)
-      : (anchorTokenId !== null && tokens[anchorTokenId] ? [tokens[anchorTokenId]] : []);
+      : (anchorTokenId !== null && tokenById.has(anchorTokenId) ? [tokenById.get(anchorTokenId)] : []);
     const activeTokenIds = activeTokens
       .map((token) => Number(token?.id))
       .filter(Number.isInteger);
@@ -473,12 +509,17 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
   function buildCompilerDescriptor(compilerContext) {
     if (!compilerContext?.verseIR) return null;
     const metadata = compilerContext.verseIR.metadata || {};
+    const tokens = Array.isArray(compilerContext.verseIR.tokens) ? compilerContext.verseIR.tokens : [];
+    const lines = Array.isArray(compilerContext.verseIR.lines) ? compilerContext.verseIR.lines : [];
+    const syllableWindows = Array.isArray(compilerContext.verseIR.syllableWindows)
+      ? compilerContext.verseIR.syllableWindows
+      : [];
     return {
       verseIRVersion: String(compilerContext.verseIR.version || ''),
       mode: String(metadata.mode || 'balanced'),
-      tokenCount: Number(metadata.tokenCount) || compilerContext.verseIR.tokens.length,
-      lineCount: Number(metadata.lineCount) || compilerContext.verseIR.lines.length,
-      syllableWindowCount: Number(metadata.syllableWindowCount) || compilerContext.verseIR.syllableWindows.length,
+      tokenCount: Number(metadata.tokenCount) || tokens.length,
+      lineCount: Number(metadata.lineCount) || lines.length,
+      syllableWindowCount: Number(metadata.syllableWindowCount) || syllableWindows.length,
       lineBreakStyle: String(metadata.lineBreakStyle || 'none'),
       whitespaceFidelity: Boolean(metadata.whitespaceFidelity),
       source: compilerContext.source,

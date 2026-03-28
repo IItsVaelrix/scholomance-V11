@@ -9,6 +9,20 @@ function createResult(cacheHit = false) {
       rawText: 'flame',
       tokens: ['flame'],
       resolvedNodes: [],
+      compiler: {
+        verseIRVersion: '1.0.0',
+        mode: 'live_fast',
+        tokenCount: 1,
+        lineCount: 1,
+        syllableWindowCount: 1,
+        lineBreakStyle: 'none',
+        whitespaceFidelity: true,
+        source: 'compiled',
+        anchorTokenId: 0,
+        anchorLineIndex: 0,
+        activeTokenIds: [0],
+        activeWindowIds: [0],
+      },
     },
     topMatches: [
       {
@@ -142,4 +156,3 @@ describe('[Server] rhymeAstrology.routes', () => {
     });
   });
 });
-
