@@ -39,3 +39,7 @@ export const combatBridge = {
     _listeners.clear();
   },
 };
+
+if (typeof window !== "undefined") {
+  window.__SCHOLOMANCE_COMBAT_BRIDGE__ = combatBridge;
+}

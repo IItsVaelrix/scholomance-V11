@@ -37,7 +37,8 @@ const fullMatrixProjects = [
  * @see https://playwright.dev/docs/test-configuration
  */
 export default defineConfig({
-  testDir: "./tests/visual",
+  testDir: "./tests",
+  testMatch: "**/*.spec.{js,jsx,ts,tsx}",
   timeout: 45 * 1000,
   fullyParallel: false,
   forbidOnly: isCI,
