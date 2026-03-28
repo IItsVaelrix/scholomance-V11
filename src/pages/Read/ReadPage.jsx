@@ -1349,7 +1349,7 @@ export default function ReadPage() {
           <Panel
             defaultSize={settings?.ideLayout?.[0] ?? 4}
             minSize={4}
-            maxSize={10}
+            maxSize={15}
             className="ide-activity-bar"
             onResize={(size) => {
               const el = document.querySelector('.ide-activity-bar');
@@ -1466,13 +1466,7 @@ export default function ReadPage() {
               )}
             </div>
           </Panel>
-          <PanelResizeHandle
-            style={
-              isNarrowViewport
-                ? { height: "2px", background: "var(--border-color)" }
-                : { width: "2px", background: "var(--border-color)" }
-            }
-          />
+          <PanelResizeHandle className="sidebar-resize-handle" />
           <Panel defaultSize={settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60)} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
               <KeystrokeSparksCanvas schoolColor={schoolColorHex} isTruesight={isTruesight} />

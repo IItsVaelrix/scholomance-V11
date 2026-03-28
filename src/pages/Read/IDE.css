@@ -315,7 +315,6 @@
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, rgba(13, 13, 32, 0.97) 0%, rgba(9, 9, 22, 0.99) 100%);
-  border-right: 1px solid rgba(100, 90, 160, 0.22);
 }
 
 /* ─── Activity Bar ─── */
@@ -324,7 +323,6 @@
   display: flex;
   flex-direction: column;
   background: rgba(0, 0, 0, 0.35);
-  border-right: 1px solid rgba(100, 90, 160, 0.15);
   height: 100%;
   overflow: hidden;
   transition: background 0.2s;
@@ -394,31 +392,35 @@
   transform: translateX(0);
 }
 
-.activity-resize-handle {
-  width: 1px;
-  background: rgba(100, 90, 160, 0.12);
-  transition: background 0.2s, width 0.2s, box-shadow 0.2s;
+.activity-resize-handle,
+.sidebar-resize-handle {
+  width: 2px;
+  background: rgba(201, 168, 64, 0.1);
+  transition: background 0.2s, box-shadow 0.2s;
   position: relative;
   z-index: 10;
+  cursor: col-resize;
 }
 
-/* Wider hit area for the handle */
-.activity-resize-handle::after {
+/* Much wider hit area for the handles */
+.activity-resize-handle::after,
+.sidebar-resize-handle::after {
   content: "";
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -6px;
-  right: -6px;
-  width: 12px;
+  left: -8px;
+  right: -8px;
   cursor: col-resize;
+  z-index: 11;
 }
 
 .activity-resize-handle:hover,
-.activity-resize-handle:active {
+.activity-resize-handle:active,
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle:active {
   background: var(--read-accent);
-  width: 2px;
-  box-shadow: 0 0 8px var(--active-school-glow);
+  box-shadow: 0 0 10px var(--active-school-glow);
 }
 
 .ide-sidebar > div[data-panel-group] {
