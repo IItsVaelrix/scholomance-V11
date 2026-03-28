@@ -53,7 +53,7 @@ export default function Navigation() {
   const [isPending, startTransition] = useTransition();
   const activeSection = location.pathname.replace("/", "") || "watch";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedLink, setSelectedLink] = useState(null);
+  const [navigatingPath, setNavigatingPath] = useState(null);
   const navTimeoutRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
@@ -74,18 +74,20 @@ export default function Navigation() {
   const handleNav = useCallback((path) => {
     if (location.pathname === path) {
       setIsMenuOpen(false);
+      setNavigatingPath(null);
       return;
     }
     
+    setNavigatingPath(path);
     startTransition(() => {
       navigate(path);
     });
   }, [navigate, location.pathname]);
 
-  // Close mobile menu on route change
+  // Reset navigating state when location changes
   useEffect(() => {
+    setNavigatingPath(null);
     setIsMenuOpen(false);
-    setSelectedLink(null);
   }, [location.pathname]);
 
   // Lock body scroll when menu is open
@@ -100,23 +102,21 @@ export default function Navigation() {
 
   // Cleanup timeout on unmount
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     return () => { if (navTimeoutRef.current) clearTimeout(navTimeoutRef.current); };
   }, []);
 
   const handleToggle = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
-    setSelectedLink(null);
+    setNavigatingPath(null);
   }, []);
 
   // Magical nav: select link → glow animation → navigate quickly
   const handleMobileNavClick = useCallback((e, linkPath) => {
     e.preventDefault();
-    if (selectedLink) return; // already transitioning
-    setSelectedLink(linkPath);
-    navTimeoutRef.current = setTimeout(() => {
-      handleNav(linkPath);
-    }, 100);
-  }, [selectedLink, handleNav]);
+    if (navigatingPath) return; // already transitioning
+    handleNav(linkPath);
+  }, [navigatingPath, handleNav]);
 
   return (
     <>
@@ -138,12 +138,11 @@ export default function Navigation() {
                 <NavLink
                   to={l.path}
                   className={({ isActive }) =>
-                    `nav-link${isActive ? " active" : ""}${isPending && selectedLink === l.path ? " is-navigating" : ""}`
+                    `nav-link${isActive ? " active" : ""}${isPending && navigatingPath === l.path ? " is-navigating" : ""}`
                   }
                   onMouseEnter={() => preloadRoute(l.path)}
                   onClick={(e) => {
                     e.preventDefault();
-                    setSelectedLink(l.path);
                     handleNav(l.path);
                   }}
                 >
@@ -204,8 +203,8 @@ export default function Navigation() {
             {/* Centered link list */}
             <div className="nav-mobile-links">
               {allLinks.map((l, i) => {
-                const isSelected = selectedLink === l.path;
-                const isOther = selectedLink && !isSelected;
+                const isSelected = navigatingPath === l.path;
+                const isOther = navigatingPath && !isSelected;
                 return (
                   <motion.div
                     key={l.id}
@@ -216,8 +215,8 @@ export default function Navigation() {
                       scale: isSelected ? 1.15 : 1,
                     }}
                     transition={{
-                      delay: selectedLink ? 0 : i * 0.06,
-                      duration: selectedLink ? 0.4 : 0.3,
+                      delay: navigatingPath ? 0 : i * 0.06,
+                      duration: navigatingPath ? 0.4 : 0.3,
                       ease: "easeOut",
                     }}
                   >
