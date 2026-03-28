@@ -2,6 +2,7 @@ import { startTransition, useState, useCallback, useMemo, useRef, useEffect } fr
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { buildSyntaxLayer } from "../lib/syntax.layer.js";
 import { normalizeVowelFamily, buildVowelSummary } from "../lib/phonology/vowelFamily.js";
+import { attachPlsVerseIRBridge, buildPlsVerseIRBridge } from "../lib/pls/verseIRBridge.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 import { analyzeDocumentAsync, warmAnalysisWorker } from "../lib/workers/analysis.client.js";
 
@@ -449,6 +450,17 @@ function normalizePanelPayload(rawPayload) {
     }
     : null;
 
+  const normalizedRhymeAstrology = normalizeRhymeAstrology(payload.rhymeAstrology);
+  const verseIRBridge = buildPlsVerseIRBridge(analysis?.compiler || null, normalizedRhymeAstrology);
+  const bridgedScoreFeatures = attachPlsVerseIRBridge(
+    normalizePlsPhoneticFeatures(payload.scoreData?.plsPhoneticFeatures) || normalizedRhymeAstrology?.features,
+    verseIRBridge
+  );
+  const bridgedRhymeFeatures = attachPlsVerseIRBridge(
+    normalizedRhymeAstrology?.features,
+    verseIRBridge
+  );
+
   return {
     analysis,
     scheme,
@@ -458,11 +470,16 @@ function normalizePanelPayload(rawPayload) {
     scoreData: payload.scoreData
       ? {
         ...payload.scoreData,
-        plsPhoneticFeatures: normalizePlsPhoneticFeatures(payload.scoreData.plsPhoneticFeatures),
+        plsPhoneticFeatures: bridgedScoreFeatures,
       }
       : null,
     vowelSummary: normalizeVowelSummary(payload.vowelSummary),
-    rhymeAstrology: normalizeRhymeAstrology(payload.rhymeAstrology),
+    rhymeAstrology: normalizedRhymeAstrology
+      ? {
+        ...normalizedRhymeAstrology,
+        features: bridgedRhymeFeatures,
+      }
+      : null,
     genreProfile: payload.genreProfile || null,
     source: rawPayload?.source ?? payload.source ?? null,
   };

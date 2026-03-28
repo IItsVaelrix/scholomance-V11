@@ -32,6 +32,39 @@ vi.mock('framer-motion', async () => {
   };
 });
 
+// Mock Phaser globally
+vi.mock('phaser', () => {
+  class GameMock {
+    constructor() {
+      this.events = {
+        once: vi.fn((event, cb) => {
+          if (event === 'ready') setTimeout(cb, 0);
+        }),
+        on: vi.fn(),
+      };
+      this.scene = {
+        getScene: vi.fn().mockReturnValue({
+          updateState: vi.fn(),
+        }),
+      };
+    }
+    destroy() {}
+  }
+
+  const PhaserMock = {
+    Game: GameMock,
+    Scene: class {},
+    AUTO: 0,
+    CANVAS: 1,
+    WEBGL: 2,
+  };
+
+  return {
+    default: PhaserMock,
+    ...PhaserMock,
+  };
+});
+
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
   observe() {}
@@ -75,10 +108,26 @@ if (typeof document !== 'undefined') {
     getContext: vi.fn().mockReturnValue({
       measureText: vi.fn().mockReturnValue({ width: 10 }),
       fillText: vi.fn(),
+      fillRect: vi.fn(),
+      clearRect: vi.fn(),
       beginPath: vi.fn(),
       moveTo: vi.fn(),
       lineTo: vi.fn(),
       stroke: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      closePath: vi.fn(),
+      scale: vi.fn(),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      save: vi.fn(),
+      restore: vi.fn(),
+      drawImage: vi.fn(),
+      getImageData: vi.fn().mockReturnValue({ data: new Uint8ClampedArray(4) }),
+      putImageData: vi.fn(),
+      createPattern: vi.fn(),
+      createLinearGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
+      createRadialGradient: vi.fn().mockReturnValue({ addColorStop: vi.fn() }),
     }),
   };
   global.HTMLCanvasElement.prototype.getContext = mockCanvas.getContext;

@@ -127,7 +127,7 @@ const ArcaneLabHeader = React.memo(({ isPlaying, isTuning, statusLabel, stationN
       <span className="arcane-lab-badge">◈</span>
       <span>Arcane Signal Laboratory</span>
     </div>
-    <div className="arcane-lab-status">
+    <div className="arcane-lab-status" role="status" aria-live="polite">
       <span className={`arcane-status-dot ${isPlaying ? 'is-live' : ''} ${isTuning ? 'is-tuning' : ''}`} />
       <span className="arcane-status-text">{statusLabel}</span>
       <span className="arcane-status-sep">|</span>
@@ -213,20 +213,21 @@ ArcanePanelRight.displayName = 'ArcanePanelRight';
 const ArcaneStationGrid = React.memo(({ stations, currentSchoolId, tuneToSchool }: any) => (
   <div className="arcane-stations" role="list" aria-label="Station selector">
     {stations.map((station: any) => (
-      <button
-        type="button"
-        key={station.id}
-        className={`arcane-station-card ${station.id === currentSchoolId ? 'is-active' : ''}`}
-        style={{ '--station-color': station.color } as CSSProperties}
-        onClick={() => void tuneToSchool(station.id)}
-        aria-label={`Tune to ${station.name}`}
-        aria-pressed={station.id === currentSchoolId}
-      >
-        <span className="arcane-station-dot" />
-        <span className="arcane-station-glyph">{station.glyph}</span>
-        <span className="arcane-station-name">{station.name}</span>
-        <span className="arcane-station-id-label">{station.id}</span>
-      </button>
+      <div key={station.id} role="listitem">
+        <button
+          type="button"
+          className={`arcane-station-card ${station.id === currentSchoolId ? 'is-active' : ''}`}
+          style={{ '--station-color': station.color } as CSSProperties}
+          onClick={() => void tuneToSchool(station.id)}
+          aria-label={`Tune to ${station.name}`}
+          aria-pressed={station.id === currentSchoolId}
+        >
+          <span className="arcane-station-dot" />
+          <span className="arcane-station-glyph">{station.glyph}</span>
+          <span className="arcane-station-name">{station.name}</span>
+          <span className="arcane-station-id-label">{station.id}</span>
+        </button>
+      </div>
     ))}
   </div>
 ));

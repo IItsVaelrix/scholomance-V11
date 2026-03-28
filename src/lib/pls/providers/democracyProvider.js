@@ -1,7 +1,24 @@
 import { createJudiciaryEngine } from '../../../../codex/core/judiciary.js';
+import { resolvePlsVerseIRState } from '../verseIRBridge.js';
 
-// Create a stable judiciary instance for the PLS pipeline
 const pipelineJudiciary = createJudiciaryEngine();
+
+function buildCandidateRhymeKeys(candidateAnalysis) {
+  const keys = new Set();
+
+  if (typeof candidateAnalysis?.rhymeKey === 'string' && candidateAnalysis.rhymeKey) {
+    keys.add(candidateAnalysis.rhymeKey);
+  }
+
+  if (Array.isArray(candidateAnalysis?.extendedRhymeKeys)) {
+    candidateAnalysis.extendedRhymeKeys.forEach((key) => {
+      const normalizedKey = String(key || '').trim();
+      if (normalizedKey) keys.add(normalizedKey);
+    });
+  }
+
+  return keys;
+}
 
 /**
  * DemocracyProvider — Scorer provider.
@@ -13,10 +30,6 @@ export async function democracyProvider(context, engines, candidates) {
   const { trie, spellchecker, phonemeEngine, dictionaryAPI } = engines;
   if (!candidates || candidates.length === 0) return [];
 
-  // 1. Prepare "voters" for each candidate by checking endorsements from each layer.
-  // To avoid expensive lookups for every single candidate, we'll pre-check 
-  // the top-tier suggestions for the current context.
-  
   const trieSuggestions = trie
     ? new Set((trie.predict(prefix || '', 30) || []).map((token) => String(token).toLowerCase()))
     : new Set();
@@ -51,25 +64,27 @@ export async function democracyProvider(context, engines, candidates) {
     }
   }
 
-  const targetAnalysis = (prevLineEndWord && phonemeEngine) ? phonemeEngine.analyzeWord(prevLineEndWord) : null;
+  const verseIRState = resolvePlsVerseIRState(context);
+  const verseIRTarget = verseIRState?.previousLineEnd || null;
+  const targetAnalysis = (prevLineEndWord && phonemeEngine)
+    ? phonemeEngine.analyzeWord(verseIRTarget?.word || prevLineEndWord)
+    : null;
+  const targetRhymeKey = verseIRTarget?.rhymeTailSignature || targetAnalysis?.rhymeKey || null;
 
-  // 2. Build the candidate pool for the Judiciary
   const judiciaryCandidates = [];
-  
-  candidates.forEach(candidate => {
+
+  candidates.forEach((candidate) => {
     const word = candidate.token;
     const normalizedWord = String(word).toLowerCase();
 
-    // Endorsement from Predictor Layer
     if (trieSuggestions.has(normalizedWord) || bigramSuggestions.has(normalizedWord)) {
       judiciaryCandidates.push({
         word,
         layer: 'PREDICTOR',
-        confidence: 0.8
+        confidence: 0.8,
       });
     }
 
-    // Endorsement from Spellcheck Layer
     const isSuggestedBySpellchecker = spellSuggestions.has(normalizedWord);
     const isValidatedByDictionary = dictionaryValidWords.has(normalizedWord);
     const isKnownLocally = spellchecker && typeof spellchecker.check === 'function'
@@ -85,25 +100,24 @@ export async function democracyProvider(context, engines, candidates) {
       judiciaryCandidates.push({
         word,
         layer: 'SPELLCHECK',
-        confidence: spellcheckConfidence
+        confidence: spellcheckConfidence,
       });
     }
 
-    // Endorsement from Phoneme Layer (Rhyme check)
-    if (targetAnalysis && phonemeEngine) {
+    if (targetRhymeKey && phonemeEngine) {
       const candidateAnalysis = phonemeEngine.analyzeWord(word);
-      if (candidateAnalysis && candidateAnalysis.rhymeKey === targetAnalysis.rhymeKey) {
+      const candidateRhymeKeys = buildCandidateRhymeKeys(candidateAnalysis);
+      if (candidateRhymeKeys.has(targetRhymeKey)) {
         judiciaryCandidates.push({
           word,
           layer: 'PHONEME',
           confidence: 0.9,
-          isRhyme: true
+          isRhyme: true,
         });
       }
     }
   });
 
-  // 3. Score legacy endorsements, then let the graph judiciary arbitrate path-aware winners.
   const allScores = pipelineJudiciary.calculateAllScores(judiciaryCandidates, syntaxContext || null);
   const graphScores = new Map(
     pipelineJudiciary
@@ -111,7 +125,7 @@ export async function democracyProvider(context, engines, candidates) {
       .map((candidate) => [candidate.token, candidate.totalScore])
   );
 
-  return candidates.map(candidate => {
+  return candidates.map((candidate) => {
     const scoreData = allScores.get(candidate.token);
     const graphScore = graphScores.get(candidate.token) ?? 0;
     return {
@@ -120,8 +134,8 @@ export async function democracyProvider(context, engines, candidates) {
         ...candidate.scores,
         democracy: scoreData
           ? Math.min(1.0, Math.max(scoreData.total, graphScore))
-          : graphScore
-      }
+          : graphScore,
+      },
     };
   });
 }

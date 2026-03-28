@@ -139,7 +139,6 @@ export const ArcaneKnob: React.FC<ArcaneKnobProps> = ({
     <div
       className="arcane-knob-wrapper"
       style={{ width: size, userSelect: 'none' }}
-      aria-label={label ? `${label} knob` : 'Volume knob'}
     >
       {label && <span className="arcane-knob-label">{label}</span>}
 
@@ -149,6 +148,7 @@ export const ArcaneKnob: React.FC<ArcaneKnobProps> = ({
         style={{ width: size, height: size, cursor: isDragging ? 'grabbing' : 'grab' }}
         onMouseDown={handleMouseDown}
         role="slider"
+        aria-label={label ? `${label} knob` : 'Volume knob'}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={Math.round(value * 100)}
