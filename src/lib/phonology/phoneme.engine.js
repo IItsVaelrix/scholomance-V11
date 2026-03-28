@@ -105,6 +105,34 @@ const WORD_PHONEME_OVERRIDES = Object.freeze({
   CONTINENT: ["K", "AA0", "N", "T", "IH1", "N", "EH0", "N", "T"],
 });
 
+function freezeStringList(values) {
+  return Object.freeze(
+    (Array.isArray(values) ? values : [])
+      .map((value) => String(value || '').trim())
+      .filter(Boolean)
+  );
+}
+
+function createPhoneticDiagnostics({
+  source = 'unresolved',
+  branch = 'unknown',
+  fallbackPath = [],
+  authoritySource = null,
+  usedAuthorityCache = false,
+  unknownReason = null,
+  notes = [],
+} = {}) {
+  return Object.freeze({
+    source: String(source || 'unresolved'),
+    branch: String(branch || 'unknown'),
+    fallbackPath: freezeStringList(fallbackPath),
+    authoritySource: authoritySource ? String(authoritySource) : null,
+    usedAuthorityCache: Boolean(usedAuthorityCache),
+    unknownReason: unknownReason ? String(unknownReason) : null,
+    notes: freezeStringList(notes),
+  });
+}
+
 
 /**
  * Phoneme Analysis Engine for Scholomance CODEx.
@@ -113,12 +141,14 @@ export const PhonemeEngine = {
   DICT_V2: null,
   RULES_V2: null,
   WORD_CACHE: new Map(),
+  WORD_DIAGNOSTICS_CACHE: new Map(),
   AUTHORITY_CACHE: new Map(),
   AUTHORITY_IN_FLIGHT: new Map(),
   _initPromise: null,
 
   clearCache() {
     this.WORD_CACHE.clear();
+    this.WORD_DIAGNOSTICS_CACHE.clear();
     this.AUTHORITY_CACHE.clear();
     this.AUTHORITY_IN_FLIGHT.clear();
     if (typeof CmuPhonemeEngine.clearCache === "function") {
@@ -234,10 +264,37 @@ export const PhonemeEngine = {
     return Promise.allSettled(pending).then(() => undefined);
   },
 
-  analyzeWord(word) {
+  _resolveWordAnalysisDetailed(word) {
     const upper = String(word || "").toUpperCase().replace(/[^A-Z]/g, '');
-    if (!upper) return null;
-    if (this.WORD_CACHE.has(upper)) return this.WORD_CACHE.get(upper);
+    if (!upper) {
+      return {
+        analysis: null,
+        diagnostics: createPhoneticDiagnostics({
+          source: 'unresolved',
+          branch: 'ascii_normalization',
+          fallbackPath: ['sanitize_ascii'],
+          unknownReason: 'empty_after_ascii_normalization',
+          notes: ['The token collapsed to an empty ASCII word after normalization.'],
+        }),
+      };
+    }
+    if (this.WORD_CACHE.has(upper)) {
+      return {
+        analysis: this.WORD_CACHE.get(upper),
+        diagnostics: this.WORD_DIAGNOSTICS_CACHE.get(upper) || createPhoneticDiagnostics({
+          source: 'cached_analysis',
+          branch: 'cache_hit',
+          fallbackPath: ['cache_hit'],
+          notes: ['Cached phoneme analysis reused without a stored provenance trail.'],
+        }),
+      };
+    }
+
+    const cacheResult = (analysis, diagnostics) => {
+      this.WORD_CACHE.set(upper, analysis);
+      this.WORD_DIAGNOSTICS_CACHE.set(upper, diagnostics);
+      return { analysis, diagnostics };
+    };
 
     if (upper.length === 1 && ALPHABET_PHONETIC_MAP[upper]) {
       const phonemes = ALPHABET_PHONETIC_MAP[upper];
@@ -251,15 +308,26 @@ export const PhonemeEngine = {
       if (upper === 'I') vowelFamily = 'AY';
 
       const result = { vowelFamily, phonemes, coda: null, rhymeKey: `${vowelFamily}-open`, syllableCount: syllables.length };
-      this.WORD_CACHE.set(upper, result);
-      return result;
+      return cacheResult(result, createPhoneticDiagnostics({
+        source: 'alphabet_literal',
+        branch: 'single_letter_map',
+        fallbackPath: ['alphabet_phonetic_map'],
+        notes: ['Single-letter token resolved through the alphabet phonetic map.'],
+      }));
     }
 
     const cmuResult = CmuPhonemeEngine.analyzeWord(upper);
     let result;
+    let diagnostics;
     if (cmuResult) {
       const cmuFamily = normalizeVowelFamily(cmuResult.vowelFamily) || "A";
       result = { ...cmuResult, vowelFamily: cmuFamily, rhymeKey: `${cmuFamily}-${cmuResult.coda || "open"}` };
+      diagnostics = createPhoneticDiagnostics({
+        source: 'cmu_dictionary',
+        branch: 'cmu_lookup',
+        fallbackPath: ['cmu_dictionary'],
+        notes: ['Resolved directly from the CMU pronunciation dictionary.'],
+      });
     } else {
       const phonemes = this.splitToPhonemes(upper);
       const processed = this.applyPhonologicalProcesses(phonemes);
@@ -275,7 +343,8 @@ export const PhonemeEngine = {
       const stressedVowelP = stressedSyl.find(p => ARPABET_VOWELS.has(p.replace(/[0-9]/g, '')));
       const stressedBaseV = stressedVowelP ? stressedVowelP.replace(/[0-9]/g, '') : lastBaseV;
 
-      let vowelFamily = this.AUTHORITY_CACHE.get(upper);
+      const authorityFamily = this.AUTHORITY_CACHE.get(upper);
+      let vowelFamily = authorityFamily;
       if (!vowelFamily) vowelFamily = normalizeVowelFamily(VOWEL_TO_BASE_FAMILY[stressedBaseV] || 'A');
       else vowelFamily = normalizeVowelFamily(vowelFamily);
 
@@ -285,9 +354,29 @@ export const PhonemeEngine = {
       // rhymeKey is still based on the final syllable
       const finalFamily = normalizeVowelFamily(VOWEL_TO_BASE_FAMILY[lastBaseV] || 'A');
       result = { vowelFamily, phonemes: processed, coda, rhymeKey: `${finalFamily}-${coda || "open"}`, syllableCount: syllables.length };
+      diagnostics = createPhoneticDiagnostics({
+        source: WORD_PHONEME_OVERRIDES[upper] ? 'word_override' : 'heuristic_fallback',
+        branch: WORD_PHONEME_OVERRIDES[upper] ? 'override_lookup' : 'rule_based_split',
+        fallbackPath: WORD_PHONEME_OVERRIDES[upper]
+          ? ['word_override', 'phonological_processes', 'syllabifier']
+          : ['grapheme_rules', 'phonological_processes', 'syllabifier'],
+        authoritySource: authorityFamily ? 'scholomance_dictionary_batch' : null,
+        usedAuthorityCache: Boolean(authorityFamily),
+        unknownReason: processed.length === 0 ? 'no_phonemes_generated' : null,
+        notes: authorityFamily
+          ? ['Heuristic phonemes were generated, then the authoritative Scholomance vowel family override was applied.']
+          : ['Heuristic grapheme-to-phoneme fallback generated the pronunciation.'],
+      });
     }
-    this.WORD_CACHE.set(upper, result);
-    return result;
+    return cacheResult(result, diagnostics);
+  },
+
+  analyzeWord(word) {
+    return this._resolveWordAnalysisDetailed(word).analysis;
+  },
+
+  analyzeWordWithDiagnostics(word) {
+    return this._resolveWordAnalysisDetailed(word);
   },
 
   guessVowelFamily(word) { return this.analyzeWord(word)?.vowelFamily || 'A'; },
@@ -413,11 +502,32 @@ export const PhonemeEngine = {
     return false;
   },
 
-  analyzeDeep(word) {
-    const basic = this.analyzeWord(word);
-    if (!basic) return null;
+  analyzeDeepWithDiagnostics(word) {
+    const { analysis: basic, diagnostics } = this._resolveWordAnalysisDetailed(word);
+    if (!basic) {
+      return {
+        analysis: null,
+        diagnostics,
+      };
+    }
     const syllables = this.analyzeSyllables(basic.phonemes);
-    return { word: String(word).toUpperCase(), vowelFamily: basic.vowelFamily, phonemes: basic.phonemes, syllables, syllableCount: syllables.length, rhymeKey: basic.rhymeKey, extendedRhymeKeys: this.getExtendedRhymeKeys(syllables), stressPattern: this.getStressPattern(syllables) };
+    return {
+      analysis: {
+        word: String(word).toUpperCase(),
+        vowelFamily: basic.vowelFamily,
+        phonemes: basic.phonemes,
+        syllables,
+        syllableCount: syllables.length,
+        rhymeKey: basic.rhymeKey,
+        extendedRhymeKeys: this.getExtendedRhymeKeys(syllables),
+        stressPattern: this.getStressPattern(syllables),
+      },
+      diagnostics,
+    };
+  },
+
+  analyzeDeep(word) {
+    return this.analyzeDeepWithDiagnostics(word).analysis;
   },
 
   analyzeSyllables(phonemes) {
