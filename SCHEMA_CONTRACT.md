@@ -3,11 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.12** | Last updated: 2026-03-28
+**Version: 1.13** | Last updated: 2026-03-28
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
+
+---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: Phonemic Oracle contract
+- Version: 1.12 -> 1.13
+- Changed fields: added `OracleInsight`, `OracleSuggestion`, and `OraclePayload`; `/api/analysis/panels` response may include `oracle: OraclePayload | null`
+- Breaking: no
+- Claude impact: Analysis surfaces should render the new `oracle` commentary and suggestions when present
+- Blackbox impact: panel-analysis fixtures can assert the new optional `oracle` payload
 
 ---
 
@@ -241,6 +252,30 @@ interface SyllableWindowIR {
   stressContour: string;
   codaContour: string;
   signature: string;
+}
+
+interface OracleInsight {
+  id: string;
+  category: "TECHNICAL" | "ARCANE" | "STRATEGIC" | "WARNING";
+  message: string;
+  evidence?: string[];
+  scoreImpact?: number;
+}
+
+interface OracleSuggestion {
+  original: string;
+  suggested: string;
+  reason: string;
+  resonanceGain: number;
+}
+
+interface OraclePayload {
+  version: string;
+  persona: string;
+  mood: "ENLIGHTENED" | "CRITICAL" | "OBSERVANT" | "AWE";
+  summary: string;
+  insights: OracleInsight[];
+  suggestions: OracleSuggestion[];
 }
 
 interface VerseIRAmplifierArchetype {
@@ -947,14 +982,15 @@ response body: {
       [key: string]: unknown;
     } | null;
     rhymeAstrology: RhymeAstrologyPanelPayload | null;
+    oracle: OraclePayload | null;
     [key: string]: unknown;
   };
 }
-```
 
 Notes:
 - `rhymeAstrology` is optional and feature-flag gated.
 - `analysis.verseIRAmplifier` is optional and carries the Synapse Slot / VerseIR amplifier payload when the server compiled VerseIR context for the request.
+- `oracle` is optional and carries the Phonemic Oracle commentary and suggestions.
 - When enabled, inspector anchors/windows/spans are decorative client guidance only; the server remains authoritative for scoring and persistence.
 
 ```ts

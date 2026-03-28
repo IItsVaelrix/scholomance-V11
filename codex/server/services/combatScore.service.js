@@ -4,7 +4,7 @@ import { analyzeText } from '../../core/analysis.pipeline.js';
 import { normalizeCombatScore } from '../../core/combat.scoring.js';
 import { createCorpusRankMap } from '../../core/combat.profile.js';
 import { createCombatScoringEngine } from '../../core/scoring.defaults.js';
-import { attachVerseIRAmplifier, enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
+import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
 import {
   loadSessionVoiceProfile,
@@ -12,6 +12,7 @@ import {
   resolveSessionSpeakerId,
 } from './combatVoiceProfiles.service.js';
 import { createLexiconAbyssService } from './lexiconAbyss.service.js';
+import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
 
 function normalizeCombatText(rawText) {
   if (typeof rawText === 'string') return rawText;
@@ -48,7 +49,9 @@ export function createCombatScoreService(options = {}) {
   async function scoreScroll(rawText, context = {}) {
     const scrollText = normalizeCombatText(rawText);
     const analyzedDoc = analyzeText(scrollText);
-    const verseIR = await enhanceVerseIR(compileVerseToIR(scrollText, { mode: 'balanced' }));
+    const verseIR = await enhanceVerseIRWithServerPolicy(
+      compileVerseToIR(scrollText, { mode: 'balanced' })
+    );
     const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
     const baseScoreData = await scoringEngine.calculateScore(amplifiedDoc);
     const scoreData = {

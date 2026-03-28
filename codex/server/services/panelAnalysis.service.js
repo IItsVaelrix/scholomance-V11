@@ -21,7 +21,8 @@ import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
 import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
-import { attachVerseIRAmplifier, enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
+import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
+import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -769,7 +770,7 @@ export function createPanelAnalysisService(options = {}) {
           ? { syntaxLayer, authorityMode: 'background' }
           : { authorityMode: 'background' }
       );
-      const verseIR = await enhanceVerseIR(compileVerseToIR(text, {
+      const verseIR = await enhanceVerseIRWithServerPolicy(compileVerseToIR(text, {
         phonemeEngine: PhonemeEngine,
         mode: deepAnalysis?.compiler?.mode || 'balanced',
       }));

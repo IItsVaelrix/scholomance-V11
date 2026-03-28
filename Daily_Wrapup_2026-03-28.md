@@ -12,6 +12,11 @@ We have successfully utilized the 50GB persistent disk on Render to create the *
 *   **Impact:** Solved the "Solved Meta" problem. The world now tracks server-wide word usage. Overused words suffer **Semantic Decay** (potency drop), while rare words gain **Abyssal Resonance** (damage bonus).
 *   **Akashic Record:** High-fidelity SQLite storage of every combat encounter now allows for forensic "Post-Mortem Analysis."
 
+### **The Phonemic Oracle (PO) & Linguistic Insight Engine**
+Architected a VerseIR-driven technical commentary system that transforms raw mathematical analysis into arcane technical mastery.
+*   **Impact:** CODEx now "talks" like a Linguistic God. Instead of dry numbers, the Oracle provides forensic critiques based on **HHM States** and suggests low-entropy replacements from the **Lexicon Abyss**.
+*   **Synapse Slot Integration:** The Oracle enters a "State of Awe" when inexplicable semantic elements are detected, revealing deep source-law secrets.
+
 ### **Hidden Harkov Model (HHM) Integration**
 The "Harkov Model" has been moved from prophecy to implementation. It is now woven directly into the `SyntaxLayer`.
 *   **Impact:** Every word now carries **Hidden States** (Terminal Anchors, Stress Anchors, Function Gates). This provides the deep grammar required for high-level combat tactics and resolves 34 critical test failures.
