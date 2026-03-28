@@ -1355,9 +1355,9 @@ export default function ReadPage() {
             defaultSize={(() => {
               const layout = settings?.ideLayout;
               if (layout?.length === 5) return layout[0] + layout[1]; // migrate old format
-              return layout?.[0] ?? 3;
+              return layout?.[0] ?? 8;
             })()}
-            minSize={3}
+            minSize={4}
             maxSize={22}
             className="ide-activity-bar ide-activity-combined"
           >
