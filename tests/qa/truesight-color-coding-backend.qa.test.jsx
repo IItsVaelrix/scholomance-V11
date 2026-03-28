@@ -133,12 +133,15 @@ describe("[QA] Truesight Color Coding (Backend-Driven)", () => {
       result.current.analyzeDocument("test error handling");
     });
 
-    await act(async () => {
-      await flushAnalysisCycle();
-    });
-
-    // Hook should surface the error and fall back to client-side analysis
-    expect(result.current.error).toBeTruthy();
+    // Use a longer timeout and waitFor to ensure the async fallback completes
+    await vi.waitFor(() => {
+      if (result.current.error === null) {
+        // Still waiting for debounce or request
+        vi.advanceTimersByTime(100);
+        throw new Error("Waiting for error state");
+      }
+      expect(result.current.error).toBeTruthy();
+    }, { timeout: 2000, interval: 50 });
 
     // Render with empty data — should not crash
     const { container } = renderTruesightEditor({

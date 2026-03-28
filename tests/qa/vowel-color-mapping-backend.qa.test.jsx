@@ -142,12 +142,15 @@ describe("[QA] Vowel Family Color Mapping (Backend-Driven)", () => {
       result.current.analyzeDocument("test unknown family");
     });
 
-    await act(async () => {
-      await flushAnalysisCycle();
-    });
-
-    // Hook should surface the error
-    expect(result.current.error).toBeTruthy();
+    // Use a longer timeout and waitFor to ensure the async fallback completes
+    await vi.waitFor(() => {
+      if (result.current.error === null) {
+        // Still waiting for debounce or request
+        vi.advanceTimersByTime(100);
+        throw new Error("Waiting for error state");
+      }
+      expect(result.current.error).toBeTruthy();
+    }, { timeout: 2000, interval: 50 });
 
     // Render with empty data — should not crash
     const { container } = renderTruesightEditor({

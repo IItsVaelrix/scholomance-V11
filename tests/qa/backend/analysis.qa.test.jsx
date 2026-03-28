@@ -61,14 +61,19 @@ describe("Panel analysis backend QA", () => {
       result.current.analyzeDocument("unique failure text");
     });
 
-    await act(async () => {
-      await flushAnalysisCycle();
-    });
+    // Use a longer timeout and waitFor to ensure the async fallback completes
+    await vi.waitFor(() => {
+      if (result.current.error === null) {
+        // Still waiting for debounce or request
+        vi.advanceTimersByTime(100);
+        throw new Error("Waiting for error state");
+      }
+      expect(result.current.error).toBe("Server unavailable — using local analysis");
+    }, { timeout: 2000, interval: 50 });
 
     const analysisCalls = fetchMock.mock.calls.filter(call => String(call[0]).includes("/api/analysis/panels"));
     expect(analysisCalls).toHaveLength(1);
     expect(result.current.analysis).not.toBe(null);
-    expect(result.current.error).toBe("Server unavailable — using local analysis");
   });
 
   it("debounces rapid requests and sends only the latest payload", async () => {

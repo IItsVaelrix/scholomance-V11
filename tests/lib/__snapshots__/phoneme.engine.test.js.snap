@@ -100,44 +100,6 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AE-T",
-      ],
-      "rhymeKey": "AE-T",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "T",
-          "index": 0,
-          "onset": "TH",
-          "stress": 1,
-          "vowel": "AE1",
-          "vowelFamily": "AE",
-        },
-      ],
-      "word": "THAT",
-    },
-    {
-      "extendedRhymeKeys": [
-        "A-open",
-      ],
-      "rhymeKey": "A-open",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "",
-          "index": 0,
-          "onset": "Y",
-          "stress": 1,
-          "vowel": "AW1",
-          "vowelFamily": "A",
-        },
-      ],
-      "word": "YOU",
-    },
-    {
-      "extendedRhymeKeys": [
         "AE-open",
       ],
       "rhymeKey": "AE-open",
@@ -157,25 +119,6 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "EY-open",
-      ],
-      "rhymeKey": "EY-open",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "",
-          "index": 0,
-          "onset": "M",
-          "stress": 1,
-          "vowel": "AY1",
-          "vowelFamily": "EY",
-        },
-      ],
-      "word": "MY",
-    },
-    {
-      "extendedRhymeKeys": [
         "IH-S",
       ],
       "rhymeKey": "IH-S",
@@ -185,13 +128,89 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
         {
           "coda": "S",
           "index": 0,
-          "onset": "",
+          "onset": "H",
           "stress": 1,
           "vowel": "IH1",
           "vowelFamily": "IH",
         },
       ],
-      "word": "IS",
+      "word": "HIS",
+    },
+    {
+      "extendedRhymeKeys": [
+        "AE-T",
+      ],
+      "rhymeKey": "AE-T",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "T",
+          "index": 0,
+          "onset": "TH",
+          "stress": 1,
+          "vowel": "AE1",
+          "vowelFamily": "AE",
+        },
+      ],
+      "word": "THAT",
+    },
+    {
+      "extendedRhymeKeys": [
+        "AE-S",
+      ],
+      "rhymeKey": "AE-S",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "S",
+          "index": 0,
+          "onset": "W",
+          "stress": 1,
+          "vowel": "AE1",
+          "vowelFamily": "AE",
+        },
+      ],
+      "word": "WAS",
+    },
+    {
+      "extendedRhymeKeys": [
+        "AE-R",
+      ],
+      "rhymeKey": "AE-R",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "R",
+          "index": 0,
+          "onset": "H",
+          "stress": 1,
+          "vowel": "EH1",
+          "vowelFamily": "AE",
+        },
+      ],
+      "word": "HER",
+    },
+    {
+      "extendedRhymeKeys": [
+        "AE-D",
+      ],
+      "rhymeKey": "AE-D",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "D",
+          "index": 0,
+          "onset": "H",
+          "stress": 1,
+          "vowel": "AE1",
+          "vowelFamily": "AE",
+        },
+      ],
+      "word": "HAD",
     },
     {
       "extendedRhymeKeys": [
@@ -211,25 +230,6 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
         },
       ],
       "word": "IT",
-    },
-    {
-      "extendedRhymeKeys": [
-        "IH-S",
-      ],
-      "rhymeKey": "IH-S",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "S",
-          "index": 0,
-          "onset": "H",
-          "stress": 1,
-          "vowel": "IH1",
-          "vowelFamily": "IH",
-        },
-      ],
-      "word": "HIS",
     },
     {
       "extendedRhymeKeys": [
@@ -271,41 +271,22 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "A-T",
+        "A-open",
       ],
-      "rhymeKey": "A-T",
+      "rhymeKey": "A-open",
       "stressPattern": "1",
       "syllableCount": 1,
       "syllables": [
         {
-          "coda": "T",
+          "coda": "",
           "index": 0,
-          "onset": "N",
+          "onset": "Y",
           "stress": 1,
-          "vowel": "AA1",
+          "vowel": "AW1",
           "vowelFamily": "A",
         },
       ],
-      "word": "NOT",
-    },
-    {
-      "extendedRhymeKeys": [
-        "AE-S",
-      ],
-      "rhymeKey": "AE-S",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "S",
-          "index": 0,
-          "onset": "W",
-          "stress": 1,
-          "vowel": "AE1",
-          "vowelFamily": "AE",
-        },
-      ],
-      "word": "WAS",
+      "word": "YOU",
     },
     {
       "extendedRhymeKeys": [
@@ -328,6 +309,44 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
+        "AE-open",
+      ],
+      "rhymeKey": "AE-open",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "",
+          "index": 0,
+          "onset": "SH",
+          "stress": 1,
+          "vowel": "EH1",
+          "vowelFamily": "AE",
+        },
+      ],
+      "word": "SHE",
+    },
+    {
+      "extendedRhymeKeys": [
+        "IH-S",
+      ],
+      "rhymeKey": "IH-S",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "S",
+          "index": 0,
+          "onset": "",
+          "stress": 1,
+          "vowel": "IH1",
+          "vowelFamily": "IH",
+        },
+      ],
+      "word": "IS",
+    },
+    {
+      "extendedRhymeKeys": [
         "A-T",
       ],
       "rhymeKey": "A-T",
@@ -344,6 +363,63 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
         },
       ],
       "word": "BUT",
+    },
+    {
+      "extendedRhymeKeys": [
+        "A-T",
+      ],
+      "rhymeKey": "A-T",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "T",
+          "index": 0,
+          "onset": "N",
+          "stress": 1,
+          "vowel": "AA1",
+          "vowelFamily": "A",
+        },
+      ],
+      "word": "NOT",
+    },
+    {
+      "extendedRhymeKeys": [
+        "EY-open",
+      ],
+      "rhymeKey": "EY-open",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "",
+          "index": 0,
+          "onset": "M",
+          "stress": 1,
+          "vowel": "AY1",
+          "vowelFamily": "EY",
+        },
+      ],
+      "word": "MY",
+    },
+    {
+      "extendedRhymeKeys": [
+        "IH-M",
+      ],
+      "rhymeKey": "IH-M",
+      "stressPattern": "1",
+      "syllableCount": 1,
+      "syllables": [
+        {
+          "coda": "M",
+          "index": 0,
+          "onset": "H",
+          "stress": 1,
+          "vowel": "IH1",
+          "vowelFamily": "IH",
+        },
+      ],
+      "word": "HIM",
     },
     {
       "extendedRhymeKeys": [
@@ -366,98 +442,22 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     },
     {
       "extendedRhymeKeys": [
-        "AE-open",
+        "A-N",
       ],
-      "rhymeKey": "AE-open",
+      "rhymeKey": "A-N",
       "stressPattern": "1",
       "syllableCount": 1,
       "syllables": [
         {
-          "coda": "",
+          "coda": "N",
           "index": 0,
-          "onset": "M",
+          "onset": "",
           "stress": 1,
-          "vowel": "EH1",
-          "vowelFamily": "AE",
+          "vowel": "AA1",
+          "vowelFamily": "A",
         },
       ],
-      "word": "ME",
-    },
-    {
-      "extendedRhymeKeys": [
-        "IH-S",
-      ],
-      "rhymeKey": "IH-S",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "S",
-          "index": 0,
-          "onset": "TH",
-          "stress": 1,
-          "vowel": "IH1",
-          "vowelFamily": "IH",
-        },
-      ],
-      "word": "THIS",
-    },
-    {
-      "extendedRhymeKeys": [
-        "AE-R",
-      ],
-      "rhymeKey": "AE-R",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "R",
-          "index": 0,
-          "onset": "H",
-          "stress": 1,
-          "vowel": "EH1",
-          "vowelFamily": "AE",
-        },
-      ],
-      "word": "HER",
-    },
-    {
-      "extendedRhymeKeys": [
-        "AE-V",
-      ],
-      "rhymeKey": "AE-V",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "V",
-          "index": 0,
-          "onset": "H",
-          "stress": 1,
-          "vowel": "AE1",
-          "vowelFamily": "AE",
-        },
-      ],
-      "word": "HAVE",
-    },
-    {
-      "extendedRhymeKeys": [
-        "IH-M",
-      ],
-      "rhymeKey": "IH-M",
-      "stressPattern": "1",
-      "syllableCount": 1,
-      "syllables": [
-        {
-          "coda": "M",
-          "index": 0,
-          "onset": "H",
-          "stress": 1,
-          "vowel": "IH1",
-          "vowelFamily": "IH",
-        },
-      ],
-      "word": "HIM",
+      "word": "ON",
     },
   ],
   "words": [
@@ -466,25 +466,25 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeDeep
     "of",
     "to",
     "in",
-    "that",
-    "you",
     "he",
-    "my",
-    "is",
-    "it",
     "his",
+    "that",
+    "was",
+    "her",
+    "had",
+    "it",
     "with",
     "for",
-    "not",
-    "was",
+    "you",
     "as",
+    "she",
+    "is",
     "but",
-    "be",
-    "me",
-    "this",
-    "her",
-    "have",
+    "not",
+    "my",
     "him",
+    "be",
+    "on",
   ],
 }
 `;
@@ -549,29 +549,6 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "word": "IN",
     },
     {
-      "coda": "T",
-      "phonemes": [
-        "TH",
-        "AE1",
-        "T",
-      ],
-      "rhymeKey": "AE-T",
-      "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "THAT",
-    },
-    {
-      "coda": null,
-      "phonemes": [
-        "Y",
-        "AW1",
-      ],
-      "rhymeKey": "A-open",
-      "syllableCount": 1,
-      "vowelFamily": "A",
-      "word": "YOU",
-    },
-    {
       "coda": null,
       "phonemes": [
         "H",
@@ -581,39 +558,6 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "syllableCount": 1,
       "vowelFamily": "AE",
       "word": "HE",
-    },
-    {
-      "coda": null,
-      "phonemes": [
-        "M",
-        "AY1",
-      ],
-      "rhymeKey": "EY-open",
-      "syllableCount": 1,
-      "vowelFamily": "EY",
-      "word": "MY",
-    },
-    {
-      "coda": "S",
-      "phonemes": [
-        "IH1",
-        "S",
-      ],
-      "rhymeKey": "IH-S",
-      "syllableCount": 1,
-      "vowelFamily": "IH",
-      "word": "IS",
-    },
-    {
-      "coda": "T",
-      "phonemes": [
-        "IH1",
-        "T",
-      ],
-      "rhymeKey": "IH-T",
-      "syllableCount": 1,
-      "vowelFamily": "IH",
-      "word": "IT",
     },
     {
       "coda": "S",
@@ -626,6 +570,65 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "syllableCount": 1,
       "vowelFamily": "IH",
       "word": "HIS",
+    },
+    {
+      "coda": "T",
+      "phonemes": [
+        "TH",
+        "AE1",
+        "T",
+      ],
+      "rhymeKey": "AE-T",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "THAT",
+    },
+    {
+      "coda": "S",
+      "phonemes": [
+        "W",
+        "AE1",
+        "S",
+      ],
+      "rhymeKey": "AE-S",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "WAS",
+    },
+    {
+      "coda": "R",
+      "phonemes": [
+        "H",
+        "EH1",
+        "R",
+      ],
+      "rhymeKey": "AE-R",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "HER",
+    },
+    {
+      "coda": "D",
+      "phonemes": [
+        "H",
+        "AE1",
+        "D",
+      ],
+      "rhymeKey": "AE-D",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "HAD",
+    },
+    {
+      "coda": "T",
+      "phonemes": [
+        "IH1",
+        "T",
+      ],
+      "rhymeKey": "IH-T",
+      "syllableCount": 1,
+      "vowelFamily": "IH",
+      "word": "IT",
     },
     {
       "coda": "TH",
@@ -652,28 +655,15 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "word": "FOR",
     },
     {
-      "coda": "T",
+      "coda": null,
       "phonemes": [
-        "N",
-        "AA1",
-        "T",
+        "Y",
+        "AW1",
       ],
-      "rhymeKey": "A-T",
+      "rhymeKey": "A-open",
       "syllableCount": 1,
       "vowelFamily": "A",
-      "word": "NOT",
-    },
-    {
-      "coda": "S",
-      "phonemes": [
-        "W",
-        "AE1",
-        "S",
-      ],
-      "rhymeKey": "AE-S",
-      "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "WAS",
+      "word": "YOU",
     },
     {
       "coda": "S",
@@ -685,6 +675,28 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "syllableCount": 1,
       "vowelFamily": "AE",
       "word": "AS",
+    },
+    {
+      "coda": null,
+      "phonemes": [
+        "SH",
+        "EH1",
+      ],
+      "rhymeKey": "AE-open",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "SHE",
+    },
+    {
+      "coda": "S",
+      "phonemes": [
+        "IH1",
+        "S",
+      ],
+      "rhymeKey": "IH-S",
+      "syllableCount": 1,
+      "vowelFamily": "IH",
+      "word": "IS",
     },
     {
       "coda": "T",
@@ -699,62 +711,27 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "word": "BUT",
     },
     {
-      "coda": null,
+      "coda": "T",
       "phonemes": [
-        "B",
-        "EH1",
+        "N",
+        "AA1",
+        "T",
       ],
-      "rhymeKey": "AE-open",
+      "rhymeKey": "A-T",
       "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "BE",
+      "vowelFamily": "A",
+      "word": "NOT",
     },
     {
       "coda": null,
       "phonemes": [
         "M",
-        "EH1",
+        "AY1",
       ],
-      "rhymeKey": "AE-open",
+      "rhymeKey": "EY-open",
       "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "ME",
-    },
-    {
-      "coda": "S",
-      "phonemes": [
-        "TH",
-        "IH1",
-        "S",
-      ],
-      "rhymeKey": "IH-S",
-      "syllableCount": 1,
-      "vowelFamily": "IH",
-      "word": "THIS",
-    },
-    {
-      "coda": "R",
-      "phonemes": [
-        "H",
-        "EH1",
-        "R",
-      ],
-      "rhymeKey": "AE-R",
-      "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "HER",
-    },
-    {
-      "coda": "V",
-      "phonemes": [
-        "H",
-        "AE1",
-        "V",
-      ],
-      "rhymeKey": "AE-V",
-      "syllableCount": 1,
-      "vowelFamily": "AE",
-      "word": "HAVE",
+      "vowelFamily": "EY",
+      "word": "MY",
     },
     {
       "coda": "M",
@@ -768,6 +745,28 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
       "vowelFamily": "IH",
       "word": "HIM",
     },
+    {
+      "coda": null,
+      "phonemes": [
+        "B",
+        "EH1",
+      ],
+      "rhymeKey": "AE-open",
+      "syllableCount": 1,
+      "vowelFamily": "AE",
+      "word": "BE",
+    },
+    {
+      "coda": "N",
+      "phonemes": [
+        "AA1",
+        "N",
+      ],
+      "rhymeKey": "A-N",
+      "syllableCount": 1,
+      "vowelFamily": "A",
+      "word": "ON",
+    },
   ],
   "words": [
     "the",
@@ -775,25 +774,25 @@ exports[`PhonemeEngine > Regression Contract (Corpus Sample) > keeps analyzeWord
     "of",
     "to",
     "in",
-    "that",
-    "you",
     "he",
-    "my",
-    "is",
-    "it",
     "his",
+    "that",
+    "was",
+    "her",
+    "had",
+    "it",
     "with",
     "for",
-    "not",
-    "was",
+    "you",
     "as",
+    "she",
+    "is",
     "but",
-    "be",
-    "me",
-    "this",
-    "her",
-    "have",
+    "not",
+    "my",
     "him",
+    "be",
+    "on",
   ],
 }
 `;

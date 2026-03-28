@@ -173,6 +173,7 @@ export function buildSyntaxLayer(analyzedDoc) {
       tokenCount: tokens.length,
       ...counts,
       tokens,
+      hhm,
     },
   };
 }

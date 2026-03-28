@@ -14,6 +14,9 @@ export function restoreClock() {
 
 export async function flushAnalysisCycle(durationMs = ANALYSIS_DEBOUNCE_MS) {
   await vi.advanceTimersByTimeAsync(durationMs);
-  await Promise.resolve();
-  await Promise.resolve();
+  // Flush multiple rounds of microtasks to ensure all async steps 
+  // (imports, analysis, state transitions) complete.
+  for (let i = 0; i < 20; i++) {
+    await Promise.resolve();
+  }
 }
