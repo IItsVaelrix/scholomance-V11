@@ -104,6 +104,34 @@ const USER_MIGRATIONS = [
     },
   },
   {
+    version: 7,
+    name: 'create_world_entities_table',
+    up(database) {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS world_entities (
+          id TEXT PRIMARY KEY,
+          kind TEXT NOT NULL,
+          lexeme TEXT NOT NULL,
+          roomId TEXT,
+          ownerUserId INTEGER,
+          seed TEXT NOT NULL,
+          actions_json TEXT NOT NULL DEFAULT '["inspect"]',
+          state_json TEXT NOT NULL DEFAULT '{}',
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          inspect_count INTEGER NOT NULL DEFAULT 0,
+          last_inspected_at DATETIME,
+          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+          FOREIGN KEY (roomId) REFERENCES world_rooms (id),
+          FOREIGN KEY (ownerUserId) REFERENCES users (id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_world_entities_room ON world_entities(roomId, updatedAt DESC);
+        CREATE INDEX IF NOT EXISTS idx_world_entities_owner ON world_entities(ownerUserId, updatedAt DESC);
+        CREATE INDEX IF NOT EXISTS idx_world_entities_lexeme ON world_entities(lexeme);
+      `);
+    },
+  },
+  {
     version: 8,
     name: 'create_user_settings_table',
     up(database) {
