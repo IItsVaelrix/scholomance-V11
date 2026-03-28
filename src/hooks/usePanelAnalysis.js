@@ -1,5 +1,6 @@
 import { startTransition, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
+import { buildSyntaxLayer } from "../lib/syntax.layer.js";
 import { normalizeVowelFamily, buildVowelSummary } from "../lib/phonology/vowelFamily.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 import { analyzeDocumentAsync, warmAnalysisWorker } from "../lib/workers/analysis.client.js";
@@ -506,6 +507,25 @@ async function runClientSideAnalysis(text) {
   const scheme = detectScheme(analysis.schemePattern, analysis.rhymeGroups);
   const meter = analyzeMeter(analysis.lines);
   const vowelSummary = buildVowelSummary(analysis.lines.flatMap((line) => line.words || []));
+
+  // Build syntax layer for client-side fallback if not already present
+  let syntaxSummary = analysis.syntaxSummary || null;
+  if (!syntaxSummary && Array.isArray(analysis.lines)) {
+    const docForSyntax = {
+      lines: analysis.lines.map((line, idx) => ({
+        number: idx,
+        words: (line.words || []).map(w => ({
+          text: w.word,
+          charStart: w.charStart,
+          lineIndex: w.lineIndex,
+          wordIndex: w.wordIndex
+        }))
+      }))
+    };
+    const syntaxLayer = buildSyntaxLayer(docForSyntax);
+    syntaxSummary = syntaxLayer?.syntaxSummary || null;
+  }
+
   return {
     data: {
       analysis: {
@@ -513,7 +533,7 @@ async function runClientSideAnalysis(text) {
         statistics: analysis.statistics || null,
         schemePattern: typeof analysis.schemePattern === "string" ? analysis.schemePattern : "",
         rhymeGroups: analysis.rhymeGroups instanceof Map ? analysis.rhymeGroups : new Map(),
-        syntaxSummary: analysis.syntaxSummary || null,
+        syntaxSummary,
         compiler: analysis.compiler || null,
         wordAnalyses,
         lineSyllableCounts,
@@ -535,6 +555,7 @@ export function usePanelAnalysis() {
   const [analysis, setAnalysis] = useState(null);
   const [schemeDetection, setSchemeDetection] = useState(null);
   const [meterDetection, setMeterDetection] = useState(null);
+  const [hhmSummary, setHhmSummary] = useState(null);
   const [scoreData, setScoreData] = useState(null);
   const [vowelSummary, setVowelSummary] = useState(EMPTY_VOWEL_SUMMARY);
   const [rhymeAstrology, setRhymeAstrology] = useState(null);
@@ -558,6 +579,7 @@ export function usePanelAnalysis() {
     setAnalysis(null);
     setSchemeDetection(null);
     setMeterDetection(null);
+    setHhmSummary(null);
     setScoreData(null);
     setVowelSummary(EMPTY_VOWEL_SUMMARY);
     setRhymeAstrology(null);
@@ -586,6 +608,7 @@ export function usePanelAnalysis() {
       setAnalysis(nextAnalysis);
       setSchemeDetection(normalized.scheme);
       setMeterDetection(normalized.meter);
+      setHhmSummary(nextAnalysis?.syntaxSummary?.hhm || null);
       setScoreData(normalized.scoreData);
       setVowelSummary(normalized.vowelSummary);
       setRhymeAstrology(normalized.rhymeAstrology);
@@ -759,6 +782,7 @@ export function usePanelAnalysis() {
     analysis,
     schemeDetection,
     meterDetection,
+    hhmSummary,
     hasComplexScheme,
     literaryDevices,
     emotion,
