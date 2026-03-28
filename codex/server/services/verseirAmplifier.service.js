@@ -51,6 +51,7 @@ function buildCacheKey(verseIR, options) {
     amplifiers,
     timeoutMs: options?.timeoutMs ?? null,
     amplifierTimeouts: options?.amplifierTimeouts ?? null,
+    routing: options?.routing ?? null,
     domainOverrides: options?.domainOverrides ?? null,
     domainExtensions: options?.domainExtensions ?? null,
   });

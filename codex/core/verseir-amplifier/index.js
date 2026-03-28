@@ -3,6 +3,7 @@ import { rareElementAmplifier } from './plugins/rareElements.js';
 import { inexplicableElementAmplifier } from './plugins/inexplicableElements.js';
 import {
   clamp01,
+  collectVerseIRTokenStats,
   createAmplifierDiagnostic,
   createAmplifierResult,
   normalizeAmplifierTier,
@@ -15,6 +16,8 @@ const MIN_PRECISION_SCALAR = 0.72;
 const PRECISION_DECAY_PER_ACTIVE_AMPLIFIER = 0.08;
 const MAX_MATCHES_PER_TIER = 6;
 const MAX_DIAGNOSTICS = 8;
+const DEFAULT_ROUTING_TOP_K = 3;
+const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
   commonElementAmplifier,
@@ -72,6 +75,217 @@ function withAmplifierTimeout(task, amplifierId, timeoutMs) {
     }),
   ]).finally(() => {
     if (timeoutHandle) clearTimeout(timeoutHandle);
+  });
+}
+
+function resolveRoutingConfig(options, amplifierCount) {
+  const routing = options?.routing && typeof options.routing === 'object'
+    ? options.routing
+    : {};
+  const requestedTopK = Number(routing.topK);
+  const topK = Number.isInteger(requestedTopK) && requestedTopK > 0
+    ? Math.min(amplifierCount, requestedTopK)
+    : Math.min(amplifierCount, DEFAULT_ROUTING_TOP_K);
+  const requestedMinScore = Number(routing.minScore);
+
+  return Object.freeze({
+    enabled: routing.enabled !== false,
+    topK,
+    minScore: Number.isFinite(requestedMinScore)
+      ? clamp01(requestedMinScore)
+      : DEFAULT_ROUTING_MIN_SCORE,
+  });
+}
+
+function normalizeRouteResult(rawRoute, amplifier, index) {
+  const amplifierId = getAmplifierId(amplifier, index);
+
+  if (rawRoute === undefined || rawRoute === null) {
+    return Object.freeze({
+      amplifierId,
+      score: 1,
+      shouldRun: true,
+      reason: 'no_route',
+      matchedDomainCount: 0,
+      topMatch: null,
+      forceRun: false,
+      routeError: null,
+    });
+  }
+
+  if (typeof rawRoute === 'boolean') {
+    return Object.freeze({
+      amplifierId,
+      score: rawRoute ? 1 : 0,
+      shouldRun: rawRoute,
+      reason: rawRoute ? 'matched' : 'route_rejected',
+      matchedDomainCount: 0,
+      topMatch: null,
+      forceRun: false,
+      routeError: null,
+    });
+  }
+
+  if (typeof rawRoute === 'number') {
+    const score = roundTo(clamp01(rawRoute));
+    return Object.freeze({
+      amplifierId,
+      score,
+      shouldRun: score > 0,
+      reason: score > 0 ? 'matched' : 'route_rejected',
+      matchedDomainCount: 0,
+      topMatch: null,
+      forceRun: false,
+      routeError: null,
+    });
+  }
+
+  if (typeof rawRoute !== 'object') {
+    return Object.freeze({
+      amplifierId,
+      score: 1,
+      shouldRun: true,
+      reason: 'invalid_route_shape',
+      matchedDomainCount: 0,
+      topMatch: null,
+      forceRun: false,
+      routeError: null,
+    });
+  }
+
+  const hasExplicitScore = Number.isFinite(Number(rawRoute?.score));
+  const hasExplicitShouldRun = typeof rawRoute?.shouldRun === 'boolean';
+  const score = hasExplicitScore
+    ? clamp01(Number(rawRoute.score))
+    : hasExplicitShouldRun
+      ? (rawRoute.shouldRun ? 1 : 0)
+      : 1;
+  const shouldRun = hasExplicitShouldRun ? rawRoute.shouldRun : score > 0;
+
+  return Object.freeze({
+    amplifierId,
+    score: roundTo(score),
+    shouldRun,
+    reason: String(rawRoute?.reason || (shouldRun ? 'matched' : 'route_rejected')),
+    matchedDomainCount: Math.max(0, Math.round(Number(rawRoute?.matchedDomainCount) || 0)),
+    topMatch: normalizeAmplifierMatch(rawRoute?.topMatch),
+    forceRun: false,
+    routeError: null,
+  });
+}
+
+function createRouteFailureSelection(amplifier, index, error) {
+  return Object.freeze({
+    amplifierId: getAmplifierId(amplifier, index),
+    score: 1,
+    shouldRun: true,
+    reason: 'route_error_fallback',
+    matchedDomainCount: 0,
+    topMatch: null,
+    forceRun: true,
+    routeError: Object.freeze({
+      code: String(error?.code || 'VERSEIR_AMPLIFIER_ROUTE_FAILED'),
+      message: String(error?.message || error || 'unknown error'),
+    }),
+  });
+}
+
+async function scoreAmplifierRoute(amplifier, executionContext, index) {
+  if (!amplifier || typeof amplifier.analyze !== 'function') {
+    return Object.freeze({
+      amplifierId: getAmplifierId(amplifier, index),
+      score: 1,
+      shouldRun: true,
+      reason: 'invalid_plugin',
+      matchedDomainCount: 0,
+      topMatch: null,
+      forceRun: true,
+      routeError: null,
+    });
+  }
+
+  if (typeof amplifier.route !== 'function') {
+    return normalizeRouteResult(undefined, amplifier, index);
+  }
+
+  try {
+    return normalizeRouteResult(await amplifier.route(executionContext), amplifier, index);
+  } catch (error) {
+    return createRouteFailureSelection(amplifier, index, error);
+  }
+}
+
+function sortRouteSelections(left, right) {
+  if (right.score !== left.score) return right.score - left.score;
+
+  const rightWeight = Number(right?.amplifier?.claimedWeight) || 0;
+  const leftWeight = Number(left?.amplifier?.claimedWeight) || 0;
+  if (rightWeight !== leftWeight) return rightWeight - leftWeight;
+
+  return String(left?.amplifierId || '').localeCompare(String(right?.amplifierId || ''));
+}
+
+function createDormantAmplifierResult(amplifier, index, selection) {
+  const amplifierId = selection?.amplifierId || getAmplifierId(amplifier, index);
+  const amplifierLabel = String(amplifier?.label || amplifierId).trim();
+
+  let code = 'VERSEIR_AMPLIFIER_ROUTED_OUT';
+  let severity = 'info';
+  let message = `${amplifierLabel} remained dormant under routing.`;
+  let commentary = `${amplifierLabel} remained dormant under MoE routing.`;
+
+  switch (selection?.reason) {
+    case 'no_domains':
+      code = 'VERSEIR_AMPLIFIER_NO_DOMAINS';
+      severity = 'warning';
+      message = `${amplifierLabel} has no registered semantic domains.`;
+      commentary = `${amplifierLabel} has no semantic domains to route.`;
+      break;
+    case 'no_tokens':
+      message = `${amplifierLabel} remained dormant because the verse exposed no routable tokens.`;
+      commentary = `${amplifierLabel} remained dormant because the verse exposed no routable tokens.`;
+      break;
+    case 'below_threshold':
+      message = `${amplifierLabel} remained dormant because its routing score stayed below the activation threshold.`;
+      commentary = `${amplifierLabel} remained dormant because its routing score stayed below the activation threshold.`;
+      break;
+    case 'not_top_k':
+      message = `${amplifierLabel} remained dormant because higher-confidence amplifiers claimed the active slots.`;
+      commentary = `${amplifierLabel} remained dormant because higher-confidence amplifiers claimed the active slots.`;
+      break;
+    case 'route_rejected':
+    case 'no_match':
+      message = `${amplifierLabel} remained dormant because the router found no relevant signal.`;
+      commentary = `${amplifierLabel} remained dormant because the router found no relevant signal.`;
+      break;
+    default:
+      break;
+  }
+
+  return createAmplifierResult({
+    id: amplifierId,
+    label: amplifierLabel,
+    tier: normalizeAmplifierTier(amplifier?.tier),
+    claimedWeight: Number(amplifier?.claimedWeight) || 0,
+    diagnostics: [
+      createAmplifierDiagnostic({
+        message,
+        severity,
+        source: `verseir_amplifier:${amplifierId}`,
+        metadata: {
+          amplifierId,
+          code,
+          routingScore: Number(selection?.score) || 0,
+          routingReason: String(selection?.reason || 'routed_out'),
+          routingTopK: Number(selection?.routing?.topK) || 0,
+          routingMinScore: Number(selection?.routing?.minScore) || 0,
+          matchedDomainCount: Number(selection?.matchedDomainCount) || 0,
+          topMatchId: selection?.topMatch?.id || null,
+          topMatchLabel: selection?.topMatch?.label || null,
+        },
+      }),
+    ],
+    commentary,
   });
 }
 
@@ -278,7 +492,85 @@ function computePrecisionScalar(activeAmplifiers) {
   ));
 }
 
-async function executeAmplifier(amplifier, verseIR, options, index) {
+async function planAmplifierExecution(amplifiers, executionContext) {
+  const routing = resolveRoutingConfig(executionContext?.options, amplifiers.length);
+  const scoredSelections = await Promise.all(
+    amplifiers.map(async (amplifier, index) => Object.freeze({
+      amplifier,
+      index,
+      ...(await scoreAmplifierRoute(amplifier, executionContext, index)),
+    }))
+  );
+
+  if (!routing.enabled) {
+    return Object.freeze(
+      scoredSelections.map((selection) => Object.freeze({
+        ...selection,
+        selected: true,
+        routing,
+      }))
+    );
+  }
+
+  const forcedSelections = scoredSelections.filter((selection) => selection.forceRun);
+  const selectedIds = new Set(forcedSelections.map((selection) => selection.amplifierId));
+  const routedSelections = scoredSelections
+    .filter((selection) => !selection.forceRun && selection.shouldRun && selection.score >= routing.minScore)
+    .sort(sortRouteSelections)
+    .slice(0, routing.topK);
+
+  for (const selection of routedSelections) {
+    selectedIds.add(selection.amplifierId);
+  }
+
+  return Object.freeze(
+    scoredSelections.map((selection) => {
+      let reason = selection.reason;
+      if (!selectedIds.has(selection.amplifierId)) {
+        if (!selection.shouldRun || selection.score <= 0) {
+          reason = selection.reason || 'no_match';
+        } else if (selection.score < routing.minScore) {
+          reason = 'below_threshold';
+        } else {
+          reason = 'not_top_k';
+        }
+      }
+
+      return Object.freeze({
+        ...selection,
+        reason,
+        selected: selectedIds.has(selection.amplifierId),
+        routing,
+      });
+    })
+  );
+}
+
+function withRouteFallbackDiagnostic(rawResult, amplifier, index, routeResult) {
+  if (!routeResult?.routeError || !rawResult || typeof rawResult !== 'object') {
+    return rawResult;
+  }
+
+  const amplifierId = getAmplifierId(amplifier, index);
+  return {
+    ...rawResult,
+    diagnostics: [
+      ...(Array.isArray(rawResult?.diagnostics) ? rawResult.diagnostics : []),
+      createAmplifierDiagnostic({
+        severity: 'warning',
+        source: `verseir_amplifier:${amplifierId}`,
+        message: `${String(amplifier?.label || amplifierId).trim()} routing failed, so it executed in fallback mode.`,
+        metadata: {
+          amplifierId,
+          code: routeResult.routeError.code,
+          error: routeResult.routeError.message,
+        },
+      }),
+    ],
+  };
+}
+
+async function executeAmplifier(amplifier, executionContext, index) {
   if (!amplifier || typeof amplifier.analyze !== 'function') {
     return createExecutionFailureResult(
       amplifier,
@@ -289,14 +581,19 @@ async function executeAmplifier(amplifier, verseIR, options, index) {
   }
 
   const amplifierId = getAmplifierId(amplifier, index);
+  const options = executionContext?.options;
 
   try {
     const rawResult = await withAmplifierTimeout(
-      () => amplifier.analyze({ verseIR, options }),
+      () => amplifier.analyze(executionContext),
       amplifierId,
       resolveAmplifierTimeoutMs(options, amplifierId)
     );
-    return normalizeAmplifierResult(rawResult, amplifier, index);
+    return normalizeAmplifierResult(
+      withRouteFallbackDiagnostic(rawResult, amplifier, index, executionContext?.routeResult),
+      amplifier,
+      index
+    );
   } catch (error) {
     const code = error?.code || 'VERSEIR_AMPLIFIER_EXECUTION_FAILED';
     const message = code === 'VERSEIR_AMPLIFIER_TIMEOUT'
@@ -313,10 +610,29 @@ export async function runVerseIRAmplifiers(verseIR, options = {}) {
   const amplifiers = Array.isArray(options?.amplifiers) && options.amplifiers.length > 0
     ? options.amplifiers
     : DEFAULT_VERSEIR_AMPLIFIERS;
-  const latencyMultiplier = roundTo(1 + (Math.max(0, amplifiers.length - 1) * 0.18));
+  const executionContext = Object.freeze({
+    verseIR,
+    options,
+    tokenStats: collectVerseIRTokenStats(verseIR),
+  });
+  const executionPlan = await planAmplifierExecution(amplifiers, executionContext);
+  const latencyMultiplier = roundTo(
+    1 + (Math.max(0, executionPlan.filter((step) => step.selected).length - 1) * 0.18)
+  );
   const normalizedResults = Object.freeze(
     await Promise.all(
-      amplifiers.map((amplifier, index) => executeAmplifier(amplifier, verseIR, options, index))
+      executionPlan.map((step) => (
+        step.selected
+          ? executeAmplifier(
+            step.amplifier,
+            Object.freeze({
+              ...executionContext,
+              routeResult: step,
+            }),
+            step.index
+          )
+          : Promise.resolve(createDormantAmplifierResult(step.amplifier, step.index, step))
+      ))
     )
   );
   const activeAmplifiers = normalizedResults.filter(isAmplifierActive).length;
