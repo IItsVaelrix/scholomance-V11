@@ -86,6 +86,9 @@ function SpellbookTruesightOverlay({ text, analyzedWordsByStart, textareaRef }) 
         if (!isWord) return <span key={i}>{token.text}</span>;
 
         const analysis = analyzedWordsByStart.get(token.start);
+        const role = analysis?.role || 'content';
+        const isFunction = role === 'function' || role === 'conjunction' || role === 'preposition';
+        
         const schoolId = analysis ? VOWEL_FAMILY_TO_SCHOOL[analysis.vowelFamily] : null;
         const school = schoolId ? SCHOOLS[schoolId] : null;
         const color = school ? school.color : 'inherit';
@@ -93,8 +96,13 @@ function SpellbookTruesightOverlay({ text, analyzedWordsByStart, textareaRef }) 
         return (
           <span 
             key={i} 
-            className="spellbook-truesight-word" 
-            style={{ color }}
+            className={`spellbook-truesight-word role-${role}`}
+            style={{ 
+              color,
+              opacity: isFunction ? 0.45 : 1,
+              fontWeight: isFunction ? 400 : 600,
+              filter: isFunction ? 'none' : `drop-shadow(0 0 2px ${color}44)`
+            }}
           >
             {token.text}
           </span>

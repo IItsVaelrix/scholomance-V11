@@ -83,6 +83,13 @@ body::before {
   --font-sans: "Space Grotesk", system-ui, -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "SF Mono", Consolas, monospace;
   --font-display: 'Cinzel', 'Palatino Linotype', Georgia, serif;
+
+  /* Vellum Palette */
+  --vellum-base: #ecddb8;
+  --vellum-mid: #dece9e;
+  --vellum-dark: #c4a870;
+  --vellum-ink: #1a1410;
+  --vellum-ink-faint: rgba(26, 20, 16, 0.45);
   
   /* Font Sizes - Fluid Scale */
   --text-2xs: 0.625rem;
@@ -1534,5 +1541,27 @@ h6 { font-size: var(--text-base); }
 .transition-wrapper > * {
   position: absolute;
   width: 100%;
+}
+
+/* ─── Ancient Vellum Surface ─── */
+.vellum-surface {
+  position: relative;
+  background-color: var(--vellum-base);
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(100, 70, 20, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, rgba(80, 55, 20, 0.05) 0%, transparent 40%);
+  color: var(--vellum-ink);
+  overflow: hidden;
+}
+
+.vellum-surface::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  z-index: 5;
 }
 

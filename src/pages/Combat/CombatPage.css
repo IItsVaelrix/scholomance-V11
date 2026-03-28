@@ -60,37 +60,116 @@
   text-shadow: 0 0 10px rgba(0, 229, 255, 0.25);
 }
 
-/* ─── Main Split Layout ─────────────────────────────────────── */
+/* ─── Main Dashboard Layout ─── */
 
-.combat-split {
-  display: flex;
+.combat-dashboard {
   flex: 1;
+  display: flex;
   min-height: 0;
   overflow: hidden;
 }
 
-/* ─── Left: Visual Column (Phaser) ─────────────────────────── */
-
-.combat-visual-col {
-  flex: 0 0 42%;
-  min-width: 0;
+.combat-panel {
   display: flex;
   flex-direction: column;
-  background: #040211;
-  border-right: 1px solid rgba(201, 162, 39, 0.14);
+  min-height: 0;
   position: relative;
-  overflow: hidden;
-  box-shadow: 2px 0 16px rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.15);
 }
 
-/* ─── Phaser Canvas Host ───────────────────────────────────── */
+.panel-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  position: relative;
+}
+
+.panel-header {
+  padding: var(--space-2) var(--space-4);
+  background: rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.15);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-family: var(--font-display, 'Cinzel', serif);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.12em;
+  color: var(--vellum-dark);
+  opacity: 0.85;
+}
+
+.panel-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-4);
+  overflow-y: auto;
+  position: relative;
+}
+
+/* ─── Column Adjustments ─── */
+
+.combat-panel--center {
+  background: #040211;
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.8);
+}
 
 .combat-canvas-host {
   flex: 1;
-  min-height: 0;
+  width: 100%;
+  height: 100%;
   position: relative;
-  overflow: hidden;
-  background: #050310;
+}
+
+.combat-opponent-overlay {
+  position: absolute;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  z-index: 10;
+  background: rgba(5, 3, 16, 0.85);
+  backdrop-filter: blur(8px);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid rgba(201, 162, 39, 0.22);
+  border-radius: 4px;
+  box-shadow: var(--shadow-lg);
+}
+
+.combat-resize-handle {
+  width: 4px;
+  background: rgba(201, 162, 39, 0.08);
+  transition: background 0.2s;
+  cursor: col-resize;
+  z-index: 20;
+}
+
+.combat-resize-handle:hover,
+.combat-resize-handle:active {
+  background: rgba(201, 162, 39, 0.3);
+}
+
+/* ─── Chronicle Adjustments ─── */
+
+.combat-panel--right .panel-content {
+  padding: 0; /* Let BattleLog/Doctrine handle padding */
+  display: flex;
+  flex-direction: column;
+}
+
+.inline-score-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(5, 3, 16, 0.95);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
 }
 
 .combat-canvas-host canvas {

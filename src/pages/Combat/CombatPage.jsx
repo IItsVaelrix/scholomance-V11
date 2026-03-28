@@ -13,9 +13,15 @@
  *   4. Victory/Defeat    — end-state overlay
  */
 
+import {
+  Group as PanelGroup,
+  Panel,
+  Separator as PanelResizeHandle,
+} from "react-resizable-panels";
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCombatEngine } from './hooks/useCombatEngine.js';
+import { useUserSettings } from '../../hooks/useUserSettings.js';
 import { combatBridge } from './combatBridge.js';
 import { Spellbook } from './components/Spellbook.jsx';
 import { ScoreReveal } from './components/ScoreReveal.jsx';
@@ -64,6 +70,11 @@ export default function CombatPage() {
   const [phaserReady, setPhaserReady]   = useState(false);
   const [phaserError, setPhaserError]   = useState(null);
   const prefersReduced = usePrefersReducedMotion();
+  const { settings, updateSettings } = useUserSettings();
+
+  const handleLayoutChange = useCallback((sizes) => {
+    updateSettings({ combatLayout: sizes });
+  }, [updateSettings]);
 
   const {
     combatState,
@@ -233,161 +244,138 @@ export default function CombatPage() {
         <span className="combat-opponent-name">{opponent?.name}</span>
       </div>
 
-      {/* ── Main Split ── */}
-      <div className={`combat-split ${phaserError ? 'combat-split--text-only' : ''}`}>
-
-        {/* LEFT — Phaser visionglass (collapses on error per UI_SPEC §6.3) */}
-        <div className={`combat-visual-col ${phaserError ? 'combat-visual-col--fallback' : ''}`}>
-
-          {/* Phaser canvas */}
-          <div
-            className="combat-canvas-host"
-            ref={canvasHostRef}
-            aria-label="Battle arena"
+      {/* ── Main Dashboard ── */}
+      <main className="combat-dashboard vellum-surface">
+        <PanelGroup 
+          direction="horizontal" 
+          onLayout={handleLayoutChange}
+        >
+          {/* COLUMN 1: THE SPELLBOOK (Input) */}
+          <Panel 
+            defaultSize={settings?.combatLayout?.[0] ?? 25} 
+            minSize={20}
+            className="combat-panel combat-panel--left"
           >
-            {!phaserReady && !phaserError && (
-              <div className="combat-canvas-loading" role="status" aria-live="polite">
-                <div className="loading-glyph" aria-hidden="true">♩</div>
-                <p>The arena stirs...</p>
+            <div className="panel-inner">
+              <header className="panel-header">
+                <span className="panel-title">✦ SPELLBOOK</span>
+              </header>
+              <div className="panel-content">
+                <div className="combat-status-header" aria-label="Scholar stats">
+                  <StatusBar label="HP" current={playerHP} max={maxPlayerHP} variant="hp" />
+                  <StatusBar label="MP" current={playerMP} max={maxPlayerMP} variant="mp" />
+                </div>
+                
+                <Spellbook
+                  isVisible={true} // Persistent in dashboard
+                  mode="inline"
+                  onCast={castPlayerSpell}
+                  onCancel={cancelCasting}
+                  playerMP={playerMP}
+                  mpCost={MP_COST}
+                />
+
+                {isPlayerTurn && (
+                  <div className="combat-prompt-area">
+                    <span className="action-prompt">READY TO INSCRIBE</span>
+                  </div>
+                )}
               </div>
-            )}
-            {phaserError && (
-              <div className="combat-canvas-error" role="alert">
-                <div className="error-glyph" aria-hidden="true">⚔</div>
-                <p className="error-title">Text-Only Mode</p>
-                <p className="error-body">The visionglass could not be summoned. Combat continues through the chronicle.</p>
+            </div>
+          </Panel>
+
+          <PanelResizeHandle className="combat-resize-handle" />
+
+          {/* COLUMN 2: THE ARENA (Visuals) */}
+          <Panel 
+            defaultSize={settings?.combatLayout?.[1] ?? 45} 
+            minSize={30}
+            className="combat-panel combat-panel--center"
+          >
+            <div className="panel-inner">
+              <div
+                className="combat-canvas-host"
+                ref={canvasHostRef}
+                aria-label="Battle arena"
+              >
+                {!phaserReady && !phaserError && (
+                  <div className="combat-canvas-loading" role="status" aria-live="polite">
+                    <div className="loading-glyph" aria-hidden="true">♩</div>
+                    <p>The arena stirs...</p>
+                  </div>
+                )}
+                {phaserError && (
+                  <div className="combat-canvas-error" role="alert">
+                    <div className="error-glyph" aria-hidden="true">⚔</div>
+                    <p className="error-title">Text-Only Mode</p>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Opponent HP — visual footer */}
-          <div className="combat-visual-footer">
-            <div className="vf-opponent-row">
-              <span className="vf-opponent-name">{opponent?.name ?? 'The Cryptonym'}</span>
-              <span className="vf-opponent-hp-text" aria-hidden="true">
-                {opponentHP} / {maxOpponentHP}
-              </span>
+              {/* Opponent HP — floating overlay in arena */}
+              <div className="combat-opponent-overlay">
+                <div className="vf-opponent-row">
+                  <span className="vf-opponent-name">{opponent?.name ?? 'The Cryptonym'}</span>
+                  <span className="vf-opponent-hp-text">
+                    {opponentHP} / {maxOpponentHP}
+                  </span>
+                </div>
+                <div className="vf-hp-track">
+                  <motion.div
+                    className="vf-hp-fill"
+                    animate={{ width: `${opponentHPPct}%`, backgroundColor: opponentHPColor }}
+                    transition={{ duration: 0.45 }}
+                  />
+                </div>
+              </div>
             </div>
-            <div
-              className="vf-hp-track"
-              role="progressbar"
-              aria-label={`Opponent HP: ${opponentHP} of ${maxOpponentHP}`}
-              aria-valuenow={opponentHP}
-              aria-valuemin={0}
-              aria-valuemax={maxOpponentHP}
-            >
-              <motion.div
-                className="vf-hp-fill"
-                animate={{ width: `${opponentHPPct}%`, backgroundColor: opponentHPColor }}
-                transition={{ duration: 0.45, ease: 'easeOut' }}
-              />
+          </Panel>
+
+          <PanelResizeHandle className="combat-resize-handle" />
+
+          {/* COLUMN 3: THE CHRONOS TERMINAL (Log) */}
+          <Panel 
+            defaultSize={settings?.combatLayout?.[2] ?? 30} 
+            minSize={20}
+            className="combat-panel combat-panel--right"
+          >
+            <div className="panel-inner">
+              <header className="panel-header">
+                <span className="panel-title">✦ CHRONICLE</span>
+              </header>
+              <div className="panel-content">
+                <OpponentDoctrinePanel
+                  opponent={opponent}
+                  {...doctrineSurface}
+                  prefersReduced={prefersReduced}
+                />
+                <BattleLog entries={battleLog} />
+                
+                {/* Score Reveal floats over log */}
+                <AnimatePresence>
+                  {isScoreRevealing && (
+                    <motion.div 
+                      className="inline-score-overlay"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <ScoreReveal
+                        isVisible={true}
+                        scoreData={lastScoreData}
+                        damage={lastPlayerDamage}
+                        spellText={lastPlayerSpell}
+                        opponentHP={opponentHP}
+                        onContinue={continueAfterReveal}
+                      />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
-        </div>
-
-        {/* RIGHT — Text terminal */}
-        <div className="combat-terminal-col">
-
-          {/* Status bars — player HP/MP */}
-          <div className="combat-status-header" aria-label="Scholar stats">
-            <StatusBar label="HP" current={playerHP} max={maxPlayerHP} variant="hp" />
-            <StatusBar label="MP" current={playerMP} max={maxPlayerMP} variant="mp" />
-          </div>
-
-          {/* The Chronicle — primary MUD text surface */}
-          <OpponentDoctrinePanel
-            opponent={opponent}
-            profileType={doctrineSurface.profileType}
-            doctrine={doctrineSurface.doctrine}
-            passiveLabel={doctrineSurface.passiveLabel}
-            phase={doctrineSurface.phase}
-            telegraph={doctrineSurface.telegraph}
-            telegraphKey={doctrineSurface.telegraphKey}
-            moveId={doctrineSurface.moveId}
-            moveLabel={doctrineSurface.moveLabel}
-            moveSchool={doctrineSurface.moveSchool}
-            statusesApplied={doctrineSurface.statusesApplied}
-            stolenTokens={doctrineSurface.stolenTokens}
-            arenaCondition={doctrineSurface.arenaCondition}
-            prefersReduced={prefersReduced}
-          />
-          <BattleLog entries={battleLog} />
-
-          {/* Score Reveal — inline in terminal after chronicle */}
-          <ScoreReveal
-            isVisible={isScoreRevealing}
-            scoreData={lastScoreData}
-            damage={lastPlayerDamage}
-            spellText={lastPlayerSpell}
-            opponentHP={opponentHP}
-            onContinue={continueAfterReveal}
-          />
-
-          {/* Inline Spellbook — sits at terminal bottom when CASTING */}
-          <Spellbook
-            isVisible={isSpellbookOpen}
-            mode="inline"
-            onCast={castPlayerSpell}
-            onCancel={cancelCasting}
-            playerMP={playerMP}
-            mpCost={MP_COST}
-          />
-
-          {/* Action bar — command prompt when PLAYER_TURN */}
-          <AnimatePresence>
-            {isPlayerTurn && (
-              <motion.div
-                className="combat-action-bar"
-                role="toolbar"
-                aria-label="Combat actions"
-                initial={prefersReduced ? {} : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 4 }}
-                transition={{ duration: 0.18 }}
-              >
-                <span className="action-prompt" aria-hidden="true">▶</span>
-                <button
-                  className="action-btn action-btn--inscribe"
-                  onClick={handleInscribe}
-                  disabled={playerMP < MP_COST}
-                  aria-label={`Inscribe a spell. Press I as keyboard shortcut. MP cost: ${MP_COST}.`}
-                  title="Press I to inscribe"
-                >
-                  INSCRIBE SPELL
-                  <span className="action-kbd" aria-hidden="true">[I]</span>
-                </button>
-                <button
-                  className="action-btn action-btn--flee"
-                  onClick={handleFlee}
-                  aria-label="Flee from combat"
-                >
-                  FLEE
-                </button>
-              </motion.div>
-            )}
-
-            {/* State indicator — shown when not player turn and not end */}
-            {!isPlayerTurn && !isSpellbookOpen && !isEndState && stateLabel && (
-              <motion.div
-                className="combat-state-indicator"
-                key={combatState}
-                role="status"
-                aria-live="polite"
-                initial={prefersReduced ? {} : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <span className="state-indicator-glyph" aria-hidden="true">
-                  {combatState === 'OPPONENT_TURN' || combatState === 'OPPONENT_CASTING' ? '◀' : '·'}
-                </span>
-                <span className="state-indicator-text">{stateLabel}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-        </div>
-      </div>
+          </Panel>
+        </PanelGroup>
+      </main>
 
       {/* ── Spell cast effect overlay ── */}
       <SpellCastEffect combatState={combatState} prefersReduced={prefersReduced} />

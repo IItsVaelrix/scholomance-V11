@@ -992,7 +992,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}`}
               style={{
                 zIndex: 5,
-                pointerEvents: (isEditable) ? 'none' : 'auto',
+                pointerEvents: 'none', // Critical: allows scrolling the textarea underneath
                 overflow: 'hidden'
               }}
               aria-hidden={isEditable || !onWordActivate}
@@ -1023,7 +1023,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           : null;
 
                         if (!isWord) {
-                          return <span key={start}>{token}</span>;
+                          return <span key={start} style={{ pointerEvents: 'none' }}>{token}</span>;
                         }
 
                         const isStopWord = STOP_WORDS.has(clean);
@@ -1071,7 +1071,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             <span
                               key={start}
                               className={wordClassName}
-                              style={{ color, opacity: wordOpacity }}
+                              style={{ color, opacity: wordOpacity, pointerEvents: isEditable ? 'none' : 'auto' }}
                               data-char-start={charStart}
                             >
                               {token}
@@ -1084,7 +1084,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             key={start}
                             type="button"
                             className={`${wordClassName} grimoire-word--interactive`}
-                            style={{ color, opacity: wordOpacity }}
+                            style={{ color, opacity: wordOpacity, pointerEvents: isEditable ? 'none' : 'auto' }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}
