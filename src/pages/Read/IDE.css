@@ -1370,7 +1370,18 @@
   resize: none;
   overflow: auto;
   caret-color: var(--read-accent);
-  z-index: 10;
+}
+
+.ide-layout-wrapper .editor-textarea--foreground {
+  z-index: 6;
+}
+
+.ide-layout-wrapper .editor-textarea--underlay {
+  z-index: 1;
+}
+
+.ide-layout-wrapper .editor-textarea--read-only-truesight {
+  pointer-events: none;
 }
 
 .ide-layout-wrapper .editor-textarea:focus {
@@ -1437,7 +1448,7 @@
 
 .ide-layout-wrapper .truesight-overlay {
   z-index: 5;
-  overflow-y: auto;
+  overflow: hidden;
   scrollbar-color: transparent transparent;
 }
 
@@ -1451,6 +1462,17 @@
 
 .ide-layout-wrapper .truesight-overlay--editing {
   pointer-events: none;
+}
+
+.ide-layout-wrapper .truesight-overlay--passive {
+  pointer-events: none;
+}
+
+.ide-layout-wrapper .truesight-overlay--read-only {
+  pointer-events: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
 }
 
 .ide-layout-wrapper .truesight-overlay--editing .truesight-line--highlighted {

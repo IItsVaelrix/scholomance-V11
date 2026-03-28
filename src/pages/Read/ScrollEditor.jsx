@@ -268,6 +268,37 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [cursorVersion, setCursorVersion] = useState(0);
   const textareaRef = useRef(null);
   const truesightOverlayRef = useRef(null);
+  const markdownRef = useRef(null);
+  const isReadOnlyTruesight = isTruesight && !isEditable;
+  const isReadOnlyPlain = !isTruesight && !isEditable;
+
+  const getViewportNode = useCallback(() => {
+    if (isReadOnlyTruesight) return truesightOverlayRef.current;
+    if (isReadOnlyPlain) return markdownRef.current;
+    return textareaRef.current;
+  }, [isReadOnlyPlain, isReadOnlyTruesight]);
+
+  const syncScrollPosition = useCallback((top, left = 0, source = null) => {
+    const nextTop = Number.isFinite(top) ? Math.max(0, top) : 0;
+    const nextLeft = Number.isFinite(left) ? Math.max(0, left) : 0;
+
+    scrollTopRef.current = nextTop;
+    setScrollTop((prev) => (Math.abs(prev - nextTop) > 1 ? nextTop : prev));
+    onScrollChange?.(nextTop);
+
+    const peers = [textareaRef.current, truesightOverlayRef.current, markdownRef.current];
+    for (const node of peers) {
+      if (!node || node === source) continue;
+
+      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) {
+        node.scrollTop = nextTop;
+      }
+
+      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) {
+        node.scrollLeft = nextLeft;
+      }
+    }
+  }, [onScrollChange]);
 
   // IntelliSense: PLS-powered completions with rhyme, meter, color awareness
   useEffect(() => {
@@ -712,46 +743,53 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [isEditable, initialContent]);
 
-  // Sync scroll positions between textarea and overlay
-  useEffect(() => {
-    if (isTruesight && textareaRef.current) {
-      setScrollTop(textareaRef.current.scrollTop);
+  useLayoutEffect(() => {
+    const viewport = getViewportNode();
+    if (!viewport) return;
+
+    const persistedTop = Math.max(0, scrollTopRef.current);
+    if (Math.abs((viewport.scrollTop ?? 0) - persistedTop) > 1) {
+      viewport.scrollTop = persistedTop;
     }
-  }, [isTruesight]);
+
+    syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
+  }, [getViewportNode, syncScrollPosition]);
 
   useEffect(() => {
-    if (!isTruesight) return;
+    const viewport = getViewportNode();
+    if (!viewport) return;
+
+    const maxScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+    if (viewport.scrollTop > maxScrollTop) {
+      viewport.scrollTop = maxScrollTop;
+    }
+
+    syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
+  }, [content, editorHeight, getViewportNode, syncScrollPosition]);
+
+  const handleTextareaScroll = useCallback(() => {
+    if (isReadOnlyPlain || isReadOnlyTruesight) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    const maxScrollTop = Math.max(0, textarea.scrollHeight - textarea.clientHeight);
-    if (textarea.scrollTop > maxScrollTop) {
-      textarea.scrollTop = maxScrollTop;
-    }
+    syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
+  }, [isReadOnlyPlain, isReadOnlyTruesight, syncScrollPosition]);
 
-    const top = textarea.scrollTop;
-    setScrollTop((prev) => (Math.abs(prev - top) > 1 ? top : prev));
+  const handleOverlayScroll = useCallback(() => {
+    if (!isReadOnlyTruesight) return;
+    const overlay = truesightOverlayRef.current;
+    if (!overlay) return;
 
-    if (truesightOverlayRef.current) {
-      truesightOverlayRef.current.scrollTop = top;
-      truesightOverlayRef.current.scrollLeft = textarea.scrollLeft;
-    }
-  }, [content, editorHeight, isTruesight]);
+    syncScrollPosition(overlay.scrollTop, overlay.scrollLeft, overlay);
+  }, [isReadOnlyTruesight, syncScrollPosition]);
 
-  const handleScroll = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
+  const handleMarkdownScroll = useCallback(() => {
+    if (!isReadOnlyPlain) return;
+    const markdown = markdownRef.current;
+    if (!markdown) return;
 
-    const top = textarea.scrollTop;
-    setScrollTop(top);
-    scrollTopRef.current = top;
-    onScrollChange?.(top);
-
-    if (truesightOverlayRef.current) {
-      truesightOverlayRef.current.scrollTop = top;
-      truesightOverlayRef.current.scrollLeft = textarea.scrollLeft;
-    }
-  }, [onScrollChange]);
+    syncScrollPosition(markdown.scrollTop, markdown.scrollLeft, markdown);
+  }, [isReadOnlyPlain, syncScrollPosition]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
@@ -789,24 +827,37 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       offset += lines[i].length + 1;
     }
 
-    textarea.focus();
-    textarea.setSelectionRange(offset, offset);
-    
-    // Scroll into view
+    if (isEditable) {
+      textarea.focus();
+      textarea.setSelectionRange(offset, offset);
+    }
+
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
-    textarea.scrollTop = (lineNum - 1) * lineHeight;
-  }, [content]);
+    const viewport = getViewportNode();
+    const nextTop = Math.max(0, (lineNum - 1) * lineHeight);
+
+    if (viewport) {
+      viewport.scrollTop = nextTop;
+      syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
+      return;
+    }
+
+    textarea.scrollTop = nextTop;
+    syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
+  }, [content, getViewportNode, isEditable, syncScrollPosition]);
 
   const scrollTo = useCallback((y) => {
-    if (textareaRef.current) {
-      textareaRef.current.scrollTop = y;
-    }
-  }, []);
+    const viewport = getViewportNode();
+    if (!viewport) return;
+
+    viewport.scrollTop = y;
+    syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
+  }, [getViewportNode, syncScrollPosition]);
 
   const scrollToTopSmooth = useCallback(() => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.scrollTop;
+    const viewport = getViewportNode();
+    if (!viewport) return;
+    const start = viewport.scrollTop;
     if (start === 0) return;
     const duration = 320;
     const startTime = performance.now();
@@ -814,11 +865,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
       const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
-      textarea.scrollTop = start * (1 - ease);
+      viewport.scrollTop = start * (1 - ease);
+      syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
       if (t < 1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
-  }, []);
+  }, [getViewportNode, syncScrollPosition]);
 
   // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
@@ -831,9 +883,9 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       setContent(newContent);
       onContentChange?.(newContent);
     },
-    get clientHeight() { return textareaRef.current?.clientHeight || 0; },
-    get scrollHeight() { return textareaRef.current?.scrollHeight || 0; },
-  }), [applyFormat, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
+    get clientHeight() { return getViewportNode()?.clientHeight || 0; },
+    get scrollHeight() { return getViewportNode()?.scrollHeight || 0; },
+  }), [applyFormat, getViewportNode, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
 
   const handleKeyDown = useCallback(
     (e) => {
@@ -948,7 +1000,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         >
           {/* Read-only plain display — mirrors textarea white-space: pre-wrap exactly */}
           {!isEditable && !isTruesight && (
-            <div className="markdown-rendered" aria-label={`Scroll content: ${title || "Untitled"}`}>
+            <div
+              ref={markdownRef}
+              className="markdown-rendered"
+              aria-label={`Scroll content: ${title || "Untitled"}`}
+              onScroll={handleMarkdownScroll}
+            >
               {content}
             </div>
           )}
@@ -963,11 +1020,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           <textarea
             id="scroll-content"
             ref={textareaRef}
-            className={`editor-textarea ${isTruesight ? "truesight-transparent" : ""} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""}`}
-            style={{
-              zIndex: isTruesight ? 1 : 2,
-              pointerEvents: (!isEditable && isTruesight) ? 'none' : 'auto',
-            }}
+            className={`editor-textarea ${isTruesight ? "truesight-transparent editor-textarea--underlay" : "editor-textarea--foreground"} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""} ${isReadOnlyTruesight ? "editor-textarea--read-only-truesight" : ""}`}
             aria-hidden={isTruesight && !isEditable && !!onWordActivate}
             placeholder={isEditable
               ? "Inscribe thy verses upon this sacred parchment..."
@@ -978,7 +1031,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             onKeyUp={handleCursorChange}
             onClick={handleCursorChange}
             onBlur={() => setIntellisenseSuggestions([])}
-            onScroll={handleScroll}
+            onScroll={handleTextareaScroll}
             disabled={disabled || isSaving}
             readOnly={!isEditable}
             spellCheck="false"
@@ -989,13 +1042,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           <div
               key={`overlay-${isTruesight}`}
               ref={truesightOverlayRef}
-              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}`}
-              style={{
-                zIndex: 5,
-                pointerEvents: 'none', // Critical: allows scrolling the textarea underneath
-                overflow: 'hidden'
-              }}
+              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}${isReadOnlyTruesight ? " truesight-overlay--read-only" : " truesight-overlay--passive"}`}
               aria-hidden={isEditable || !onWordActivate}
+              aria-label={isReadOnlyTruesight ? `Truesight content: ${title || "Untitled"}` : undefined}
+              onScroll={handleOverlayScroll}
+              role={isReadOnlyTruesight ? "region" : undefined}
+              tabIndex={isReadOnlyTruesight ? 0 : -1}
             >
               <div>
                 {overlayLines.map(({ lineIndex: li, tokens, lineType }) => {
