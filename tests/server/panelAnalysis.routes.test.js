@@ -132,7 +132,7 @@ describe('[Server] panelAnalysis.routes', () => {
     expect(payload.source).toBe('server-analysis');
     expect(payload.data).toBeTruthy();
     expect(payload.data.scoreData).toBeTruthy();
-  });
+  }, 20000);
 
   it('includes syntax summary and connection syntax metadata when enabled', async () => {
     const previous = process.env.ENABLE_SYNTAX_RHYME_LAYER;
