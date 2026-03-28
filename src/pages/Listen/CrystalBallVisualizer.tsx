@@ -7,18 +7,17 @@ interface CrystalBallVisualizerProps {
   schoolColor: string;
   glyph: string;
   isTuning: boolean;
+  schoolId?: string;
   size?: number;
 }
 
-/**
- * CrystalBallVisualizer — React wrapper for the Phaser Crystal Ball scene.
- */
 export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
   signalLevel,
   schoolColor,
   glyph,
   isTuning,
-  size = 320
+  schoolId,
+  size = 320,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -28,48 +27,45 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
     let game: Phaser.Game | null = null;
 
     const initPhaser = async () => {
-      const { default: Phaser } = await import('phaser');
-      
+      const { default: PhaserLib } = await import('phaser');
       if (!containerRef.current) return;
 
-      game = new Phaser.Game({
-        type: Phaser.AUTO,
+      game = new PhaserLib.Game({
+        type: PhaserLib.AUTO,
         width: size,
         height: size,
         parent: containerRef.current,
         transparent: true,
         antialias: true,
         scene: [CrystalBallScene],
-        fps: { target: 60, forceSetTimeOut: true }
+        fps: { target: 60, forceSetTimeOut: true },
       });
 
       game.events.once('ready', () => {
         const scene = game?.scene.getScene('CrystalBallScene') as CrystalBallScene;
         sceneRef.current = scene;
+        // Push initial state immediately
+        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId });
       });
 
       gameRef.current = game;
     };
 
-    initPhaser();
+    void initPhaser();
 
     return () => {
-      if (game) {
-        game.destroy(true);
-      }
+      game?.destroy(true);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size]);
 
-  // Sync React state to Phaser scene
   useEffect(() => {
-    if (sceneRef.current) {
-      sceneRef.current.updateState({ signalLevel, schoolColor, glyph, isTuning });
-    }
-  }, [signalLevel, schoolColor, glyph, isTuning]);
+    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId });
+  }, [signalLevel, schoolColor, glyph, isTuning, schoolId]);
 
   return (
-    <div 
-      ref={containerRef} 
+    <div
+      ref={containerRef}
       className="crystal-ball-container"
       style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden' }}
     />
