@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo, useRef, useEffect } from "react";
+import { startTransition, useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { normalizeVowelFamily, buildVowelSummary } from "../lib/phonology/vowelFamily.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
-import { analyzeDocumentAsync } from "../lib/workers/analysis.client.js";
+import { analyzeDocumentAsync, warmAnalysisWorker } from "../lib/workers/analysis.client.js";
 
-const ANALYSIS_DEBOUNCE_MS = 2500;
+const ANALYSIS_DEBOUNCE_MS = 500;
 const REQUEST_TIMEOUT_MS = 15000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()
@@ -468,7 +468,7 @@ function normalizePanelPayload(rawPayload) {
 }
 
 async function runClientSideAnalysis(text) {
-  const analysis = await analyzeDocumentAsync(text);
+  const analysis = await analyzeDocumentAsync(text, { authorityMode: "background" });
 
   // Flatten lines[].words[] into wordAnalyses for the normalization pipeline.
   // The DeepRhymeEngine returns word data nested inside lines, but the panel
@@ -581,21 +581,22 @@ export function usePanelAnalysis() {
     const nextAnalysis = normalized.analysis;
     const allConnections = Array.isArray(nextAnalysis?.allConnections) ? nextAnalysis.allConnections : [];
 
-    setAnalysis(nextAnalysis);
-    setSchemeDetection(normalized.scheme);
-    setMeterDetection(normalized.meter);
-    setScoreData(normalized.scoreData);
-    setVowelSummary(normalized.vowelSummary);
-    setRhymeAstrology(normalized.rhymeAstrology);
-    setActiveConnections(allConnections);
-    setHighlightedGroup(null);
-    setLiteraryDevices(normalized.literaryDevices);
-    setEmotion(normalized.emotion);
-    setGenreProfile(normalized.genreProfile);
-    setSource(normalized.source);
-    setError(null);
-    setIsAnalyzing(false);
     isPendingRef.current = false;
+    startTransition(() => {
+      setAnalysis(nextAnalysis);
+      setSchemeDetection(normalized.scheme);
+      setMeterDetection(normalized.meter);
+      setScoreData(normalized.scoreData);
+      setVowelSummary(normalized.vowelSummary);
+      setRhymeAstrology(normalized.rhymeAstrology);
+      setActiveConnections(allConnections);
+      setHighlightedGroup(null);
+      setLiteraryDevices(normalized.literaryDevices);
+      setEmotion(normalized.emotion);
+      setGenreProfile(normalized.genreProfile);
+      setSource(normalized.source);
+      setIsAnalyzing(false);
+    });
   }, []);
 
   const analyzeDocument = useCallback((text) => {
@@ -634,17 +635,12 @@ export function usePanelAnalysis() {
     if (nextText === lastTextRef.current && !isPendingRef.current && analysis) {
       return;
     }
-    const isActuallyNewText = nextText !== lastTextRef.current;
     lastTextRef.current = nextText;
 
     requestIdRef.current += 1;
     const requestId = requestIdRef.current;
-    console.log(`[usePanelAnalysis] analyzeDocument triggered for requestId: ${requestId}, text: "${nextText.slice(0, 20)}..."`);
-
     setIsAnalyzing(true);
-    if (isActuallyNewText) {
-        setError(null);
-    }
+    setError(null);
     isPendingRef.current = true;
 
     debounceTimerRef.current = setTimeout(async () => {
@@ -693,10 +689,7 @@ export function usePanelAnalysis() {
         try {
           const fallback = await runClientSideAnalysis(nextText);
           applyResultIfCurrent(requestId, fallback);
-          // Only show error if we didn't get any result yet
-          if (!analysis) {
-            setError("Server unavailable — using local analysis");
-          }
+          setError("Server unavailable \u2014 using local analysis");
         } catch {
           setError(analysisError.message || "Analysis failed");
           setIsAnalyzing(false);
@@ -747,6 +740,10 @@ export function usePanelAnalysis() {
   }, [schemeDetection]);
 
   useEffect(() => {
+    void warmAnalysisWorker();
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (debounceTimerRef.current) {
         clearTimeout(debounceTimerRef.current);
@@ -780,3 +777,4 @@ export function usePanelAnalysis() {
     getConnectionsForLine,
   };
 }
+

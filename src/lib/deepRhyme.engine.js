@@ -38,6 +38,10 @@ const SYNTAX_GATES = Object.freeze({
   SUPPRESS: 'suppress',
 });
 
+function resolveAuthorityMode(options) {
+  return options?.authorityMode === 'background' ? 'background' : 'blocking';
+}
+
 function createWordRegex() {
   return new RegExp(WORD_REGEX_GLOBAL.source, WORD_REGEX_GLOBAL.flags);
 }
@@ -72,7 +76,14 @@ export class DeepRhymeEngine {
 
     const allUniqueWords = [...new Set(text.match(createWordRegex()) || [])];
     if (typeof this.engine.ensureAuthorityBatch === 'function') {
-      await this.engine.ensureAuthorityBatch(allUniqueWords);
+      const authorityPromise = typeof this.engine.primeAuthorityBatch === 'function'
+        ? this.engine.primeAuthorityBatch(allUniqueWords)
+        : this.engine.ensureAuthorityBatch(allUniqueWords);
+      if (resolveAuthorityMode(options) === 'blocking') {
+        await authorityPromise;
+      } else if (authorityPromise?.catch) {
+        authorityPromise.catch(() => {});
+      }
     }
 
     this.syntaxLayerContext = syntaxLayer;

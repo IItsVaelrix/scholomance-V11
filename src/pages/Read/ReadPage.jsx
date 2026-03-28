@@ -448,7 +448,7 @@ export default function ReadPage() {
   );
 
   // Ambient analysis: always run on content change.
-  // usePanelAnalysis internally debounces at 2.5s, so no extra debounce needed here.
+  // usePanelAnalysis internally debounces at 500ms, so no extra debounce needed here.
   useEffect(() => {
     if (!truesightContent) return;
     analyzeDocument(truesightContent);

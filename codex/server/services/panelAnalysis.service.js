@@ -749,7 +749,11 @@ export function createPanelAnalysisService(options = {}) {
 
     try {
       const uniqueWords = [...new Set(text.match(/[A-Za-z]+(?:['-][A-Za-z]+)*/g) || [])];
-      await PhonemeEngine.ensureAuthorityBatch(uniqueWords);
+      if (typeof PhonemeEngine.primeAuthorityBatch === 'function') {
+        void PhonemeEngine.primeAuthorityBatch(uniqueWords);
+      } else {
+        void PhonemeEngine.ensureAuthorityBatch(uniqueWords);
+      }
 
       const analyzedDoc = analyzeText(text);
       const syntaxLayerForEmotion = buildSyntaxLayer(analyzedDoc);
@@ -761,7 +765,9 @@ export function createPanelAnalysisService(options = {}) {
       const scoreData = await scoreEngine.calculateScore(analyzedDoc);
       const deepAnalysis = await deepRhymeEngine.analyzeDocument(
         text,
-        syntaxLayer ? { syntaxLayer } : {}
+        syntaxLayer
+          ? { syntaxLayer, authorityMode: 'background' }
+          : { authorityMode: 'background' }
       );
       const verseIR = compileVerseToIR(text, {
         phonemeEngine: PhonemeEngine,

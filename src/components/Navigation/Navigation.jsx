@@ -1,6 +1,6 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useTransition } from "react";
 import { LINKS } from "../../data/library";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useAuth } from "../../hooks/useAuth.jsx";
@@ -50,6 +50,7 @@ function isAdminUser(user) {
 export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isPending, startTransition] = useTransition();
   const activeSection = location.pathname.replace("/", "") || "watch";
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedLink, setSelectedLink] = useState(null);
@@ -69,6 +70,17 @@ export default function Navigation() {
       label: user ? user.username : "Portal",
     },
   ];
+
+  const handleNav = useCallback((path) => {
+    if (location.pathname === path) {
+      setIsMenuOpen(false);
+      return;
+    }
+    
+    startTransition(() => {
+      navigate(path);
+    });
+  }, [navigate, location.pathname]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -102,21 +114,20 @@ export default function Navigation() {
     if (selectedLink) return; // already transitioning
     setSelectedLink(linkPath);
     navTimeoutRef.current = setTimeout(() => {
-      // If already on this path, just close the menu
-      if (location.pathname === linkPath) {
-        setIsMenuOpen(false);
-        setSelectedLink(null);
-      } else {
-        navigate(linkPath);
-      }
+      handleNav(linkPath);
     }, 100);
-  }, [navigate, selectedLink, location.pathname]);
+  }, [selectedLink, handleNav]);
 
   return (
     <>
       <nav className="primary-nav" aria-label="Primary navigation">
         <div className="nav-inner">
-          <NavLink to="/watch" className="nav-brand font-bold" aria-label="Scholomance Home">
+          <NavLink 
+            to="/watch" 
+            className="nav-brand font-bold" 
+            aria-label="Scholomance Home"
+            onClick={(e) => { e.preventDefault(); handleNav("/watch"); }}
+          >
             SCHOLOMANCE
           </NavLink>
 
@@ -127,9 +138,14 @@ export default function Navigation() {
                 <NavLink
                   to={l.path}
                   className={({ isActive }) =>
-                    `nav-link${isActive ? " active" : ""}`
+                    `nav-link${isActive ? " active" : ""}${isPending && selectedLink === l.path ? " is-navigating" : ""}`
                   }
                   onMouseEnter={() => preloadRoute(l.path)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedLink(l.path);
+                    handleNav(l.path);
+                  }}
                 >
                   {l.label}
                 </NavLink>

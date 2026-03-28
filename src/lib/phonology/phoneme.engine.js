@@ -114,11 +114,13 @@ export const PhonemeEngine = {
   RULES_V2: null,
   WORD_CACHE: new Map(),
   AUTHORITY_CACHE: new Map(),
+  AUTHORITY_IN_FLIGHT: new Map(),
   _initPromise: null,
 
   clearCache() {
     this.WORD_CACHE.clear();
     this.AUTHORITY_CACHE.clear();
+    this.AUTHORITY_IN_FLIGHT.clear();
     if (typeof CmuPhonemeEngine.clearCache === "function") {
       CmuPhonemeEngine.clearCache();
     }
@@ -184,6 +186,52 @@ export const PhonemeEngine = {
             this.AUTHORITY_CACHE.set(word.toUpperCase(), family);
         }
     } catch (_e) { /* noop — authority lookup is best-effort */ }
+  },
+
+  primeAuthorityBatch(words) {
+    const normalizedWords = [...new Set(
+      (Array.isArray(words) ? words : [])
+        .map((word) => String(word || "").trim())
+        .filter(Boolean)
+    )];
+    if (!normalizedWords.length) return Promise.resolve();
+
+    const pending = [];
+    const requestWords = [];
+
+    normalizedWords.forEach((word) => {
+      const cacheKey = word.toUpperCase();
+      if (this.AUTHORITY_CACHE.has(cacheKey)) return;
+
+      const inFlight = this.AUTHORITY_IN_FLIGHT.get(cacheKey);
+      if (inFlight) {
+        pending.push(inFlight);
+        return;
+      }
+
+      requestWords.push(word);
+    });
+
+    if (requestWords.length > 0) {
+      const requestKeys = requestWords.map((word) => word.toUpperCase());
+      const requestPromise = this.ensureAuthorityBatch(requestWords)
+        .catch(() => {
+          /* noop - authority lookup is best-effort */
+        })
+        .finally(() => {
+          requestKeys.forEach((cacheKey) => {
+            this.AUTHORITY_IN_FLIGHT.delete(cacheKey);
+          });
+        });
+
+      requestKeys.forEach((cacheKey) => {
+        this.AUTHORITY_IN_FLIGHT.set(cacheKey, requestPromise);
+      });
+      pending.push(requestPromise);
+    }
+
+    if (!pending.length) return Promise.resolve();
+    return Promise.allSettled(pending).then(() => undefined);
   },
 
   analyzeWord(word) {
