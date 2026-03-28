@@ -13,6 +13,7 @@ import {
   getSemanticTierLabel,
   normalizeSemanticKeyword,
 } from './semantics.registry.js';
+import { rawScoreToAbyssMultiplier } from './lexicon.abyss.js';
 import { analyzeSpeaking } from './speaking/index.js';
 import { WORD_REGEX_GLOBAL } from '../../src/lib/wordTokenization.js';
 import { normalizeVowelFamily } from '../../src/lib/phonology/vowelFamily.js';
@@ -464,6 +465,7 @@ function buildCombatCommentary({
   cohesionScore,
   statusEffect,
   speaking,
+  abyssalResonanceMultiplier,
 }) {
   const parts = [buildRarityPraise(rarity, dominantSchool)];
 
@@ -496,6 +498,12 @@ function buildCombatCommentary({
 
   if ((Number(speaking?.harmony?.score) || 0) >= 0.55) {
     parts.push('Vowel harmony locks the cast into a higher resonance band.');
+  }
+
+  if ((Number(abyssalResonanceMultiplier) || 1) >= 1.15) {
+    parts.push('The Lexicon Abyss answers with stored hunger. The arena has not heard these words enough to dull them.');
+  } else if ((Number(abyssalResonanceMultiplier) || 1) <= 0.9) {
+    parts.push('The Lexicon Abyss recognizes overworked wording and bleeds force from the cast.');
   }
 
   return parts.join(' ');
@@ -533,6 +541,9 @@ export function buildCombatProfile({
   const cohesionScore = scoreData
     ? clamp01(cohesionSignal || calculateCohesionScore(doc))
     : calculateCohesionScore(doc);
+  const abyssTrace = getScoreTrace(scoreData, 'abyssal_resonance');
+  const abyssSignal = abyssTrace ? clamp01(Number(abyssTrace.rawScore) || 0) : 0.5;
+  const abyssalResonanceMultiplier = rawScoreToAbyssMultiplier(abyssSignal);
 
   const rarityScore = clamp01(
     (corpusRarity * 0.4)
@@ -574,6 +585,7 @@ export function buildCombatProfile({
     cohesionScore,
     statusEffect,
     speaking,
+    abyssalResonanceMultiplier,
   });
   const intent = {
     ...baseIntent,
@@ -607,7 +619,9 @@ export function buildCombatProfile({
       phoneticHacking: hackingSignal,
       vocabulary: vocabularySignal,
       cohesion: cohesionScore,
+      abyssalResonance: abyssSignal,
     },
+    abyssalResonanceMultiplier,
     rarity: {
       ...rarity,
       score: rarityScore,

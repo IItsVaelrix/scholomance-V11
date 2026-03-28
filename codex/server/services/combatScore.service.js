@@ -3,11 +3,13 @@ import path from 'path';
 import { normalizeCombatScore } from '../../core/combat.scoring.js';
 import { createCorpusRankMap } from '../../core/combat.profile.js';
 import { createCombatScoringEngine } from '../../core/scoring.defaults.js';
+import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
 import {
   loadSessionVoiceProfile,
   persistSessionVoiceProfile,
   resolveSessionSpeakerId,
 } from './combatVoiceProfiles.service.js';
+import { createLexiconAbyssService } from './lexiconAbyss.service.js';
 
 function normalizeCombatText(rawText) {
   if (typeof rawText === 'string') return rawText;
@@ -31,13 +33,20 @@ function loadCorpusRanks(corpusPath = DEFAULT_CORPUS_PATH) {
 }
 
 export function createCombatScoreService(options = {}) {
-  const scoringEngine = options.scoringEngine || createCombatScoringEngine();
+  const lexiconAbyssService = options.lexiconAbyssService || createLexiconAbyssService({
+    dbPath: options.abyssDbPath,
+    log: options.log,
+  });
+  const ownsLexiconAbyssService = !options.lexiconAbyssService;
+  const scoringEngine = options.scoringEngine || createCombatScoringEngine({
+    abyssProvider: lexiconAbyssService.createHeuristicProvider(),
+  });
   const corpusRanks = options.corpusRanks || loadCorpusRanks(options.corpusPath);
 
   async function scoreScroll(rawText, context = {}) {
     const scrollText = normalizeCombatText(rawText);
     const scoreData = await scoringEngine.calculateScore(scrollText);
-    const speakerId = resolveSessionSpeakerId(context.session, context.speakerId);
+    const speakerId = resolveSessionSpeakerId(context.session, context.speakerId || context.playerId);
     const speakerProfile = loadSessionVoiceProfile(context.session, {
       speakerId,
       speakerType: 'PLAYER',
@@ -55,6 +64,7 @@ export function createCombatScoreService(options = {}) {
       speakerProfile,
     });
     const { nextVoiceProfile, ...publicResponse } = normalized;
+    const verseIR = compileVerseToIR(scrollText, { mode: 'balanced' });
 
     if (nextVoiceProfile && context.session && speakerId) {
       await persistSessionVoiceProfile(context.session, {
@@ -63,10 +73,26 @@ export function createCombatScoreService(options = {}) {
       });
     }
 
-    return publicResponse;
+    const traceId = await lexiconAbyssService.recordCombatResolved({
+      text: scrollText,
+      verseIR,
+      scoreResponse: publicResponse,
+      playerId: speakerId || context.playerId || null,
+      opponentId: context.opponentId || null,
+    });
+
+    return {
+      ...publicResponse,
+      traceId,
+    };
   }
 
   return {
     scoreScroll,
+    close() {
+      if (ownsLexiconAbyssService) {
+        lexiconAbyssService.close?.();
+      }
+    },
   };
 }

@@ -13,7 +13,13 @@ const combatScoreBodySchema = z.object({
 }).strict();
 
 export async function combatRoutes(fastify, opts = {}) {
-  const combatScoreService = opts.combatScoreService || createCombatScoreService();
+  const combatScoreService = opts.combatScoreService || createCombatScoreService({
+    log: fastify.log,
+  });
+
+  fastify.addHook('onClose', async () => {
+    await combatScoreService.close?.();
+  });
 
   fastify.post('/api/combat/score', {
     config: {
@@ -30,6 +36,7 @@ export async function combatRoutes(fastify, opts = {}) {
 
       return combatScoreService.scoreScroll(parsed.data.scrollText, {
         weave: parsed.data.weave,
+        playerId: parsed.data.playerId,
         arenaSchool: parsed.data.arenaSchool,
         opponentSchool: parsed.data.opponentSchool,
         session: request.session,

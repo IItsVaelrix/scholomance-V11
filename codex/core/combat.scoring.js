@@ -211,6 +211,7 @@ export function calculateCombatScore({
     harmonyMultiplier,
     severityMultiplier,
     voiceResonanceMultiplier,
+    abyssalResonanceMultiplier: profile.abyssalResonanceMultiplier,
     weaveResonanceMultiplier,
     bridge,
     rarity: profile.rarity,

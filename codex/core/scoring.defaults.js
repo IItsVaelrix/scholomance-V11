@@ -1,4 +1,5 @@
 import { createScoringEngine } from './scoring.engine.js';
+import { createAbyssalResonanceHeuristic } from './heuristics/abyssal_resonance.js';
 import { alliterationDensityHeuristic } from './heuristics/alliteration_density.js';
 import { cohesionHeuristic } from './heuristics/cohesion.js';
 import { literaryDeviceRichnessHeuristic } from './heuristics/literary_device_richness.js';
@@ -33,11 +34,12 @@ function overrideHeuristicWeight(heuristicDef, weight) {
 
 export const COMBAT_SCORING_HEURISTICS = Object.freeze([
   overrideHeuristicWeight(phonemeDensityHeuristic, 0.15),
-  overrideHeuristicWeight(rhymeQualityHeuristic, 0.10),
-  overrideHeuristicWeight(multisyllabicRhymeHeuristic, 0.20),
+  overrideHeuristicWeight(rhymeQualityHeuristic, 0.15),
+  overrideHeuristicWeight(multisyllabicRhymeHeuristic, 0.15),
   overrideHeuristicWeight(cohesionHeuristic, 0.15),
-  overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.25),
-  overrideHeuristicWeight(phoneticHackingHeuristic, 0.15),
+  overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.15),
+  createAbyssalResonanceHeuristic({ weight: 0.15 }),
+  overrideHeuristicWeight(phoneticHackingHeuristic, 0.10),
 ]);
 
 export function createDefaultScoringEngine() {
@@ -52,9 +54,24 @@ export function createDefaultScoringEngine() {
   return engine;
 }
 
-export function createCombatScoringEngine() {
+function getCombatScoringHeuristics(options = {}) {
+  return Object.freeze([
+    overrideHeuristicWeight(phonemeDensityHeuristic, 0.15),
+    overrideHeuristicWeight(rhymeQualityHeuristic, 0.15),
+    overrideHeuristicWeight(multisyllabicRhymeHeuristic, 0.15),
+    overrideHeuristicWeight(cohesionHeuristic, 0.15),
+    overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.15),
+    createAbyssalResonanceHeuristic({
+      provider: options.abyssProvider,
+      weight: 0.15,
+    }),
+    overrideHeuristicWeight(phoneticHackingHeuristic, 0.10),
+  ]);
+}
+
+export function createCombatScoringEngine(options = {}) {
   const engine = createScoringEngine();
-  COMBAT_SCORING_HEURISTICS.forEach((heuristicDef) => {
+  getCombatScoringHeuristics(options).forEach((heuristicDef) => {
     engine.registerHeuristic({
       name: heuristicDef.name,
       scorer: heuristicDef.scorer,
@@ -63,3 +80,5 @@ export function createCombatScoringEngine() {
   });
   return engine;
 }
+
+export { getCombatScoringHeuristics };

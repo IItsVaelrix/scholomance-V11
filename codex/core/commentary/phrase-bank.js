@@ -489,6 +489,40 @@ export const PHRASE_BANK = Object.freeze({
     ],
   }),
 
+  abyssal_resonance: freezeEntry({
+    concept: "entropy pressure",
+    citations: [
+      {
+        quote: "The old order changeth, yielding place to new",
+        attribution: "Tennyson, Idylls of the King (PG 610)",
+      },
+      {
+        quote: "What has been once done can be done again",
+        attribution: "The Thousand and One Nights (PG 34206)",
+      },
+      {
+        quote: "The effect of elevated language upon an audience is not persuasion but transport",
+        attribution: "Longinus, On the Sublime (PG 6081)",
+      },
+      {
+        quote: "True ease in writing comes from art, not chance",
+        attribution: "Pope, An Essay on Criticism (PG 2612)",
+      },
+      {
+        quote: "The poet binds together by passion and knowledge the vast empire of human society",
+        attribution: "Wordsworth, Preface to Lyrical Ballads (PG 5600)",
+      },
+    ],
+    aspects: [
+      "entropy pressure", "public usage field", "semantic wear",
+      "abyssal hunger", "lexical weather",
+    ],
+    criteria: [
+      "rarity recovery", "collective overuse", "semantic decay",
+      "public-cast freshness", "linguistic entropy",
+    ],
+  }),
+
   emotional_resonance: freezeEntry({
     concept: "affective continuity",
     citations: [

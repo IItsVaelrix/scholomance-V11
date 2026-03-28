@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.10** | Last updated: 2026-03-28
+**Version: 1.11** | Last updated: 2026-03-28
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Rhyme astrology compiler bridge contract
-- Version: 1.9 -> 1.10
-- Changed fields: added `RhymeAstrologyQueryCompilerContext`, `RhymeAstrologyQueryPattern`, `RhymeAstrologyMatch`, `RhymeAstrologyConstellation`, `RhymeAstrologyResult`, `RhymeAstrologyAnchorCompilerRef`, `RhymeAstrologyInspectorAnchor`, `RhymeAstrologyWindowSummary`, `RhymeAstrologySpan`, and `RhymeAstrologyPanelPayload`; panel-analysis payloads may now include compiler-native rhyme-astrology anchors, windows, and spans
+- Schema: Combat scoring abyssal resonance contract
+- Version: 1.10 -> 1.11
+- Changed fields: added `abyssalResonanceMultiplier` and `traceId` to `CombatScoreResponse`; authoritative combat scoring can now expose the average Lexicon Abyss multiplier and the Akashic replay handle for the resolved cast
 - Breaking: no
-- Claude impact: optional `rhymeAstrology.inspector.windows` and `rhymeAstrology.inspector.spans` are now available for Truesight overlays and future compiler-grounded highlighting; anchor rows can now carry `compilerRef`
-- Blackbox impact: panel-analysis fixtures can now assert compiler-native rhyme-astrology payloads; route/runtime coverage should include VerseIR-backed anchor metadata and span/window serialization
+- Claude impact: combat surfaces can label/render the new abyssal trace and may use `abyssalResonanceMultiplier` or `traceId` for future Akashic and Truesight affordances
+- Blackbox impact: combat route fixtures should assert the new response fields and verify replay persistence remains scrubbed to linguistic data only
 
 ---
 
@@ -706,6 +706,7 @@ interface CombatScoreResponse {
   harmonyMultiplier: number;
   severityMultiplier: number;
   voiceResonanceMultiplier: number;
+  abyssalResonanceMultiplier: number;
   cohesionScore: number;
   rarity: CombatRarity;
   intent: CombatIntent;
@@ -714,6 +715,7 @@ interface CombatScoreResponse {
   statusEffect: CombatStatusEffect | null;
   failureCast: boolean;
   commentary: string;
+  traceId: string;
   traces: ScoreTrace[];
   explainTrace: ScoreTrace[];
 }
@@ -847,6 +849,8 @@ Notes:
 - `traces` is the canonical combat breakdown array. `explainTrace` is returned as an alias for existing consumers that still read the older field name.
 - `healing` is authoritative and may accompany offensive damage for alchemical/supportive casts.
 - `commentary` carries CODEx rarity praise for powerful spells.
+- `abyssalResonanceMultiplier` is the average Lexicon Abyss multiplier applied from public combat speech entropy for the resolved cast.
+- `traceId` is the authoritative Akashic replay handle recorded alongside the resolved cast.
 
 ```ts
 GET /api/rhyme-astrology/query
@@ -970,6 +974,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.8 | 2026-03-21 | Added phonosemantic token-graph node/edge, activation, and graph-candidate contracts for prediction and judiciary traversal | no |
 | 1.9 | 2026-03-26 | Added VerseIR compiler contracts, whitespace-fidelity line metadata, syllable windows, and optional Truesight compiler metadata for panel analysis | no |
 | 1.10 | 2026-03-28 | Added compiler-aware rhyme astrology query/panel payload contracts, including VerseIR-backed anchors, windows, and spans | no |
+| 1.11 | 2026-03-28 | Added abyssal resonance multiplier and Akashic trace handle to authoritative combat scoring | no |
 
 ---
 
