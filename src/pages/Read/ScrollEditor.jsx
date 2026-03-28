@@ -22,6 +22,7 @@ const MARKDOWN_FORMATS = {
 function buildOverlayLines(content) {
   const rawLines = String(content || "").split("\n");
   const lines = [];
+  const allTokens = [];
   let documentOffset = 0;
 
   for (let lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
@@ -41,12 +42,14 @@ function buildOverlayLines(content) {
       const token = match[0];
       const localStart = match.index ?? 0;
       const isWord = WORD_TOKEN_REGEX.test(token);
-      tokens.push({
+      const tokenData = {
         token,
         start: documentOffset + localStart,
         lineIndex,
         wordIndex: isWord ? wordIndex : null,
-      });
+      };
+      tokens.push(tokenData);
+      allTokens.push(tokenData);
       if (isWord) {
         wordIndex += 1;
       }
@@ -56,7 +59,7 @@ function buildOverlayLines(content) {
     documentOffset += lineText.length + 1;
   }
 
-  return lines;
+  return { lines, allTokens };
 }
 
 function normalizeWordToken(token) {
@@ -520,14 +523,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   // the windowed content from popping in visibly at the edges.
   const BUFFER = 20;
 
-  const overlayLines = useMemo(() => {
+  const { overlayLines, allOverlayTokens } = useMemo(() => {
     const perfStart = performance.now();
-    const lines = buildOverlayLines(content);
+    const result = buildOverlayLines(content);
     const perfEnd = performance.now();
     if (perfEnd - perfStart > 4) {
-      console.warn(`[PERF] overlayLines memo: ${(perfEnd - perfStart).toFixed(2)}ms`);
+      console.warn(`[PERF] buildOverlayLines: ${(perfEnd - perfStart).toFixed(2)}ms`);
     }
-    return lines;
+    return { overlayLines: result.lines, allOverlayTokens: result.allTokens };
   }, [content]);
 
   // Virtualization windowing
@@ -553,21 +556,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const derivedAnalyzedWordsByCharStart = useMemo(() => {
     const derived = new Map(analyzedWordsByCharStart);
 
-    for (const { lineIndex, tokens } of overlayLines) {
-      for (const { token, start, wordIndex } of tokens) {
-        if (!WORD_TOKEN_REGEX.test(token) || derived.has(start)) continue;
-        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${start}`;
-        const nw = normalizeWordToken(token);
-        const fromIdentity = analyzedWordsByIdentity.get(identityKey);
-        if (fromIdentity) {
-          derived.set(start, { ...fromIdentity, charStart: start, normalizedWord: fromIdentity.normalizedWord || nw });
-          continue;
-        }
-        if (!allowLegacyWordFallback) continue;
-        const fromWord = analyzedWords.get(nw);
-        if (fromWord) {
-          derived.set(start, { ...fromWord, charStart: start, normalizedWord: fromWord.normalizedWord || nw });
-        }
+    for (const { token, start, lineIndex, wordIndex } of allOverlayTokens) {
+      if (!WORD_TOKEN_REGEX.test(token) || derived.has(start)) continue;
+      const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${start}`;
+      const nw = normalizeWordToken(token);
+      const fromIdentity = analyzedWordsByIdentity.get(identityKey);
+      if (fromIdentity) {
+        derived.set(start, { ...fromIdentity, charStart: start, normalizedWord: fromIdentity.normalizedWord || nw });
+        continue;
+      }
+      if (!allowLegacyWordFallback) continue;
+      const fromWord = analyzedWords.get(nw);
+      if (fromWord) {
+        derived.set(start, { ...fromWord, charStart: start, normalizedWord: fromWord.normalizedWord || nw });
       }
     }
 
@@ -577,7 +578,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     analyzedWordsByCharStart,
     analyzedWordsByIdentity,
     allowLegacyWordFallback,
-    overlayLines,
+    allOverlayTokens,
   ]);
 
   const analysisSources = useMemo(() => ({

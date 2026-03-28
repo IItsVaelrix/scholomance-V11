@@ -1061,6 +1061,12 @@ export default function ReadPage() {
   }, [editorContent, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
 
   /* ── Shared content blocks used in both mobile and desktop ── */
+  const isAstrologyMode = analysisMode === ANALYSIS_MODES.ASTROLOGY;
+  const isAnalyzeMode = isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE;
+  const isAnalysisPanelVisible = isAnalyzeMode || isAstrologyMode;
+  const analysisPanelTitle = isAstrologyMode ? "Rhyme Astrology" : "Analyze";
+  const analysisPanelCloseLabel = isAstrologyMode ? "Close Rhyme Astrology" : "Close Analysis";
+
   const editorBlock = (
     <div className="codex-workspace">
       <div className="document-container">
@@ -1153,6 +1159,28 @@ export default function ReadPage() {
               editorRef.current?.scrollToTopSmooth?.();
             }}
             highlightedLines={effectiveHighlightedLines}
+          />
+        </div>
+      )}
+      {isAstrologyMode && (
+        <div className="sidebar-sub-panel">
+          <AnalysisPanel
+            scheme={schemeDetection}
+            meter={meterDetection}
+            statistics={deepAnalysis?.statistics}
+            literaryDevices={literaryDevices}
+            emotion={emotion}
+            genreProfile={genreProfile}
+            hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
+            scoreData={scoreData}
+            rhymeAstrology={rhymeAstrology}
+            onGroupHover={highlightRhymeGroup}
+            onGroupLeave={clearHighlight}
+            infoBeamEnabled={infoBeamEnabled}
+            onInfoBeamToggle={() => setInfoBeamEnabled((prev) => !prev)}
+            onGroupClick={handleInfoBeamClick}
+            activeInfoBeamFamily={infoBeamFamily}
+            surfaceMode="astrology"
           />
         </div>
       )}
@@ -1507,15 +1535,15 @@ export default function ReadPage() {
                       </div>
                     )}
 
-                    {isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
+                    {isAnalysisPanelVisible && (
                       <div className="right-panel-section">
                         <div className="right-panel-section-header">
-                          <span className="right-panel-section-title">Analyze</span>
+                          <span className="right-panel-section-title">{analysisPanelTitle}</span>
                           <button
                             type="button"
                             className="right-panel-close"
-                            onClick={() => handleModeChange(ANALYSIS_MODES.NONE)}
-                            aria-label="Close Analysis"
+                            onClick={() => handleModeChange(analysisMode)}
+                            aria-label={analysisPanelCloseLabel}
                           >×</button>
                         </div>
                         <AnalysisPanel
@@ -1534,6 +1562,7 @@ export default function ReadPage() {
                           onInfoBeamToggle={() => setInfoBeamEnabled((prev) => !prev)}
                           onGroupClick={handleInfoBeamClick}
                           activeInfoBeamFamily={infoBeamFamily}
+                          surfaceMode={isAstrologyMode ? "astrology" : "full"}
                         />
                       </div>
                     )}
@@ -1627,10 +1656,10 @@ export default function ReadPage() {
                       </div>
                     )}
 
-                    {!showScorePanel && !(isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE) && !(infoBeamEnabled && infoBeamFamily) && !showMinimap && !(isPredictive && misspellings.length > 0) && (
+                    {!showScorePanel && !isAnalysisPanelVisible && !(infoBeamEnabled && infoBeamFamily) && !showMinimap && !(isPredictive && misspellings.length > 0) && (
                       <div className="right-panel-empty">
                         <div className="right-panel-empty-icon">⊘</div>
-                        <p>Enable Truesight or CODEx Metrics to see analysis here</p>
+                        <p>Open Rhyme Astrology, Truesight Analyze, or CODEx Metrics to see analysis here</p>
                       </div>
                     )}
                   </div>
@@ -1680,11 +1709,11 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {isNarrowViewport && isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
+      {isNarrowViewport && isAnalysisPanelVisible && (
         <FloatingPanel
-          id="analyze-panel"
-          title="Analyze"
-          onClose={() => handleModeChange(ANALYSIS_MODES.NONE)}
+          id={isAstrologyMode ? "astrology-panel" : "analyze-panel"}
+          title={analysisPanelTitle}
+          onClose={() => handleModeChange(analysisMode)}
           defaultX={window.innerWidth - 360}
           defaultY={80}
           defaultWidth={340}
@@ -1710,6 +1739,7 @@ export default function ReadPage() {
             onInfoBeamToggle={() => setInfoBeamEnabled((prev) => !prev)}
             onGroupClick={handleInfoBeamClick}
             activeInfoBeamFamily={infoBeamFamily}
+            surfaceMode={isAstrologyMode ? "astrology" : "full"}
           />
         </FloatingPanel>
       )}

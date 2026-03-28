@@ -389,6 +389,70 @@ export class CrystalBallScene extends Phaser.Scene {
     }
   }
 
+  // ── SACRED GEOMETRY (STANDBY) ──────────────────────────────────────────────
+  _drawSacredGeometry(g, cx, cy, r, t, sig, col) {
+    const weight = Math.max(0, 1 - sig * 4); // Strongest when signal is low
+    if (weight <= 0) return;
+
+    const baseAlpha = 0.22 * weight * this._transitionAlpha;
+    const rot = t * 0.00025;
+    
+    // 1. Nested Hexagons (Metatron Fragments)
+    for (let h = 0; h < 3; h++) {
+      const hexR = r * (0.85 - h * 0.25);
+      const hexRot = rot * (h % 2 === 0 ? 1 : -0.8);
+      g.lineStyle(1, col, baseAlpha * (1 - h * 0.2));
+      
+      g.beginPath();
+      const points = [];
+      for (let i = 0; i <= 6; i++) {
+        const angle = (i / 6) * Math.PI * 2 + hexRot;
+        const px = cx + Math.cos(angle) * hexR;
+        const py = cy + Math.sin(angle) * hexR;
+        if (i === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+        if (i < 6) points.push({x: px, y: py});
+      }
+      g.strokePath();
+
+      // Connect opposite vertices for even hexagons
+      if (h === 0) {
+        g.lineStyle(0.5, col, baseAlpha * 0.5);
+        for (let i = 0; i < 3; i++) {
+          g.lineBetween(points[i].x, points[i].y, points[i+3].x, points[i+3].y);
+        }
+      }
+    }
+
+    // 2. The Star of Scholomance (Double Triangles)
+    for (let tri = 0; tri < 2; tri++) {
+      const triRot = rot * -1.2 + (tri * Math.PI);
+      const triR = r * 0.62;
+      g.lineStyle(1.5, col, baseAlpha * 1.4);
+      g.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const angle = (i / 3) * Math.PI * 2 + triRot;
+        const px = cx + Math.cos(angle) * triR;
+        const py = cy + Math.sin(angle) * triR;
+        if (i === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.strokePath();
+    }
+
+    // 3. Flower of Life pulse
+    const orbitCount = 6;
+    const orbitR = r * 0.38;
+    const pulse = Math.sin(t * 0.001) * 0.05;
+    for (let i = 0; i < orbitCount; i++) {
+      const angle = (i / orbitCount) * Math.PI * 2 + rot * 0.6;
+      const ox = cx + Math.cos(angle) * orbitR;
+      const oy = cy + Math.sin(angle) * orbitR;
+      g.lineStyle(1, col, baseAlpha * 0.7);
+      g.strokeCircle(ox, oy, r * (0.38 + pulse));
+    }
+  }
+
   // ── UPDATE LOOP ─────────────────────────────────────────────────────────────
   update(time, delta) {
     const { width, height } = this.scale;
@@ -409,10 +473,15 @@ export class CrystalBallScene extends Phaser.Scene {
       this._needsBgRedraw = false;
     }
 
-    // 2. School-specific pattern
+    // 2. Rendering Layers
     this.patternLayer.clear();
-    this.patternLayer.setAlpha(this._transitionAlpha);
+    
+    // Always draw sacred geometry (Standby layer)
+    this._drawSacredGeometry(this.patternLayer, cx, cy, r, time, this.signalLevel, col);
 
+    // Draw school-specific pattern (Active layer)
+    this.patternLayer.setAlpha(this._transitionAlpha);
+    
     const drawFn = this._programs[this.schoolId] || this._genericProgram;
     drawFn(this.patternLayer, cx, cy, r, time, this.signalLevel, col);
 
@@ -431,9 +500,15 @@ export class CrystalBallScene extends Phaser.Scene {
     this.glyphText.setScale(glyphPulse);
     this.glyphText.setAlpha(0.2 + this.signalLevel * 0.55);
 
-    // 5. Particles
+    // 5. Particles (Signal-reactive)
     if (this.particles && typeof this.particles.setParticleColor === 'function') {
       this.particles.setParticleColor(col);
+      
+      const pFreq = this.signalLevel > 0.05 ? 130 : 80; // More motes when quiet/paused
+      
+      if (this.particles.frequency !== pFreq) {
+        this.particles.frequency = pFreq;
+      }
     }
 
     // 6. Tuning noise

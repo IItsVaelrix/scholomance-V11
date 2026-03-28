@@ -1,8 +1,8 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
 import { normalizeVowelFamily, buildVowelSummary } from "../lib/phonology/vowelFamily.js";
-import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
+import { analyzeDocumentAsync } from "../lib/workers/analysis.client.js";
 
 const ANALYSIS_DEBOUNCE_MS = 2500;
 const REQUEST_TIMEOUT_MS = 15000;
@@ -467,10 +467,8 @@ function normalizePanelPayload(rawPayload) {
   };
 }
 
-const clientEngine = new DeepRhymeEngine();
-
 async function runClientSideAnalysis(text) {
-  const analysis = await clientEngine.analyzeDocument(text);
+  const analysis = await analyzeDocumentAsync(text);
 
   // Flatten lines[].words[] into wordAnalyses for the normalization pipeline.
   // The DeepRhymeEngine returns word data nested inside lines, but the panel

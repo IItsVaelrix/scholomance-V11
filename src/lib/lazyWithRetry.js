@@ -65,8 +65,11 @@ export async function loadModuleWithRetry(importer, moduleId, options = {}) {
  * @template T
  * @param {() => Promise<T>} importer
  * @param {string} moduleId
- * @returns {import("react").LazyExoticComponent<import("react").ComponentType<any>>}
+ * @returns {import("react").LazyExoticComponent<import("react").ComponentType<any>> & { preload: () => Promise<T> }}
  */
 export function lazyWithRetry(importer, moduleId) {
-  return lazy(() => loadModuleWithRetry(importer, moduleId));
+  const load = () => loadModuleWithRetry(importer, moduleId);
+  const component = lazy(load);
+  component.preload = load;
+  return component;
 }

@@ -215,10 +215,12 @@ export default function AnalysisPanel({
   onInfoBeamToggle = null,
   onGroupClick = null,
   activeInfoBeamFamily = null,
+  surfaceMode = "full",
 }) {
   const [groupsExpanded, setGroupsExpanded] = useState(false);
   const groupEntries = scheme?.groups ? Array.from(scheme.groups.entries()) : [];
   const patternLetters = scheme?.pattern ? [...scheme.pattern] : [];
+  const isAstrologySurface = surfaceMode === "astrology";
   const hasRhymeAstrology = Boolean(rhymeAstrology?.enabled);
   const rhymeAstrologyAnchors = Array.isArray(rhymeAstrology?.inspector?.anchors)
     ? rhymeAstrology.inspector.anchors
@@ -248,12 +250,14 @@ export default function AnalysisPanel({
       statistics,
     })
     : "";
-  const hasContent = scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology;
+  const hasContent = isAstrologySurface
+    ? hasRhymeAstrology
+    : scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology;
 
   return (
-    <div className="analyze-panel">
+    <div className={`analyze-panel${isAstrologySurface ? " analyze-panel--astrology" : ""}`}>
       {/* Score badge */}
-      {scoreData && (
+      {!isAstrologySurface && scoreData && (
         <div className="analyze-score-badge">
           <motion.span
             className="analyze-score-value"
@@ -269,7 +273,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Scroll Profile */}
-      {(genreProfile || emotion !== "Neutral") && (
+      {!isAstrologySurface && (genreProfile || emotion !== "Neutral") && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25C8;</span> Scroll Profile
@@ -302,7 +306,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Poetic Form */}
-      {(scheme || (meter && meter.meterName !== "Free Verse")) && (
+      {!isAstrologySurface && (scheme || (meter && meter.meterName !== "Free Verse")) && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25C9;</span> Poetic Form
@@ -347,7 +351,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Rhyme Profile */}
-      {statistics && (
+      {!isAstrologySurface && statistics && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25C7;</span> Rhyme Profile
@@ -372,10 +376,18 @@ export default function AnalysisPanel({
 
       {/* Rhyme Astrology */}
       {hasRhymeAstrology && (
-        <section className="analyze-section">
+        <section className={`analyze-section${isAstrologySurface ? " analyze-section--astrology-focus" : ""}`}>
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x2736;</span> Rhyme Astrology
           </h4>
+          {isAstrologySurface && (
+            <div className="analyze-astro-intro">
+              <span className="analyze-astro-kicker">Constellation Lattice</span>
+              <p>
+                The active scroll is charted by shared vowel gravities, stress echoes, and repeated syllable windows.
+              </p>
+            </div>
+          )}
           {rhymeAstrology?.features && (
             <div className="analyze-astro-features-bars">
               {[
@@ -482,7 +494,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Verse Structure — HHM stanza data */}
-      {hhmSummary?.enabled && hhmSummary.stanzas?.length > 0 && (
+      {!isAstrologySurface && hhmSummary?.enabled && hhmSummary.stanzas?.length > 0 && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25EB;</span> Verse Structure
@@ -515,7 +527,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Literary Craft */}
-      {hasLiteraryCraft && (
+      {!isAstrologySurface && hasLiteraryCraft && (
         <section className="analyze-section">
           <h4 className="analyze-section-title">
             <span className="analyze-glyph">&#x25B3;</span> Literary Craft
@@ -605,7 +617,7 @@ export default function AnalysisPanel({
       )}
 
       {/* Rhyme Groups */}
-      {groupEntries.length > 0 && (
+      {!isAstrologySurface && groupEntries.length > 0 && (
         <section className="analyze-section">
           <div className="analyze-section-toggle-row">
             <button
@@ -677,7 +689,7 @@ export default function AnalysisPanel({
       {!hasContent && (
         <div className="analyze-empty">
           <span className="analyze-empty-glyph">&#x2736;</span>
-          <p>Write a scroll to reveal its structure.</p>
+          <p>{isAstrologySurface ? "Write a scroll to chart its rhyme constellations." : "Write a scroll to reveal its structure."}</p>
         </div>
       )}
     </div>
@@ -746,5 +758,6 @@ AnalysisPanel.propTypes = {
   onInfoBeamToggle: PropTypes.func,
   onGroupClick: PropTypes.func,
   activeInfoBeamFamily: PropTypes.string,
+  surfaceMode: PropTypes.oneOf(["full", "astrology"]),
 };
 

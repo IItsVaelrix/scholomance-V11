@@ -125,6 +125,17 @@ export function RhymeIcon(props) {
 
 // ─── Misc UI Icons ───────────────────────────────────────────────────────────
 
+/** Star chart — Rhyme Astrology */
+export function AstrologyIcon(props) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3l1.9 4.86L19 9.76l-4 3.15 1.3 5.09L12 15.2 7.7 18l1.3-5.09-4-3.15 5.1-1.9L12 3z" />
+      <circle cx="18.5" cy="5.5" r="1.25" />
+      <circle cx="6" cy="18" r="1" />
+    </Icon>
+  );
+}
+
 /** Checkmark — Success/Saved */
 export function CheckIcon(props) {
   return (

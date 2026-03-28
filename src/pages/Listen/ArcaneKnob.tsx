@@ -33,23 +33,32 @@ function angleFromEvent(e: MouseEvent | React.MouseEvent, rect: DOMRect): number
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
   const raw = Math.atan2(e.clientY - cy, e.clientX - cx) * (180 / Math.PI);
-  // Normalize: 0° at top, clockwise
+  // Normalize: 0° at top, 90° at right, 180° at bottom, 270° at left
   let norm = raw + 90;
-  if (norm < 0) norm += 360;
+  while (norm < 0) norm += 360;
+  while (norm >= 360) norm -= 360;
   return norm;
 }
 
-function normalizedFromAngle(normAngle: number): number {
-  // usable arc: 45° → 315° (within the full 360°)
-  if (normAngle < 45) return 0;
-  if (normAngle > 315) return 1;
-  return (normAngle - 45) / SWEEP;
+function normalizedFromAngle(angle: number): number {
+  // Visually, the sweep is from 225° (bottom-left) to 135° (bottom-right) clockwise.
+  // We shift the angle so that 225° becomes 0.
+  let shifted = angle + 135;
+  while (shifted < 0) shifted += 360;
+  while (shifted >= 360) shifted -= 360;
+
+  // The usable range is now 0 (at 225°) to 270 (at 135°).
+  // The dead zone is between 270 and 360.
+  if (shifted > 270) {
+    return shifted > 315 ? 0 : 1;
+  }
+  return shifted / SWEEP;
 }
 
 export const ArcaneKnob: React.FC<ArcaneKnobProps> = ({
   value,
   onChange,
-  step = 0.01,
+  step = 0.05,
   label,
   size = 80,
   color = 'var(--active-school-color)',

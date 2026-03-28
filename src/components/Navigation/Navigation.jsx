@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { LINKS } from "../../data/library";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useAuth } from "../../hooks/useAuth.jsx";
+import { preloadRoute } from "../../lib/routes.js";
 
 const SunIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -95,7 +96,7 @@ export default function Navigation() {
     setSelectedLink(null);
   }, []);
 
-  // Magical nav: select link → glow animation → navigate after delay
+  // Magical nav: select link → glow animation → navigate quickly
   const handleMobileNavClick = useCallback((e, linkPath) => {
     e.preventDefault();
     if (selectedLink) return; // already transitioning
@@ -108,7 +109,7 @@ export default function Navigation() {
       } else {
         navigate(linkPath);
       }
-    }, 500);
+    }, 100);
   }, [navigate, selectedLink, location.pathname]);
 
   return (
@@ -128,6 +129,7 @@ export default function Navigation() {
                   className={({ isActive }) =>
                     `nav-link${isActive ? " active" : ""}`
                   }
+                  onMouseEnter={() => preloadRoute(l.path)}
                 >
                   {l.label}
                 </NavLink>
@@ -206,6 +208,7 @@ export default function Navigation() {
                     <NavLink
                       to={l.path}
                       onClick={(e) => handleMobileNavClick(e, l.path)}
+                      onTouchStart={() => preloadRoute(l.path)}
                       className={({ isActive }) =>
                         `nav-mobile-link${isActive ? " active" : ""}${isSelected ? " nav-mobile-link--selected" : ""}`
                       }

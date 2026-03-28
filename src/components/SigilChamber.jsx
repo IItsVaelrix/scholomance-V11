@@ -240,7 +240,7 @@ export default function SigilChamber({ color, glyph, syllables, word }) {
         gameRef.current = null;
       }
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   /* Push word updates into the live scene */
   useEffect(() => {

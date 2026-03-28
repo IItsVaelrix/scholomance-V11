@@ -1,5 +1,5 @@
 import { ANALYSIS_MODES } from './TruesightControls.jsx';
-import { EyeIcon, SparkleIcon, MetricsIcon, AnalyzeIcon, RhymeIcon } from '../../components/Icons.jsx';
+import { EyeIcon, SparkleIcon, MetricsIcon, AnalyzeIcon, RhymeIcon, AstrologyIcon } from '../../components/Icons.jsx';
 import './IDE.css';
 
 // ─── ToolsSidebar ─────────────────────────────────────────────────────────────
@@ -79,6 +79,13 @@ export default function ToolsSidebar({
           <span className="sidebar-section-glyph" aria-hidden="true">⋈</span>
           Modes
         </h3>
+        <button
+          className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.ASTROLOGY ? 'active' : ''}`}
+          onClick={() => onModeChange(ANALYSIS_MODES.ASTROLOGY)}
+        >
+          <span className="tool-icon"><AstrologyIcon /></span>
+          <span className="tool-label">Rhyme Astrology</span>
+        </button>
         <button
           className={`sidebar-tool-btn ${analysisMode === ANALYSIS_MODES.ANALYZE ? 'active' : ''}`}
           onClick={() => onModeChange(ANALYSIS_MODES.ANALYZE)}

@@ -7,16 +7,19 @@ import "./index.css";
 import ErrorBoundary from "./components/shared/ErrorBoundary";
 import RouteErrorPage from "./components/shared/RouteErrorPage.jsx";
 import { ThemeProvider } from "./hooks/useTheme.jsx";
-import { lazyWithRetry } from "./lib/lazyWithRetry.js";
+import {
+  WatchPage,
+  ListenPage,
+  ReadPage,
+  AuthPage,
+  CollabPage,
+  ProfilePage,
+  CombatPage,
+  NexusPage
+} from "./lib/routes.js";
 
-const WatchPage = lazyWithRetry(() => import("./pages/Watch/WatchPage.jsx"), "watch-page");
-const ListenPage = lazyWithRetry(() => import("./pages/Listen/ListenPage"), "listen-page");
-const ReadPage = lazyWithRetry(() => import("./pages/Read/ReadPage.jsx"), "read-page");
-const AuthPage = lazyWithRetry(() => import("./pages/Auth/AuthPage.jsx"), "auth-page");
-const CollabPage = lazyWithRetry(() => import("./pages/Collab/CollabPage.jsx"), "collab-page");
-const ProfilePage = lazyWithRetry(() => import("./pages/Profile/ProfilePage.jsx"), "profile-page");
-const CombatPage = lazyWithRetry(() => import("./pages/Combat/CombatPage.jsx"), "combat-page");
-const NexusPage = lazyWithRetry(() => import("./pages/Nexus/NexusPage.jsx"), "nexus-page");
+// Ambiently preload Phaser to eliminate latency when mounting visualizers
+void import("phaser").catch(() => {});
 
 const router = createBrowserRouter([
   {

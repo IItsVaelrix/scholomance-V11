@@ -31,20 +31,30 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
 
   const wordAnalyses = useMemo(() => {
     if (Array.isArray(analysisSources)) return analysisSources;
-    const combined = new Map();
-    if (analysisSources && typeof analysisSources === 'object' && !(analysisSources instanceof Map)) {
-      const { analyzedWords, analyzedWordsByCharStart, analyzedWordsByIdentity } = analysisSources;
-      if (analyzedWords instanceof Map) for (const [k, v] of analyzedWords) combined.set(k, v);
-      if (analyzedWordsByCharStart instanceof Map) for (const [k, v] of analyzedWordsByCharStart) combined.set(k, { ...v, charStart: k });
-      if (analyzedWordsByIdentity instanceof Map) for (const [k, v] of analyzedWordsByIdentity) combined.set(k, v);
-      return Array.from(combined.values());
-    }
     if (analysisSources instanceof Map) {
-        return Array.from(analysisSources.entries()).map(([k, v]) => ({
-            ...v,
-            normalizedWord: typeof k === 'string' ? k : v.normalizedWord,
-            charStart: typeof k === 'number' ? k : v.charStart
-        }));
+      return Array.from(analysisSources.entries()).map(([k, v]) => ({
+        ...v,
+        normalizedWord: typeof k === 'string' ? k : v.normalizedWord,
+        charStart: typeof k === 'number' ? k : v.charStart
+      }));
+    }
+    
+    if (analysisSources && typeof analysisSources === 'object') {
+      const { analyzedWords, analyzedWordsByCharStart, analyzedWordsByIdentity } = analysisSources;
+      
+      // Use charStart-based map as primary flattened source if available
+      if (analyzedWordsByCharStart instanceof Map) {
+        return Array.from(analyzedWordsByCharStart.entries()).map(([k, v]) => ({ ...v, charStart: k }));
+      }
+
+      const combined = new Map();
+      if (analyzedWords instanceof Map) {
+        for (const [k, v] of analyzedWords) combined.set(k, v);
+      }
+      if (analyzedWordsByIdentity instanceof Map) {
+        for (const [k, v] of analyzedWordsByIdentity) combined.set(k, v);
+      }
+      return Array.from(combined.values());
     }
     return [];
   }, [analysisSources]);

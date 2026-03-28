@@ -169,7 +169,7 @@ const ArcanePanelLeft = React.memo(({ volume, setVolume, color, signalLevel, ban
   return (
     <div className="arcane-panel arcane-panel--left">
       <div className="arcane-panel-label">VOL. MATRIX</div>
-      <ArcaneKnob value={volume} onChange={setVolume} color={color} size={88} label="VOL" />
+      <ArcaneKnob value={volume} onChange={setVolume} color={color} size={88} label="VOL" step={0.05} />
       <VUMeter signalLevel={signalLevel} />
       <div className="arcane-readouts">
         <div className="arcane-readout"><span className="arcane-readout-key">SIG</span><span className="arcane-readout-val">{Math.round(signalLevel * 100)}%</span></div>

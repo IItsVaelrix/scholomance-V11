@@ -70,7 +70,7 @@ export default function App() {
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.3, ease: "easeInOut" }}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.15, ease: "easeOut" }}
                 >
                   <Suspense fallback={<div>Loading...</div>}>
                     <Outlet />

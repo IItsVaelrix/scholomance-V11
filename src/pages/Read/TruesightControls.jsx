@@ -7,6 +7,7 @@ export const ANALYSIS_MODES = {
   NONE: 'none',
   RHYME: 'rhyme',
   ANALYZE: 'analyze',
+  ASTROLOGY: 'astrology',
 };
 
 /**
@@ -49,6 +50,18 @@ export default function TruesightControls({
         Predict
       </button>
 
+      <button
+        type="button"
+        className={`toolbar-btn toolbar-btn--astrology ${analysisMode === ANALYSIS_MODES.ASTROLOGY ? 'toolbar-btn--active' : ''}`}
+        onClick={() => onModeChange(ANALYSIS_MODES.ASTROLOGY)}
+        disabled={disabled}
+        aria-pressed={analysisMode === ANALYSIS_MODES.ASTROLOGY}
+        title="Summon the rhyme astrology observatory"
+      >
+        <span aria-hidden="true">&#x2736;</span>
+        Astrology
+      </button>
+
       {isTruesight && (
         <div className="truesight-mode-selector animate-fadeIn" role="group" aria-label="Analysis mode">
           <button
@@ -72,12 +85,12 @@ export default function TruesightControls({
             </span>
             <span>Analyze</span>
           </button>
-          {isAnalyzing && (
-            <span className="analyzing-indicator" aria-live="polite">
-              Analyzing...
-            </span>
-          )}
         </div>
+      )}
+      {isAnalyzing && (
+        <span className="analyzing-indicator" aria-live="polite">
+          Analyzing...
+        </span>
       )}
     </div>
   );
