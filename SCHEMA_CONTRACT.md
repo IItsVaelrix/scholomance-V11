@@ -3,11 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.13** | Last updated: 2026-03-28
+**Version: 1.14** | Last updated: 2026-03-28
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
+
+---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: VerseIR substrate hardening contract
+- Version: 1.13 -> 1.14
+- Changed fields: `VerseLineIR`, `VerseTokenIR`, and `SyllableWindowIR` now expose parallel grapheme offsets; `VerseIR` adds `surfaceSpans`; VerseIR metadata now records applied window limits, offset semantics, grapheme support, and normalization policy; `VerseTokenIR` may expose `phoneticDiagnostics`; compiler descriptors may optionally surface the applied limits and grapheme metadata
+- Breaking: no
+- Claude impact: Analysis surfaces can keep using code-unit offsets, but may opt into the new grapheme offsets and `surfaceSpans` table for more exact hover/selection overlays
+- Blackbox impact: VerseIR fixtures, compiler snapshots, and rhyme-astrology compiler payload assertions can include the new optional metadata and surface span structures
 
 ---
 
@@ -191,9 +202,33 @@ interface TruesightCompilerDescriptor {
   mode: TruesightAnalysisMode;
   tokenCount: number;
   lineCount: number;
+  maxWindowSyllables?: number;
+  maxWindowTokenSpan?: number;
   syllableWindowCount: number;
   lineBreakStyle: LineBreakStyle;
+  offsetSemantics?: string;
+  graphemeAware?: boolean;
+  graphemeCount?: number;
   whitespaceFidelity: boolean;
+}
+
+interface VerseNormalizationPolicy {
+  lowercase: boolean;
+  unicodeForm: "none" | "NFC" | "NFD" | "NFKC" | "NFKD";
+  accentFolding: boolean;
+}
+
+interface VerseSurfaceSpanIR {
+  id: number;
+  lineIndex: number;
+  surfaceIndexInLine: number;
+  kind: "word" | "whitespace" | "punctuation";
+  text: string;
+  tokenId: number | null;
+  charStart: number;
+  charEnd: number;
+  graphemeStart: number;
+  graphemeEnd: number;
 }
 
 interface VerseLineIR {
@@ -203,11 +238,23 @@ interface VerseLineIR {
   tokenIds: number[];
   charStart: number;
   charEnd: number;
+  graphemeStart: number;
+  graphemeEnd: number;
   lineBreak: string;
   lineBreakStart: number;
   lineBreakEnd: number;
   rawSlice: string;
   isTerminalLine: boolean;
+}
+
+interface PhoneticDiagnosticTrail {
+  source: string;
+  branch: string;
+  fallbackPath: string[];
+  authoritySource: string | null;
+  usedAuthorityCache: boolean;
+  unknownReason: string | null;
+  notes: string[];
 }
 
 interface VerseTokenIR {
@@ -220,6 +267,8 @@ interface VerseTokenIR {
   globalTokenIndex: number;
   charStart: number;
   charEnd: number;
+  graphemeStart: number;
+  graphemeEnd: number;
   syllableCount: number;
   phonemes: string[];
   stressPattern: string;
@@ -238,6 +287,7 @@ interface VerseTokenIR {
     isStopWordLike: boolean;
     unknownPhonetics: boolean;
   };
+  phoneticDiagnostics?: PhoneticDiagnosticTrail | null;
 }
 
 interface SyllableWindowIR {
@@ -246,6 +296,8 @@ interface SyllableWindowIR {
   lineSpan: [number, number];
   charStart: number;
   charEnd: number;
+  graphemeStart: number;
+  graphemeEnd: number;
   syllableLength: number;
   phonemeSpan: string[];
   vowelSequence: string[];
@@ -334,13 +386,48 @@ interface VerseIRAmplifierPayload {
   amplifiers: VerseIRAmplifierResult[];
 }
 
+interface VerseIRIndexes {
+  tokenIdsByLineIndex: number[][];
+  lineEndTokenIds: number[];
+  tokenIdsByRhymeTail: Map<string, number[]>;
+  tokenIdsByVowelFamily: Map<string, number[]>;
+  tokenIdsByTerminalVowelFamily: Map<string, number[]>;
+  tokenIdsByStressedVowelFamily: Map<string, number[]>;
+  tokenIdsByConsonantSkeleton: Map<string, number[]>;
+  tokenIdsByStressContour: Map<string, number[]>;
+  windowIdsBySyllableLength: Map<number, number[]>;
+  windowIdsBySignature: Map<string, number[]>;
+}
+
+interface VerseIRFeatureTables {
+  tokenNeighborhoods: Array<{
+    tokenId: number;
+    lineIndex: number;
+    prevTokenId: number | null;
+    nextTokenId: number | null;
+  }>;
+  lineAdjacency: Array<{
+    lineIndex: number;
+    prevLineIndex: number | null;
+    nextLineIndex: number | null;
+  }>;
+  summary: {
+    tokenCount: number;
+    lineCount: number;
+    syllableWindowCount: number;
+  };
+}
+
 interface VerseIR {
   version: string;
   rawText: string;
   normalizedText: string;
   lines: VerseLineIR[];
   tokens: VerseTokenIR[];
+  surfaceSpans: VerseSurfaceSpanIR[];
   syllableWindows: SyllableWindowIR[];
+  indexes: VerseIRIndexes;
+  featureTables: VerseIRFeatureTables;
   semanticDepth?: number;
   archetypeResonance?: VerseIRAmplifierArchetype[];
   elementMatches?: VerseIRAmplifierPayload["elementMatches"];
@@ -350,9 +437,32 @@ interface VerseIR {
     lineBreakStyle: LineBreakStyle;
     tokenCount: number;
     lineCount: number;
+    maxWindowSyllables: number;
+    maxWindowTokenSpan: number;
     syllableWindowCount: number;
+    offsetSemantics: "code_unit_primary";
+    graphemeAware: boolean;
+    graphemeCount: number;
+    normalization: VerseNormalizationPolicy;
     whitespaceFidelity: boolean;
   };
+}
+
+interface SerializedVerseIRIndexes {
+  tokenIdsByLineIndex: Array<[number, number[]]>;
+  lineEndTokenIds: number[];
+  tokenIdsByRhymeTail: Array<[string, number[]]>;
+  tokenIdsByVowelFamily: Array<[string, number[]]>;
+  tokenIdsByTerminalVowelFamily: Array<[string, number[]]>;
+  tokenIdsByStressedVowelFamily: Array<[string, number[]]>;
+  tokenIdsByConsonantSkeleton: Array<[string, number[]]>;
+  tokenIdsByStressContour: Array<[string, number[]]>;
+  windowIdsBySyllableLength: Array<[number, number[]]>;
+  windowIdsBySignature: Array<[string, number[]]>;
+}
+
+interface SerializedVerseIR extends Omit<VerseIR, "indexes"> {
+  indexes: SerializedVerseIRIndexes;
 }
 
 interface RhymeAstrologyQueryCompilerContext {
@@ -360,8 +470,13 @@ interface RhymeAstrologyQueryCompilerContext {
   mode: TruesightAnalysisMode | string;
   tokenCount: number;
   lineCount: number;
+  maxWindowSyllables?: number;
+  maxWindowTokenSpan?: number;
   syllableWindowCount: number;
   lineBreakStyle: LineBreakStyle | string;
+  offsetSemantics?: string;
+  graphemeAware?: boolean;
+  graphemeCount?: number;
   whitespaceFidelity: boolean;
   source: "provided" | "compiled";
   anchorTokenId?: number | null;
@@ -1074,6 +1189,8 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.10 | 2026-03-28 | Added compiler-aware rhyme astrology query/panel payload contracts, including VerseIR-backed anchors, windows, and spans | no |
 | 1.11 | 2026-03-28 | Added abyssal resonance multiplier and Akashic trace handle to authoritative combat scoring | no |
 | 1.12 | 2026-03-28 | Added VerseIR Synapse Slot amplifier payloads and optional panel-analysis exposure for semantic depth / archetype resonance | no |
+| 1.13 | 2026-03-28 | Added `OracleInsight`, `OracleSuggestion`, and `OraclePayload` plus optional analysis oracle commentary payloads | no |
+| 1.14 | 2026-03-28 | Hardened VerseIR with grapheme offsets, surface spans, normalization metadata, phonetic provenance, and applied window-limit metadata | no |
 
 ---
 
