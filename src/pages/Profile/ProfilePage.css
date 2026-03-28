@@ -1,5 +1,5 @@
 .profile-page {
-  padding-top: 80px;
+  padding-top: var(--space-20);
 }
 
 .profile-grid {
@@ -57,7 +57,7 @@
   color: var(--school-sonic);
   padding: 2px 12px;
   border-radius: 12px;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   font-weight: 700;
   text-transform: uppercase;
   white-space: nowrap;
@@ -70,7 +70,7 @@
 
 .profile-title {
   color: var(--text-muted);
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   margin-bottom: var(--space-6);
 }
 
@@ -93,7 +93,7 @@
   position: absolute;
   top: 12px;
   right: 0;
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   font-family: var(--font-mono);
 }
@@ -113,7 +113,7 @@
 }
 
 .stat-label {
-  font-size: 0.65rem;
+  font-size: var(--text-2xs);
   text-transform: uppercase;
   color: var(--text-muted);
 }
@@ -171,12 +171,12 @@
 }
 
 .school-info h3 {
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   margin-bottom: 0;
 }
 
 .school-info p {
-  font-size: 0.7rem;
+  font-size: var(--text-2xs);
   color: var(--text-muted);
   text-transform: uppercase;
 }
@@ -224,7 +224,7 @@
 }
 
 .ach-details p {
-  font-size: 0.8rem;
+  font-size: var(--text-xs);
   color: var(--text-muted);
 }
 

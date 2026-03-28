@@ -256,7 +256,7 @@ export default function AuthPage() {
             <AnimatePresence mode="wait">
               {error && (
                 <motion.div 
-                  className="auth-error text-xs font-mono mt-4 text-red-400 bg-red-900/20 p-2 rounded border border-red-900/50"
+                  className="auth-error"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 10 }}
@@ -266,7 +266,7 @@ export default function AuthPage() {
               )}
               {successMsg && (
                 <motion.div 
-                  className="auth-success text-xs font-mono mt-4 text-green-400 bg-green-900/20 p-2 rounded border border-green-900/50"
+                  className="auth-success"
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 10 }}
