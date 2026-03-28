@@ -123,7 +123,10 @@ npm start                    # runs ritual-init.js then Fastify server
 ## API Routes
 
 ### Health
-- `GET /health`, `/health/live`, `/health/ready`, `/metrics`
+- `GET /health`
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /metrics`
 
 ### Auth
 - `POST /auth/register`, `/auth/login`, `/auth/logout`
