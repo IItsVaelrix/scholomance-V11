@@ -410,12 +410,14 @@ const WordTooltip = ({
       : (definition?.text ? [definition.text] : ["No arcane definitions found."]);
 
     const vowelFamily = normalizeVowelFamily(localCore?.vowelFamily || wordData?.vowelFamily);
-    const schoolName = localCore?.schoolName || getSchoolNameFromVowelFamily(vowelFamily);
-    const schoolIcon = localCore?.schoolGlyph || (schoolName ? (SCHOOL_ICONS[schoolName] || "\u2736") : "\u2736");
+    const schoolId = VOWEL_FAMILY_TO_SCHOOL[vowelFamily] || "DEFAULT";
+    const schoolName = localCore?.schoolName || (SCHOOLS[schoolId]?.name);
+    const schoolIcon = localCore?.schoolGlyph || (SCHOOLS[schoolId]?.glyph || "\u2736");
     const fallbackColor = theme === "light" ? "#1a1a2e" : "#f8f9ff";
     const vowelColor = vowelFamily ? (vowelPalette[vowelFamily] || fallbackColor) : fallbackColor;
     const rarity = getRarity(word);
     const syllables = wordData?.syllableCount || localCore?.syllableCount || 1;
+    const resonance = Math.round((word.length * 8.5) + (syllables * 12)); // Synthetic power
 
     const rhymeLinks = Array.isArray(rhymeContext?.links) ? rhymeContext.links.slice(0, 6) : [];
     const astrologyTopMatches = Array.isArray(astrologyContext?.topMatches)
@@ -428,7 +430,7 @@ const WordTooltip = ({
     const hasSuggestions = synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0;
 
     return (
-      <div className={`word-card word-card--${rarity}`}>
+      <div className={`word-card word-card--${rarity}`} data-school={schoolId}>
         <div className="card-frame" onPointerDown={handleDragStart}>
           <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
 
@@ -461,21 +463,22 @@ const WordTooltip = ({
                 </header>
 
                 <div className="card-art-frame" style={{ borderColor: vowelColor }} aria-hidden="true">
-                  <div className="card-art" style={{ background: `radial-gradient(ellipse at center, ${vowelColor}22 0%, transparent 70%)` }}>
-                    <span className="card-school-icon">{schoolIcon}</span>
+                  <div className="card-art" style={{ background: `radial-gradient(ellipse at 50% 40%, ${vowelColor}33 0%, rgba(4, 2, 10, 1) 80%)` }}>
+                    <span className="card-school-icon" style={{ color: vowelColor }}>{schoolIcon}</span>
                     {vowelFamily && <span className="card-vowel-glyph" style={{ color: vowelColor }}>{vowelFamily}</span>}
                   </div>
                 </div>
 
                 <div className="card-type-line">
                   <span className="card-type">
-                    {schoolName || "Arcane"} {partOfSpeech ? `\u2014 ${partOfSpeech}` : "Word"}
+                    Lexeme — {vowelFamily || "Unknown"} {rarity}
                   </span>
                 </div>
 
                 <div className="card-text-box" role="region" aria-label="Word definitions">
                   {renderBreadcrumb()}
 
+                  <p className="card-definition-type">{schoolName} {partOfSpeech || "Word"}</p>
                   {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
 
                   {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
@@ -582,6 +585,11 @@ const WordTooltip = ({
                       <span className="stat-value">{rhymeKey}</span>
                     </div>
                   )}
+                  <div className="card-power-toughness">
+                    <span className="card-power">{resonance}</span>
+                    <span className="card-pt-separator">/</span>
+                    <span className="card-toughness">{word.length}</span>
+                  </div>
                   <div className="card-rarity-gem" data-rarity={rarity} aria-label={`Rarity: ${rarity}`} />
                   <div className="card-stat card-stat--right" title="Syllables">
                     <span className="stat-value">{syllables}</span>

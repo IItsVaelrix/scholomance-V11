@@ -16,6 +16,7 @@ import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js'
 import { buildSyntaxLayer } from '../../../src/lib/syntax.layer.js';
 import { buildHiddenHarkovSummary } from '../../../src/lib/models/harkov.model.js';
 import { LiteraryClassifier } from '../../../src/lib/literaryClassifier.js';
+import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
 import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
 import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
@@ -34,6 +35,7 @@ const DEFAULT_RHYME_ASTROLOGY_MIN_SCORE = 0.35;
 const DEFAULT_RHYME_ASTROLOGY_MAX_CLUSTERS = 4;
 const DEFAULT_RHYME_ASTROLOGY_BUCKET_CAP = 200;
 const DEFAULT_RHYME_ASTROLOGY_CACHE_SIZE = 500;
+const DEFAULT_RHYME_ASTROLOGY_WINDOW_LIMIT = 12;
 const DEFAULT_RHYME_EMOTION_PRIORS_PATH = path.resolve(DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_emotion_priors.json');
 
 function parsePositiveInt(value, fallback) {

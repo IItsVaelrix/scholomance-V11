@@ -40,6 +40,9 @@
    CARD SHELL
    ────────────────────────────────────────────────────────────────────────── */
 .word-card {
+  --school-frame-color: var(--card-gold);
+  --school-bg-color: #0d0a18;
+  --school-accent-color: var(--card-gold-dim);
   width: 100%;
   height: 100%;
   position: relative;
@@ -48,43 +51,70 @@
   user-select: none;
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   OUTER FRAME — triple-layer eldritch binding
-   ────────────────────────────────────────────────────────────────────────── */
+/* School Frame Overrides */
+.word-card[data-school="SONIC"]   { --school-frame-color: #651fff; --school-bg-color: #0a051a; --school-accent-color: rgba(101, 31, 255, 0.3); }
+.word-card[data-school="VOID"]    { --school-frame-color: #ff1744; --school-bg-color: #0a0205; --school-accent-color: rgba(255, 23, 68, 0.3); }
+.word-card[data-school="KINETIC"] { --school-frame-color: #00e5ff; --school-bg-color: #020a0c; --school-accent-color: rgba(0, 229, 255, 0.3); }
+.word-card[data-school="PSYCHIC"] { --school-frame-color: #d500f9; --school-bg-color: #0a020c; --school-accent-color: rgba(213, 0, 249, 0.3); }
+.word-card[data-school="ANCIENT"] { --school-frame-color: #c9a227; --school-bg-color: #0a0802; --school-accent-color: rgba(201, 162, 39, 0.3); }
+
 .card-frame {
   position: relative;
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-
-  /* Cosmic void with eldritch tendrils */
   background:
-    radial-gradient(ellipse at 18% 14%, rgba(32, 12, 64, 0.85) 0%, transparent 52%),
-    radial-gradient(ellipse at 82% 86%, rgba(10, 28, 22, 0.75) 0%, transparent 52%),
-    radial-gradient(ellipse at 50% 50%, #0d0a18 0%, var(--card-void) 100%);
-
-  /* Triple border: gold line / dark gap / faint outer ring */
-  border: 2px solid var(--card-gold);
-  border-radius: 6px;
-  padding: 14px 12px 12px 12px;
-
+    radial-gradient(ellipse at 18% 14%, var(--school-accent-color) 0%, transparent 52%),
+    radial-gradient(ellipse at 50% 50%, var(--school-bg-color) 0%, var(--card-void) 100%);
+  border: 2px solid var(--school-frame-color);
+  border-radius: 8px;
+  padding: 12px;
   box-shadow:
-    /* Outer glow ring */
-    0 0 0 1px rgba(200, 168, 75, 0.06),
-    0 0 0 5px rgba(4, 2, 10, 0.95),
-    0 0 0 6px rgba(200, 168, 75, 0.10),
-    /* Ambient depth */
-    0 0 50px rgba(0, 0, 0, 0.7),
-    /* Inner surface shadow */
-    inset 0 0 40px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(200, 168, 75, 0.07);
-
+    0 0 0 1px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(0, 0, 0, 0.8),
+    inset 0 0 40px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
 
-  transition:
-    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s ease;
+/* Parchment Texture Overlay for the Text Box */
+.card-text-box {
+  position: relative;
+  background: 
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"),
+    linear-gradient(172deg, #ecddb8 0%, #e0cf9e 32%, #e8d8a8 62%, #d8c888 100%);
+  background-blend-mode: soft-light;
+  border: 1px solid #4a3010;
+  border-radius: 2px;
+  padding: 12px;
+  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Foil Shimmer Effect */
+.word-card--legendary .card-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(255, 255, 255, 0.1) 45%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 200%;
+  animation: foil-shimmer 4s infinite linear;
+  pointer-events: none;
+  z-index: 10;
+}
+
+@keyframes foil-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 
@@ -582,16 +612,45 @@
   letter-spacing: 0.5px;
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   FOOTER — power/toughness MTG-style stats
-   ────────────────────────────────────────────────────────────────────────── */
-.card-footer {
+.card-power-toughness {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--card-gold-dim);
+  gap: 2px;
+  background: rgba(4, 2, 10, 0.95);
+  padding: 4px 12px;
+  border: 1px solid var(--school-frame-color);
+  border-radius: 4px;
+  position: absolute;
+  bottom: 8px;
+  right: 12px;
+  z-index: 20;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.card-power, .card-toughness {
+  font-family: var(--font-family-display, 'Cinzel', serif);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--card-text-light);
+}
+
+.card-pt-separator {
+  font-size: 1rem;
+  color: var(--school-frame-color);
+  margin: 0 2px;
+  font-weight: bold;
+}
+
+.card-definition-type {
+  font-family: var(--font-family-heading, 'Cinzel', serif);
+  font-size: 0.65rem;
+  color: #4a3010;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(74, 48, 16, 0.15);
+  padding-bottom: 4px;
 }
 
 .card-stat {

@@ -1,6 +1,9 @@
+import { createHash } from 'crypto';
 import { buildPhoneticSignature } from '../../core/rhyme-astrology/signatures.js';
 import { clampUnitInterval } from '../../core/rhyme-astrology/scoring.js';
 import { scoreNodeSimilarity } from '../../core/rhyme-astrology/similarity.js';
+import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
+import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js';
 import {
   assembleConstellations,
   buildQueryCacheKey,
@@ -69,6 +72,15 @@ function durationMs(startNs) {
 }
 
 /**
+ * @param {any} value
+ * @returns {number | null}
+ */
+function toIntegerOrNull(value) {
+  const numeric = Number(value);
+  return Number.isInteger(numeric) ? numeric : null;
+}
+
+/**
  * @param {any} node
  * @param {string} fallbackToken
  */
@@ -101,6 +113,60 @@ function toRuntimeNode(node, fallbackToken) {
 }
 
 /**
+ * @param {any} token
+ * @returns {import('../../core/rhyme-astrology/types.js').PhoneticSignature}
+ */
+function buildVerseTokenSignature(token) {
+  const derived = buildPhoneticSignature(Array.isArray(token?.phonemes) ? token.phonemes : []);
+  return {
+    ...derived,
+    endingSignature: String(token?.rhymeTailSignature || derived.endingSignature || ''),
+    stressPattern: String(token?.stressPattern || derived.stressPattern || ''),
+    syllableCount: Number(token?.syllableCount) || derived.syllableCount,
+  };
+}
+
+/**
+ * @param {any} token
+ * @param {any} lexiconNode
+ */
+function toRuntimeNodeFromVerseToken(token, lexiconNode = null) {
+  const signature = buildVerseTokenSignature(token);
+  const tokenText = normalizeToken(token?.text || lexiconNode?.token || '');
+  const normalized = normalizeToken(token?.normalized || lexiconNode?.normalized || tokenText);
+  return {
+    id: String(lexiconNode?.id || ''),
+    token: tokenText,
+    normalized,
+    phonemes: signature.phonemes,
+    stressPattern: signature.stressPattern,
+    syllableCount: signature.syllableCount,
+    vowelSkeleton: signature.vowelSkeleton,
+    consonantSkeleton: signature.consonantSkeleton,
+    endingSignature: signature.endingSignature,
+    onsetSignature: signature.onsetSignature,
+    frequencyScore: Number(lexiconNode?.frequencyScore) || 0,
+    signature,
+    verseTokenId: toIntegerOrNull(token?.id),
+    primaryStressedVowelFamily: normalizeVowelFamily(token?.primaryStressedVowelFamily) || null,
+    terminalVowelFamily: normalizeVowelFamily(token?.terminalVowelFamily) || null,
+  };
+}
+
+/**
+ * @param {import('../../core/rhyme-astrology/types.js').PhoneticSignature} signature
+ * @returns {string | null}
+ */
+function extractSignatureVowelFamily(signature) {
+  const vowels = Array.isArray(signature?.vowelSkeleton) ? signature.vowelSkeleton : [];
+  for (let index = vowels.length - 1; index >= 0; index -= 1) {
+    const family = normalizeVowelFamily(vowels[index]);
+    if (family) return family;
+  }
+  return null;
+}
+
+/**
  * @param {import('../../../src/lib/phonology/phoneme.engine.js').PhonemeEngine} phonemeEngine
  * @param {string} token
  */
@@ -130,12 +196,15 @@ function buildTransientNode(phonemeEngine, token) {
 }
 
 /**
- * @param {Array<ReturnType<typeof toRuntimeNode>>} resolvedNodes
- * @param {ReturnType<typeof toRuntimeNode>} anchorNode
+ * @param {Array<ReturnType<typeof toRuntimeNode> | ReturnType<typeof toRuntimeNodeFromVerseToken>>} resolvedNodes
+ * @param {ReturnType<typeof toRuntimeNode> | ReturnType<typeof toRuntimeNodeFromVerseToken>} anchorNode
+ * @param {Array<any>} [activeWindows]
  */
-function buildLineContext(resolvedNodes, anchorNode) {
+function buildCompilerBoostContext(resolvedNodes, anchorNode, activeWindows = []) {
   const internalEndingSignatures = new Set();
   const internalOnsets = new Set();
+  const stressedFamilies = new Set();
+  const windowSyllableLengths = new Set();
   for (const node of resolvedNodes) {
     if (!node) continue;
     if (node.endingSignature && node.endingSignature !== anchorNode.endingSignature) {
@@ -144,10 +213,27 @@ function buildLineContext(resolvedNodes, anchorNode) {
     if (node.onsetSignature && node.onsetSignature !== anchorNode.onsetSignature) {
       internalOnsets.add(node.onsetSignature);
     }
+    const family = node.primaryStressedVowelFamily
+      || node.terminalVowelFamily
+      || extractSignatureVowelFamily(node.signature);
+    if (family) stressedFamilies.add(family);
+  }
+  for (const window of Array.isArray(activeWindows) ? activeWindows : []) {
+    const syllableLength = Number(window?.syllableLength);
+    if (Number.isInteger(syllableLength) && syllableLength > 0) {
+      windowSyllableLengths.add(syllableLength);
+    }
+    const vowelSequence = Array.isArray(window?.vowelSequence) ? window.vowelSequence : [];
+    for (const value of vowelSequence) {
+      const family = normalizeVowelFamily(value);
+      if (family) stressedFamilies.add(family);
+    }
   }
   return {
     internalEndingSignatures,
     internalOnsets,
+    stressedFamilies,
+    windowSyllableLengths,
   };
 }
 
@@ -156,9 +242,11 @@ function buildLineContext(resolvedNodes, anchorNode) {
  * @param {{
  *   internalEndingSignatures: Set<string>,
  *   internalOnsets: Set<string>,
+ *   stressedFamilies: Set<string>,
+ *   windowSyllableLengths: Set<number>,
  * }} lineContext
  */
-function applyLineModeBoost(candidates, lineContext) {
+function applyCompilerContextBoost(candidates, lineContext) {
   return candidates.map((candidate) => {
     const signature = candidate.signature || buildPhoneticSignature(candidate.phonemes || []);
     const reasons = Array.isArray(candidate.reasons) ? [...candidate.reasons] : [];
@@ -178,6 +266,17 @@ function applyLineModeBoost(candidates, lineContext) {
     ) {
       boostedScore = clampUnitInterval(boostedScore + 0.02);
       reasons.push('mirrored onset with internal pattern');
+    }
+
+    const family = extractSignatureVowelFamily(signature);
+    if (family && lineContext.stressedFamilies.has(family)) {
+      boostedScore = clampUnitInterval(boostedScore + 0.02);
+      reasons.push('shares stressed vowel family with local verse context');
+    }
+
+    if (lineContext.windowSyllableLengths.has(Number(signature?.syllableCount) || 0)) {
+      boostedScore = clampUnitInterval(boostedScore + 0.015);
+      reasons.push('matches active syllable window length');
     }
 
     return {
@@ -243,6 +342,154 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
   }
 
   /**
+   * @param {any} verseIR
+   * @param {number} anchorTokenId
+   * @returns {number[]}
+   */
+  function inferActiveWindowIds(verseIR, anchorTokenId) {
+    const windows = Array.isArray(verseIR?.syllableWindows) ? verseIR.syllableWindows : [];
+    if (!Number.isInteger(anchorTokenId)) return [];
+    return windows
+      .filter((window) => {
+        const tokenSpan = Array.isArray(window?.tokenSpan) ? window.tokenSpan : [];
+        return tokenSpan.length === 2
+          && Number(tokenSpan[0]) <= anchorTokenId
+          && anchorTokenId <= Number(tokenSpan[1]);
+      })
+      .map((window) => Number(window.id))
+      .filter(Number.isInteger)
+      .slice(0, 6);
+  }
+
+  /**
+   * @param {any} verseIR
+   * @param {{
+   *   text: string,
+   *   mode: 'word' | 'line',
+   *   anchorTokenId?: number,
+   *   anchorLineIndex?: number,
+   *   anchorWindowIds?: number[],
+   * }} input
+   */
+  function buildCompilerContext(verseIR, input) {
+    if (!verseIR || !Array.isArray(verseIR.tokens) || verseIR.tokens.length === 0) {
+      return null;
+    }
+
+    const tokens = verseIR.tokens;
+    const lines = Array.isArray(verseIR.lines) ? verseIR.lines : [];
+    let anchorTokenId = Number.isInteger(Number(input?.anchorTokenId))
+      ? Number(input.anchorTokenId)
+      : null;
+    let anchorLineIndex = Number.isInteger(Number(input?.anchorLineIndex))
+      ? Number(input.anchorLineIndex)
+      : null;
+
+    if (anchorTokenId !== null && !tokens[anchorTokenId]) {
+      anchorTokenId = null;
+    }
+
+    if (anchorLineIndex === null && anchorTokenId !== null) {
+      anchorLineIndex = Number(tokens[anchorTokenId]?.lineIndex);
+    }
+
+    if (input.mode === 'line') {
+      if (anchorLineIndex === null) {
+        const fallbackLine = [...lines].reverse().find((line) => Array.isArray(line?.tokenIds) && line.tokenIds.length > 0);
+        anchorLineIndex = Number.isInteger(Number(fallbackLine?.lineIndex))
+          ? Number(fallbackLine.lineIndex)
+          : null;
+      }
+      if (anchorTokenId === null && anchorLineIndex !== null) {
+        const anchorLine = lines.find((line) => Number(line?.lineIndex) === anchorLineIndex) || null;
+        const lineTokenIds = Array.isArray(anchorLine?.tokenIds) ? anchorLine.tokenIds : [];
+        if (lineTokenIds.length > 0) {
+          anchorTokenId = Number(lineTokenIds[lineTokenIds.length - 1]);
+        }
+      }
+    } else {
+      if (anchorTokenId === null) {
+        anchorTokenId = Number(tokens[tokens.length - 1]?.id);
+      }
+      if (anchorLineIndex === null && anchorTokenId !== null) {
+        anchorLineIndex = Number(tokens[anchorTokenId]?.lineIndex);
+      }
+    }
+
+    if (anchorTokenId !== null && !tokens[anchorTokenId]) {
+      anchorTokenId = null;
+    }
+
+    const activeTokens = input.mode === 'line'
+      ? tokens.filter((token) => Number(token?.lineIndex) === anchorLineIndex)
+      : (anchorTokenId !== null && tokens[anchorTokenId] ? [tokens[anchorTokenId]] : []);
+    const activeTokenIds = activeTokens
+      .map((token) => Number(token?.id))
+      .filter(Number.isInteger);
+    const requestedWindowIds = Array.isArray(input?.anchorWindowIds)
+      ? input.anchorWindowIds.map(Number).filter((id) => Number.isInteger(id) && verseIR.syllableWindows?.[id])
+      : [];
+    const activeWindowIds = requestedWindowIds.length > 0
+      ? requestedWindowIds
+      : inferActiveWindowIds(verseIR, anchorTokenId);
+    const activeWindows = activeWindowIds
+      .map((id) => verseIR.syllableWindows?.[id] || null)
+      .filter(Boolean);
+
+    return {
+      verseIR,
+      source: input?.verseIR ? 'provided' : 'compiled',
+      anchorTokenId,
+      anchorLineIndex,
+      activeTokens,
+      activeTokenIds,
+      activeWindowIds,
+      activeWindows,
+    };
+  }
+
+  /**
+   * @param {ReturnType<typeof buildCompilerContext>} compilerContext
+   * @returns {string}
+   */
+  function buildCompilerCacheKey(compilerContext) {
+    if (!compilerContext?.verseIR) return '';
+    return createHash('sha1')
+      .update(JSON.stringify({
+        rawText: String(compilerContext.verseIR.rawText || ''),
+        version: String(compilerContext.verseIR.version || ''),
+        source: compilerContext.source,
+        anchorTokenId: compilerContext.anchorTokenId,
+        anchorLineIndex: compilerContext.anchorLineIndex,
+        activeTokenIds: compilerContext.activeTokenIds,
+        activeWindowIds: compilerContext.activeWindowIds,
+      }))
+      .digest('hex');
+  }
+
+  /**
+   * @param {ReturnType<typeof buildCompilerContext>} compilerContext
+   */
+  function buildCompilerDescriptor(compilerContext) {
+    if (!compilerContext?.verseIR) return null;
+    const metadata = compilerContext.verseIR.metadata || {};
+    return {
+      verseIRVersion: String(compilerContext.verseIR.version || ''),
+      mode: String(metadata.mode || 'balanced'),
+      tokenCount: Number(metadata.tokenCount) || compilerContext.verseIR.tokens.length,
+      lineCount: Number(metadata.lineCount) || compilerContext.verseIR.lines.length,
+      syllableWindowCount: Number(metadata.syllableWindowCount) || compilerContext.verseIR.syllableWindows.length,
+      lineBreakStyle: String(metadata.lineBreakStyle || 'none'),
+      whitespaceFidelity: Boolean(metadata.whitespaceFidelity),
+      source: compilerContext.source,
+      anchorTokenId: compilerContext.anchorTokenId,
+      anchorLineIndex: compilerContext.anchorLineIndex,
+      activeTokenIds: [...compilerContext.activeTokenIds],
+      activeWindowIds: [...compilerContext.activeWindowIds],
+    };
+  }
+
+  /**
    * @param {string[]} tokens
    * @returns {Promise<Array<ReturnType<typeof toRuntimeNode>>>}
    */
@@ -269,6 +516,32 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
     }
 
     return resolved;
+  }
+
+  /**
+   * @param {any[]} verseTokens
+   * @returns {Promise<Array<ReturnType<typeof toRuntimeNodeFromVerseToken>>>}
+   */
+  async function resolveVerseTokens(verseTokens) {
+    const normalizedTokens = (Array.isArray(verseTokens) ? verseTokens : [])
+      .map((token) => normalizeToken(token?.normalized || token?.text))
+      .filter(Boolean);
+    if (normalizedTokens.length === 0) return [];
+
+    await ensurePhonemeReady();
+    const batchLookup = typeof lexiconRepo.lookupNodesByNormalizedBatch === 'function'
+      ? await Promise.resolve(lexiconRepo.lookupNodesByNormalizedBatch(normalizedTokens))
+      : {};
+    const byToken = batchLookup && typeof batchLookup === 'object' ? batchLookup : {};
+
+    return verseTokens.map((token) => {
+      const normalized = normalizeToken(token?.normalized || token?.text);
+      let lexiconNode = byToken[normalized] || null;
+      if (!lexiconNode && typeof lexiconRepo.lookupNodeByNormalized === 'function') {
+        lexiconNode = lexiconRepo.lookupNodeByNormalized(normalized);
+      }
+      return toRuntimeNodeFromVerseToken(token, lexiconNode);
+    });
   }
 
   /**
@@ -391,6 +664,27 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
     const minScore = toScore(input?.minScore, DEFAULT_MIN_SCORE);
     const includeConstellations = input?.includeConstellations !== false;
     const includeDiagnostics = input?.includeDiagnostics !== false;
+    const shouldUseCompiler = Boolean(input?.verseIR)
+      || mode === 'line'
+      || Number.isInteger(Number(input?.anchorTokenId))
+      || Number.isInteger(Number(input?.anchorLineIndex))
+      || (Array.isArray(input?.anchorWindowIds) && input.anchorWindowIds.length > 0);
+
+    let compilerContext = null;
+    if (shouldUseCompiler && text.trim()) {
+      await ensurePhonemeReady();
+      const verseIR = input?.verseIR || compileVerseToIR(text, {
+        phonemeEngine,
+        mode: mode === 'line' ? 'balanced' : 'live_fast',
+      });
+      compilerContext = buildCompilerContext(verseIR, {
+        ...input,
+        text,
+        mode,
+      });
+    }
+    const compilerDescriptor = buildCompilerDescriptor(compilerContext);
+    const compilerCacheKey = buildCompilerCacheKey(compilerContext);
 
     const cacheKey = buildQueryCacheKey({
       text,
@@ -398,6 +692,7 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
       limit,
       minScore,
       includeConstellations,
+      compilerCacheKey,
     });
     const cached = cache.get(cacheKey);
     if (cached) {
@@ -411,9 +706,33 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
     }
 
     const allTokens = tokenizeText(text);
-    const queryTokens = mode === 'line'
+    let queryTokens = mode === 'line'
       ? allTokens
       : (allTokens.length > 0 ? [allTokens[allTokens.length - 1]] : []);
+    let resolvedNodes = [];
+    let anchorNode = null;
+    let compilerBoostContext = null;
+
+    if (compilerContext?.activeTokens?.length > 0) {
+      queryTokens = compilerContext.activeTokens
+        .map((token) => normalizeToken(token?.text))
+        .filter(Boolean);
+      resolvedNodes = await resolveVerseTokens(compilerContext.activeTokens);
+      anchorNode = compilerContext.anchorTokenId !== null
+        ? resolvedNodes.find((node) => node.verseTokenId === compilerContext.anchorTokenId) || null
+        : null;
+      if (!anchorNode) {
+        anchorNode = resolvedNodes[resolvedNodes.length - 1] || null;
+      }
+      if (anchorNode) {
+        compilerBoostContext = buildCompilerBoostContext(
+          resolvedNodes,
+          anchorNode,
+          compilerContext.activeWindows
+        );
+      }
+    }
+
     if (queryTokens.length === 0) {
       const emptyResult = {
         query: buildQueryPattern({
@@ -421,6 +740,7 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
           mode,
           tokens: [],
           resolvedNodes: [],
+          compiler: compilerDescriptor,
         }),
         topMatches: [],
         constellations: [],
@@ -441,8 +761,13 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
       return emptyResult;
     }
 
-    const resolvedNodes = await resolveNodes(queryTokens);
-    const anchorNode = resolvedNodes[resolvedNodes.length - 1];
+    if (!anchorNode) {
+      resolvedNodes = await resolveNodes(queryTokens);
+      anchorNode = resolvedNodes[resolvedNodes.length - 1];
+      if (mode === 'line' && anchorNode) {
+        compilerBoostContext = buildCompilerBoostContext(resolvedNodes, anchorNode, []);
+      }
+    }
     if (!anchorNode) {
       throw new Error('Failed to resolve anchor node for rhyme astrology query.');
     }
@@ -455,9 +780,8 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
     let scoredCandidates = Array.isArray(candidateEnvelope.candidates)
       ? candidateEnvelope.candidates
       : [];
-    if (mode === 'line') {
-      const lineContext = buildLineContext(resolvedNodes, anchorNode);
-      scoredCandidates = applyLineModeBoost(scoredCandidates, lineContext);
+    if (compilerBoostContext) {
+      scoredCandidates = applyCompilerContextBoost(scoredCandidates, compilerBoostContext);
     }
 
     const rankedCandidates = rankCandidates(scoredCandidates, { limit, minScore });
@@ -482,6 +806,7 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
         mode,
         tokens: queryTokens,
         resolvedNodes,
+        compiler: compilerDescriptor,
       }),
       topMatches,
       constellations: includeConstellations ? constellations : [],
@@ -534,4 +859,3 @@ export function createRhymeAstrologyQueryEngine(options = {}) {
     },
   };
 }
-

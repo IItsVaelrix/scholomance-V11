@@ -77,6 +77,7 @@ function toResolvedNodePayload(node) {
  *   tokens: string[],
  *   mode: 'word' | 'line',
  *   resolvedNodes: import('../../core/rhyme-astrology/types.js').LexiconNode[],
+ *   compiler?: Record<string, unknown> | null,
  * }} params
  */
 export function buildQueryPattern(params) {
@@ -93,6 +94,11 @@ export function buildQueryPattern(params) {
     rawText: String(params.text || ''),
     tokens,
     resolvedNodes,
+    ...(params.compiler && typeof params.compiler === 'object'
+      ? {
+        compiler: params.compiler,
+      }
+      : {}),
     ...(params.mode === 'line'
       ? {
         lineEndingSignature,
@@ -112,6 +118,7 @@ export function buildQueryPattern(params) {
  *   limit: number,
  *   minScore: number,
  *   includeConstellations: boolean,
+ *   compilerCacheKey?: string | null,
  * }} input
  * @returns {string}
  */
@@ -122,6 +129,7 @@ export function buildQueryCacheKey(input) {
     limit: toPositiveInteger(input.limit, 25),
     minScore: toScoreThreshold(input.minScore, 0.4),
     includeConstellations: Boolean(input.includeConstellations),
+    compilerCacheKey: typeof input.compilerCacheKey === 'string' ? input.compilerCacheKey : '',
   });
 }
 
@@ -262,4 +270,3 @@ export function assembleConstellations(options) {
   if (!endingSignature) return [];
   return options.indexRepo.lookupClustersByEndingSignature(endingSignature, maxClusters);
 }
-

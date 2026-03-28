@@ -80,6 +80,21 @@ export function normalizeRhymeAstrologyQuery(rawQuery) {
   };
 }
 
+export const rhymeAstrologyQueryCompilerSchema = z.object({
+  verseIRVersion: z.string(),
+  mode: z.string(),
+  tokenCount: z.number().int().min(0),
+  lineCount: z.number().int().min(0),
+  syllableWindowCount: z.number().int().min(0),
+  lineBreakStyle: z.string(),
+  whitespaceFidelity: z.boolean(),
+  source: z.enum(['provided', 'compiled']),
+  anchorTokenId: z.number().int().min(0).nullable().optional(),
+  anchorLineIndex: z.number().int().min(0).nullable().optional(),
+  activeTokenIds: z.array(z.number().int().min(0)).optional(),
+  activeWindowIds: z.array(z.number().int().min(0)).optional(),
+});
+
 export const rhymeAstrologyQueryPatternSchema = z.object({
   rawText: z.string(),
   tokens: z.array(z.string()),
@@ -87,6 +102,7 @@ export const rhymeAstrologyQueryPatternSchema = z.object({
   lineEndingSignature: z.string().optional(),
   internalPattern: z.array(z.string()).optional(),
   stressContour: z.string().optional(),
+  compiler: rhymeAstrologyQueryCompilerSchema.optional(),
 });
 
 export const rhymeAstrologyMatchSchema = z.object({
@@ -123,4 +139,3 @@ export const rhymeAstrologyResultSchema = z.object({
 export function validateRhymeAstrologyResult(value) {
   return rhymeAstrologyResultSchema.parse(value);
 }
-
