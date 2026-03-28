@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import Database from 'better-sqlite3';
 import { applySqlitePragmas, runSqliteMigrations } from '../db/sqlite.migrations.js';
 import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
+import { serializeVerseIR } from '../../../src/lib/truesight/compiler/verseIRSerialization.js';
 import {
   ABYSS_NEUTRAL_MULTIPLIER,
   classifyAbyssalState,
@@ -96,107 +97,7 @@ function buildTraceId(occurredAtMs) {
 }
 
 function serializeVerseIRForAbyss(verseIR) {
-  const lines = Array.isArray(verseIR?.lines) ? verseIR.lines : [];
-  const tokens = Array.isArray(verseIR?.tokens) ? verseIR.tokens : [];
-  const syllableWindows = Array.isArray(verseIR?.syllableWindows) ? verseIR.syllableWindows : [];
-
-  return {
-    version: String(verseIR?.version || ''),
-    rawText: String(verseIR?.rawText || ''),
-    normalizedText: String(verseIR?.normalizedText || ''),
-    lines: lines.map((line) => ({
-      lineIndex: Number(line?.lineIndex) || 0,
-      text: String(line?.text || ''),
-      normalizedText: String(line?.normalizedText || ''),
-      tokenIds: Array.isArray(line?.tokenIds) ? [...line.tokenIds] : [],
-      charStart: Number(line?.charStart) || 0,
-      charEnd: Number(line?.charEnd) || 0,
-      lineBreak: String(line?.lineBreak || ''),
-      lineBreakStart: Number(line?.lineBreakStart) || -1,
-      lineBreakEnd: Number(line?.lineBreakEnd) || -1,
-      rawSlice: String(line?.rawSlice || ''),
-      isTerminalLine: Boolean(line?.isTerminalLine),
-    })),
-    tokens: tokens.map((token) => ({
-      id: Number(token?.id) || 0,
-      text: String(token?.text || ''),
-      normalized: String(token?.normalized || ''),
-      normalizedUpper: String(token?.normalizedUpper || ''),
-      lineIndex: Number(token?.lineIndex) || 0,
-      tokenIndexInLine: Number(token?.tokenIndexInLine) || 0,
-      globalTokenIndex: Number(token?.globalTokenIndex) || 0,
-      charStart: Number(token?.charStart) || 0,
-      charEnd: Number(token?.charEnd) || 0,
-      syllableCount: Number(token?.syllableCount) || 0,
-      phonemes: Array.isArray(token?.phonemes) ? [...token.phonemes] : [],
-      stressPattern: String(token?.stressPattern || ''),
-      onset: Array.isArray(token?.onset) ? [...token.onset] : [],
-      nucleus: Array.isArray(token?.nucleus) ? [...token.nucleus] : [],
-      coda: Array.isArray(token?.coda) ? [...token.coda] : [],
-      vowelFamily: Array.isArray(token?.vowelFamily) ? [...token.vowelFamily] : [],
-      primaryStressedVowelFamily: token?.primaryStressedVowelFamily || null,
-      terminalVowelFamily: token?.terminalVowelFamily || null,
-      rhymeTailSignature: String(token?.rhymeTailSignature || ''),
-      consonantSkeleton: String(token?.consonantSkeleton || ''),
-      extendedRhymeKeys: Array.isArray(token?.extendedRhymeKeys) ? [...token.extendedRhymeKeys] : [],
-      flags: token?.flags
-        ? {
-            isLineStart: Boolean(token.flags.isLineStart),
-            isLineEnd: Boolean(token.flags.isLineEnd),
-            isStopWordLike: Boolean(token.flags.isStopWordLike),
-            unknownPhonetics: Boolean(token.flags.unknownPhonetics),
-          }
-        : null,
-      analysis: token?.analysis
-        ? {
-            word: String(token.analysis.word || ''),
-            vowelFamily: token.analysis.vowelFamily || null,
-            phonemes: Array.isArray(token.analysis.phonemes) ? [...token.analysis.phonemes] : [],
-            syllables: Array.isArray(token.analysis.syllables)
-              ? token.analysis.syllables.map((syllable) => ({
-                  index: Number(syllable?.index) || 0,
-                  vowel: String(syllable?.vowel || ''),
-                  vowelFamily: syllable?.vowelFamily || null,
-                  onset: String(syllable?.onset || ''),
-                  coda: String(syllable?.coda || ''),
-                  onsetPhonemes: Array.isArray(syllable?.onsetPhonemes) ? [...syllable.onsetPhonemes] : [],
-                  codaPhonemes: Array.isArray(syllable?.codaPhonemes) ? [...syllable.codaPhonemes] : [],
-                  stress: Number(syllable?.stress) || 0,
-                }))
-              : [],
-            syllableCount: Number(token.analysis.syllableCount) || 0,
-            rhymeKey: token.analysis.rhymeKey || null,
-            extendedRhymeKeys: Array.isArray(token.analysis.extendedRhymeKeys)
-              ? [...token.analysis.extendedRhymeKeys]
-              : [],
-            stressPattern: String(token.analysis.stressPattern || ''),
-          }
-        : null,
-    })),
-    syllableWindows: syllableWindows.map((window) => ({
-      id: Number(window?.id) || 0,
-      tokenSpan: Array.isArray(window?.tokenSpan) ? [...window.tokenSpan] : [],
-      lineSpan: Array.isArray(window?.lineSpan) ? [...window.lineSpan] : [],
-      charStart: Number(window?.charStart) || 0,
-      charEnd: Number(window?.charEnd) || 0,
-      syllableLength: Number(window?.syllableLength) || 0,
-      phonemeSpan: Array.isArray(window?.phonemeSpan) ? [...window.phonemeSpan] : [],
-      vowelSequence: Array.isArray(window?.vowelSequence) ? [...window.vowelSequence] : [],
-      stressContour: String(window?.stressContour || ''),
-      codaContour: String(window?.codaContour || ''),
-      signature: String(window?.signature || ''),
-    })),
-    metadata: verseIR?.metadata
-      ? {
-          mode: String(verseIR.metadata.mode || ''),
-          lineBreakStyle: String(verseIR.metadata.lineBreakStyle || ''),
-          tokenCount: Number(verseIR.metadata.tokenCount) || 0,
-          lineCount: Number(verseIR.metadata.lineCount) || 0,
-          syllableWindowCount: Number(verseIR.metadata.syllableWindowCount) || 0,
-          whitespaceFidelity: Boolean(verseIR.metadata.whitespaceFidelity),
-        }
-      : null,
-  };
+  return serializeVerseIR(verseIR);
 }
 
 function buildNeutralSignal(tokenCount, source = 'neutral_fallback') {

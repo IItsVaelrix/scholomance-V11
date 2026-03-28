@@ -151,10 +151,13 @@ export default function ReadPage() {
   }, [updateSettings]);
 
   useLayoutEffect(() => {
-    // Sync initial activity bar size for CSS attribute selectors
-    const size = settings?.ideLayout?.[0] ?? 4;
-    const el = document.querySelector('.ide-activity-bar');
-    if (el) el.setAttribute('data-panel-size', size.toFixed(1));
+    // Combined icons + labels strip width — drives IDE.css label reveal thresholds
+    const layout = settings?.ideLayout;
+    const iconsPct = layout?.[0] ?? 3;
+    const labelsPct = layout?.[1] ?? 0;
+    const combined = iconsPct + labelsPct;
+    const el = document.querySelector('.ide-activity-labels');
+    if (el) el.setAttribute('data-panel-size', combined.toFixed(1));
   }, [settings?.ideLayout]);
 
   const handleLayoutChange = useCallback((sizes) => {
@@ -1348,9 +1351,9 @@ export default function ReadPage() {
           {/* 1. Activity Bar - Icons (Fixed-ish) */}
           <Panel
             defaultSize={settings?.ideLayout?.[0] ?? 3}
-            minSize={3}
-            maxSize={3}
-            className="ide-activity-icons"
+            minSize={2}
+            maxSize={14}
+            className="ide-activity-bar ide-activity-icons"
           >
             <div className="activity-bar-content">
               {['FILES', 'SEARCH', 'TOOLS'].map((tab) => {
@@ -1381,7 +1384,7 @@ export default function ReadPage() {
             defaultSize={settings?.ideLayout?.[1] ?? 0}
             minSize={0}
             maxSize={8}
-            className="ide-activity-labels"
+            className="ide-activity-bar ide-activity-labels"
           >
             <div className="activity-bar-content">
               {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
