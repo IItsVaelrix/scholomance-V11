@@ -2608,8 +2608,6 @@
 }
 
 .truesight-overlay--definitions-only .grimoire-word--interactive:hover {
-  text-decoration: underline;
-  text-decoration-color: rgba(201, 168, 64, 0.3);
   color: transparent !important;
 }
 
