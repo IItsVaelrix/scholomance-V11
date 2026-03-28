@@ -219,6 +219,10 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     await service.unlockAudio();
   }, [service]);
 
+  const seek = useCallback((offset: number) => {
+    service.seek(offset);
+  }, [service]);
+
   return {
     ...state,
     currentSchoolId,
@@ -249,5 +253,6 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     setOrbVisibility,
     toggleOrbVisibility,
     unlockAudio,
+    seek,
   };
 }

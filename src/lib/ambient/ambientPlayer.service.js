@@ -595,6 +595,14 @@ async function createTrackController({
           throw new Error("Audio playback blocked. Please interact with the page.");
         }
       },
+      seek: (offset) => {
+        if (destroyed || usingSunoEmbedFallback || !audio) return;
+        try {
+          audio.currentTime = Math.max(0, audio.currentTime + offset);
+        } catch {
+          // Ignore seek errors
+        }
+      },
       pause: async () => {
         if (destroyed) return;
         if (usingSunoEmbedFallback) {
@@ -1612,6 +1620,12 @@ function createAmbientPlayerService(options = {}) {
 
   function toggleCyclingEnabled() {
     setCyclingEnabled(!state.cyclingEnabled);
+  }
+
+  function seek(offset) {
+    if (currentController && typeof currentController.seek === "function") {
+      currentController.seek(offset);
+    }
   }
 
   function destroy() {

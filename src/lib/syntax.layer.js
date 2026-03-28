@@ -1,5 +1,6 @@
 import { stemWord } from "../../codex/core/analysis.pipeline.js";
 import { englishSyntaxHMM } from "../../codex/core/hmm.js";
+import { buildHiddenHarkovSummary } from "./models/harkov.model.js";
 
 /**
  * English function words (closed-class tokens).
@@ -152,11 +153,21 @@ export function buildSyntaxLayer(analyzedDoc) {
     }
   }
 
+  // Weave in the Hidden Harkov Model (HHM)
+  const { summary: hhm, tokenStateByIdentity } = buildHiddenHarkovSummary(tokens);
+
+  // Attach per-token HHM state
+  tokens.forEach(token => {
+    const identity = getSyntaxIdentityKey(token.lineNumber, token.wordIndex, token.charStart);
+    token.hhm = tokenStateByIdentity.get(identity) || null;
+  });
+
   return {
     enabled: tokens.length > 0,
     tokens,
     tokenByIdentity,
     tokenByCharStart,
+    hhm,
     syntaxSummary: {
       enabled: tokens.length > 0,
       tokenCount: tokens.length,

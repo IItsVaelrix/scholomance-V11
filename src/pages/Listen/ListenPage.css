@@ -42,6 +42,25 @@
   align-items: stretch;
 }
 
+.listen-main-content {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem 0;
+}
+
+.listen-footer {
+  text-align: center;
+  margin-top: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.listen-footer strong {
+  color: var(--active-school-color);
+}
+
 .listen-station-panel,
 .listen-control-panel,
 .listen-now-card {

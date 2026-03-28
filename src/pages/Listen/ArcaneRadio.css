@@ -1,0 +1,255 @@
+/* Arcane Radio visual language tokens */
+.arcane-radio {
+  --radio-gold: #c9a227;
+  --radio-leather: #1a1208;
+  --radio-parchment: #e8dfc8;
+  --radio-void: #0d0b06;
+  --radio-glow: var(--active-school-color, #c9a227);
+  
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: var(--radio-void);
+  border: 4px solid #2a1f0d;
+  border-radius: 40px;
+  box-shadow: 
+    0 20px 50px rgba(0,0,0,0.8),
+    inset 0 0 30px rgba(201,162,39,0.1);
+  max-width: 900px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* Texture overlay for the leather look */
+.arcane-radio::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("https://www.transparenttextures.com/patterns/dark-leather.png");
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.arcane-radio-header {
+  width: 100%;
+  text-align: center;
+  margin-bottom: 2rem;
+  z-index: 1;
+}
+
+.arcane-radio-title {
+  font-family: "Cormorant Garamond", serif;
+  font-size: 2.5rem;
+  color: var(--radio-gold);
+  text-shadow: 0 0 10px rgba(201,162,39,0.4);
+  margin: 0;
+}
+
+.arcane-radio-body {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 3rem;
+  width: 100%;
+  z-index: 1;
+}
+
+/* Crystal Ball Container */
+.crystal-ball-focal {
+  position: relative;
+  width: 360px;
+  height: 360px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.1), transparent);
+  box-shadow: 
+    0 0 40px var(--radio-glow),
+    inset 0 0 20px rgba(255,255,255,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 8px solid #2a1f0d;
+}
+
+.crystal-ball-focal::after {
+  content: "";
+  position: absolute;
+  inset: -15px;
+  border: 2px solid rgba(201,162,39,0.3);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Controls Grid */
+.arcane-controls-left, .arcane-controls-right {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
+/* Knob Styling */
+.arcane-knob-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.arcane-knob-label {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--radio-gold);
+  opacity: 0.8;
+}
+
+.arcane-knob {
+  position: relative;
+  background: #1a1a1a;
+  border-radius: 50%;
+  border: 3px solid #333;
+  box-shadow: 
+    0 4px 10px rgba(0,0,0,0.5),
+    inset 0 2px 5px rgba(255,255,255,0.1);
+}
+
+.arcane-knob-dial {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #222, #111);
+}
+
+.arcane-knob-indicator {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  width: 4px;
+  height: 20%;
+  border-radius: 2px;
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px var(--radio-glow);
+}
+
+.arcane-knob-value {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: var(--radio-gold);
+}
+
+/* Button Styling */
+.arcane-btn {
+  background: #1a1208;
+  border: 2px solid var(--radio-gold);
+  border-radius: 12px;
+  color: var(--radio-gold);
+  padding: 0.75rem 1.5rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 0 #2a1f0d;
+}
+
+.arcane-btn:hover {
+  background: #2a1f0d;
+  box-shadow: 0 2px 0 #2a1f0d;
+  transform: translateY(2px);
+}
+
+.arcane-btn:active {
+  box-shadow: 0 0 0 #2a1f0d;
+  transform: translateY(4px);
+}
+
+.arcane-btn.is-active {
+  background: var(--radio-gold);
+  color: #1a1208;
+}
+
+/* Station Grid */
+.arcane-stations {
+  width: 100%;
+  margin-top: 3rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  z-index: 1;
+}
+
+.arcane-station-card {
+  background: rgba(201,162,39,0.05);
+  border: 1px solid rgba(201,162,39,0.2);
+  padding: 1rem;
+  border-radius: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.arcane-station-card:hover {
+  background: rgba(201,162,39,0.1);
+  border-color: var(--radio-gold);
+}
+
+.arcane-station-card.is-active {
+  background: rgba(201,162,39,0.2);
+  border-color: var(--radio-gold);
+  box-shadow: 0 0 15px rgba(201,162,39,0.3);
+}
+
+.arcane-station-glyph {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.arcane-station-name {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--radio-gold);
+}
+
+/* Light Mode Overrides */
+[data-theme="light"] .arcane-radio {
+  --radio-void: #f5f2e9;
+  --radio-leather: #e8dfc8;
+  --radio-gold: #8b6b23;
+  background: var(--radio-void);
+  border-color: #d2c8b0;
+}
+
+[data-theme="light"] .arcane-radio::before {
+  background-image: url("https://www.transparenttextures.com/patterns/parchment.png");
+  opacity: 0.5;
+}
+
+[data-theme="light"] .arcane-knob {
+  background: #e8dfc8;
+  border-color: #d2c8b0;
+}
+
+[data-theme="light"] .arcane-knob-dial {
+  background: linear-gradient(145deg, #f5f2e9, #e8dfc8);
+}
+
+[data-theme="light"] .arcane-btn {
+  background: #f5f2e9;
+  box-shadow: 0 4px 0 #d2c8b0;
+}
+
+[data-theme="light"] .arcane-btn:hover {
+  background: #e8dfc8;
+}
+
+[data-theme="light"] .crystal-ball-focal {
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.8), transparent);
+  border-color: #d2c8b0;
+}
