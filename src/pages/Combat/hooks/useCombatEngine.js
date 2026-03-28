@@ -268,7 +268,7 @@ export function useCombatEngine() {
     }
 
     pendingPlayerCastRef.current = null;
-  }, [appendLogEntries, emitStateUpdate, log, updateState]);
+  }, [appendLogEntries, emitStateUpdate, log, recordWordUse, updateState]);
 
   useEffect(() => {
     const unsubSceneState = combatBridge.on('state:update', (payload = {}) => {
@@ -358,7 +358,7 @@ export function useCombatEngine() {
     updateState,
   ]);
 
-  const castPlayerSpell = useCallback((text, weave, scoreData) => {
+  const castPlayerSpell = useCallback((text, weave, _scoreData) => {
     const {
       combatState,
       playerHP,

@@ -20,7 +20,6 @@ const MENU_W = 260;
 const SONIC_PURPLE = 0x651fff;
 const GOLD = 0xc9a227;
 const VOID_DARK = 0x0a0810;
-const PARCHMENT = 0x1a1208;
 const PANEL_BG = 0x0d0b08;
 const TEXT_PRIMARY = '#c9a227';
 const TEXT_DIM = '#6b5a2a';

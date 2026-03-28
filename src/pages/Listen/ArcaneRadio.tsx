@@ -44,14 +44,14 @@ const TuningIcon = () => (
 );
 
 // ── Oscilloscope ─────────────────────────────────────────────────────────────
-const OscilloscopeDisplay: React.FC<{
-  signalLevel: number;
-  isPlaying: boolean;
-  color: string;
-}> = ({ signalLevel, isPlaying, color }) => {
+const OscilloscopeDisplay = React.memo(({ signalLevel, isPlaying, color }: any) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef    = useRef<number>();
   const tRef      = useRef(0);
+  const levelRef  = useRef(signalLevel);
+
+  // Sync prop to ref for high-frequency access in RAF without re-triggering effect
+  useEffect(() => { levelRef.current = signalLevel; }, [signalLevel]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,6 +65,8 @@ const OscilloscopeDisplay: React.FC<{
     const draw = () => {
       tRef.current += 0.04;
       const t = tRef.current;
+      const sig = isPlaying ? levelRef.current : 0.04;
+      
       ctx.clearRect(0, 0, W, H);
 
       // Grid
@@ -77,16 +79,16 @@ const OscilloscopeDisplay: React.FC<{
         ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
       }
 
-      const opacity = isPlaying ? 0.45 + signalLevel * 0.45 : 0.25;
+      const opacity = isPlaying ? 0.45 + sig * 0.45 : 0.25;
       ctx.strokeStyle = color || 'rgba(201,162,39,0.8)';
       ctx.globalAlpha = opacity;
       ctx.lineWidth = 1.5;
       ctx.shadowColor = color;
-      ctx.shadowBlur = isPlaying ? 4 + signalLevel * 6 : 0;
+      ctx.shadowBlur = isPlaying ? 4 + sig * 6 : 0;
+      
       ctx.beginPath();
       for (let px = 0; px < W; px++) {
         const nx = px / W;
-        const sig = isPlaying ? signalLevel : 0.04;
         const w1 = Math.sin(nx * Math.PI * 5 + t) * sig;
         const w2 = Math.sin(nx * Math.PI * 11 + t * 1.4) * sig * 0.35;
         const y = H / 2 + (w1 + w2) * H * 0.38;
@@ -102,7 +104,8 @@ const OscilloscopeDisplay: React.FC<{
 
     draw();
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [signalLevel, isPlaying, color]);
+    // Only restart if playing status or base color changes
+  }, [isPlaying, color]);
 
   return (
     <canvas
@@ -113,7 +116,121 @@ const OscilloscopeDisplay: React.FC<{
       aria-label="Signal waveform display"
     />
   );
-};
+});
+OscilloscopeDisplay.displayName = 'OscilloscopeDisplay';
+
+// ── Components ───────────────────────────────────────────────────────────────
+
+const ArcaneLabHeader = React.memo(({ isPlaying, isTuning, statusLabel, stationName }: any) => (
+  <header className="arcane-lab-header">
+    <div className="arcane-lab-title">
+      <span className="arcane-lab-badge">◈</span>
+      <span>Arcane Signal Laboratory</span>
+    </div>
+    <div className="arcane-lab-status">
+      <span className={`arcane-status-dot ${isPlaying ? 'is-live' : ''} ${isTuning ? 'is-tuning' : ''}`} />
+      <span className="arcane-status-text">{statusLabel}</span>
+      <span className="arcane-status-sep">|</span>
+      <span className="arcane-status-station">{stationName}</span>
+    </div>
+  </header>
+));
+ArcaneLabHeader.displayName = 'ArcaneLabHeader';
+
+const VUMeter = React.memo(({ signalLevel }: { signalLevel: number }) => {
+  const vuBars = Array.from({ length: 12 }, (_, i) => i / 12 < signalLevel);
+  return (
+    <div className="arcane-vu-meter" aria-label="Signal level meter">
+      <div className="arcane-vu-bars">
+        {vuBars.map((active, i) => (
+          <div
+            key={i}
+            className={`arcane-vu-bar ${active ? 'is-active' : ''} ${i >= 10 ? 'is-hot' : i >= 8 ? 'is-warm' : ''}`}
+            style={{ '--bar-delay': `${i * 0.03}s` } as CSSProperties}
+          />
+        ))}
+      </div>
+      <div className="arcane-vu-scale"><span>+6</span><span>0</span><span>-∞</span></div>
+    </div>
+  );
+});
+VUMeter.displayName = 'VUMeter';
+
+const FreqBars = React.memo(({ signalLevel }: { signalLevel: number }) => (
+  <div className="arcane-freq-bars">
+    {Array.from({ length: 20 }, (_, i) => (
+      <div key={i} className={`arcane-freq-bar ${signalLevel * 20 > i ? 'is-active' : ''}`} style={{ '--bar-n': i } as CSSProperties} />
+    ))}
+  </div>
+));
+FreqBars.displayName = 'FreqBars';
+
+const ArcanePanelLeft = React.memo(({ volume, setVolume, color, signalLevel, bandId }: any) => {
+  return (
+    <div className="arcane-panel arcane-panel--left">
+      <div className="arcane-panel-label">VOL. MATRIX</div>
+      <ArcaneKnob value={volume} onChange={setVolume} color={color} size={88} label="VOL" />
+      <VUMeter signalLevel={signalLevel} />
+      <div className="arcane-readouts">
+        <div className="arcane-readout"><span className="arcane-readout-key">SIG</span><span className="arcane-readout-val">{Math.round(signalLevel * 100)}%</span></div>
+        <div className="arcane-readout"><span className="arcane-readout-key">VOL</span><span className="arcane-readout-val">{Math.round(volume * 100)}%</span></div>
+        <div className="arcane-readout"><span className="arcane-readout-key">BAND</span><span className="arcane-readout-val">{bandId || '—'}</span></div>
+      </div>
+    </div>
+  );
+});
+ArcanePanelLeft.displayName = 'ArcanePanelLeft';
+
+const ArcanePanelRight = React.memo(({ isPlaying, isTuning, signalLevel, color, seek, togglePlayPause, handleReplay, volume, setVolume }: any) => (
+  <div className="arcane-panel arcane-panel--right">
+    <div className="arcane-panel-label">SIGNAL CONTROL</div>
+    <div className="arcane-oscilloscope">
+      <div className="arcane-scope-label">
+        <span>WAVEFORM</span>
+        <span className={`arcane-scope-live ${isPlaying ? 'is-on' : ''}`}>{isPlaying ? '● LIVE' : '○ OFF'}</span>
+      </div>
+      <OscilloscopeDisplay signalLevel={signalLevel} isPlaying={isPlaying} color={color} />
+    </div>
+    <div className="arcane-transport" role="group" aria-label="Playback controls">
+      <div className="arcane-transport-row arcane-transport-row--main">
+        <button className="arcane-t-btn arcane-t-btn--sm" onClick={() => seek(-10)} aria-label="Rewind"><RewindIcon /><span className="arcane-t-label">RW</span></button>
+        <button className={`arcane-t-btn arcane-t-btn--lg ${isPlaying ? 'is-playing' : ''} ${isTuning ? 'is-tuning' : ''}`} onClick={togglePlayPause}>{isTuning ? <TuningIcon /> : isPlaying ? <PauseIcon /> : <PlayIcon /> }<span className="arcane-t-label">{isTuning ? 'SYNC' : isPlaying ? 'PAUSE' : 'PLAY'}</span></button>
+        <button className="arcane-t-btn arcane-t-btn--sm" onClick={() => seek(10)} aria-label="Fast forward"><FastFwdIcon /><span className="arcane-t-label">FF</span></button>
+      </div>
+      <div className="arcane-transport-row arcane-transport-row--aux">
+        <button className="arcane-t-btn arcane-t-btn--aux" onClick={handleReplay} aria-label="Replay"><ReplayIcon /><span className="arcane-t-label">REPLAY</span></button>
+        <button className={`arcane-t-btn arcane-t-btn--aux ${volume === 0 ? 'is-muted' : ''}`} onClick={() => setVolume(volume === 0 ? 0.5 : 0)}>{volume === 0 ? <MuteIcon /> : <SpeakerIcon />}<span className="arcane-t-label">{volume === 0 ? 'UNMUTE' : 'MUTE'}</span></button>
+      </div>
+    </div>
+    <div className="arcane-freq-bar-row">
+      <span className="arcane-freq-label">FREQ</span>
+      <FreqBars signalLevel={signalLevel} />
+    </div>
+  </div>
+));
+ArcanePanelRight.displayName = 'ArcanePanelRight';
+
+const ArcaneStationGrid = React.memo(({ stations, currentSchoolId, tuneToSchool }: any) => (
+  <div className="arcane-stations" role="list" aria-label="Station selector">
+    {stations.map((station: any) => (
+      <button
+        type="button"
+        key={station.id}
+        className={`arcane-station-card ${station.id === currentSchoolId ? 'is-active' : ''}`}
+        style={{ '--station-color': station.color } as CSSProperties}
+        onClick={() => void tuneToSchool(station.id)}
+        aria-label={`Tune to ${station.name}`}
+        aria-pressed={station.id === currentSchoolId}
+      >
+        <span className="arcane-station-dot" />
+        <span className="arcane-station-glyph">{station.glyph}</span>
+        <span className="arcane-station-name">{station.name}</span>
+        <span className="arcane-station-id-label">{station.id}</span>
+      </button>
+    ))}
+  </div>
+));
+ArcaneStationGrid.displayName = 'ArcaneStationGrid';
 
 // ── ArcaneRadio ──────────────────────────────────────────────────────────────
 export const ArcaneRadio: React.FC = () => {
@@ -148,101 +265,42 @@ export const ArcaneRadio: React.FC = () => {
     [stations, currentSchoolId]
   );
 
-  const handleReplay = () => {
+  const handleReplay = React.useCallback(() => {
     if (currentSchoolId) void tuneToSchool(currentSchoolId);
-  };
+  }, [currentSchoolId, tuneToSchool]);
 
   const radioStyle = {
     '--active-school-color': currentStation?.color || '#c9a227',
     '--radio-glow': currentStation?.color || '#c9a227',
   } as CSSProperties;
 
-  // VU bar heights driven by signal
-  const vuBars = Array.from({ length: 12 }, (_, i) => {
-    const threshold = i / 12;
-    return signalLevel > threshold;
-  });
-
   const statusLabel = isTuning ? 'SYNCING' : isPlaying ? 'TRANSMITTING' : status === 'ERROR' ? 'ERROR' : 'STANDBY';
 
   return (
     <div className="arcane-radio" style={radioStyle} aria-label="Arcane Signal Laboratory">
-
       {/* Corner bracket decorations */}
       <div className="arcane-corner arcane-corner--tl" aria-hidden />
       <div className="arcane-corner arcane-corner--tr" aria-hidden />
       <div className="arcane-corner arcane-corner--bl" aria-hidden />
       <div className="arcane-corner arcane-corner--br" aria-hidden />
 
-      {/* Header */}
-      <header className="arcane-lab-header">
-        <div className="arcane-lab-title">
-          <span className="arcane-lab-badge">◈</span>
-          <span>Arcane Signal Laboratory</span>
-        </div>
-        <div className="arcane-lab-status">
-          <span className={`arcane-status-dot ${isPlaying ? 'is-live' : ''} ${isTuning ? 'is-tuning' : ''}`} />
-          <span className="arcane-status-text">{statusLabel}</span>
-          <span className="arcane-status-sep">|</span>
-          <span className="arcane-status-station">
-            {currentStation ? currentStation.name.toUpperCase() : 'NO SIGNAL'}
-          </span>
-        </div>
-      </header>
+      <ArcaneLabHeader 
+        isPlaying={isPlaying} 
+        isTuning={isTuning} 
+        statusLabel={statusLabel} 
+        stationName={currentStation ? currentStation.name.toUpperCase() : 'NO SIGNAL'} 
+      />
 
-      {/* Main Console */}
       <div className="arcane-console">
+        <ArcanePanelLeft 
+          volume={volume} 
+          setVolume={setVolume} 
+          color={currentStation?.color} 
+          signalLevel={signalLevel} 
+          bandId={currentStation?.id} 
+        />
 
-        {/* ── Left Panel: Volume ────────────────────────────────────── */}
-        <div className="arcane-panel arcane-panel--left">
-          <div className="arcane-panel-label">VOL. MATRIX</div>
-
-          <ArcaneKnob
-            value={volume}
-            onChange={setVolume}
-            color={currentStation?.color}
-            size={88}
-            label="VOL"
-          />
-
-          {/* VU Meter */}
-          <div className="arcane-vu-meter" aria-label="Signal level meter">
-            <div className="arcane-vu-bars">
-              {vuBars.map((active, i) => (
-                <div
-                  key={i}
-                  className={`arcane-vu-bar ${active ? 'is-active' : ''} ${i >= 10 ? 'is-hot' : i >= 8 ? 'is-warm' : ''}`}
-                  style={{ '--bar-delay': `${i * 0.03}s` } as CSSProperties}
-                />
-              ))}
-            </div>
-            <div className="arcane-vu-scale">
-              <span>+6</span>
-              <span>0</span>
-              <span>-∞</span>
-            </div>
-          </div>
-
-          {/* Readout grid */}
-          <div className="arcane-readouts">
-            <div className="arcane-readout">
-              <span className="arcane-readout-key">SIG</span>
-              <span className="arcane-readout-val">{Math.round(signalLevel * 100)}%</span>
-            </div>
-            <div className="arcane-readout">
-              <span className="arcane-readout-key">VOL</span>
-              <span className="arcane-readout-val">{Math.round(volume * 100)}%</span>
-            </div>
-            <div className="arcane-readout">
-              <span className="arcane-readout-key">BAND</span>
-              <span className="arcane-readout-val">{currentStation?.id || '—'}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Center: Orb Chamber ───────────────────────────────────── */}
         <div className="arcane-orb-chamber">
-          {/* Measurement ring with ticks */}
           <div className="arcane-chamber-surround" aria-hidden>
             <svg className="arcane-ring-svg" viewBox="0 0 360 360">
               {Array.from({ length: 36 }, (_, i) => {
@@ -253,27 +311,18 @@ export const ArcaneRadio: React.FC = () => {
                 const r1 = major ? 158 : mid ? 163 : 167;
                 const r2 = 173;
                 return (
-                  <line
-                    key={i}
-                    x1={180 + Math.cos(rad) * r1} y1={180 + Math.sin(rad) * r1}
-                    x2={180 + Math.cos(rad) * r2} y2={180 + Math.sin(rad) * r2}
-                    stroke="rgba(201,162,39,0.45)"
-                    strokeWidth={major ? 2 : 1}
-                  />
+                  <line key={i} x1={180 + Math.cos(rad) * r1} y1={180 + Math.sin(rad) * r1} x2={180 + Math.cos(rad) * r2} y2={180 + Math.sin(rad) * r2} stroke="rgba(201,162,39,0.45)" strokeWidth={major ? 2 : 1} />
                 );
               })}
               <circle cx="180" cy="180" r="173" fill="none" stroke="rgba(201,162,39,0.18)" strokeWidth="1"/>
               <circle cx="180" cy="180" r="148" fill="none" stroke="rgba(201,162,39,0.07)" strokeWidth="1"/>
             </svg>
-
-            {/* Cardinal labels */}
             <span className="arcane-ring-label arcane-ring-n">N</span>
             <span className="arcane-ring-label arcane-ring-e">E</span>
             <span className="arcane-ring-label arcane-ring-s">S</span>
             <span className="arcane-ring-label arcane-ring-w">W</span>
           </div>
 
-          {/* The Orb */}
           <motion.div
             className="arcane-orb-focal"
             animate={{ scale: isTuning ? [1, 1.015, 1] : 1 }}
@@ -289,135 +338,34 @@ export const ArcaneRadio: React.FC = () => {
             />
           </motion.div>
 
-          {/* Station nameplate below orb */}
           <div className="arcane-station-plate">
             {currentStation ? (
               <>
-                <span className="arcane-plate-glyph" style={{ color: currentStation.color }}>
-                  {currentStation.glyph}
-                </span>
+                <span className="arcane-plate-glyph" style={{ color: currentStation.color }}>{currentStation.glyph}</span>
                 <span className="arcane-plate-name">{currentStation.name}</span>
               </>
-            ) : (
-              <span className="arcane-plate-empty">— NO SIGNAL —</span>
-            )}
+            ) : <span className="arcane-plate-empty">— NO SIGNAL —</span>}
           </div>
         </div>
 
-        {/* ── Right Panel: Transport ────────────────────────────────── */}
-        <div className="arcane-panel arcane-panel--right">
-          <div className="arcane-panel-label">SIGNAL CONTROL</div>
-
-          {/* Oscilloscope */}
-          <div className="arcane-oscilloscope">
-            <div className="arcane-scope-label">
-              <span>WAVEFORM</span>
-              <span className={`arcane-scope-live ${isPlaying ? 'is-on' : ''}`}>
-                {isPlaying ? '● LIVE' : '○ OFF'}
-              </span>
-            </div>
-            <OscilloscopeDisplay
-              signalLevel={signalLevel}
-              isPlaying={isPlaying}
-              color={currentStation?.color || '#c9a227'}
-            />
-          </div>
-
-          {/* Transport buttons */}
-          <div className="arcane-transport" role="group" aria-label="Playback controls">
-            {/* Row 1: Rewind | Play | Forward */}
-            <div className="arcane-transport-row arcane-transport-row--main">
-              <button
-                className="arcane-t-btn arcane-t-btn--sm"
-                onClick={() => seek(-10)}
-                aria-label="Rewind 10 seconds"
-                title="Rewind"
-              >
-                <RewindIcon />
-                <span className="arcane-t-label">RW</span>
-              </button>
-
-              <button
-                className={`arcane-t-btn arcane-t-btn--lg ${isPlaying ? 'is-playing' : ''} ${isTuning ? 'is-tuning' : ''}`}
-                onClick={togglePlayPause}
-                aria-label={isTuning ? 'Tuning…' : isPlaying ? 'Pause' : 'Play'}
-              >
-                {isTuning ? <TuningIcon /> : isPlaying ? <PauseIcon /> : <PlayIcon />}
-                <span className="arcane-t-label">
-                  {isTuning ? 'SYNC' : isPlaying ? 'PAUSE' : 'PLAY'}
-                </span>
-              </button>
-
-              <button
-                className="arcane-t-btn arcane-t-btn--sm"
-                onClick={() => seek(10)}
-                aria-label="Fast forward 10 seconds"
-                title="Fast Forward"
-              >
-                <FastFwdIcon />
-                <span className="arcane-t-label">FF</span>
-              </button>
-            </div>
-
-            {/* Row 2: Replay | Mute */}
-            <div className="arcane-transport-row arcane-transport-row--aux">
-              <button
-                className="arcane-t-btn arcane-t-btn--aux"
-                onClick={handleReplay}
-                aria-label="Replay current station"
-                title="Replay"
-              >
-                <ReplayIcon />
-                <span className="arcane-t-label">REPLAY</span>
-              </button>
-
-              <button
-                className={`arcane-t-btn arcane-t-btn--aux ${volume === 0 ? 'is-muted' : ''}`}
-                onClick={() => setVolume(volume === 0 ? 0.5 : 0)}
-                aria-label={volume === 0 ? 'Unmute' : 'Mute'}
-                title={volume === 0 ? 'Unmute' : 'Mute'}
-              >
-                {volume === 0 ? <MuteIcon /> : <SpeakerIcon />}
-                <span className="arcane-t-label">{volume === 0 ? 'UNMUTE' : 'MUTE'}</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Signal frequency meter */}
-          <div className="arcane-freq-bar-row">
-            <span className="arcane-freq-label">FREQ</span>
-            <div className="arcane-freq-bars">
-              {Array.from({ length: 20 }, (_, i) => (
-                <div
-                  key={i}
-                  className={`arcane-freq-bar ${signalLevel * 20 > i ? 'is-active' : ''}`}
-                  style={{ '--bar-n': i } as CSSProperties}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
+        <ArcanePanelRight 
+          isPlaying={isPlaying} 
+          isTuning={isTuning} 
+          signalLevel={signalLevel} 
+          color={currentStation?.color || '#c9a227'} 
+          seek={seek} 
+          togglePlayPause={togglePlayPause} 
+          handleReplay={handleReplay} 
+          volume={volume} 
+          setVolume={setVolume} 
+        />
       </div>
 
-      {/* Station Grid */}
-      <div className="arcane-stations" role="list" aria-label="Station selector">
-        {stations.map((station) => (
-          <button
-            key={station.id}
-            className={`arcane-station-card ${station.id === currentSchoolId ? 'is-active' : ''}`}
-            style={{ '--station-color': station.color } as CSSProperties}
-            onClick={() => void tuneToSchool(station.id)}
-            role="listitem"
-            aria-label={`Tune to ${station.name}`}
-            aria-pressed={station.id === currentSchoolId}
-          >
-            <span className="arcane-station-dot" />
-            <span className="arcane-station-glyph">{station.glyph}</span>
-            <span className="arcane-station-name">{station.name}</span>
-            <span className="arcane-station-id-label">{station.id}</span>
-          </button>
-        ))}
-      </div>
+      <ArcaneStationGrid 
+        stations={stations} 
+        currentSchoolId={currentSchoolId} 
+        tuneToSchool={tuneToSchool} 
+      />
     </div>
   );
 };

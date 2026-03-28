@@ -65,7 +65,7 @@ export function BattleLog({ entries = [] }) {
     }
     prevLengthRef.current = entries.length;
     bottomRef.current?.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth' });
-  }, [entries.length, prefersReduced]);
+  }, [entries, prefersReduced]);
 
   return (
     <aside

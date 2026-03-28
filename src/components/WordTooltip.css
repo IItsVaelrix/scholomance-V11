@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   SCHOLOMANCE ELDRITCH WORD CARD
-   Tarot × Magic: The Gathering × Lovecraftian Grimoire
+   SCHOLOMANCE — ARCANE GRIMOIRE WORD CARD
+   Living sigil oracle · Parchment inscriptions · School-resonant chrome
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -25,7 +25,6 @@
   pointer-events: auto;
   max-width: calc(100vw - 24px);
   perspective: 1000px;
-  /* Drop shadow lives here — container never scrolls, so compositing is free */
   filter: drop-shadow(0 22px 55px rgba(0, 0, 0, 0.85));
   transition: filter 0.4s ease;
 }
@@ -41,7 +40,7 @@
    ────────────────────────────────────────────────────────────────────────── */
 .word-card {
   --school-frame-color: var(--card-gold);
-  --school-bg-color: #0d0a18;
+  --school-bg-color:    #0d0a18;
   --school-accent-color: var(--card-gold-dim);
   width: 100%;
   height: 100%;
@@ -51,7 +50,7 @@
   user-select: none;
 }
 
-/* School Frame Overrides */
+/* School frame overrides */
 .word-card[data-school="SONIC"]   { --school-frame-color: #651fff; --school-bg-color: #0a051a; --school-accent-color: rgba(101, 31, 255, 0.3); }
 .word-card[data-school="VOID"]    { --school-frame-color: #ff1744; --school-bg-color: #0a0205; --school-accent-color: rgba(255, 23, 68, 0.3); }
 .word-card[data-school="KINETIC"] { --school-frame-color: #00e5ff; --school-bg-color: #020a0c; --school-accent-color: rgba(0, 229, 255, 0.3); }
@@ -68,7 +67,7 @@
     radial-gradient(ellipse at 50% 50%, var(--school-bg-color) 0%, var(--card-void) 100%);
   border: 2px solid var(--school-frame-color);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.5),
     0 0 20px rgba(0, 0, 0, 0.8),
@@ -78,47 +77,7 @@
   overflow: hidden;
 }
 
-/* Parchment Texture Overlay for the Text Box */
-.card-text-box {
-  position: relative;
-  background: 
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"),
-    linear-gradient(172deg, #ecddb8 0%, #e0cf9e 32%, #e8d8a8 62%, #d8c888 100%);
-  background-blend-mode: soft-light;
-  border: 1px solid #4a3010;
-  border-radius: 2px;
-  padding: 12px;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
-}
-
-/* Foil Shimmer Effect */
-.word-card--legendary .card-frame::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    125deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(255, 255, 255, 0.1) 45%,
-    rgba(255, 255, 255, 0.3) 50%,
-    rgba(255, 255, 255, 0.1) 55%,
-    transparent 60%,
-    transparent 100%
-  );
-  background-size: 200% 200%;
-  animation: foil-shimmer 4s infinite linear;
-  pointer-events: none;
-  z-index: 10;
-}
-
-@keyframes foil-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-
-/* Secondary inner border line */
+/* Secondary inner border */
 .card-frame::before {
   content: '';
   position: absolute;
@@ -126,28 +85,80 @@
   border: 1px solid var(--card-gold-dim);
   border-radius: 3px;
   pointer-events: none;
+  z-index: 1;
 }
 
-/* Void-texture scanlines */
+/* Scanline texture overlay */
 .card-frame::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 6px;
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 3px,
-      rgba(0, 0, 0, 0.06) 3px,
-      rgba(0, 0, 0, 0.06) 4px
-    );
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(0, 0, 0, 0.06) 3px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
   pointer-events: none;
   opacity: 0.55;
+  z-index: 1;
+}
+
+/* Legendary foil shimmer */
+.word-card--legendary .card-frame > .card-foil {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    125deg,
+    transparent 0%, transparent 40%,
+    rgba(255, 255, 255, 0.10) 45%,
+    rgba(255, 255, 255, 0.28) 50%,
+    rgba(255, 255, 255, 0.10) 55%,
+    transparent 60%, transparent 100%
+  );
+  background-size: 200% 200%;
+  animation: foil-shimmer 4s infinite linear;
+  pointer-events: none;
+  z-index: 2;
+  border-radius: 6px;
+}
+
+@keyframes foil-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   CARD INNER
+   SIGIL CHAMBER — Phaser canvas container
+   Positioned directly inside card-frame, before card-inner
+   ────────────────────────────────────────────────────────────────────────── */
+.sigil-chamber {
+  position: relative;
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  flex-shrink: 0;
+  /* Subtle border separating sigil from inscription below */
+  border-bottom: 1px solid var(--card-gold-dim);
+  /* School-tinted inner glow — deepens the void effect */
+  box-shadow:
+    inset 0 -12px 28px rgba(0, 0, 0, 0.6),
+    inset 0 0 40px rgba(0, 0, 0, 0.4);
+  border-radius: 4px 4px 0 0;
+}
+
+/* Phaser drops the canvas as a direct child — size it correctly */
+.sigil-chamber canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   CARD INNER — flex column for all text content
    ────────────────────────────────────────────────────────────────────────── */
 .card-inner {
   flex: 1;
@@ -155,176 +166,82 @@
   flex-direction: column;
   min-height: 0;
   position: relative;
-  /* No z-index here — lets the absolutely-positioned resize handle (z-index:25)
-     stay reliably above without competing stacking contexts */
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   MANA COST CRYSTAL — diamond-cut syllable gem (top-right)
+   INSCRIPTION HEADER — word name carved in gold light
+   Primary drag zone
    ────────────────────────────────────────────────────────────────────────── */
-.card-mana-cost {
-  position: absolute;
-  top: -14px;
-  right: 14px;
-  width: 46px;
-  height: 46px;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 15;
-  transition: transform 0.3s ease, filter 0.3s ease, background-color 0.35s ease;
-  filter: drop-shadow(0 0 8px currentColor);
-}
-
-.card-mana-cost::before {
-  content: '';
-  position: absolute;
-  inset: 3px;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-  background: rgba(0, 0, 0, 0.45);
-  z-index: 0;
-}
-
-.word-card:hover .card-mana-cost {
-  transform: scale(1.08);
-  filter: drop-shadow(0 0 14px currentColor);
-}
-
-.mana-value {
-  position: relative;
-  z-index: 1;
-  font-family: var(--font-family-display, 'Cinzel', serif);
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
-  text-shadow:
-    0 0 6px rgba(255, 255, 255, 0.55),
-    0 0 14px currentColor,
-    1px 1px 2px rgba(0, 0, 0, 0.9);
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   NAME BANNER — drag handle
-   ────────────────────────────────────────────────────────────────────────── */
-.card-name-banner {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(28, 18, 8, 0.96) 7%,
-    rgba(38, 26, 12, 0.98) 50%,
-    rgba(28, 18, 8, 0.96) 93%,
-    transparent 100%
-  );
-  padding: 9px 58px 9px 14px;
-  margin-bottom: 10px;
-  border-radius: 3px;
-  border-top: 1px solid var(--card-gold);
-  border-bottom: 1px solid var(--card-gold-dim);
-  position: relative;
-}
-
-/* Runic end-glyphs */
-.card-name-banner::before,
-.card-name-banner::after {
-  content: '\2736';
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--card-gold-dim);
-  font-size: 0.65rem;
-}
-
-.card-name-banner::before { left: 4px; }
-.card-name-banner::after  { right: 58px; }
-
-.card-name {
-  margin: 0;
-  font-family: var(--font-family-display, 'Cinzel', serif);
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--card-gold-bright);
-  text-transform: capitalize;
-  text-shadow:
-    0 0 12px rgba(240, 192, 80, 0.45),
-    1px 1px 2px rgba(0, 0, 0, 0.95);
-  letter-spacing: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* ──────────────────────────────────────────────────────────────────────────
-   ART FRAME — eldritch sigil chamber
-   ────────────────────────────────────────────────────────────────────────── */
-.card-art-frame {
-  border: 1px solid var(--card-gold-dim);
-  border-radius: 3px;
-  margin-bottom: 8px;
-  overflow: hidden;
-  position: relative;
-  box-shadow:
-    inset 0 0 24px rgba(0, 0, 0, 0.85),
-    inset 0 0 3px rgba(200, 168, 75, 0.08);
-}
-
-/* Corner light-leak effect */
-.card-art-frame::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(135deg, rgba(200, 168, 75, 0.12) 0%, transparent 28%),
-    linear-gradient(225deg, rgba(200, 168, 75, 0.08) 0%, transparent 28%),
-    linear-gradient(315deg, rgba(200, 168, 75, 0.10) 0%, transparent 28%),
-    linear-gradient(45deg,  rgba(200, 168, 75, 0.08) 0%, transparent 28%);
-  z-index: 2;
-  pointer-events: none;
-}
-
-.card-art {
-  height: 114px;
+.card-inscription-header {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 12px 40px 8px;
   position: relative;
-  background:
-    radial-gradient(ellipse at 50% 40%, rgba(26, 10, 52, 0.95) 0%, rgba(4, 2, 10, 1) 80%);
+  gap: 3px;
 }
 
-.card-school-icon {
-  font-size: 2.8rem;
+/* Horizontal ornament lines flanking the word name */
+.card-inscription-ornament {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--card-gold-dim) 25%,
+    var(--card-gold) 50%,
+    var(--card-gold-dim) 75%,
+    transparent 100%
+  );
+  flex-shrink: 0;
   position: relative;
-  z-index: 2;
-  filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.22));
-  transition: transform 0.4s ease;
-  animation: eldritch-pulse 4.5s ease-in-out infinite;
 }
 
-@keyframes eldritch-pulse {
-  0%, 100% { filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.18)); }
-  50%       { filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.42)) drop-shadow(0 0 28px currentColor); }
+/* Small diamond at the ornament center */
+.card-inscription-ornament::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(45deg);
+  width: 5px;
+  height: 5px;
+  background: var(--card-gold);
+  opacity: 0.7;
 }
 
-.word-card:hover .card-school-icon {
-  transform: scale(1.14);
-}
-
-.card-vowel-glyph {
+.card-word-name {
+  margin: 0;
   font-family: var(--font-family-display, 'Cinzel', serif);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-shadow: 0 0 8px currentColor, 0 0 18px currentColor;
-  margin-top: 5px;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  z-index: 2;
-  opacity: 0.82;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--card-gold-bright);
+  text-transform: capitalize;
+  text-align: center;
+  letter-spacing: 2px;
+  text-shadow:
+    0 0 18px rgba(240, 192, 80, 0.5),
+    0 0 40px rgba(240, 192, 80, 0.18),
+    1px 1px 2px rgba(0, 0, 0, 0.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  line-height: 1.2;
+  padding: 4px 0 2px;
+}
+
+.card-ipa {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--card-text-muted);
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  text-align: center;
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   TYPE LINE — runic separator
+   TYPE LINE — school · part of speech
    ────────────────────────────────────────────────────────────────────────── */
 .card-type-line {
   background: linear-gradient(
@@ -335,8 +252,8 @@
     rgba(20, 12, 6, 0.94) 92%,
     transparent 100%
   );
-  padding: 5px 12px;
-  margin: 0 0 8px 0;
+  padding: 4px 12px;
+  margin: 0 0 6px 0;
   border-top: 1px solid var(--card-gold-dim);
   border-bottom: 1px solid var(--card-gold-dim);
   display: flex;
@@ -351,14 +268,13 @@
   height: 1px;
   background: linear-gradient(90deg, transparent, var(--card-gold-dim));
 }
-
 .card-type-line::after {
   background: linear-gradient(90deg, var(--card-gold-dim), transparent);
 }
 
 .card-type {
   font-family: var(--font-family-heading, 'Cinzel', serif);
-  font-size: 0.73rem;
+  font-size: 0.68rem;
   color: var(--card-gold);
   text-transform: uppercase;
   letter-spacing: 1.2px;
@@ -367,32 +283,121 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   TEXT BOX — aged grimoire parchment
+   ARCANE PROPERTIES — replaces power/toughness
+   Three glyphed stat badges: Depth · Rarity · Echo
+   ────────────────────────────────────────────────────────────────────────── */
+.card-arcane-props {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 5px 12px 7px;
+  flex-shrink: 0;
+}
+
+.arcane-prop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  background: rgba(4, 2, 10, 0.75);
+  border: 1px solid var(--card-gold-dim);
+  border-radius: 3px;
+  padding: 4px 10px 3px;
+  min-width: 52px;
+  position: relative;
+}
+
+/* Subtle corner clips on prop badges */
+.arcane-prop::before,
+.arcane-prop::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-color: var(--card-gold-dim);
+  border-style: solid;
+  opacity: 0.6;
+}
+.arcane-prop::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+.arcane-prop::after  { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+
+.arcane-prop-value {
+  font-family: var(--font-family-display, 'Cinzel', serif);
+  font-size: 1.0rem;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.arcane-prop-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--card-text-muted);
+  line-height: 1;
+}
+
+/* Rarity prop — wider to fit the tier name */
+.arcane-prop--rarity {
+  min-width: 110px;
+  flex-direction: row;
+  gap: 6px;
+  justify-content: center;
+}
+
+.arcane-prop-label--rarity {
+  font-size: 0.6rem;
+  color: var(--card-text-muted);
+}
+
+/* Rarity gem — diamond-cut */
+.arcane-rarity-gem {
+  width: 12px;
+  height: 12px;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  flex-shrink: 0;
+}
+
+.arcane-rarity-gem[data-rarity="common"] {
+  background: linear-gradient(135deg, #a0aab4 0%, #6b7280 100%);
+  filter: drop-shadow(0 0 2px rgba(156, 163, 175, 0.4));
+}
+.arcane-rarity-gem[data-rarity="rare"] {
+  background: linear-gradient(135deg, #93c5fd 0%, #2563eb 100%);
+  filter: drop-shadow(0 0 5px rgba(96, 165, 250, 0.8));
+}
+.arcane-rarity-gem[data-rarity="epic"] {
+  background: linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
+  filter: drop-shadow(0 0 7px rgba(167, 85, 247, 0.9));
+}
+.arcane-rarity-gem[data-rarity="legendary"] {
+  background: linear-gradient(135deg, #fde68a 0%, #d97706 100%);
+  animation: legendary-gem 2.2s ease-in-out infinite;
+}
+
+@keyframes legendary-gem {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(251, 191, 36, 0.7)); }
+  50%       { filter: drop-shadow(0 0 14px rgba(251, 191, 36, 1)) drop-shadow(0 0 22px rgba(251, 191, 36, 0.4)); }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   TEXT BOX — aged parchment with inscription content
    ────────────────────────────────────────────────────────────────────────── */
 .card-text-box {
   flex: 1;
   min-height: 0;
   background:
-    /* Age spots */
     radial-gradient(circle at 12% 88%, rgba(100, 70, 20, 0.14) 0%, transparent 28%),
     radial-gradient(circle at 88% 12%, rgba(80, 55, 20, 0.10) 0%, transparent 22%),
-    /* Parchment base */
-    linear-gradient(
-      172deg,
-      #ecddb8 0%,
-      #e0cf9e 32%,
-      #e8d8a8 62%,
-      #d8c888 100%
-    );
+    linear-gradient(172deg, #ecddb8 0%, #e0cf9e 32%, #e8d8a8 62%, #d8c888 100%);
   border: 1px solid rgba(140, 110, 60, 0.55);
   border-radius: 2px;
   padding: 10px 12px;
   overflow-y: auto;
-  /* Own compositing layer — scroll is GPU-driven, no re-rasterization of the card */
   will-change: transform;
-  /* Contain scroll so it doesn't chain to the page */
   overscroll-behavior: contain;
-  /* Native momentum scrolling on WebKit */
   -webkit-overflow-scrolling: touch;
   box-shadow:
     inset 0 1px 4px rgba(0, 0, 0, 0.18),
@@ -403,6 +408,18 @@
 .card-text-box::-webkit-scrollbar-track  { background: rgba(100, 70, 20, 0.08); }
 .card-text-box::-webkit-scrollbar-thumb  { background: rgba(140, 110, 50, 0.42); border-radius: 2px; }
 
+.card-definition-type {
+  font-family: var(--font-family-heading, 'Cinzel', serif);
+  font-size: 0.65rem;
+  color: #4a3010;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(74, 48, 16, 0.15);
+  padding-bottom: 4px;
+}
+
 .card-definition {
   margin: 0 0 6px 0;
   font-size: 0.88rem;
@@ -410,15 +427,6 @@
   color: #190f08;
   font-family: Georgia, serif;
 }
-
-.card-definitions-list {
-  margin: 0;
-  padding-left: 1.4em;
-  list-style: decimal;
-}
-
-.card-definitions-list .card-definition { margin-bottom: 4px; }
-.card-definitions-list .card-definition:last-child { margin-bottom: 0; }
 
 .card-insight-section {
   margin-bottom: 6px;
@@ -442,15 +450,10 @@
   line-height: 1.35;
 }
 
-.card-insight-line--error {
-  color: #8f1d1d;
-  font-weight: 600;
-}
-
+/* Rhyme Astrology section */
 .card-insight-section--astrology {
   border-bottom-color: rgba(35, 97, 120, 0.26);
 }
-
 .card-insight-section--astrology .card-insight-title {
   color: #1e4f66;
   display: flex;
@@ -463,14 +466,12 @@
   opacity: 0.7;
 }
 
-/* Sign badge */
 .card-astro-sign-badge {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-bottom: 6px;
 }
-
 .card-astro-sign-label {
   font-size: 0.6rem;
   text-transform: uppercase;
@@ -479,7 +480,6 @@
   font-family: "Space Grotesk", sans-serif;
   flex-shrink: 0;
 }
-
 .card-astro-sign {
   font-family: "JetBrains Mono", monospace;
   font-size: 0.72rem;
@@ -491,14 +491,12 @@
   padding: 1px 5px;
 }
 
-/* Cluster chips */
 .card-astro-clusters {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
 }
-
 .card-astro-cluster-chip {
   font-size: 0.62rem;
   padding: 1px 6px;
@@ -510,13 +508,7 @@
   letter-spacing: 0.03em;
 }
 
-/* Top match rows */
-.card-astro-matches {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
+.card-astro-matches       { display: flex; flex-direction: column; gap: 5px; }
 .card-astro-matches-label {
   font-size: 0.58rem;
   text-transform: uppercase;
@@ -525,39 +517,16 @@
   font-family: "Space Grotesk", sans-serif;
   margin: 0 0 2px;
 }
-
-.card-astro-match-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.card-astro-match-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.card-astro-match-word {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #1a3d50;
-  font-family: Georgia, serif;
-}
-
-.card-astro-match-score {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.62rem;
-  color: #1e6680;
-}
-
+.card-astro-match-row     { display: flex; flex-direction: column; gap: 2px; }
+.card-astro-match-header  { display: flex; align-items: center; justify-content: space-between; }
+.card-astro-match-word    { font-size: 0.72rem; font-weight: 700; color: #1a3d50; font-family: Georgia, serif; }
+.card-astro-match-score   { font-family: "JetBrains Mono", monospace; font-size: 0.62rem; color: #1e6680; }
 .card-astro-match-bar-track {
   height: 2px;
   background: rgba(35, 97, 120, 0.12);
   border-radius: 1px;
   overflow: hidden;
 }
-
 .card-astro-match-bar-fill {
   height: 100%;
   border-radius: 1px;
@@ -565,13 +534,7 @@
   min-width: 2px;
   max-width: 100%;
 }
-
-.card-astro-reason-pills {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 3px;
-}
-
+.card-astro-reason-pills  { display: flex; flex-wrap: wrap; gap: 3px; }
 .card-astro-reason-pill {
   font-size: 0.56rem;
   padding: 0px 4px;
@@ -585,13 +548,7 @@
 
 .card-flavor-divider {
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(100, 70, 20, 0.45) 18%,
-    rgba(100, 70, 20, 0.45) 82%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, rgba(100, 70, 20, 0.45) 18%, rgba(100, 70, 20, 0.45) 82%, transparent 100%);
   margin: 6px 0;
 }
 
@@ -612,108 +569,8 @@
   letter-spacing: 0.5px;
 }
 
-.card-power-toughness {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  background: rgba(4, 2, 10, 0.95);
-  padding: 4px 12px;
-  border: 1px solid var(--school-frame-color);
-  border-radius: 4px;
-  position: absolute;
-  bottom: 8px;
-  right: 12px;
-  z-index: 20;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-}
-
-.card-power, .card-toughness {
-  font-family: var(--font-family-display, 'Cinzel', serif);
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--card-text-light);
-}
-
-.card-pt-separator {
-  font-size: 1rem;
-  color: var(--school-frame-color);
-  margin: 0 2px;
-  font-weight: bold;
-}
-
-.card-definition-type {
-  font-family: var(--font-family-heading, 'Cinzel', serif);
-  font-size: 0.65rem;
-  color: #4a3010;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 8px;
-  font-weight: 700;
-  border-bottom: 1px solid rgba(74, 48, 16, 0.15);
-  padding-bottom: 4px;
-}
-
-.card-stat {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  background: rgba(4, 2, 10, 0.85);
-  padding: 4px 10px;
-  border: 1px solid var(--card-gold-dim);
-  border-radius: 2px;
-  min-width: 46px;
-  justify-content: center;
-}
-
-.card-stat--left  { flex-direction: row; }
-.card-stat--right { flex-direction: row-reverse; }
-
-.stat-icon {
-  font-size: 0.85rem;
-  color: var(--card-gold);
-}
-
-.stat-value {
-  font-family: var(--font-family-display, 'Cinzel', serif);
-  font-size: 0.9rem;
-  color: var(--card-gold-bright);
-  font-weight: 700;
-}
-
-/* Rarity gem — diamond-cut */
-.card-rarity-gem {
-  width: 16px;
-  height: 16px;
-  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-}
-
-.card-rarity-gem[data-rarity="common"] {
-  background: linear-gradient(135deg, #a0aab4 0%, #6b7280 100%);
-  filter: drop-shadow(0 0 3px rgba(156, 163, 175, 0.5));
-}
-
-.card-rarity-gem[data-rarity="rare"] {
-  background: linear-gradient(135deg, #93c5fd 0%, #2563eb 100%);
-  filter: drop-shadow(0 0 7px rgba(96, 165, 250, 0.9));
-}
-
-.card-rarity-gem[data-rarity="epic"] {
-  background: linear-gradient(135deg, #c084fc 0%, #7c3aed 100%);
-  filter: drop-shadow(0 0 9px rgba(167, 85, 247, 1));
-}
-
-.card-rarity-gem[data-rarity="legendary"] {
-  background: linear-gradient(135deg, #fde68a 0%, #d97706 100%);
-  animation: legendary-gem 2.2s ease-in-out infinite;
-}
-
-@keyframes legendary-gem {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)); }
-  50%       { filter: drop-shadow(0 0 18px rgba(251, 191, 36, 1)) drop-shadow(0 0 28px rgba(251, 191, 36, 0.5)); }
-}
-
 /* ──────────────────────────────────────────────────────────────────────────
-   CORNER DECORATIONS — L-bracket ornaments in eldritch gold
+   CORNER DECORATIONS — L-bracket ornaments
    ────────────────────────────────────────────────────────────────────────── */
 .card-corner {
   position: absolute;
@@ -722,14 +579,12 @@
   pointer-events: none;
   z-index: 10;
 }
-
 .card-corner::before {
   content: '';
   position: absolute;
   background: var(--card-gold);
   opacity: 0.65;
 }
-
 .card-corner::after {
   content: '';
   position: absolute;
@@ -737,13 +592,11 @@
   opacity: 0.65;
 }
 
-/* Horizontal bars */
 .card-corner--tl::before { width: 15px; height: 1px; top: 0; left: 0; }
 .card-corner--tr::before { width: 15px; height: 1px; top: 0; right: 0; }
 .card-corner--bl::before { width: 15px; height: 1px; bottom: 0; left: 0; }
 .card-corner--br::before { width: 15px; height: 1px; bottom: 0; right: 0; }
 
-/* Vertical bars */
 .card-corner--tl::after  { width: 1px; height: 15px; top: 0; left: 0; }
 .card-corner--tr::after  { width: 1px; height: 15px; top: 0; right: 0; }
 .card-corner--bl::after  { width: 1px; height: 15px; bottom: 0; left: 0; }
@@ -761,127 +614,56 @@
   position: absolute;
   z-index: 25;
   pointer-events: all;
-  /* Transparent by default — hover reveals subtle gold */
   opacity: 0;
   transition: opacity 0.18s ease, background 0.18s ease;
 }
 
 .word-card:hover .card-resize-handle,
-.word-tooltip-container.is-interacting .card-resize-handle {
-  opacity: 1;
-}
+.word-tooltip-container.is-interacting .card-resize-handle { opacity: 1; }
 
-/* ── Edge handles — 12px hit area, 3px visual indicator via ::after ── */
-.card-resize-handle--n {
-  top: 0; left: 16px; right: 24px;
-  height: 12px;
-  cursor: ns-resize;
-}
-.card-resize-handle--n::after {
-  content: ''; position: absolute;
-  top: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(to bottom, rgba(200, 168, 75, 0.28), transparent);
-  transition: background 0.18s;
-}
+.card-resize-handle--n  { top: 0; left: 16px; right: 24px; height: 12px; cursor: ns-resize; }
+.card-resize-handle--s  { bottom: 0; left: 16px; right: 16px; height: 12px; cursor: ns-resize; }
+.card-resize-handle--e  { right: 0; top: 24px; bottom: 16px; width: 12px; cursor: ew-resize; }
+.card-resize-handle--w  { left: 0; top: 16px; bottom: 16px; width: 12px; cursor: ew-resize; }
 
-.card-resize-handle--s {
-  bottom: 0; left: 16px; right: 16px;
-  height: 12px;
-  cursor: ns-resize;
-}
-.card-resize-handle--s::after {
-  content: ''; position: absolute;
-  bottom: 0; left: 0; right: 0; height: 3px;
-  background: linear-gradient(to top, rgba(200, 168, 75, 0.28), transparent);
-  transition: background 0.18s;
-}
-
-.card-resize-handle--e {
-  right: 0; top: 24px; bottom: 16px;
-  width: 12px;
-  cursor: ew-resize;
-}
-.card-resize-handle--e::after {
-  content: ''; position: absolute;
-  top: 0; right: 0; bottom: 0; width: 3px;
-  background: linear-gradient(to left, rgba(200, 168, 75, 0.28), transparent);
-  transition: background 0.18s;
-}
-
-.card-resize-handle--w {
-  left: 0; top: 16px; bottom: 16px;
-  width: 12px;
-  cursor: ew-resize;
-}
-.card-resize-handle--w::after {
-  content: ''; position: absolute;
-  top: 0; left: 0; bottom: 0; width: 3px;
-  background: linear-gradient(to right, rgba(200, 168, 75, 0.28), transparent);
-  transition: background 0.18s;
-}
+.card-resize-handle--n::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to bottom, rgba(200, 168, 75, 0.28), transparent); }
+.card-resize-handle--s::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: linear-gradient(to top, rgba(200, 168, 75, 0.28), transparent); }
+.card-resize-handle--e::after { content: ''; position: absolute; top: 0; right: 0; bottom: 0; width: 3px; background: linear-gradient(to left, rgba(200, 168, 75, 0.28), transparent); }
+.card-resize-handle--w::after { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: linear-gradient(to right, rgba(200, 168, 75, 0.28), transparent); }
 
 .card-resize-handle--n:hover::after { background: linear-gradient(to bottom, rgba(200, 168, 75, 0.55), transparent); }
 .card-resize-handle--s:hover::after { background: linear-gradient(to top,    rgba(200, 168, 75, 0.55), transparent); }
 .card-resize-handle--e:hover::after { background: linear-gradient(to left,   rgba(200, 168, 75, 0.55), transparent); }
 .card-resize-handle--w:hover::after { background: linear-gradient(to right,  rgba(200, 168, 75, 0.55), transparent); }
 
-/* ── Corner handles (16×16 squares) ── */
-.card-resize-handle--nw {
-  top: 0; left: 0;
-  width: 16px; height: 16px;
-  cursor: nwse-resize;
-}
+.card-resize-handle--nw { top: 0; left: 0; width: 16px; height: 16px; cursor: nwse-resize; }
+.card-resize-handle--ne { top: 0; right: 0; width: 10px; height: 10px; cursor: nesw-resize; }
+.card-resize-handle--sw { bottom: 0; left: 0; width: 16px; height: 16px; cursor: nesw-resize; }
 
-.card-resize-handle--ne {
-  top: 0; right: 0;
-  width: 10px; height: 10px;
-  cursor: nesw-resize;
-}
-
-.card-resize-handle--sw {
-  bottom: 0; left: 0;
-  width: 16px; height: 16px;
-  cursor: nesw-resize;
-}
-
-/* ── SE corner — eldritch grip (visible anchor) ── */
+/* SE corner — eldritch grip anchor */
 .card-resize-handle--se {
   bottom: 0; right: 0;
   width: 36px; height: 36px;
   cursor: nwse-resize;
   border-radius: 0 0 6px 0;
-  background: linear-gradient(
-    135deg,
-    transparent 50%,
-    rgba(200, 168, 75, 0.18) 50%,
-    rgba(200, 168, 75, 0.38) 100%
-  );
+  background: linear-gradient(135deg, transparent 50%, rgba(200, 168, 75, 0.18) 50%, rgba(200, 168, 75, 0.38) 100%);
   opacity: 0.75 !important;
   transition: opacity 0.2s, background 0.2s;
 }
-
 .card-resize-handle--se::before {
   content: '';
   position: absolute;
-  bottom: 6px;
-  right: 6px;
-  width: 12px;
-  height: 12px;
+  bottom: 6px; right: 6px;
+  width: 12px; height: 12px;
   background:
     radial-gradient(circle at 80% 80%, var(--card-gold) 1.5px, transparent 1.5px),
     radial-gradient(circle at 20% 80%, var(--card-gold) 1.5px, transparent 1.5px),
     radial-gradient(circle at 80% 20%, var(--card-gold) 1.5px, transparent 1.5px);
   opacity: 0.7;
 }
-
 .card-resize-handle--se:hover {
   opacity: 1 !important;
-  background: linear-gradient(
-    135deg,
-    transparent 50%,
-    rgba(200, 168, 75, 0.38) 50%,
-    rgba(240, 192, 80, 0.72) 100%
-  );
+  background: linear-gradient(135deg, transparent 50%, rgba(200, 168, 75, 0.38) 50%, rgba(240, 192, 80, 0.72) 100%);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -890,7 +672,6 @@
 .word-card--common .card-frame {
   border-color: #5a4838;
 }
-
 .word-card--rare .card-frame {
   border-color: #3b82f6;
   box-shadow:
@@ -900,7 +681,6 @@
     inset 0 0 40px rgba(0, 0, 0, 0.65),
     0 0 28px rgba(59, 130, 246, 0.22);
 }
-
 .word-card--epic .card-frame {
   border-color: #8b5cf6;
   box-shadow:
@@ -910,7 +690,6 @@
     inset 0 0 40px rgba(0, 0, 0, 0.65),
     0 0 35px rgba(139, 92, 246, 0.32);
 }
-
 .word-card--legendary .card-frame {
   border-color: var(--card-gold);
   animation: legendary-frame 3.5s ease-in-out infinite;
@@ -979,14 +758,8 @@
   font-size: 2.5rem;
 }
 
-.card-empty-icon {
-  color: #5a4a36;
-  font-family: var(--font-family-display, 'Cinzel', serif);
-  font-weight: bold;
-}
-
 /* ──────────────────────────────────────────────────────────────────────────
-   CLOSE BUTTON — eldritch diamond seal
+   CLOSE BUTTON — diamond seal
    ────────────────────────────────────────────────────────────────────────── */
 .card-close-btn {
   position: absolute;
@@ -1009,7 +782,6 @@
   touch-action: manipulation;
   transition: color 0.2s ease, filter 0.2s ease;
 }
-
 .card-close-btn:hover {
   color: #fff;
   filter: drop-shadow(0 0 7px rgba(220, 60, 60, 0.7));
@@ -1018,28 +790,17 @@
 /* ──────────────────────────────────────────────────────────────────────────
    ACCESSIBILITY
    ────────────────────────────────────────────────────────────────────────── */
-.word-card:focus-within {
-  outline: none;
-}
+.word-card:focus-within { outline: none; }
+.card-close-btn:focus   { outline: none; }
+.card-close-btn:focus-visible { box-shadow: 0 0 0 2px rgba(220, 60, 60, 0.45); }
 
-.card-close-btn:focus {
-  outline: none;
-}
-
-.card-close-btn:focus-visible {
-  box-shadow: 0 0 0 2px rgba(220, 60, 60, 0.45);
-}
-
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .word-card,
-  .card-school-icon,
-  .card-rarity-gem,
+  .arcane-rarity-gem,
   .word-card--legendary .card-frame,
   .card-loading-spinner {
     animation: none !important;
   }
-
   .card-frame,
   .word-card:hover .card-frame {
     transform: none !important;
@@ -1047,7 +808,7 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   SUGGESTION RUNES — clickable word pills (Allies / Foes / Resonates / Near Echo)
+   SUGGESTION RUNES — clickable word pills
    ────────────────────────────────────────────────────────────────────────── */
 .suggestion-rune {
   display: inline-block;
@@ -1066,23 +827,14 @@
   user-select: none;
   vertical-align: baseline;
 }
-
 .suggestion-rune:hover {
   background: rgba(200, 168, 75, 0.2);
   border-color: rgba(200, 168, 75, 0.6);
   box-shadow: 0 0 6px rgba(200, 168, 75, 0.28);
   color: #1a0f04;
 }
-
-.suggestion-rune:active {
-  transform: scale(0.93);
-  background: rgba(200, 168, 75, 0.32);
-}
-
-.suggestion-rune:focus-visible {
-  outline: 1px solid rgba(200, 168, 75, 0.7);
-  outline-offset: 1px;
-}
+.suggestion-rune:active { transform: scale(0.93); background: rgba(200, 168, 75, 0.32); }
+.suggestion-rune:focus-visible { outline: 1px solid rgba(200, 168, 75, 0.7); outline-offset: 1px; }
 
 /* ──────────────────────────────────────────────────────────────────────────
    CARD BREADCRUMB — within-card word trail
@@ -1099,26 +851,9 @@
   font-size: 0.72rem;
   line-height: 1.4;
 }
-
-.card-breadcrumb-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0;
-}
-
-.card-breadcrumb-sep {
-  color: rgba(100, 70, 20, 0.45);
-  font-size: 0.8rem;
-  padding: 0 3px;
-  user-select: none;
-}
-
-.card-breadcrumb-current {
-  color: #1a0f04;
-  font-weight: 600;
-  font-style: italic;
-}
-
+.card-breadcrumb-item { display: inline-flex; align-items: center; gap: 0; }
+.card-breadcrumb-sep  { color: rgba(100, 70, 20, 0.45); font-size: 0.8rem; padding: 0 3px; user-select: none; }
+.card-breadcrumb-current { color: #1a0f04; font-weight: 600; font-style: italic; }
 .card-breadcrumb-ancestor {
   color: rgba(58, 40, 16, 0.6);
   background: none;
@@ -1134,19 +869,11 @@
   transition: color 0.12s ease;
   line-height: inherit;
 }
-
-.card-breadcrumb-ancestor:hover {
-  color: #3a2810;
-}
-
-.card-breadcrumb-ancestor.card-breadcrumb-truncated {
-  text-decoration: none;
-  cursor: default;
-  pointer-events: none;
-}
+.card-breadcrumb-ancestor:hover { color: #3a2810; }
+.card-breadcrumb-ancestor.card-breadcrumb-truncated { text-decoration: none; cursor: default; pointer-events: none; }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   SESSION NAV — footer row showing position in pinned-word session
+   SESSION NAV — pinned word history navigation
    ────────────────────────────────────────────────────────────────────────── */
 .card-session-nav {
   display: flex;
@@ -1170,21 +897,9 @@
   transition: opacity 0.15s ease, color 0.15s ease;
   border-radius: 2px;
 }
-
-.session-nav-btn:hover:not(:disabled) {
-  opacity: 1;
-  color: var(--card-gold-bright);
-}
-
-.session-nav-btn:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.session-nav-btn:focus-visible {
-  outline: 1px solid var(--card-gold);
-  outline-offset: 1px;
-}
+.session-nav-btn:hover:not(:disabled) { opacity: 1; color: var(--card-gold-bright); }
+.session-nav-btn:disabled  { opacity: 0.25; cursor: default; }
+.session-nav-btn:focus-visible { outline: 1px solid var(--card-gold); outline-offset: 1px; }
 
 .session-nav-pos {
   font-family: var(--font-family-display, 'Cinzel', serif);
@@ -1235,45 +950,20 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Flatten the card frame inside mobile sheet — no fixed dimensions or dragging */
-.word-tooltip-mobile-body .word-card {
-  width: 100% !important;
-  height: auto !important;
-  position: static !important;
-}
+/* Flatten card inside mobile sheet */
+.word-tooltip-mobile-body .word-card  { width: 100% !important; height: auto !important; position: static !important; }
+.word-tooltip-mobile-body .card-frame { width: 100% !important; height: auto !important; border-radius: 0; border: none; box-shadow: none; }
+.word-tooltip-mobile-body .card-inner { width: 100% !important; height: auto !important; }
 
-.word-tooltip-mobile-body .card-frame {
-  width: 100% !important;
-  height: auto !important;
-  border-radius: 0;
-  border: none;
-  box-shadow: none;
-}
-
-.word-tooltip-mobile-body .card-inner {
-  width: 100% !important;
-  height: auto !important;
-}
-
-/* Hide resize handles and drag handles on mobile sheet */
+/* Hide resize handles on mobile */
 .word-tooltip-mobile-body .card-resize-handle,
 .word-tooltip-mobile-body .card-corner,
-.word-tooltip-mobile-body .card-close-btn {
-  display: none !important;
-}
+.word-tooltip-mobile-body .card-close-btn { display: none !important; }
 
-.word-tooltip-mobile-body .card-name-banner {
-  cursor: default;
-}
-
-.word-tooltip-mobile-body .card-text-box {
-  max-height: none;
-  overflow: visible;
-}
+.word-tooltip-mobile-body .card-inscription-header { cursor: default; }
+.word-tooltip-mobile-body .card-text-box { max-height: none; overflow: visible; }
 
 /* ──────────────────────────────────────────────────────────────────────────
-   LEGACY COMPAT (react-resizable handle hidden in favor of custom)
+   LEGACY COMPAT
    ────────────────────────────────────────────────────────────────────────── */
-.react-resizable-handle {
-  display: none;
-}
+.react-resizable-handle { display: none; }

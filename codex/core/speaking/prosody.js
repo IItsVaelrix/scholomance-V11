@@ -118,7 +118,7 @@ function resolveTerminalPunctuation(lineText) {
   const text = String(lineText || '').trim();
   if (!text) return '';
   if (/[.]{3}$/.test(text) || /…$/.test(text)) return '...';
-  const match = text.match(/[?!:;,\.]$/);
+  const match = text.match(/[?!:;,.]$/);
   return match ? match[0] : '';
 }
 

@@ -38,7 +38,7 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
         transparent: true,
         antialias: true,
         scene: [CrystalBallScene],
-        fps: { target: 60, forceSetTimeOut: true },
+        fps: { target: 60 }, // Default to RAF for performance
       });
 
       game.events.once('ready', () => {

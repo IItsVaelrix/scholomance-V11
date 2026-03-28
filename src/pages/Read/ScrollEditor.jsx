@@ -251,7 +251,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   onWordActivate,
   onCursorChange,
   onScrollChange,
-  isEditorIdle = true,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -532,7 +531,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   }, [content]);
 
   // Virtualization windowing
-  const visibleRange = useMemo(() => {
+  const _visibleRange = useMemo(() => {
     // Always compute visible range — overlay renders in both Truesight and definition-only mode
     
     const startIdx = Math.max(0, Math.floor(scrollTop / lineHeightPx) - BUFFER);
@@ -543,13 +542,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     
     return { start: startIdx, end: endIdx };
   }, [scrollTop, editorHeight, overlayLines.length, lineHeightPx]);
-
-  const windowedLines = useMemo(() => {
-    return overlayLines.slice(visibleRange.start, visibleRange.end);
-  }, [overlayLines, visibleRange]);
-
-  const paddingTop = visibleRange.start * lineHeightPx;
-  const paddingBottom = Math.max(0, (overlayLines.length - visibleRange.end) * lineHeightPx);
 
   const { theme: effectiveTheme } = useTheme();
   const activeTheme = theme || effectiveTheme;

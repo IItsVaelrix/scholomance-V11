@@ -147,14 +147,6 @@ function hslToHex(h, s, l) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/**
- * Boosts lightness of a hex color by a percentage.
- */
-function boostLightness(hex, boost) {
-  const { h, s, l } = hexToHsl(hex);
-  return hslToHex(h, s, Math.min(1, l + boost));
-}
-
 // ---------------------------------------------------------------------------
 // Canonical family selection
 // ---------------------------------------------------------------------------

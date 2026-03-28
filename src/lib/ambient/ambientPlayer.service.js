@@ -1663,6 +1663,7 @@ function createAmbientPlayerService(options = {}) {
     play,
     pause,
     togglePlayPause,
+    seek,
     setVolume,
     setAutoplayAmbient,
     toggleAutoplayAmbient,

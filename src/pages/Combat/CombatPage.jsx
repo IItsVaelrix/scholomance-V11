@@ -182,10 +182,6 @@ export default function CombatPage() {
     combatBridge.emit('action:inscribe', {});
   }, []);
 
-  const handleFlee = useCallback(() => {
-    combatBridge.emit('action:flee', {});
-  }, []);
-
   // Keyboard shortcut: I = inscribe when player turn
   useEffect(() => {
     const onKey = (e) => {
@@ -200,7 +196,6 @@ export default function CombatPage() {
 
   // ─── Derived state ────────────────────────────────────────────────────────
 
-  const isSpellbookOpen  = combatState === 'CASTING';
   const isScoreRevealing = combatState === 'SCORE_REVEAL';
   const isVictory        = combatState === 'VICTORY';
   const isDefeat         = combatState === 'DEFEAT';
@@ -222,15 +217,6 @@ export default function CombatPage() {
     stolenTokens: stolenTokens ?? opponent?.stolenTokens ?? [],
     arenaCondition: arenaCondition ?? opponent?.arenaCondition ?? null,
   };
-
-  // State label shown in the terminal footer when not player turn
-  const stateLabel = {
-    OPPONENT_TURN:    'Counter-verse gathering...',
-    OPPONENT_CASTING: 'The counter-verse strikes...',
-    SPELL_FLYING:     'Verse in flight...',
-    SCORE_REVEAL:     'The aftermath unfolds...',
-    INTRO:            'The arena stirs...',
-  }[combatState] ?? null;
 
   // ─── Render ──────────────────────────────────────────────────────────────
 

@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Shared Icon primitive for consistent sizing and styling.
  */

@@ -1,7 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useProgression } from '../../hooks/useProgression';
-import { SYNERGIES, WORD_SYNERGY_MAP, MASTERY_LEVELS } from '../../../codex/core/nexus.registry';
 import './NexusPanel.css';
+
+const formatSynergyLabel = (synergyId) =>
+  String(synergyId || '')
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
 
 export const NexusPanel = () => {
   const { nexus } = useProgression();
@@ -12,53 +19,50 @@ export const NexusPanel = () => {
   }, [nexus.discoveredWords]);
 
   const renderWordMastery = (mastery) => {
-    const nextLevel = MASTERY_LEVELS[mastery.level] || MASTERY_LEVELS[MASTERY_LEVELS.length - 1];
-    const progress = (mastery.exp / nextLevel.expRequired) * 100;
-    
     return (
-      <div 
-        key={mastery.word} 
+      <button
+        key={mastery.word}
+        type="button"
         className={`nexus-word-card tier-${mastery.level}`}
         onClick={() => setSelectedWord(mastery)}
+        aria-pressed={selectedWord?.word === mastery.word}
+        aria-label={`Inspect ${mastery.word} resonance`}
       >
         <div className="word-text">{mastery.word}</div>
         <div className="word-level">Lvl {mastery.level}</div>
-        <div className="mastery-progress-bar">
-          <div className="progress-fill" style={{ width: `${Math.min(100, progress)}%` }}></div>
-        </div>
-      </div>
+        <div className="word-level">{mastery.exp} resonance</div>
+      </button>
     );
   };
 
   const renderSelectedDetail = () => {
     if (!selectedWord) return <div className="nexus-empty-state">Select a word to view its resonance</div>;
 
-    const synergies = WORD_SYNERGY_MAP[selectedWord.word] || [];
+    const unlockedSynergies = Array.isArray(selectedWord.unlockedSynergies)
+      ? selectedWord.unlockedSynergies
+      : [];
 
     return (
       <div className="nexus-detail-view">
         <h2>{selectedWord.word}</h2>
         <div className="detail-stats">
-          <p>Mastery: {MASTERY_LEVELS[selectedWord.level - 1].name} (Level {selectedWord.level})</p>
+          <p>Mastery Level: {selectedWord.level}</p>
+          <p>Resonance: {selectedWord.exp}</p>
           <p>Uses: {selectedWord.stats.count}</p>
           <p>Schools: {selectedWord.stats.schools.join(', ')}</p>
         </div>
 
         <div className="synergy-section">
-          <h3>Synergies</h3>
-          {synergies.length === 0 ? (
-            <p className="no-synergies">No synergies discovered for this word yet.</p>
+          <h3>Unlocked Resonances</h3>
+          {unlockedSynergies.length === 0 ? (
+            <p className="no-synergies">No resonance links awakened for this word yet.</p>
           ) : (
-            synergies.map(id => {
-              const synergy = SYNERGIES[id];
-              const isUnlocked = selectedWord.level >= 3; // Placeholder logic
-              return (
-                <div key={id} className={`synergy-card ${isUnlocked ? 'unlocked' : 'locked'}`}>
-                  <h4>{synergy.name} {isUnlocked ? '✨' : '🔒'}</h4>
-                  <p>{synergy.description}</p>
-                </div>
-              );
-            })
+            unlockedSynergies.map((synergyId) => (
+              <div key={synergyId} className="synergy-card unlocked">
+                <h4>{formatSynergyLabel(synergyId)}</h4>
+                <p>Unlocked through nexus progression.</p>
+              </div>
+            ))
           )}
         </div>
       </div>

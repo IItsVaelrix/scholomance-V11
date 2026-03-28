@@ -26,6 +26,7 @@
 }
 
 .nexus-word-card {
+  width: 100%;
   padding: 12px;
   background: #1a1a24;
   border: 1px solid #333;
@@ -34,11 +35,16 @@
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  text-align: left;
+  font: inherit;
+  color: inherit;
 }
 
-.nexus-word-card:hover {
+.nexus-word-card:hover,
+.nexus-word-card:focus-visible {
   border-color: #651fff;
   background: #242435;
+  outline: none;
 }
 
 .word-text {

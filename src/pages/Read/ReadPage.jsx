@@ -2,7 +2,6 @@ import {
   FolderIcon,
   SearchIcon,
   ToolsIcon,
-  BookIcon,
   SettingsIcon
 } from "../../components/Icons.jsx";
 import { useUserSettings } from "../../hooks/useUserSettings.js";
@@ -176,8 +175,6 @@ export default function ReadPage() {
   const [toasts, setToasts] = useState([]);
   const [infoBeamEnabled, setInfoBeamEnabled] = useState(false);
   const [infoBeamFamily, setInfoBeamFamily] = useState(null);
-  const [isEditorIdle, setIsEditorIdle] = useState(true);
-
   const addToast = useCallback((message, type = "info") => {
     const id = Date.now();
     setToasts((prev) => [...prev, { id, message, type }]);
@@ -632,11 +629,9 @@ export default function ReadPage() {
 
   const handleEditorContentChange = useCallback((content) => {
     isTypingRef.current = true;
-    setIsEditorIdle(false);
     clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
-      setIsEditorIdle(true);
       if (pendingCommitRef.current) {
         setCommittedColors(pendingCommitRef.current);
         pendingCommitRef.current = null;
@@ -1104,7 +1099,6 @@ export default function ReadPage() {
             onWordActivate={handleWordActivate}
             onCursorChange={setCursorPos}
             onScrollChange={setMinimapScrollTop}
-            isEditorIdle={isEditorIdle}
           />
         ) : (
           <div className="scroll-placeholder">
@@ -1469,7 +1463,6 @@ export default function ReadPage() {
                     onWordActivate={handleWordActivate}
                     onCursorChange={setCursorPos}
                     onScrollChange={setMinimapScrollTop}
-                    isEditorIdle={isEditorIdle}
                   />
                 ) : (
                   <div className="scroll-placeholder">

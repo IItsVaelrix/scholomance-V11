@@ -5,7 +5,6 @@ import {
   PANEL_ANALYSIS_ENDPOINT,
 } from "./tools/panelAnalysis.fetchMock.js";
 import { RHYME_ANALYSIS_SCENARIOS } from "./fixtures/panelAnalysis.scenarios.js";
-import { createPanelAnalysisData } from "./tools/panelAnalysis.fixture.js";
 
 /**
  * QA Suite: Rhyme Analysis Backend Integration

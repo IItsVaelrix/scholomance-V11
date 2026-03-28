@@ -5,39 +5,40 @@ import { useTheme } from "../hooks/useTheme.jsx";
 import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
 import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
+import SigilChamber from "./SigilChamber.jsx";
 import "./WordTooltip.css";
 
-// ── Fading ink transition variants ──────────────────────────────────────────
-// Exit: ink lifts off the page — brightens and blurs upward (evaporation)
+/* ── Ink transitions — content fades in like ink soaking into parchment ── */
 const INK_EXIT = {
   opacity: 0,
   filter: "blur(1.5px) brightness(1.6)",
   y: -6,
   transition: { duration: 0.16, ease: "easeIn" },
 };
-// Enter: ink soaks into parchment — starts dark/blurry, brief gold flash, resolves crisp
 const INK_INITIAL = { opacity: 0, filter: "blur(2.5px) brightness(0.5)", y: 8 };
 const INK_ANIMATE = {
   opacity: 1,
   filter: [
     "blur(2px) brightness(0.55)",
-    "blur(0.4px) brightness(1.22)",  // gold flash — wet ink catching light
+    "blur(0.4px) brightness(1.22)",
     "blur(0px) brightness(1)",
   ],
   y: 0,
   transition: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
 };
-// Mana gem: syllable count pop on word change
+
+/* ── Depth gem pop — syllable count on word change ────────────────────── */
 const GEM_EXIT    = { opacity: 0, scale: 1.35, transition: { duration: 0.11, ease: "easeIn" } };
 const GEM_INITIAL = { opacity: 0, scale: 0.65 };
 const GEM_ANIMATE = { opacity: 1, scale: 1, transition: { duration: 0.28, delay: 0.1, ease: [0.22, 1, 0.36, 1] } };
 
-const TOOLTIP_MIN_WIDTH = 300;
-const TOOLTIP_MIN_HEIGHT = 350;
-const TOOLTIP_MAX_WIDTH = 680;
-const TOOLTIP_MAX_HEIGHT = 720;
-const TOOLTIP_DEFAULT_WIDTH = 390;
-const TOOLTIP_DEFAULT_HEIGHT = 510;
+const TOOLTIP_MIN_WIDTH    = 300;
+const TOOLTIP_MIN_HEIGHT   = 380;
+const TOOLTIP_MAX_WIDTH    = 680;
+const TOOLTIP_MAX_HEIGHT   = 720;
+const TOOLTIP_DEFAULT_WIDTH  = 390;
+const TOOLTIP_DEFAULT_HEIGHT = 540;
+
 const DRAG_IGNORE_SELECTOR = [
   ".card-resize-handle",
   ".card-close-btn",
@@ -49,31 +50,21 @@ const DRAG_IGNORE_SELECTOR = [
   "select",
 ].join(", ");
 
-const SCHOOL_ICONS = {
-  Evocation: "\uD83D\uDD25",
-  Conjuration: "\u2728",
-  Abjuration: "\uD83D\uDEE1\uFE0F",
-  Divination: "\uD83D\uDC41\uFE0F",
-  Enchantment: "\uD83D\uDCAB",
-  Illusion: "\uD83C\uDF00",
-  Necromancy: "\uD83D\uDC80",
-  Transmutation: "\u2697\uFE0F",
-};
-
-function getSchoolNameFromVowelFamily(vowelFamily) {
-  const normalized = normalizeVowelFamily(vowelFamily);
-  const schoolId = VOWEL_FAMILY_TO_SCHOOL[normalized];
-  if (!schoolId) return null;
-  return SCHOOLS[schoolId]?.name || schoolId;
-}
-
+/* ── Arcane classification ────────────────────────────────────────────── */
 const getRarity = (word) => {
   if (!word) return "common";
   const len = word.length;
   if (len >= 12) return "legendary";
-  if (len >= 9) return "epic";
-  if (len >= 6) return "rare";
+  if (len >= 9)  return "epic";
+  if (len >= 6)  return "rare";
   return "common";
+};
+
+const RARITY_NAMES = {
+  common:    "Common Tongue",
+  rare:      "Arcane Script",
+  epic:      "Eldritch Text",
+  legendary: "Mythic Inscription",
 };
 
 const WordTooltip = ({
@@ -91,21 +82,18 @@ const WordTooltip = ({
   onSessionNavigate,
 }) => {
   const { theme } = useTheme();
-  const vowelPalette = getVowelColorsForSchool("DEFAULT", theme);
-  const containerRef = useRef(null);
-  const titleId = useId();
+  const vowelPalette  = getVowelColorsForSchool("DEFAULT", theme);
+  const containerRef  = useRef(null);
+  const titleId       = useId();
 
   const [size, setSize] = useState({ width: TOOLTIP_DEFAULT_WIDTH, height: TOOLTIP_DEFAULT_HEIGHT });
-  const [pos, setPos] = useState({ x, y });
-  const posRef = useRef({ x, y });
-  // Once the card is placed on screen we own our position — don't let
-  // incoming x/y props (computed from the newly-clicked word's DOM rect)
-  // teleport the card. The user may have dragged it; posRef is always live.
-  const posInitialized = useRef(false);
+  const [pos,  setPos]  = useState({ x, y });
+  const posRef          = useRef({ x, y });
+  const posInitialized  = useRef(false);
   const [isInteracting, setIsInteracting] = useState(false);
 
-  // Card-local navigation history (suggestion rune clicks)
-  const [cardHistory, setCardHistory] = useState([]);
+  /* Card-local navigation history (suggestion rune clicks) */
+  const [cardHistory,      setCardHistory]      = useState([]);
   const [cardHistoryIndex, setCardHistoryIndex] = useState(0);
 
   const setTooltipPos = (nextPos) => {
@@ -116,11 +104,10 @@ const WordTooltip = ({
     const node = containerRef.current;
     if (!node) return;
     node.style.left = `${nextPos.x}px`;
-    node.style.top = `${nextPos.y}px`;
+    node.style.top  = `${nextPos.y}px`;
   };
 
-  // Only snap to x/y on first appearance. After that the card is position-locked
-  // — new word clicks update ink content in place, not card location.
+  /* Snap to x/y only on first appearance — thereafter the card owns its position */
   useLayoutEffect(() => {
     if (posInitialized.current) return;
     posInitialized.current = true;
@@ -130,7 +117,7 @@ const WordTooltip = ({
     applyLivePosition(nextPos);
   }, [x, y]);
 
-  // Reset card history when the session entry changes (pin or session nav)
+  /* Reset card history when session entry changes */
   const prevSessionIndexRef = useRef(sessionIndex);
   useEffect(() => {
     if (prevSessionIndexRef.current === sessionIndex) return;
@@ -144,11 +131,7 @@ const WordTooltip = ({
 
   useEffect(() => {
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        onClose();
-        return;
-      }
-      // Arrow session nav — only when focus is inside this dialog
+      if (event.key === "Escape") { onClose(); return; }
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       if (sessionHistory.length <= 1) return;
       const tooltipHasFocus =
@@ -164,7 +147,7 @@ const WordTooltip = ({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose, onSessionNavigate, sessionHistory.length, sessionIndex]);
 
-  // ── Card history: suggestion rune click ─────────────────────────────────
+  /* ── Card history: suggestion rune click ─────────────────────────────── */
   const handleSuggestionRune = (word) => {
     const newHistory = [...cardHistory.slice(0, cardHistoryIndex + 1), word];
     setCardHistory(newHistory);
@@ -172,56 +155,47 @@ const WordTooltip = ({
     onSuggestionClick(word);
   };
 
-  // ── Card history: breadcrumb ancestor click ──────────────────────────────
+  /* ── Card history: breadcrumb ancestor click ──────────────────────────── */
   const handleBreadcrumbClick = (index) => {
     if (index === cardHistoryIndex) return;
     setCardHistoryIndex(index);
     onSuggestionClick(cardHistory[index]);
   };
 
-  // High-performance Drag Logic
+  /* ── High-performance drag ────────────────────────────────────────────── */
   const handleDragStart = (e) => {
     if (e.button !== 0 && e.button !== undefined) return;
     if (!(e.target instanceof Element)) return;
     if (e.target.closest(DRAG_IGNORE_SELECTOR)) return;
     if (e.cancelable) e.preventDefault();
 
-    const target = e.currentTarget;
+    const target    = e.currentTarget;
     const pointerId = e.pointerId;
     let hasPointerCapture = false;
     if (typeof pointerId === "number" && target.setPointerCapture) {
-      try {
-        target.setPointerCapture(pointerId);
-        hasPointerCapture = true;
-      } catch {
-        hasPointerCapture = false;
-      }
+      try { target.setPointerCapture(pointerId); hasPointerCapture = true; } catch { /**/ }
     }
     setIsInteracting(true);
 
     const startPointerX = e.clientX;
     const startPointerY = e.clientY;
-    const startPos = { ...posRef.current };
-    // Mutable tracker to avoid stale closure; pointer-up reads the real final position
-    let latestPos = startPos;
+    const startPos      = { ...posRef.current };
+    let latestPos       = startPos;
 
     const handlePointerMove = (moveEvent) => {
       if (typeof pointerId === "number" && moveEvent.pointerId !== pointerId) return;
       if (moveEvent.cancelable) moveEvent.preventDefault();
-      const nextX = startPos.x + (moveEvent.clientX - startPointerX);
-      const nextY = startPos.y + (moveEvent.clientY - startPointerY);
-      latestPos = { x: nextX, y: nextY };
+      latestPos = {
+        x: startPos.x + (moveEvent.clientX - startPointerX),
+        y: startPos.y + (moveEvent.clientY - startPointerY),
+      };
       posRef.current = latestPos;
       applyLivePosition(latestPos);
     };
 
     const handlePointerEnd = (endEvent) => {
       if (typeof pointerId === "number" && endEvent.pointerId !== pointerId) return;
-      if (
-        hasPointerCapture &&
-        typeof pointerId === "number" &&
-        target.hasPointerCapture?.(pointerId)
-      ) {
+      if (hasPointerCapture && typeof pointerId === "number" && target.hasPointerCapture?.(pointerId)) {
         target.releasePointerCapture(pointerId);
       }
       window.removeEventListener("pointermove", handlePointerMove);
@@ -237,53 +211,36 @@ const WordTooltip = ({
     window.addEventListener("pointercancel", handlePointerEnd);
   };
 
-  // High-performance Resize Logic — supports all 8 directions (n/s/e/w/ne/nw/se/sw)
+  /* ── High-performance resize — 8 directions ──────────────────────────── */
   const handleResizeStart = (direction) => (e) => {
     e.stopPropagation();
     if (e.button !== 0 && e.button !== undefined) return;
-    const target = e.currentTarget;
+    const target    = e.currentTarget;
     const pointerId = e.pointerId;
     let hasPointerCapture = false;
     if (typeof pointerId === "number" && target.setPointerCapture) {
-      try {
-        target.setPointerCapture(pointerId);
-        hasPointerCapture = true;
-      } catch {
-        hasPointerCapture = false;
-      }
+      try { target.setPointerCapture(pointerId); hasPointerCapture = true; } catch { /**/ }
     }
     setIsInteracting(true);
 
-    const startW   = size.width;
-    const startH   = size.height;
-    const startX   = e.clientX;
-    const startY   = e.clientY;
+    const startW    = size.width;
+    const startH    = size.height;
+    const startX    = e.clientX;
+    const startY    = e.clientY;
     const startPosX = posRef.current.x;
     const startPosY = posRef.current.y;
-
-    // Mutable tracker for the same reason as drag — avoids stale pos on pointerup
     let latestResizePos = { x: startPosX, y: startPosY };
     const movesPosition = direction.includes("w") || direction.includes("n");
 
     const handlePointerMove = (moveEvent) => {
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
+      let newW = startW, newH = startH, newPosX = startPosX, newPosY = startPosY;
 
-      let newW = startW;
-      let newH = startH;
-      let newPosX = startPosX;
-      let newPosY = startPosY;
-
-      if (direction.includes("e")) newW = Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH, startW + dx));
-      if (direction.includes("w")) {
-        newW = Math.min(TOOLTIP_MAX_WIDTH, Math.max(TOOLTIP_MIN_WIDTH, startW - dx));
-        newPosX = startPosX + (startW - newW);
-      }
+      if (direction.includes("e")) newW = Math.min(TOOLTIP_MAX_WIDTH,  Math.max(TOOLTIP_MIN_WIDTH,  startW + dx));
+      if (direction.includes("w")) { newW = Math.min(TOOLTIP_MAX_WIDTH,  Math.max(TOOLTIP_MIN_WIDTH,  startW - dx)); newPosX = startPosX + (startW - newW); }
       if (direction.includes("s")) newH = Math.min(TOOLTIP_MAX_HEIGHT, Math.max(TOOLTIP_MIN_HEIGHT, startH + dy));
-      if (direction.includes("n")) {
-        newH = Math.min(TOOLTIP_MAX_HEIGHT, Math.max(TOOLTIP_MIN_HEIGHT, startH - dy));
-        newPosY = startPosY + (startH - newH);
-      }
+      if (direction.includes("n")) { newH = Math.min(TOOLTIP_MAX_HEIGHT, Math.max(TOOLTIP_MIN_HEIGHT, startH - dy)); newPosY = startPosY + (startH - newH); }
 
       latestResizePos = { x: newPosX, y: newPosY };
       setSize({ width: newW, height: newH });
@@ -291,17 +248,12 @@ const WordTooltip = ({
     };
 
     const handlePointerUp = () => {
-      if (
-        hasPointerCapture &&
-        typeof pointerId === "number" &&
-        target.hasPointerCapture?.(pointerId)
-      ) {
+      if (hasPointerCapture && typeof pointerId === "number" && target.hasPointerCapture?.(pointerId)) {
         target.releasePointerCapture(pointerId);
       }
       target.removeEventListener("pointermove", handlePointerMove);
       target.removeEventListener("pointerup", handlePointerUp);
       setIsInteracting(false);
-      // If position moved (W/N edges), inform parent so it doesn't snap back on re-render
       if (movesPosition) onDrag(latestResizePos);
     };
 
@@ -309,49 +261,40 @@ const WordTooltip = ({
     target.addEventListener("pointerup", handlePointerUp);
   };
 
+  /* ── Suggestion rune pills ────────────────────────────────────────────── */
   const renderSuggestionRunes = (words) =>
     words.map((w, i) => (
-      <button
-        key={i}
-        className="suggestion-rune"
-        onClick={() => handleSuggestionRune(w)}
-        type="button"
-      >
+      <button key={i} className="suggestion-rune" onClick={() => handleSuggestionRune(w)} type="button">
         {w}
       </button>
     ));
 
+  /* ── Breadcrumb trail ─────────────────────────────────────────────────── */
   const renderBreadcrumb = () => {
     if (cardHistory.length <= 1) return null;
-    const end = cardHistoryIndex + 1;
-    const start = Math.max(0, end - 6);
+    const end       = cardHistoryIndex + 1;
+    const start     = Math.max(0, end - 6);
     const truncated = start > 0;
-    const visible = cardHistory.slice(start, end);
+    const visible   = cardHistory.slice(start, end);
 
     return (
       <div className="card-breadcrumb" aria-label="Word navigation history">
         {truncated && (
           <span className="card-breadcrumb-item">
-            <span className="card-breadcrumb-ancestor card-breadcrumb-truncated">\u2026</span>
-            <span className="card-breadcrumb-sep" aria-hidden="true">\u203A</span>
+            <span className="card-breadcrumb-ancestor card-breadcrumb-truncated">…</span>
+            <span className="card-breadcrumb-sep" aria-hidden="true">›</span>
           </span>
         )}
         {visible.map((w, relIdx) => {
-          const absIdx = start + relIdx;
+          const absIdx    = start + relIdx;
           const isCurrent = absIdx === cardHistoryIndex;
           return (
             <span key={absIdx} className="card-breadcrumb-item">
-              {(relIdx > 0) && (
-                <span className="card-breadcrumb-sep" aria-hidden="true">\u203A</span>
-              )}
+              {relIdx > 0 && <span className="card-breadcrumb-sep" aria-hidden="true">›</span>}
               {isCurrent ? (
                 <span className="card-breadcrumb-current">{w}</span>
               ) : (
-                <button
-                  className="card-breadcrumb-ancestor"
-                  onClick={() => handleBreadcrumbClick(absIdx)}
-                  type="button"
-                >
+                <button className="card-breadcrumb-ancestor" onClick={() => handleBreadcrumbClick(absIdx)} type="button">
                   {w}
                 </button>
               )}
@@ -362,27 +305,37 @@ const WordTooltip = ({
     );
   };
 
+  /* ── Main card content ────────────────────────────────────────────────── */
   const cardContent = () => {
+    /* Loading state */
     if (isLoading && !wordData && !analysis) {
       return (
         <div className="word-card word-card--loading">
           <div className="card-frame" onPointerDown={handleDragStart}>
             <div className="card-inner" aria-busy="true">
               <div className="card-loading-spinner" />
-              <p className="card-loading-text">Divining word essence...</p>
+              <p className="card-loading-text">Consulting the arcane fabric…</p>
             </div>
           </div>
         </div>
       );
     }
 
+    /* Error state */
     if (error && !wordData && !analysis) {
       return (
         <div className="word-card word-card--error">
           <div className="card-frame" onPointerDown={handleDragStart}>
-            <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
+            <button
+              className="card-close-btn"
+              onClick={() => onClose({ restoreFocus: false })}
+              onPointerDown={(e) => e.stopPropagation()}
+              aria-label="Close card"
+            >
+              ✕
+            </button>
             <div className="card-inner" role="alert">
-              <div className="card-error-icon" aria-hidden="true">&#x26A0;&#xFE0F;</div>
+              <div className="card-error-icon" aria-hidden="true">⚠️</div>
               <p className="card-error-text">{error}</p>
             </div>
           </div>
@@ -390,65 +343,62 @@ const WordTooltip = ({
       );
     }
 
-    const localCore = analysis?.core || null;
-    const rhymeContext = analysis?.rhyme || null;
-    const astrologyContext = analysis?.rhymeAstrology || null;
+    /* ── Data extraction ──────────────────────────────────────────────── */
+    const localCore        = analysis?.core           || null;
+    const rhymeContext     = analysis?.rhyme           || null;
+    const astrologyContext = analysis?.rhymeAstrology  || null;
 
-    const word = String(wordData?.word || analysis?.token?.word || "Unknown");
-    const definition = wordData?.definition || null;
-    const definitions = Array.isArray(wordData?.definitions) ? wordData.definitions : [];
-    const synonyms = Array.isArray(wordData?.synonyms) ? wordData.synonyms : [];
-    const antonyms = Array.isArray(wordData?.antonyms) ? wordData.antonyms : [];
-    const rhymes = Array.isArray(wordData?.rhymes) ? wordData.rhymes : [];
-    const slantRhymes = Array.isArray(wordData?.slantRhymes) ? wordData.slantRhymes : [];
-    const rhymeKey = wordData?.rhymeKey || localCore?.rhymeKey || null;
-    const ipa = typeof wordData?.ipa === "string" ? wordData.ipa : null;
-
+    const word        = String(wordData?.word || analysis?.token?.word || "Unknown");
+    const definition  = wordData?.definition || null;
+    const definitions = Array.isArray(wordData?.definitions)  ? wordData.definitions  : [];
+    const synonyms    = Array.isArray(wordData?.synonyms)     ? wordData.synonyms     : [];
+    const antonyms    = Array.isArray(wordData?.antonyms)     ? wordData.antonyms     : [];
+    const rhymes      = Array.isArray(wordData?.rhymes)       ? wordData.rhymes       : [];
+    const slantRhymes = Array.isArray(wordData?.slantRhymes)  ? wordData.slantRhymes  : [];
+    const rhymeKey    = wordData?.rhymeKey || localCore?.rhymeKey || null;
+    const ipa         = typeof wordData?.ipa === "string" ? wordData.ipa : null;
     const partOfSpeech = definition?.partOfSpeech;
+
     const allDefs = definitions.length > 0
       ? [...new Set(definitions)].slice(0, 5)
-      : (definition?.text ? [definition.text] : ["No arcane definitions found."]);
+      : (definition?.text ? [definition.text] : ["No arcane inscriptions found."]);
 
-    const vowelFamily = normalizeVowelFamily(localCore?.vowelFamily || wordData?.vowelFamily);
-    const schoolId = VOWEL_FAMILY_TO_SCHOOL[vowelFamily] || "DEFAULT";
-    const schoolName = localCore?.schoolName || (SCHOOLS[schoolId]?.name);
-    const schoolIcon = localCore?.schoolGlyph || (SCHOOLS[schoolId]?.glyph || "\u2736");
+    const vowelFamily   = normalizeVowelFamily(localCore?.vowelFamily || wordData?.vowelFamily);
+    const schoolId      = VOWEL_FAMILY_TO_SCHOOL[vowelFamily] || "DEFAULT";
+    const schoolName    = localCore?.schoolName || SCHOOLS[schoolId]?.name;
+    const schoolIcon    = localCore?.schoolGlyph || SCHOOLS[schoolId]?.glyph || "✦";
     const fallbackColor = theme === "light" ? "#1a1a2e" : "#f8f9ff";
-    const vowelColor = vowelFamily ? (vowelPalette[vowelFamily] || fallbackColor) : fallbackColor;
-    const rarity = getRarity(word);
-    const syllables = wordData?.syllableCount || localCore?.syllableCount || 1;
-    const resonance = Math.round((word.length * 8.5) + (syllables * 12)); // Synthetic power
+    const vowelColor    = vowelFamily ? (vowelPalette[vowelFamily] || fallbackColor) : fallbackColor;
+    const rarity        = getRarity(word);
+    const syllables     = wordData?.syllableCount || localCore?.syllableCount || 1;
 
-    const rhymeLinks = Array.isArray(rhymeContext?.links) ? rhymeContext.links.slice(0, 6) : [];
-    const astrologyTopMatches = Array.isArray(astrologyContext?.topMatches)
-      ? astrologyContext.topMatches.slice(0, 4)
-      : [];
-    const astrologyClusters = Array.isArray(astrologyContext?.clusters)
-      ? astrologyContext.clusters.slice(0, 3)
-      : [];
-    const astrologySign = typeof astrologyContext?.sign === "string" ? astrologyContext.sign : "";
-    const hasSuggestions = synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0;
+    const rhymeLinks          = Array.isArray(rhymeContext?.links)           ? rhymeContext.links.slice(0, 6)           : [];
+    const astrologyTopMatches = Array.isArray(astrologyContext?.topMatches)  ? astrologyContext.topMatches.slice(0, 4)  : [];
+    const astrologyClusters   = Array.isArray(astrologyContext?.clusters)    ? astrologyContext.clusters.slice(0, 3)    : [];
+    const astrologySign       = typeof astrologyContext?.sign === "string"   ? astrologyContext.sign                    : "";
+    const hasSuggestions      = synonyms.length > 0 || antonyms.length > 0 || rhymes.length > 0 || slantRhymes.length > 0;
 
     return (
       <div className={`word-card word-card--${rarity}`} data-school={schoolId}>
         <div className="card-frame" onPointerDown={handleDragStart}>
-          <button className="card-close-btn" onClick={() => onClose({ restoreFocus: false })} onPointerDown={(e) => e.stopPropagation()} aria-label="Close card">&#x2715;</button>
+          <button
+            className="card-close-btn"
+            onClick={() => onClose({ restoreFocus: false })}
+            onPointerDown={(e) => e.stopPropagation()}
+            aria-label="Close card"
+          >
+            ✕
+          </button>
 
-          <div className="card-mana-cost" style={{ backgroundColor: vowelColor }} aria-label={`${syllables} syllables`}>
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={`${word}-${syllables}`}
-                className="mana-value"
-                aria-hidden="true"
-                initial={GEM_INITIAL}
-                animate={GEM_ANIMATE}
-                exit={GEM_EXIT}
-              >
-                {syllables}
-              </motion.span>
-            </AnimatePresence>
-          </div>
+          {/* ── Phaser Sigil Chamber — living ritual circle ─────────────── */}
+          <SigilChamber
+            color={vowelColor}
+            glyph={schoolIcon}
+            syllables={syllables}
+            word={word}
+          />
 
+          {/* ── Text content — ink-soaks in on word change ───────────────── */}
           <div className="card-inner">
             <AnimatePresence mode="wait">
               <motion.div
@@ -458,73 +408,114 @@ const WordTooltip = ({
                 exit={INK_EXIT}
                 style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
               >
-                <header className="card-name-banner" style={{ cursor: isInteracting ? "grabbing" : "grab" }} title="Drag to move">
-                  <h3 id={titleId} className="card-name">{word}</h3>
+                {/* ── Word inscription — primary drag zone ─────────────── */}
+                <header
+                  className="card-inscription-header"
+                  style={{ cursor: isInteracting ? "grabbing" : "grab" }}
+                  title="Drag to move"
+                >
+                  <div className="card-inscription-ornament" aria-hidden="true" />
+                  <h3 id={titleId} className="card-word-name">{word}</h3>
+                  {ipa && (
+                    <span className="card-ipa" aria-label={`Pronunciation: ${ipa}`}>{ipa}</span>
+                  )}
+                  <div className="card-inscription-ornament" aria-hidden="true" />
                 </header>
 
-                <div className="card-art-frame" style={{ borderColor: vowelColor }} aria-hidden="true">
-                  <div className="card-art" style={{ background: `radial-gradient(ellipse at 50% 40%, ${vowelColor}33 0%, rgba(4, 2, 10, 1) 80%)` }}>
-                    <span className="card-school-icon" style={{ color: vowelColor }}>{schoolIcon}</span>
-                    {vowelFamily && <span className="card-vowel-glyph" style={{ color: vowelColor }}>{vowelFamily}</span>}
-                  </div>
-                </div>
-
+                {/* ── School · Part of speech ──────────────────────────── */}
                 <div className="card-type-line">
                   <span className="card-type">
-                    Lexeme — {vowelFamily || "Unknown"} {rarity}
+                    {schoolName || "Unknown School"} · {partOfSpeech || "Lexeme"}
                   </span>
                 </div>
 
+                {/* ── Arcane Properties row ────────────────────────────── */}
+                <div className="card-arcane-props" aria-label="Arcane properties">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={`${word}-syl`}
+                      className="arcane-prop"
+                      initial={GEM_INITIAL}
+                      animate={GEM_ANIMATE}
+                      exit={GEM_EXIT}
+                      aria-label={`${syllables} syllables`}
+                    >
+                      <span className="arcane-prop-value" style={{ color: vowelColor }}>{syllables}</span>
+                      <span className="arcane-prop-label">depth</span>
+                    </motion.div>
+                  </AnimatePresence>
+
+                  <div
+                    className="arcane-prop arcane-prop--rarity"
+                    data-rarity={rarity}
+                    aria-label={`Rarity: ${RARITY_NAMES[rarity]}`}
+                  >
+                    <div className="arcane-rarity-gem" data-rarity={rarity} />
+                    <span className="arcane-prop-label arcane-prop-label--rarity">{RARITY_NAMES[rarity]}</span>
+                  </div>
+
+                  {rhymeKey && (
+                    <div className="arcane-prop" aria-label={`Echo key: ${rhymeKey}`}>
+                      <span className="arcane-prop-value" style={{ color: vowelColor }}>{rhymeKey}</span>
+                      <span className="arcane-prop-label">echo</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Scrollable inscription text box ──────────────────── */}
                 <div className="card-text-box" role="region" aria-label="Word definitions">
                   {renderBreadcrumb()}
 
-                  <p className="card-definition-type">{schoolName} {partOfSpeech || "Word"}</p>
-                  {allDefs.map((def, idx) => <p key={idx} className="card-definition">{def}</p>)}
-
-                  {ipa && <p className="card-insight-line">IPA: {ipa}</p>}
+                  {partOfSpeech && (
+                    <p className="card-definition-type">{partOfSpeech}</p>
+                  )}
+                  {allDefs.map((def, idx) => (
+                    <p key={idx} className="card-definition">{def}</p>
+                  ))}
 
                   {hasSuggestions && <div className="card-flavor-divider" />}
 
                   {synonyms.length > 0 && (
                     <p className="card-flavor-text">
-                      <span className="flavor-label">Allies:</span>{" "}
+                      <span className="flavor-label">Harmonic Kin:</span>{" "}
                       {renderSuggestionRunes(synonyms)}
                     </p>
                   )}
                   {antonyms.length > 0 && (
                     <p className="card-flavor-text">
-                      <span className="flavor-label">Foes:</span>{" "}
+                      <span className="flavor-label">Dissonant Kin:</span>{" "}
                       {renderSuggestionRunes(antonyms)}
                     </p>
                   )}
                   {rhymes.length > 0 && (
                     <p className="card-flavor-text">
-                      <span className="flavor-label">Resonates:</span>{" "}
+                      <span className="flavor-label">Echo Kin:</span>{" "}
                       {renderSuggestionRunes(rhymes)}
                     </p>
                   )}
                   {slantRhymes.length > 0 && (
                     <p className="card-flavor-text">
-                      <span className="flavor-label">Near Echo:</span>{" "}
+                      <span className="flavor-label">Shadow Echo:</span>{" "}
                       {renderSuggestionRunes(slantRhymes)}
                     </p>
                   )}
 
                   {rhymeLinks.length > 0 && (
                     <div className="card-insight-section">
-                      <p className="card-insight-title">Connections</p>
+                      <p className="card-insight-title">Resonance Links</p>
                       {rhymeLinks.map((link, i) => (
                         <p key={i} className="card-insight-line">
-                          {link.linkedWord} | {link.type} ({(link.score || 0).toFixed(2)})
+                          {link.linkedWord} · {link.type} ({(link.score || 0).toFixed(2)})
                         </p>
                       ))}
                     </div>
                   )}
 
-                  {astrologyContext?.enabled && (astrologySign || astrologyClusters.length > 0 || astrologyTopMatches.length > 0) && (
+                  {astrologyContext?.enabled &&
+                    (astrologySign || astrologyClusters.length > 0 || astrologyTopMatches.length > 0) && (
                     <div className="card-insight-section card-insight-section--astrology">
                       <p className="card-insight-title">
-                        <span className="card-astro-icon" aria-hidden="true">&#x2736;</span>
+                        <span className="card-astro-icon" aria-hidden="true">✶</span>
                         Rhyme Astrology
                       </p>
                       {astrologySign && (
@@ -546,8 +537,8 @@ const WordTooltip = ({
                         <div className="card-astro-matches">
                           <p className="card-astro-matches-label">Echoes</p>
                           {astrologyTopMatches.map((match, i) => {
-                            const token = String(match?.token || "");
-                            const score = Number(match?.overallScore || 0);
+                            const token   = String(match?.token || "");
+                            const score   = Number(match?.overallScore || 0);
                             const reasons = Array.isArray(match?.reasons) ? match.reasons.slice(0, 2) : [];
                             if (!token) return null;
                             return (
@@ -557,10 +548,7 @@ const WordTooltip = ({
                                   <span className="card-astro-match-score">{Math.round(score * 100)}%</span>
                                 </div>
                                 <div className="card-astro-match-bar-track">
-                                  <div
-                                    className="card-astro-match-bar-fill"
-                                    style={{ width: `${Math.round(score * 100)}%` }}
-                                  />
+                                  <div className="card-astro-match-bar-fill" style={{ width: `${Math.round(score * 100)}%` }} />
                                 </div>
                                 {reasons.length > 0 && (
                                   <div className="card-astro-reason-pills">
@@ -578,25 +566,7 @@ const WordTooltip = ({
                   )}
                 </div>
 
-                <footer className="card-footer">
-                  {rhymeKey && (
-                    <div className="card-stat card-stat--left" title="Rhyme Key">
-                      <span className="stat-icon" aria-hidden="true">&#x266A;</span>
-                      <span className="stat-value">{rhymeKey}</span>
-                    </div>
-                  )}
-                  <div className="card-power-toughness">
-                    <span className="card-power">{resonance}</span>
-                    <span className="card-pt-separator">/</span>
-                    <span className="card-toughness">{word.length}</span>
-                  </div>
-                  <div className="card-rarity-gem" data-rarity={rarity} aria-label={`Rarity: ${rarity}`} />
-                  <div className="card-stat card-stat--right" title="Syllables">
-                    <span className="stat-value">{syllables}</span>
-                    <span className="stat-icon" aria-hidden="true">&#x25C6;</span>
-                  </div>
-                </footer>
-
+                {/* ── Session history navigation ────────────────────────── */}
                 {sessionHistory.length > 1 && (
                   <div className="card-session-nav" role="navigation" aria-label="Session word history">
                     <button
@@ -606,7 +576,7 @@ const WordTooltip = ({
                       disabled={sessionIndex <= 0}
                       aria-label="Previous session word"
                     >
-                      &#x25C2;
+                      ◂
                     </button>
                     <span className="session-nav-pos">
                       {sessionIndex + 1} / {sessionHistory.length}
@@ -618,7 +588,7 @@ const WordTooltip = ({
                       disabled={sessionIndex >= sessionHistory.length - 1}
                       aria-label="Next session word"
                     >
-                      &#x25B8;
+                      ▸
                     </button>
                   </div>
                 )}
@@ -626,17 +596,17 @@ const WordTooltip = ({
             </AnimatePresence>
           </div>
 
+          {/* ── Corner L-bracket ornaments ────────────────────────────── */}
           <div className="card-corner card-corner--tl" aria-hidden="true" />
           <div className="card-corner card-corner--tr" aria-hidden="true" />
           <div className="card-corner card-corner--bl" aria-hidden="true" />
           <div className="card-corner card-corner--br" aria-hidden="true" />
 
-          {/* Edge handles */}
+          {/* ── Resize handles — 8 directions ─────────────────────────── */}
           <div className="card-resize-handle card-resize-handle--n"  onPointerDown={handleResizeStart("n")}  aria-hidden="true" />
           <div className="card-resize-handle card-resize-handle--s"  onPointerDown={handleResizeStart("s")}  aria-hidden="true" />
           <div className="card-resize-handle card-resize-handle--e"  onPointerDown={handleResizeStart("e")}  aria-hidden="true" />
           <div className="card-resize-handle card-resize-handle--w"  onPointerDown={handleResizeStart("w")}  aria-hidden="true" />
-          {/* Corner handles */}
           <div className="card-resize-handle card-resize-handle--ne" onPointerDown={handleResizeStart("ne")} aria-hidden="true" />
           <div className="card-resize-handle card-resize-handle--nw" onPointerDown={handleResizeStart("nw")} aria-hidden="true" />
           <div
@@ -652,6 +622,7 @@ const WordTooltip = ({
     );
   };
 
+  /* ── Mobile bottom sheet ──────────────────────────────────────────────── */
   const isMobileView = typeof window !== "undefined" && window.innerWidth <= 640;
 
   if (isMobileView) {
@@ -682,13 +653,8 @@ const WordTooltip = ({
             <h3 id={titleId} className="mobile-bottom-sheet-title">
               {wordData?.word || "Word"}
             </h3>
-            <button
-              type="button"
-              className="mobile-bottom-sheet-close"
-              onClick={onClose}
-              aria-label="Close word card"
-            >
-              &#x2715;
+            <button type="button" className="mobile-bottom-sheet-close" onClick={onClose} aria-label="Close word card">
+              ✕
             </button>
           </div>
           <div className="word-tooltip-mobile-body">
@@ -713,8 +679,8 @@ const WordTooltip = ({
         left: pos.x,
         width: size.width,
         height: size.height,
-        zIndex: 1300, /* Layer 4 — Interactive Chrome (UI_SPEC §3) */
-        touchAction: "none"
+        zIndex: 1300,
+        touchAction: "none",
       }}
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -769,29 +735,11 @@ WordTooltip.propTypes = {
       enabled: PropTypes.bool,
       sign: PropTypes.string,
       topMatches: PropTypes.arrayOf(
-        PropTypes.shape({
-          token: PropTypes.string,
-          overallScore: PropTypes.number,
-        })
+        PropTypes.shape({ token: PropTypes.string, overallScore: PropTypes.number })
       ),
       clusters: PropTypes.arrayOf(
-        PropTypes.shape({
-          id: PropTypes.string,
-          label: PropTypes.string,
-          sign: PropTypes.string,
-        })
+        PropTypes.shape({ id: PropTypes.string, label: PropTypes.string, sign: PropTypes.string })
       ),
-      diagnostics: PropTypes.shape({
-        queryTimeMs: PropTypes.number,
-        cacheHit: PropTypes.bool,
-        candidateCount: PropTypes.number,
-      }),
-      features: PropTypes.shape({
-        rhymeAffinityScore: PropTypes.number,
-        constellationDensity: PropTypes.number,
-        internalRecurrenceScore: PropTypes.number,
-        phoneticNoveltyScore: PropTypes.number,
-      }),
     }),
     syntax: PropTypes.shape({
       role: PropTypes.string,
@@ -809,10 +757,7 @@ WordTooltip.propTypes = {
   onClose: PropTypes.func.isRequired,
   onSuggestionClick: PropTypes.func,
   sessionHistory: PropTypes.arrayOf(
-    PropTypes.shape({
-      word: PropTypes.string,
-      localAnalysis: PropTypes.object,
-    })
+    PropTypes.shape({ word: PropTypes.string, localAnalysis: PropTypes.object })
   ),
   sessionIndex: PropTypes.number,
   onSessionNavigate: PropTypes.func,

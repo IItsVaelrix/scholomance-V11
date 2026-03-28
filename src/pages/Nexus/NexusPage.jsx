@@ -1,4 +1,3 @@
-import React from 'react';
 import NexusPanel from '../../components/Nexus/NexusPanel';
 import './NexusPage.css';
 
