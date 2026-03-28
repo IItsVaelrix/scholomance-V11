@@ -1,5 +1,24 @@
 @import './lib/css/generated/school-styles.css';
 
+/* ========================================
+   Z-INDEX REGISTRY — Scholomance V11
+   See UI_SPEC.md §3 for binding rules.
+   ========================================
+   Layer 0: Background        z: -1          Aurora, decorative backgrounds
+   Layer 1: Content           z: 1–50        Page content, textarea/overlay sync
+   Layer 2: Elevated          z: 100–200     Floating panels (via zIndex prop)
+   Layer 3: Atmosphere        z: 999–1000    Vignette (999), Scanlines (1000)
+   Layer 4: Interactive Chrome z: 1100–1500  Nav (1200), WordTooltip (1300),
+                                              mobile overlay (1100), bottom sheet (1400–1500)
+   Layer 5: Top-level Overlays z: 2000       Search overlays, panel drag overrides
+   Layer 6: A11y / Autocomplete z: 9999      Skip link, IntelliSense (topmost)
+
+   Rules:
+   - !important on z-index is PROHIBITED
+   - New components MUST declare their layer in a comment
+   - No value may exceed 9999
+   ======================================== */
+
 /* === CUSTOM MEDIA QUERIES (Lightning CSS) === */
 @custom-media --mobile (max-width: 640px);
 @custom-media --tablet (min-width: 641px) and (max-width: 1024px);

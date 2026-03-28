@@ -16,7 +16,7 @@
 .floating-panel.is-dragging {
   box-shadow: var(--shadow-depth-4, 0 20px 40px rgba(0, 0, 0, 0.6));
   cursor: grabbing !important;
-  z-index: 2000 !important;
+  z-index: 2000; /* Layer 5 — Top-level Overlays (UI_SPEC §3) */
   user-select: none;
   /* Optimization: Disable blur during movement to eliminate compositor lag */
   backdrop-filter: none !important;
