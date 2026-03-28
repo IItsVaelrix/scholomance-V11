@@ -544,6 +544,29 @@ export function useCombatEngine() {
       const damage = Math.max(0, Math.round(opponentSpell.damage * damageModifier));
       const newPlayerHP = Math.max(0, current.playerHP - damage);
 
+      // Handle signature move effects (Phase 1: Void Scribe)
+      let finalNewPlayerHP = newPlayerHP;
+      let nextPlayerMP = current.playerMP;
+
+      if (opponentSpell.signatureMove) {
+        const move = opponentSpell.signatureMove;
+        
+        if (move.type === 'CADENCE_PUNISH') {
+          // Drain 20 MP
+          nextPlayerMP = Math.max(0, nextPlayerMP - 20);
+          appendLogEntries([
+            { type: 'opponent', text: `${current.opponent.name} uses ${move.name}: Your resonance is drained.` }
+          ]);
+        }
+        
+        if (move.type === 'TOKEN_THEFT') {
+           // Phase 1: Just log it, could reduce resonance in future
+           appendLogEntries([
+            { type: 'opponent', text: `${current.opponent.name} uses ${move.name}: Your words are stolen from the air.` }
+          ]);
+        }
+      }
+
       appendLogEntries([
         current.opponentStatusLabel === 'DEBUFF'
           ? {
@@ -570,8 +593,14 @@ export function useCombatEngine() {
       updateState((prev) => startOpponentCast(prev, {
         spell: opponentSpell.spell,
         damage,
-        newPlayerHP,
+        newPlayerHP: finalNewPlayerHP,
+        signatureMove: opponentSpell.signatureMove,
       }));
+
+      // If MP was drained, update state
+      if (nextPlayerMP !== current.playerMP) {
+        updateState(prev => ({ ...prev, playerMP: nextPlayerMP }));
+      }
 
       combatBridge.emit('opponent:cast', {
         spell: opponentSpell.spell,
@@ -579,9 +608,9 @@ export function useCombatEngine() {
         school: opponentSpell.school,
       });
       emitStateUpdate(COMBAT_STATES.OPPONENT_CASTING, {
-        playerHP: newPlayerHP,
+        playerHP: finalNewPlayerHP,
         opponentHP: current.opponentHP,
-        playerMP: current.playerMP,
+        playerMP: nextPlayerMP,
       });
 
       if (newPlayerHP <= 0) {

@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { isComplexScheme, detectScheme, analyzeMeter } from "../lib/rhymeScheme.detector.js";
-import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
+import { normalizeVowelFamily, buildVowelSummary } from "../lib/phonology/vowelFamily.js";
 import { DeepRhymeEngine } from "../lib/deepRhyme.engine.js";
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 
@@ -376,26 +376,6 @@ function normalizePanelPayload(rawPayload) {
 
 const clientEngine = new DeepRhymeEngine();
 
-function buildVowelSummaryFromAnalysis(analysis) {
-  if (!analysis?.lines) return EMPTY_VOWEL_SUMMARY;
-  const familyCounts = new Map();
-  let totalWords = 0;
-  for (const line of analysis.lines) {
-    const words = line.words || [];
-    for (const word of words) {
-      if (!word.vowelFamily) continue;
-      const normalized = normalizeVowelFamily(word.vowelFamily);
-      if (!normalized) continue;
-      familyCounts.set(normalized, (familyCounts.get(normalized) || 0) + 1);
-      totalWords++;
-    }
-  }
-  const families = Array.from(familyCounts.entries())
-    .map(([id, count]) => ({ id, count, percent: totalWords > 0 ? count / totalWords : 0 }))
-    .sort((a, b) => b.count - a.count);
-  return { families, totalWords, uniqueWords: familyCounts.size };
-}
-
 async function runClientSideAnalysis(text) {
   const analysis = await clientEngine.analyzeDocument(text);
 
@@ -434,7 +414,7 @@ async function runClientSideAnalysis(text) {
 
   const scheme = detectScheme(analysis.schemePattern, analysis.rhymeGroups);
   const meter = analyzeMeter(analysis.lines);
-  const vowelSummary = buildVowelSummaryFromAnalysis(analysis);
+  const vowelSummary = buildVowelSummary(analysis.lines.flatMap((line) => line.words || []));
   return {
     data: {
       analysis: {

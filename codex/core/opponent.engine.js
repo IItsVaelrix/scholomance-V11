@@ -72,6 +72,44 @@ const OPPONENT_BANK = Object.freeze({
   }),
 });
 
+/**
+ * Procedural Opponent Doctrines.
+ * Doctrines define the specific "combat personality" and move kits.
+ * @see MECHANIC SPEC - Procedural Opponent Doctrines and Seeded Unique Move Kits.MD
+ */
+export const DOCTRINES = Object.freeze({
+  NULL_SCRIBE: Object.freeze({
+    id: 'NULL_SCRIBE',
+    school: 'VOID',
+    description: 'Specializes in syntactic erasure and cadence disruption.',
+    traits: Object.freeze(['ERASURE', 'SILENCE']),
+    signatureMoves: Object.freeze([
+      {
+        name: 'Void Pulse',
+        type: 'CADENCE_PUNISH',
+        weight: 0.4,
+        flavor: 'The silence between your words begins to scream.',
+      },
+      {
+        name: 'Syntactic Erasure',
+        type: 'TOKEN_THEFT',
+        weight: 0.3,
+        flavor: 'The word simply ceases to have ever existed.',
+      },
+      {
+        name: 'Echo Null',
+        type: 'TELEGRAPH',
+        weight: 0.3,
+        flavor: 'I see the shape of your next line, and I hollow it out.',
+      }
+    ]),
+    scaling: Object.freeze({
+      damage: 1.15,
+      memoryWindow: 1.5, // Remembers more to better counter
+    }),
+  }),
+});
+
 const COUNTER_TEMPLATES = Object.freeze([
   (token) => `I turn ${token} back through your own line`,
   (token) => `your ${token} fractures before it can settle`,
@@ -153,9 +191,15 @@ function tokenizeHistoryLines(history) {
     .filter(Boolean);
 }
 
-function collectMemoryLines(history, intelligence) {
+function collectMemoryLines(history, opponent) {
   const lines = tokenizeHistoryLines(history);
-  const memoryWindow = getOpponentMemoryWindow(intelligence);
+  let memoryWindow = getOpponentMemoryWindow(opponent.int);
+  
+  // Doctrine scaling
+  if (opponent.doctrine?.scaling?.memoryWindow) {
+    memoryWindow = Math.round(memoryWindow * opponent.doctrine.scaling.memoryWindow);
+  }
+
   if (!Number.isFinite(memoryWindow)) {
     return lines;
   }
@@ -267,10 +311,17 @@ export function createCombatOpponent(options = {}) {
   const name = String(options.name || pickOne(random, bank.names) || 'The Cryptonym');
   const subtitle = String(options.subtitle || pickOne(random, bank.subtitles) || 'Counter-Sorcerer');
 
+  // Assign doctrine based on school (Phase 1: Null Scribe for Void)
+  let doctrine = options.doctrine || null;
+  if (!doctrine && school === 'VOID') {
+    doctrine = DOCTRINES.NULL_SCRIBE;
+  }
+
   return {
     name,
     subtitle,
     school,
+    doctrine,
     schoolName: SCHOOL_DISPLAY_NAMES[school] || school,
     int: intelligence,
     voiceProfile: options.voiceProfile || createSpeakerVoiceProfile({
@@ -281,6 +332,22 @@ export function createCombatOpponent(options = {}) {
   };
 }
 
+function rollSignatureMove(random, doctrine, int) {
+  if (!doctrine?.signatureMoves || int < 10) return null;
+  
+  // 30% base chance + intelligence scaling
+  const chance = 0.3 + ((int - 10) * 0.04);
+  if (random() > chance) return null;
+
+  const roll = random();
+  let cumulative = 0;
+  for (const move of doctrine.signatureMoves) {
+    cumulative += move.weight;
+    if (roll <= cumulative) return move;
+  }
+  return doctrine.signatureMoves[0];
+}
+
 export function generateOpponentSpell({
   opponent,
   playerHistory = [],
@@ -289,7 +356,7 @@ export function generateOpponentSpell({
   arenaSchool = COMBAT_ARENA_SCHOOL,
 } = {}) {
   const safeOpponent = opponent || createCombatOpponent();
-  const memoryLines = collectMemoryLines(playerHistory, safeOpponent.int);
+  const memoryLines = collectMemoryLines(playerHistory, safeOpponent);
   const playerSchool = playerContext?.school || COMBAT_ARENA_SCHOOL;
   const attackSchool = getAttackSchool(safeOpponent, playerSchool, safeOpponent.int);
   const seed = stableHash([
@@ -302,6 +369,10 @@ export function generateOpponentSpell({
     ...memoryLines,
   ].join('|'));
   const random = createSeededRandom(seed);
+  
+  // Doctrine signature move logic
+  const signatureMove = rollSignatureMove(random, safeOpponent.doctrine, safeOpponent.int);
+  
   const bank = OPPONENT_BANK[attackSchool] || OPPONENT_BANK.VOID;
   const voiceStyle = OPPONENT_VOICE_STYLE[attackSchool] || OPPONENT_VOICE_STYLE.VOID;
   const focusTokens = collectFocusTokens(memoryLines, safeOpponent.int, random);
@@ -311,9 +382,15 @@ export function generateOpponentSpell({
   const fragmentBudget = safeOpponent.int >= 12 ? 3 : 2;
   const fragments = shuffle(random, [...directFragments, ...flavorFragments]).slice(0, fragmentBudget);
 
-  const rawSpell = fragments.length > 0
+  let rawSpell = fragments.length > 0
     ? fragments.join(', ')
     : String(pickOne(random, bank.flavor) || 'The counter-verse arrives without warning');
+    
+  // If signature move, prefix with move flavor
+  if (signatureMove) {
+    rawSpell = `${signatureMove.flavor} ${rawSpell}`;
+  }
+
   const opener = safeOpponent.int >= 9 ? pickOne(random, voiceStyle.openers) : null;
   const styledSpell = opener ? `${opener}, ${rawSpell}` : rawSpell;
   const terminalPunctuation = String(voiceStyle.punctuation || '.');
@@ -346,7 +423,9 @@ export function generateOpponentSpell({
     speakerType: 'OPPONENT',
     speakerProfile: safeOpponent.voiceProfile,
   });
-  const damage = Math.max(
+
+  // Base damage calculation
+  let damage = Math.max(
     24,
     Math.round(
       (28 + (safeOpponent.int * 3.5))
@@ -359,6 +438,17 @@ export function generateOpponentSpell({
       * Math.min(1.38, 0.86 + ((profile.rarity.totalMultiplier + rarity.totalMultiplier) * 0.12))
     )
   );
+
+  // Doctrine scaling
+  if (safeOpponent.doctrine?.scaling?.damage) {
+    damage = Math.round(damage * safeOpponent.doctrine.scaling.damage);
+  }
+
+  // Signature move damage modifier (if any)
+  if (signatureMove?.damageMult) {
+    damage = Math.round(damage * signatureMove.damageMult);
+  }
+
   const traces = buildSyntheticTraces({
     intelligence: safeOpponent.int,
     memoryLineCount: memoryLines.length,
@@ -383,5 +473,6 @@ export function generateOpponentSpell({
     speaking: profile.speaking,
     voiceProfile: profile.voiceProfile,
     voiceResonance: profile.voiceResonance,
+    signatureMove, // Expose move to UI/Engine
   };
 }

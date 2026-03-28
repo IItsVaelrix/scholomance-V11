@@ -237,6 +237,7 @@ export function startOpponentCast(state, {
   spell,
   damage,
   newPlayerHP,
+  signatureMove = null,
 }) {
   return {
     ...state,
@@ -244,6 +245,7 @@ export function startOpponentCast(state, {
     playerHP: newPlayerHP,
     lastOpponentSpell: spell,
     lastOpponentDamage: damage,
+    lastOpponentSignatureMove: signatureMove,
     opponentDamageModifier: 1,
     opponentStatusLabel: 'NEUTRAL',
   };

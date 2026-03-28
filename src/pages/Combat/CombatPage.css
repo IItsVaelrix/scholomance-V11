@@ -956,10 +956,40 @@
   box-shadow: 0 0 0 1px rgba(101, 31, 255, 0.1), inset 0 0 16px rgba(101, 31, 255, 0.025);
 }
 
+.spellbook-inline-textarea.truesight-transparent,
+.spellbook-textarea.truesight-transparent {
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.spellbook-truesight-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2; /* Between textarea (1) and shimmer (4) */
+  padding: 8px 12px;
+  font-family: Georgia, serif;
+  font-size: var(--text-base, 1rem);
+  line-height: 1.9;
+  color: #e8dfc8;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  pointer-events: none;
+  overflow: hidden; /* Scroll is synced via JS */
+}
+
+/* Modal specific padding adjustments if needed */
+.spellbook-editor-host .spellbook-truesight-overlay {
+  padding: 12px 16px;
+}
+
+.spellbook-truesight-word {
+  transition: color 0.3s ease;
+}
+
 .spellbook-inline-shimmer {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 4; /* Above the text */
   pointer-events: none;
   background: radial-gradient(ellipse at 15% 70%, #651fff 0%, transparent 60%);
   transition: opacity 0.3s;

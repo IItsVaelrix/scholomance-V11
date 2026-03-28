@@ -18,20 +18,80 @@
  *   mode                    — "inline" | "modal"  (default "modal")
  */
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScoring } from '../../../hooks/useScoring.js';
 import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.js';
+import { VOWEL_FAMILY_TO_SCHOOL, SCHOOLS } from '../../../data/schools.js';
+import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from '../../../lib/wordTokenization.js';
 
 const MAX_CHARS    = 100;
 const SCHOOL_COLOR = '#651fff';   // SONIC
 
-// ─── Placeholder sonic affinity estimator ─────────────────────────────────
-// (STUB — Phase 3 replaces with real usePanelAnalysis vowelSummary signal)
-function estimateSonicAffinity(text) {
-  if (!text) return 0;
-  const matches = (text.match(/[eing]/gi) || []).length;
-  return Math.min(1, matches / (text.length * 0.15 + 1));
+/**
+ * Calculates school affinity from vowel summary.
+ * @param {object} vowelSummary - { families: [{id, count, percent}], totalWords }
+ * @param {string} schoolId - e.g. "SONIC"
+ * @returns {number} 0.0 to 1.0
+ */
+function calculateSchoolAffinity(vowelSummary, schoolId) {
+  if (!vowelSummary || !vowelSummary.families) return 0;
+  
+  let totalAffinity = 0;
+  for (const family of vowelSummary.families) {
+    if (VOWEL_FAMILY_TO_SCHOOL[family.id] === schoolId) {
+      totalAffinity += family.percent;
+    }
+  }
+  return totalAffinity;
+}
+
+/**
+ * Truesight overlay for the Spellbook.
+ * Mirrors the textarea's text but with school-colored spans.
+ */
+function SpellbookTruesightOverlay({ text, analyzedWordsByStart, scrollTop, scrollLeft }) {
+  const overlayRef = useRef(null);
+
+  // Sync scroll
+  useEffect(() => {
+    if (overlayRef.current) {
+      overlayRef.current.scrollTop = scrollTop;
+      overlayRef.current.scrollLeft = scrollLeft;
+    }
+  }, [scrollTop, scrollLeft]);
+
+  const tokens = useMemo(() => {
+    if (!text) return [];
+    return [...text.matchAll(LINE_TOKEN_REGEX)].map(m => ({
+      text: m[0],
+      start: m.index
+    }));
+  }, [text]);
+
+  return (
+    <div className="spellbook-truesight-overlay" ref={overlayRef} aria-hidden="true">
+      {tokens.map((token, i) => {
+        const isWord = WORD_TOKEN_REGEX.test(token.text);
+        if (!isWord) return <span key={i}>{token.text}</span>;
+
+        const analysis = analyzedWordsByStart.get(token.start);
+        const schoolId = analysis ? VOWEL_FAMILY_TO_SCHOOL[analysis.vowelFamily] : null;
+        const school = schoolId ? SCHOOLS[schoolId] : null;
+        const color = school ? school.color : 'inherit';
+
+        return (
+          <span 
+            key={i} 
+            className="spellbook-truesight-word" 
+            style={{ color }}
+          >
+            {token.text}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 // ─── Syntactic Integrity — UI-layer heuristic (no codex import) ────────────
@@ -149,10 +209,12 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
   const [text, setText]           = useState('');
   const [weave, setWeave]         = useState('');
   const [bridgeFlash, setBridgeFlash] = useState(false);
+  const [scrollTop, setScrollTop] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
   const textareaRef               = useRef(null);
   const weaveRef                  = useRef(null);
   const prefersReduced            = usePrefersReducedMotion();
-  const { scoreData, isScoring }  = useScoring(text);
+  const { scoreData, vowelSummary, analyzedWordsByStart, isScoring }  = useScoring(text);
 
   const charsLeft      = 300 - text.length;
   const weaveCharsLeft = 100 - weave.length;
@@ -160,6 +222,10 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
   const canCast        = text.trim().length > 0 && weave.trim().length > 0 && playerMP >= mpCost;
   const isNearLimit    = charsLeft <= 15;
   const isAtLimit      = charsLeft <= 0;
+
+  const sonicAffinity = useMemo(() => calculateSchoolAffinity(vowelSummary, 'SONIC'), [vowelSummary]);
+  const sonicOpacity = sonicAffinity * (mode === 'inline' ? 0.35 : 0.4);
+  const mpColor      = playerMP >= mpCost ? '#4488ff' : '#cc2222';
 
   // Focus textarea and clear text on visibility change
   useEffect(() => {
@@ -169,12 +235,19 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
     } else {
       setText('');
       setWeave('');
+      setScrollTop(0);
+      setScrollLeft(0);
     }
   }, [isVisible]);
 
   const handleChange = useCallback((e) => {
     const val = e.target.value;
     if (val.length <= 300) setText(val);
+  }, []);
+
+  const handleScroll = useCallback((e) => {
+    setScrollTop(e.target.scrollTop);
+    setScrollLeft(e.target.scrollLeft);
   }, []);
 
   const handleWeaveChange = useCallback((e) => {
@@ -203,9 +276,6 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
       onCancel();
     }
   }, [handleCast, onCancel]);
-
-  const sonicOpacity = estimateSonicAffinity(text) * (mode === 'inline' ? 0.1 : 0.12);
-  const mpColor      = playerMP >= mpCost ? '#4488ff' : '#cc2222';
 
   // ─── Inline mode ────────────────────────────────────────────────────────
 
@@ -249,13 +319,23 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                   style={{ opacity: sonicOpacity }}
                 />
               )}
-              {/* Textarea (z:1 — actual input) */}
+              {/* Truesight overlay (z:3) */}
+              {text && (
+                <SpellbookTruesightOverlay 
+                  text={text} 
+                  analyzedWordsByStart={analyzedWordsByStart}
+                  scrollTop={scrollTop}
+                  scrollLeft={scrollLeft}
+                />
+              )}
+              {/* Textarea (z:1 — actual input, transparent when truesight is active) */}
               <textarea
                 ref={textareaRef}
-                className="spellbook-inline-textarea"
+                className="spellbook-inline-textarea truesight-transparent"
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
+                onScroll={handleScroll}
                 placeholder="The poetry of power…"
                 maxLength={300}
                 rows={3}
@@ -419,13 +499,22 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                     style={{ opacity: sonicOpacity }}
                   />
                 )}
+                {text && (
+                  <SpellbookTruesightOverlay 
+                    text={text} 
+                    analyzedWordsByStart={analyzedWordsByStart}
+                    scrollTop={scrollTop}
+                    scrollLeft={scrollLeft}
+                  />
+                )}
               </div>
               <textarea
                 ref={textareaRef}
-                className="spellbook-textarea"
+                className="spellbook-textarea truesight-transparent"
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
+                onScroll={handleScroll}
                 placeholder="Write your scroll here... (100 characters)"
                 maxLength={MAX_CHARS}
                 rows={4}
