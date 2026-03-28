@@ -3,7 +3,7 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.11** | Last updated: 2026-03-28
+**Version: 1.12** | Last updated: 2026-03-28
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
@@ -13,12 +13,12 @@
 
 ## SCHEMA CHANGE NOTICE
 
-- Schema: Combat scoring abyssal resonance contract
-- Version: 1.10 -> 1.11
-- Changed fields: added `abyssalResonanceMultiplier` and `traceId` to `CombatScoreResponse`; authoritative combat scoring can now expose the average Lexicon Abyss multiplier and the Akashic replay handle for the resolved cast
+- Schema: VerseIR Synapse Slot contract
+- Version: 1.11 -> 1.12
+- Changed fields: added `VerseIRAmplifierArchetype`, `VerseIRAmplifierMatch`, `VerseIRAmplifierResult`, and `VerseIRAmplifierPayload`; `VerseIR` can now optionally expose `semanticDepth`, `archetypeResonance`, `elementMatches`, and `verseIRAmplifier`; `/api/analysis/panels` may include `analysis.verseIRAmplifier`
 - Breaking: no
-- Claude impact: combat surfaces can label/render the new abyssal trace and may use `abyssalResonanceMultiplier` or `traceId` for future Akashic and Truesight affordances
-- Blackbox impact: combat route fixtures should assert the new response fields and verify replay persistence remains scrubbed to linguistic data only
+- Claude impact: Read analysis surfaces may render the optional Synapse Slot payload when present, but existing consumers remain valid without changes
+- Blackbox impact: panel-analysis fixtures can assert the new optional payload and combat scoring fixtures may observe the new `verseir_amplifier` trace when combat services attach VerseIR amplifier context
 
 ---
 
@@ -243,6 +243,62 @@ interface SyllableWindowIR {
   signature: string;
 }
 
+interface VerseIRAmplifierArchetype {
+  id: string;
+  label: string;
+  score: number;
+}
+
+interface VerseIRAmplifierMatch {
+  id: string;
+  label: string;
+  hits: number;
+  score: number;
+  coverage: number;
+  lineSpread: number;
+  tokens: string[];
+}
+
+interface VerseIRAmplifierResult {
+  id: string;
+  label: string;
+  tier: "COMMON" | "RARE" | "INEXPLICABLE";
+  claimedWeight: number;
+  signal: number;
+  semanticDepth: number;
+  raritySignal: number;
+  effectiveSignal: number;
+  effectiveSemanticDepth: number;
+  effectiveRaritySignal: number;
+  matches: VerseIRAmplifierMatch[];
+  archetypes: VerseIRAmplifierArchetype[];
+  diagnostics: Diagnostic[];
+  commentary: string;
+}
+
+interface VerseIRAmplifierPayload {
+  version: string;
+  activeAmplifiers: number;
+  noveltyBudget: number;
+  claimedWeight: number;
+  precisionScalar: number;
+  latencyMultiplier: number;
+  noveltySignal: number;
+  semanticDepth: number;
+  raritySignal: number;
+  impactMultiplier: number;
+  dominantTier: "COMMON" | "RARE" | "INEXPLICABLE" | "NONE";
+  dominantArchetype: VerseIRAmplifierArchetype | null;
+  archetypeResonance: VerseIRAmplifierArchetype[];
+  elementMatches: {
+    common: VerseIRAmplifierMatch[];
+    rare: VerseIRAmplifierMatch[];
+    inexplicable: VerseIRAmplifierMatch[];
+  };
+  diagnostics: Diagnostic[];
+  amplifiers: VerseIRAmplifierResult[];
+}
+
 interface VerseIR {
   version: string;
   rawText: string;
@@ -250,6 +306,10 @@ interface VerseIR {
   lines: VerseLineIR[];
   tokens: VerseTokenIR[];
   syllableWindows: SyllableWindowIR[];
+  semanticDepth?: number;
+  archetypeResonance?: VerseIRAmplifierArchetype[];
+  elementMatches?: VerseIRAmplifierPayload["elementMatches"];
+  verseIRAmplifier?: VerseIRAmplifierPayload | null;
   metadata: {
     mode: TruesightAnalysisMode;
     lineBreakStyle: LineBreakStyle;
@@ -883,6 +943,7 @@ response body: {
   data: {
     analysis: {
       compiler?: TruesightCompilerDescriptor | null;
+      verseIRAmplifier?: VerseIRAmplifierPayload | null;
       [key: string]: unknown;
     } | null;
     rhymeAstrology: RhymeAstrologyPanelPayload | null;
@@ -893,6 +954,7 @@ response body: {
 
 Notes:
 - `rhymeAstrology` is optional and feature-flag gated.
+- `analysis.verseIRAmplifier` is optional and carries the Synapse Slot / VerseIR amplifier payload when the server compiled VerseIR context for the request.
 - When enabled, inspector anchors/windows/spans are decorative client guidance only; the server remains authoritative for scoring and persistence.
 
 ```ts
@@ -975,6 +1037,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.9 | 2026-03-26 | Added VerseIR compiler contracts, whitespace-fidelity line metadata, syllable windows, and optional Truesight compiler metadata for panel analysis | no |
 | 1.10 | 2026-03-28 | Added compiler-aware rhyme astrology query/panel payload contracts, including VerseIR-backed anchors, windows, and spans | no |
 | 1.11 | 2026-03-28 | Added abyssal resonance multiplier and Akashic trace handle to authoritative combat scoring | no |
+| 1.12 | 2026-03-28 | Added VerseIR Synapse Slot amplifier payloads and optional panel-analysis exposure for semantic depth / archetype resonance | no |
 
 ---
 

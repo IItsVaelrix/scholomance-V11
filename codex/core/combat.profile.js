@@ -466,6 +466,7 @@ function buildCombatCommentary({
   statusEffect,
   speaking,
   abyssalResonanceMultiplier,
+  verseIRAmplifier,
 }) {
   const parts = [buildRarityPraise(rarity, dominantSchool)];
 
@@ -506,6 +507,16 @@ function buildCombatCommentary({
     parts.push('The Lexicon Abyss recognizes overworked wording and bleeds force from the cast.');
   }
 
+  if ((Number(verseIRAmplifier?.noveltySignal) || 0) >= 0.35 && verseIRAmplifier?.dominantArchetype?.label) {
+    parts.push(`${String(verseIRAmplifier.dominantArchetype.label).toUpperCase()} resonance opens through the Synapse Slot.`);
+  }
+
+  if (String(verseIRAmplifier?.dominantTier || '') === 'INEXPLICABLE') {
+    parts.push('Inexplicable syntax breaches the ordinary lexicon and drags the cast toward source-law rarity.');
+  } else if (String(verseIRAmplifier?.dominantTier || '') === 'RARE') {
+    parts.push('Rare semantic matter sharpens the verse beyond literal patterning.');
+  }
+
   return parts.join(' ');
 }
 
@@ -544,6 +555,9 @@ export function buildCombatProfile({
   const abyssTrace = getScoreTrace(scoreData, 'abyssal_resonance');
   const abyssSignal = abyssTrace ? clamp01(Number(abyssTrace.rawScore) || 0) : 0.5;
   const abyssalResonanceMultiplier = rawScoreToAbyssMultiplier(abyssSignal);
+  const verseIRAmplifier = scoreData?.verseIRAmplifier && typeof scoreData.verseIRAmplifier === 'object'
+    ? scoreData.verseIRAmplifier
+    : null;
 
   const rarityScore = clamp01(
     (corpusRarity * 0.4)
@@ -586,6 +600,7 @@ export function buildCombatProfile({
     statusEffect,
     speaking,
     abyssalResonanceMultiplier,
+    verseIRAmplifier,
   });
   const intent = {
     ...baseIntent,
@@ -620,8 +635,10 @@ export function buildCombatProfile({
       vocabulary: vocabularySignal,
       cohesion: cohesionScore,
       abyssalResonance: abyssSignal,
+      verseIRAmplifier: clamp01(verseIRAmplifier?.noveltySignal ?? 0),
     },
     abyssalResonanceMultiplier,
+    verseIRAmplifier,
     rarity: {
       ...rarity,
       score: rarityScore,

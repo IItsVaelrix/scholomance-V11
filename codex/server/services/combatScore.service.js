@@ -1,8 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'path';
+import { analyzeText } from '../../core/analysis.pipeline.js';
 import { normalizeCombatScore } from '../../core/combat.scoring.js';
 import { createCorpusRankMap } from '../../core/combat.profile.js';
 import { createCombatScoringEngine } from '../../core/scoring.defaults.js';
+import { attachVerseIRAmplifier, enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
 import { compileVerseToIR } from '../../../src/lib/truesight/compiler/compileVerseToIR.js';
 import {
   loadSessionVoiceProfile,
@@ -45,7 +47,14 @@ export function createCombatScoreService(options = {}) {
 
   async function scoreScroll(rawText, context = {}) {
     const scrollText = normalizeCombatText(rawText);
-    const scoreData = await scoringEngine.calculateScore(scrollText);
+    const analyzedDoc = analyzeText(scrollText);
+    const verseIR = await enhanceVerseIR(compileVerseToIR(scrollText, { mode: 'balanced' }));
+    const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
+    const baseScoreData = await scoringEngine.calculateScore(amplifiedDoc);
+    const scoreData = {
+      ...baseScoreData,
+      verseIRAmplifier: verseIR?.verseIRAmplifier || null,
+    };
     const speakerId = resolveSessionSpeakerId(context.session, context.speakerId || context.playerId);
     const speakerProfile = loadSessionVoiceProfile(context.session, {
       speakerId,
@@ -59,12 +68,12 @@ export function createCombatScoreService(options = {}) {
       opponentSchool: context.opponentSchool,
       corpusRanks,
       fallbackSchool: context.fallbackSchool,
+      analyzedDoc: amplifiedDoc,
       speakerId: speakerId || 'speaker:unknown',
       speakerType: 'PLAYER',
       speakerProfile,
     });
     const { nextVoiceProfile, ...publicResponse } = normalized;
-    const verseIR = compileVerseToIR(scrollText, { mode: 'balanced' });
 
     if (nextVoiceProfile && context.session && speakerId) {
       await persistSessionVoiceProfile(context.session, {

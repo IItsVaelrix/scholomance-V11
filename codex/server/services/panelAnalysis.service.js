@@ -21,6 +21,7 @@ import { parseBooleanFlag } from '../utils/envFlags.js';
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
 import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
+import { attachVerseIRAmplifier, enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -185,7 +186,7 @@ function summarizeVowelFamilies(analyzedDoc) {
   };
 }
 
-function toMinimalAnalysisPayload(analysis, wordAnalyses, lineSyllableCounts) {
+function toMinimalAnalysisPayload(analysis, wordAnalyses, lineSyllableCounts, verseIRAmplifier = null) {
   if (!analysis || typeof analysis !== 'object') {
     return null;
   }
@@ -199,6 +200,7 @@ function toMinimalAnalysisPayload(analysis, wordAnalyses, lineSyllableCounts) {
     compiler: analysis.compiler || null,
     wordAnalyses: Array.isArray(wordAnalyses) ? wordAnalyses : [],
     lineSyllableCounts: Array.isArray(lineSyllableCounts) ? lineSyllableCounts : [],
+    verseIRAmplifier: verseIRAmplifier && typeof verseIRAmplifier === 'object' ? verseIRAmplifier : null,
   };
 }
 
@@ -761,22 +763,22 @@ export function createPanelAnalysisService(options = {}) {
       const hhmSignals = syntaxLayerForEmotion?.enabled
         ? buildHiddenHarkovSummary(syntaxLayerForEmotion.tokens)
         : { summary: null, tokenStateByIdentity: null };
-
-      const scoreData = await scoreEngine.calculateScore(analyzedDoc);
       const deepAnalysis = await deepRhymeEngine.analyzeDocument(
         text,
         syntaxLayer
           ? { syntaxLayer, authorityMode: 'background' }
           : { authorityMode: 'background' }
       );
-      const verseIR = compileVerseToIR(text, {
+      const verseIR = await enhanceVerseIR(compileVerseToIR(text, {
         phonemeEngine: PhonemeEngine,
         mode: deepAnalysis?.compiler?.mode || 'balanced',
-      });
+      }));
+      const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
+      const scoreData = await scoreEngine.calculateScore(amplifiedDoc);
       const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer);
       const lineSyllableCounts = buildLineSyllableCounts(deepAnalysis);
 
-      const genreProfile = LiteraryClassifier.classify(analyzedDoc, deepAnalysis);
+      const genreProfile = LiteraryClassifier.classify(amplifiedDoc, deepAnalysis);
       const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);
       const meter = analyzeMeter(deepAnalysis.lines);
       const literaryDevices = analyzeLiteraryDevices(text);
@@ -795,7 +797,12 @@ export function createPanelAnalysisService(options = {}) {
         : scoreData;
 
       return {
-        analysis: toMinimalAnalysisPayload(deepAnalysis, wordAnalyses, lineSyllableCounts),
+        analysis: toMinimalAnalysisPayload(
+          deepAnalysis,
+          wordAnalyses,
+          lineSyllableCounts,
+          verseIR?.verseIRAmplifier || null
+        ),
         scheme: scheme
           ? {
             ...scheme,

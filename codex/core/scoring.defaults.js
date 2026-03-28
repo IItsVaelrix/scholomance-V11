@@ -9,6 +9,7 @@ import { phoneticHackingHeuristic } from './heuristics/phonetic_hacking.js';
 import { phonemeDensityHeuristic } from './heuristics/phoneme_density.js';
 import { rhymeQualityHeuristic } from './heuristics/rhyme_quality.js';
 import { scrollPowerHeuristic } from './heuristics/scroll_power.js';
+import { createVerseIRAmplifierHeuristic } from './heuristics/verseir_amplifier.js';
 import { vocabularyRichnessHeuristic } from './heuristics/vocabulary_richness.js';
 import { emotionalResonanceHeuristic } from './heuristics/emotional_resonance.js';
 
@@ -37,7 +38,8 @@ export const COMBAT_SCORING_HEURISTICS = Object.freeze([
   overrideHeuristicWeight(rhymeQualityHeuristic, 0.15),
   overrideHeuristicWeight(multisyllabicRhymeHeuristic, 0.15),
   overrideHeuristicWeight(cohesionHeuristic, 0.15),
-  overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.15),
+  overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.10),
+  createVerseIRAmplifierHeuristic({ weight: 0.05 }),
   createAbyssalResonanceHeuristic({ weight: 0.15 }),
   overrideHeuristicWeight(phoneticHackingHeuristic, 0.10),
 ]);
@@ -60,7 +62,8 @@ function getCombatScoringHeuristics(options = {}) {
     overrideHeuristicWeight(rhymeQualityHeuristic, 0.15),
     overrideHeuristicWeight(multisyllabicRhymeHeuristic, 0.15),
     overrideHeuristicWeight(cohesionHeuristic, 0.15),
-    overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.15),
+    overrideHeuristicWeight(vocabularyRichnessHeuristic, 0.10),
+    createVerseIRAmplifierHeuristic({ weight: 0.05 }),
     createAbyssalResonanceHeuristic({
       provider: options.abyssProvider,
       weight: 0.15,

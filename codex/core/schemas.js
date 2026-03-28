@@ -101,6 +101,7 @@
  * @property {AnalyzedWord[]} allWords - Flat list of all words.
  * @property {Object} stats - Aggregate lexical and structural stats.
  * @property {Object} [parsed] - Derived parsing surfaces for heuristic consumption.
+ * @property {Object} [parsed.verseIRAmplifier] - Optional VerseIR synapse payload attached by server/runtime composition.
  */
 
 /**
