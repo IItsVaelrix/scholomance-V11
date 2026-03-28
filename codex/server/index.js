@@ -541,6 +541,19 @@ fastify.delete('/api/scrolls/:id', {
     }
 });
 
+// Settings
+fastify.get('/api/settings', { preHandler: [requireAuth] }, async (request) => {
+    return persistence.settings.get(request.session.user.id);
+});
+
+fastify.post('/api/settings', {
+    preValidation: [csrfPreValidation],
+    preHandler: [requireAuth],
+    handler: async (request) => {
+        return persistence.settings.save(request.session.user.id, request.body);
+    }
+});
+
 // Audio filename helpers
 const AUDIO_EXT_RE = /\.(mp3|wav|ogg|m4a)$/i;
 

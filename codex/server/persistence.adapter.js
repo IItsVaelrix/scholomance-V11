@@ -104,30 +104,16 @@ const USER_MIGRATIONS = [
     },
   },
   {
-    version: 7,
-    name: 'create_world_entities_table',
+    version: 8,
+    name: 'create_user_settings_table',
     up(database) {
       database.exec(`
-        CREATE TABLE IF NOT EXISTS world_entities (
-          id TEXT PRIMARY KEY,
-          kind TEXT NOT NULL,
-          lexeme TEXT NOT NULL,
-          roomId TEXT,
-          ownerUserId INTEGER,
-          seed TEXT NOT NULL,
-          actions_json TEXT NOT NULL DEFAULT '["inspect"]',
-          state_json TEXT NOT NULL DEFAULT '{}',
-          metadata_json TEXT NOT NULL DEFAULT '{}',
-          inspect_count INTEGER NOT NULL DEFAULT 0,
-          last_inspected_at DATETIME,
-          createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+        CREATE TABLE IF NOT EXISTS user_settings (
+          userId INTEGER PRIMARY KEY,
+          settings_json TEXT NOT NULL DEFAULT '{}',
           updatedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
-          FOREIGN KEY (roomId) REFERENCES world_rooms (id),
-          FOREIGN KEY (ownerUserId) REFERENCES users (id)
+          FOREIGN KEY (userId) REFERENCES users (id)
         );
-        CREATE INDEX IF NOT EXISTS idx_world_entities_room ON world_entities(roomId, updatedAt DESC);
-        CREATE INDEX IF NOT EXISTS idx_world_entities_owner ON world_entities(ownerUserId, updatedAt DESC);
-        CREATE INDEX IF NOT EXISTS idx_world_entities_lexeme ON world_entities(lexeme);
       `);
     },
   },
@@ -439,6 +425,25 @@ function deleteScroll(scrollId, userId) {
   return result.changes > 0;
 }
 
+// --- Settings ---
+function getSettings(userId) {
+  const stmt = db.prepare('SELECT settings_json FROM user_settings WHERE userId = ?');
+  const row = stmt.get(userId);
+  return parseJsonObject(row?.settings_json);
+}
+
+function saveSettings(userId, settings) {
+  const stmt = db.prepare(`
+    INSERT INTO user_settings (userId, settings_json, updatedAt)
+    VALUES (?, ?, datetime('now'))
+    ON CONFLICT(userId) DO UPDATE SET
+      settings_json = excluded.settings_json,
+      updatedAt = excluded.updatedAt
+  `);
+  stmt.run(userId, JSON.stringify(settings || {}));
+  return getSettings(userId);
+}
+
 export const persistence = {
   users: {
     findByUsername: findUserByUsername,
@@ -447,6 +452,10 @@ export const persistence = {
     findByVerificationToken: findUserByVerificationToken,
     createUser: createUser,
     verifyUser: verifyUser,
+  },
+  settings: {
+    get: getSettings,
+    save: saveSettings,
   },
   progression: {
     get: getProgression,
