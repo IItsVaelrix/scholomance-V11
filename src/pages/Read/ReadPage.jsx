@@ -151,13 +151,15 @@ export default function ReadPage() {
   }, [updateSettings]);
 
   useLayoutEffect(() => {
-    // Combined icons + labels strip width — drives IDE.css label reveal thresholds
+    // Combined activity bar width — drives IDE.css label reveal thresholds
     const layout = settings?.ideLayout;
-    const iconsPct = layout?.[0] ?? 3;
-    const labelsPct = layout?.[1] ?? 0;
-    const combined = iconsPct + labelsPct;
-    const el = document.querySelector('.ide-activity-labels');
-    if (el) el.setAttribute('data-panel-size', combined.toFixed(1));
+    // Support old 5-element layout (icons + labels were separate) → merge them
+    const isOldLayout = layout?.length === 5;
+    const combinedPct = isOldLayout
+      ? (layout[0] + layout[1])
+      : (layout?.[0] ?? 3);
+    const el = document.querySelector('.ide-activity-combined');
+    if (el) el.setAttribute('data-panel-size', combinedPct.toFixed(1));
   }, [settings?.ideLayout]);
 
   const handleLayoutChange = useCallback((sizes) => {
@@ -1348,62 +1350,61 @@ export default function ReadPage() {
           direction={isNarrowViewport ? "vertical" : "horizontal"}
           onLayout={handleLayoutChange}
         >
-          {/* 1. Activity Bar - Icons (Fixed-ish) */}
+          {/* 1+2. Activity Bar — combined icons + labels strip */}
           <Panel
-            defaultSize={settings?.ideLayout?.[0] ?? 3}
-            minSize={2}
-            maxSize={14}
-            className="ide-activity-bar ide-activity-icons"
+            defaultSize={(() => {
+              const layout = settings?.ideLayout;
+              if (layout?.length === 5) return layout[0] + layout[1]; // migrate old format
+              return layout?.[0] ?? 3;
+            })()}
+            minSize={3}
+            maxSize={22}
+            className="ide-activity-bar ide-activity-combined"
           >
-            <div className="activity-bar-content">
-              {['FILES', 'SEARCH', 'TOOLS'].map((tab) => {
-                const Icon = tab === 'FILES' ? FolderIcon : tab === 'SEARCH' ? SearchIcon : ToolsIcon;
-                return (
-                  <button
-                    key={tab}
-                    className={`activity-item icon-only ${sidebarTab === tab ? 'active' : ''}`}
-                    onClick={() => setSidebarTab(tab)}
-                    title={tab}
-                  >
-                    <Icon size={20} />
+            <div className="activity-combined-inner">
+              <div className="activity-icons-col">
+                <div className="activity-bar-content">
+                  {['FILES', 'SEARCH', 'TOOLS'].map((tab) => {
+                    const Icon = tab === 'FILES' ? FolderIcon : tab === 'SEARCH' ? SearchIcon : ToolsIcon;
+                    return (
+                      <button
+                        key={tab}
+                        className={`activity-item icon-only ${sidebarTab === tab ? 'active' : ''}`}
+                        onClick={() => setSidebarTab(tab)}
+                        title={tab}
+                      >
+                        <Icon size={20} />
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="activity-bar-footer">
+                  <button className="activity-item icon-only" title="Settings">
+                    <SettingsIcon size={20} />
                   </button>
-                );
-              })}
-            </div>
-            <div className="activity-bar-footer">
-               <button className="activity-item icon-only" title="Settings">
-                  <SettingsIcon size={20} />
-               </button>
-            </div>
-          </Panel>
-
-          <PanelResizeHandle className="activity-resize-handle" />
-
-          {/* 2. Activity Bar - Labels (Resizable Expansion) */}
-          <Panel
-            defaultSize={settings?.ideLayout?.[1] ?? 0}
-            minSize={0}
-            maxSize={8}
-            className="ide-activity-bar ide-activity-labels"
-          >
-            <div className="activity-bar-content">
-              {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
-                const tabs = ['FILES', 'SEARCH', 'TOOLS'];
-                return (
-                  <button
-                    key={label}
-                    className={`activity-item label-only ${sidebarTab === tabs[i] ? 'active' : ''}`}
-                    onClick={() => setSidebarTab(tabs[i])}
-                  >
-                    <span className="activity-label visible">{label}</span>
+                </div>
+              </div>
+              <div className="activity-labels-col">
+                <div className="activity-bar-content">
+                  {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
+                    const tabs = ['FILES', 'SEARCH', 'TOOLS'];
+                    return (
+                      <button
+                        key={label}
+                        className={`activity-item label-only ${sidebarTab === tabs[i] ? 'active' : ''}`}
+                        onClick={() => setSidebarTab(tabs[i])}
+                      >
+                        <span className="activity-label">{label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="activity-bar-footer">
+                  <button className="activity-item label-only">
+                    <span className="activity-label">SETTINGS</span>
                   </button>
-                );
-              })}
-            </div>
-            <div className="activity-bar-footer">
-               <button className="activity-item label-only">
-                  <span className="activity-label visible">SETTINGS</span>
-               </button>
+                </div>
+              </div>
             </div>
           </Panel>
 
@@ -1411,7 +1412,7 @@ export default function ReadPage() {
 
           {/* 3. Primary Sidebar (Content) */}
           <Panel
-            defaultSize={settings?.ideLayout?.[2] ?? (isNarrowViewport ? 28 : 18)}
+            defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[2] : (settings?.ideLayout?.[1] ?? (isNarrowViewport ? 28 : 18))}
             minSize={isNarrowViewport ? 20 : 12}
             className="ide-sidebar"
           >
@@ -1484,7 +1485,7 @@ export default function ReadPage() {
             </div>
           </Panel>
           <PanelResizeHandle className="sidebar-resize-handle" />
-          <Panel defaultSize={settings?.ideLayout?.[3] ?? (isNarrowViewport ? undefined : 60)} minSize={isNarrowViewport ? "40%" : "30%"}>
+          <Panel defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[3] : (settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60))} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
               <KeystrokeSparksCanvas schoolColor={schoolColorHex} isTruesight={isTruesight} />
               <div className="document-container">
@@ -1540,7 +1541,7 @@ export default function ReadPage() {
                 style={{ width: "2px", background: "var(--border-color)" }}
               />
               <Panel 
-                defaultSize={settings?.ideLayout?.[4] ?? 25} 
+                defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[4] : (settings?.ideLayout?.[3] ?? 25)}
                 minSize={15} 
                 collapsible={true} 
                 className="ide-right-panel"

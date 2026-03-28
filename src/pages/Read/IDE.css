@@ -386,13 +386,62 @@
   transform: none;
 }
 
-.ide-activity-icons {
-  background: rgba(0, 0, 0, 0.45);
+/* ─── Combined activity bar (icons + labels as one resizable unit) ─── */
+
+.ide-activity-combined {
+  background: rgba(0, 0, 0, 0.40);
   border-right: 1px solid rgba(201, 168, 64, 0.08);
 }
 
-.ide-activity-labels {
+.activity-combined-inner {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  overflow: hidden;
+}
+
+.activity-icons-col {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  width: 48px;
+  background: rgba(0, 0, 0, 0.45);
+  border-right: 1px solid rgba(201, 168, 64, 0.06);
+}
+
+.activity-icons-col .activity-bar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-2);
+}
+
+.activity-icons-col .activity-bar-footer {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-4);
+}
+
+.activity-labels-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   background: rgba(0, 0, 0, 0.25);
+  min-width: 0;
+}
+
+.activity-labels-col .activity-bar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-2);
+}
+
+.activity-labels-col .activity-bar-footer {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-4);
 }
 
 .activity-label {
@@ -401,24 +450,24 @@
   letter-spacing: 0.12em;
   font-weight: 600;
   opacity: 0;
-  transform: translateX(-4px);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateX(-6px);
+  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
+  white-space: nowrap;
 }
 
-/* Reveal labels when activity bar is dragged wide enough (e.g. > 5.5%) */
-.ide-activity-bar[data-panel-size] .activity-label {
-  /* Simple JS-driven attribute check for labels */
+/* Reveal labels when combined bar is expanded past ~6% */
+.ide-activity-combined[data-panel-size] .activity-label {
   opacity: 0;
-  transform: translateX(-4px);
+  transform: translateX(-6px);
 }
 
-.ide-activity-bar[data-panel-size]:not([data-panel-size^="4."]):not([data-panel-size^="5.0"]):not([data-panel-size^="5.1"]):not([data-panel-size^="5.2"]):not([data-panel-size^="5.3"]):not([data-panel-size^="5.4"]):not([data-panel-size^="5.5"]) .activity-label {
-  opacity: 0.8;
+.ide-activity-combined[data-panel-size]:not([data-panel-size^="3."]):not([data-panel-size^="4."]):not([data-panel-size^="5."]):not([data-panel-size^="6.0"]):not([data-panel-size^="6.1"]):not([data-panel-size^="6.2"]):not([data-panel-size^="6.3"]):not([data-panel-size^="6.4"]) .activity-label {
+  opacity: 0.82;
   transform: translateX(0);
 }
 
-.activity-resize-handle,
 .sidebar-resize-handle {
   width: 2px;
   background: rgba(201, 168, 64, 0.1);
@@ -429,7 +478,6 @@
 }
 
 /* Much wider hit area for the handles */
-.activity-resize-handle::after,
 .sidebar-resize-handle::after {
   content: "";
   position: absolute;
@@ -441,8 +489,6 @@
   z-index: 11;
 }
 
-.activity-resize-handle:hover,
-.activity-resize-handle:active,
 .sidebar-resize-handle:hover,
 .sidebar-resize-handle:active {
   background: var(--read-accent);
