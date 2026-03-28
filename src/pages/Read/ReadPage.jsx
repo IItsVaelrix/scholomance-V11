@@ -124,9 +124,10 @@ export default function ReadPage() {
   const [analysisMode, setAnalysisMode] = useState(settings?.analysisMode ?? ANALYSIS_MODES.NONE);
 
   const handleToggleTruesight = useCallback(() => {
-    setIsTruesight(prev => {
+    setIsTruesight((prev) => {
       const next = !prev;
       updateSettings({ truesightEnabled: next });
+      setHighlightedLines([]);
       return next;
     });
   }, [updateSettings]);
@@ -139,9 +140,13 @@ export default function ReadPage() {
     });
   }, [updateSettings]);
 
-  const handleModeChange = useCallback((mode) => {
-    setAnalysisMode(mode);
-    updateSettings({ analysisMode: mode });
+  const handleModeChange = useCallback((nextMode) => {
+    setAnalysisMode((prev) => {
+      const resolvedMode = prev === nextMode ? ANALYSIS_MODES.NONE : nextMode;
+      updateSettings({ analysisMode: resolvedMode });
+      return resolvedMode;
+    });
+    setHighlightedLines([]);
   }, [updateSettings]);
 
   const handleLayoutChange = useCallback((sizes) => {
@@ -624,19 +629,6 @@ export default function ReadPage() {
       setSaveStatus("Saved");
     }
   }, [activeScrollId, activeScroll?.title, activeScrollContent, bumpAutosaveContext]);
-
-  const handleToggleTruesight = useCallback(() => {
-    setIsTruesight((prev) => !prev);
-    setHighlightedLines([]);
-  }, []);
-
-  const handleModeChange = useCallback(
-    (nextMode) => {
-      setAnalysisMode((prev) => (prev === nextMode ? ANALYSIS_MODES.NONE : nextMode));
-      setHighlightedLines([]);
-    },
-    []
-  );
 
   const handleEditorContentChange = useCallback((content) => {
     isTypingRef.current = true;
