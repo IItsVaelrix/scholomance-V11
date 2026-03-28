@@ -1,27 +1,155 @@
 import { PhonemeEngine } from '../../phonology/phoneme.engine.js';
 import { normalizeVowelFamily } from '../../phonology/vowelFamily.js';
-import { WORD_REGEX_GLOBAL } from '../../wordTokenization.js';
+import { LINE_TOKEN_REGEX, WORD_REGEX_GLOBAL, WORD_TOKEN_REGEX } from '../../wordTokenization.js';
 import { getTruesightAnalysisModeConfig, resolveTruesightAnalysisMode } from './analysisModes.js';
 
-export const VERSE_IR_VERSION = '1.0.0';
+export const VERSE_IR_VERSION = '1.1.0';
 
 const STOP_WORD_LIKE = new Set([
   'a', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'if',
   'in', 'is', 'it', 'of', 'on', 'or', 'so', 'the', 'to', 'was', 'were',
 ]);
 
+const UNICODE_NORMALIZATION_FORMS = new Set(['NFC', 'NFD', 'NFKC', 'NFKD']);
+const DEFAULT_NORMALIZATION_OPTIONS = Object.freeze({
+  lowercase: true,
+  unicodeForm: 'none',
+  accentFolding: false,
+});
+const GRAPHEME_SEGMENTER = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function'
+  ? new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+  : null;
+
 function createWordRegex() {
   return new RegExp(WORD_REGEX_GLOBAL.source, WORD_REGEX_GLOBAL.flags);
 }
 
-function normalizeToken(token) {
-  return String(token || '')
-    .toLowerCase()
-    .replace(/^['-]+|['-]+$/g, '');
+function createLineTokenRegex() {
+  return new RegExp(LINE_TOKEN_REGEX.source, LINE_TOKEN_REGEX.flags);
 }
 
-function normalizeSurfaceText(text) {
-  return String(text || '').toLowerCase();
+function resolveNormalizationOptions(rawOptions) {
+  const options = rawOptions && typeof rawOptions === 'object' ? rawOptions : {};
+  const unicodeForm = UNICODE_NORMALIZATION_FORMS.has(options.unicodeForm)
+    ? options.unicodeForm
+    : DEFAULT_NORMALIZATION_OPTIONS.unicodeForm;
+
+  return Object.freeze({
+    lowercase: options.lowercase !== false,
+    unicodeForm,
+    accentFolding: Boolean(options.accentFolding),
+  });
+}
+
+function stripCombiningMarks(value) {
+  return String(value || '').replace(/\p{M}+/gu, '');
+}
+
+function normalizeUnicodeText(text, normalizationOptions = DEFAULT_NORMALIZATION_OPTIONS) {
+  let normalized = String(text || '');
+
+  if (normalizationOptions.unicodeForm && normalizationOptions.unicodeForm !== 'none') {
+    normalized = normalized.normalize(normalizationOptions.unicodeForm);
+  }
+
+  if (normalizationOptions.accentFolding) {
+    normalized = stripCombiningMarks(normalized.normalize('NFD'));
+  }
+
+  if (normalizationOptions.lowercase !== false) {
+    normalized = normalized.toLowerCase();
+  }
+
+  return normalized;
+}
+
+function normalizeToken(token, normalizationOptions = DEFAULT_NORMALIZATION_OPTIONS) {
+  return normalizeUnicodeText(
+    String(token || '').replace(/^['-]+|['-]+$/g, ''),
+    normalizationOptions
+  );
+}
+
+function normalizeSurfaceText(text, normalizationOptions = DEFAULT_NORMALIZATION_OPTIONS) {
+  return normalizeUnicodeText(text, normalizationOptions);
+}
+
+function createOffsetTranslator(rawText) {
+  const source = String(rawText || '');
+  const startMap = new Array(source.length + 1).fill(0);
+  const endMap = new Array(source.length + 1).fill(0);
+
+  if (!source) {
+    return Object.freeze({
+      graphemeAware: Boolean(GRAPHEME_SEGMENTER),
+      graphemeCount: 0,
+      toGraphemeStart(offset) {
+        return 0;
+      },
+      toGraphemeEnd(offset) {
+        return 0;
+      },
+    });
+  }
+
+  if (!GRAPHEME_SEGMENTER) {
+    for (let offset = 0; offset <= source.length; offset += 1) {
+      startMap[offset] = offset;
+      endMap[offset] = offset;
+    }
+
+    return Object.freeze({
+      graphemeAware: false,
+      graphemeCount: source.length,
+      toGraphemeStart(offset) {
+        const numeric = Number(offset);
+        return Math.max(0, Math.min(source.length, Number.isFinite(numeric) ? Math.trunc(numeric) : 0));
+      },
+      toGraphemeEnd(offset) {
+        const numeric = Number(offset);
+        return Math.max(0, Math.min(source.length, Number.isFinite(numeric) ? Math.trunc(numeric) : 0));
+      },
+    });
+  }
+
+  let graphemeIndex = 0;
+  startMap[0] = 0;
+  endMap[0] = 0;
+
+  for (const segment of GRAPHEME_SEGMENTER.segment(source)) {
+    const segmentText = String(segment?.segment || '');
+    const segmentStart = Number(segment?.index);
+    const safeStart = Number.isInteger(segmentStart) ? segmentStart : 0;
+    const safeEnd = Math.min(source.length, safeStart + segmentText.length);
+
+    startMap[safeStart] = graphemeIndex;
+    endMap[safeStart] = graphemeIndex;
+
+    for (let offset = safeStart + 1; offset <= safeEnd; offset += 1) {
+      startMap[offset] = graphemeIndex + 1;
+      endMap[offset] = graphemeIndex + 1;
+    }
+
+    graphemeIndex += 1;
+  }
+
+  startMap[source.length] = graphemeIndex;
+  endMap[source.length] = graphemeIndex;
+
+  return Object.freeze({
+    graphemeAware: true,
+    graphemeCount: graphemeIndex,
+    toGraphemeStart(offset) {
+      const numeric = Number(offset);
+      const safeOffset = Math.max(0, Math.min(source.length, Number.isFinite(numeric) ? Math.trunc(numeric) : 0));
+      return startMap[safeOffset] ?? safeOffset;
+    },
+    toGraphemeEnd(offset) {
+      const numeric = Number(offset);
+      const safeOffset = Math.max(0, Math.min(source.length, Number.isFinite(numeric) ? Math.trunc(numeric) : 0));
+      return endMap[safeOffset] ?? safeOffset;
+    },
+  });
 }
 
 function inferLineBreakStyle(text) {
@@ -94,6 +222,30 @@ function cloneAnalysis(tokenText, deepAnalysis) {
       Array.isArray(deepAnalysis.extendedRhymeKeys) ? [...deepAnalysis.extendedRhymeKeys] : []
     ),
     stressPattern: String(deepAnalysis.stressPattern || buildStressPatternFromSyllables(syllables)),
+  });
+}
+
+function clonePhoneticDiagnostics(diagnostics) {
+  if (!diagnostics || typeof diagnostics !== 'object') {
+    return null;
+  }
+
+  return Object.freeze({
+    source: String(diagnostics.source || 'unspecified_engine'),
+    branch: String(diagnostics.branch || 'unspecified'),
+    fallbackPath: Object.freeze(
+      (Array.isArray(diagnostics.fallbackPath) ? diagnostics.fallbackPath : [])
+        .map((entry) => String(entry || '').trim())
+        .filter(Boolean)
+    ),
+    authoritySource: diagnostics.authoritySource ? String(diagnostics.authoritySource) : null,
+    usedAuthorityCache: Boolean(diagnostics.usedAuthorityCache),
+    unknownReason: diagnostics.unknownReason ? String(diagnostics.unknownReason) : null,
+    notes: Object.freeze(
+      (Array.isArray(diagnostics.notes) ? diagnostics.notes : [])
+        .map((note) => String(note || '').trim())
+        .filter(Boolean)
+    ),
   });
 }
 
@@ -211,8 +363,10 @@ function finalizeIndexMap(indexMap) {
   return indexMap;
 }
 
-export function splitVerseLines(rawText) {
+export function splitVerseLines(rawText, options = {}) {
   const source = String(rawText || '');
+  const normalizationOptions = resolveNormalizationOptions(options.normalization);
+  const offsetTranslator = options.offsetTranslator || createOffsetTranslator(source);
   if (!source) {
     return [];
   }
@@ -243,10 +397,12 @@ export function splitVerseLines(rawText) {
     lines.push({
       lineIndex: lines.length,
       text: source.slice(lineStart, textEnd),
-      normalizedText: normalizeSurfaceText(source.slice(lineStart, textEnd)),
+      normalizedText: normalizeSurfaceText(source.slice(lineStart, textEnd), normalizationOptions),
       tokenIds: [],
       charStart: lineStart,
       charEnd: textEnd,
+      graphemeStart: offsetTranslator.toGraphemeStart(lineStart),
+      graphemeEnd: offsetTranslator.toGraphemeEnd(textEnd),
       lineBreak,
       lineBreakStart: lineBreak ? textEnd : -1,
       lineBreakEnd: lineBreak ? textEnd + lineBreak.length : -1,
@@ -263,6 +419,8 @@ export function splitVerseLines(rawText) {
       tokenIds: [],
       charStart: source.length,
       charEnd: source.length,
+      graphemeStart: offsetTranslator.toGraphemeStart(source.length),
+      graphemeEnd: offsetTranslator.toGraphemeEnd(source.length),
       lineBreak: '',
       lineBreakStart: -1,
       lineBreakEnd: -1,
@@ -286,14 +444,26 @@ function buildTokenIR({
   globalTokenIndex,
   totalTokensInLine,
   phonemeEngine,
+  normalizationOptions,
+  offsetTranslator,
 }) {
-  const normalized = normalizeToken(tokenText);
-  const deepAnalysis = typeof phonemeEngine?.analyzeDeep === 'function'
-    ? cloneAnalysis(tokenText, phonemeEngine.analyzeDeep(tokenText))
+  const normalized = normalizeToken(tokenText, normalizationOptions);
+  const deepResult = typeof phonemeEngine?.analyzeDeepWithDiagnostics === 'function'
+    ? phonemeEngine.analyzeDeepWithDiagnostics(tokenText)
     : null;
-  const basicAnalysis = typeof phonemeEngine?.analyzeWord === 'function'
-    ? phonemeEngine.analyzeWord(tokenText)
-    : deriveBasicAnalysisFromDeepAnalysis(deepAnalysis);
+  const basicResult = typeof phonemeEngine?.analyzeWordWithDiagnostics === 'function'
+    ? phonemeEngine.analyzeWordWithDiagnostics(tokenText)
+    : null;
+  const deepAnalysis = deepResult
+    ? cloneAnalysis(tokenText, deepResult.analysis)
+    : typeof phonemeEngine?.analyzeDeep === 'function'
+      ? cloneAnalysis(tokenText, phonemeEngine.analyzeDeep(tokenText))
+      : null;
+  const basicAnalysis = basicResult?.analysis || (
+    typeof phonemeEngine?.analyzeWord === 'function'
+      ? phonemeEngine.analyzeWord(tokenText)
+      : deriveBasicAnalysisFromDeepAnalysis(deepAnalysis)
+  );
   const resolvedAnalysis = deepAnalysis || deriveDeepAnalysisFromBasicAnalysis(tokenText, basicAnalysis, phonemeEngine);
   const phonemes = Object.freeze(
     Array.isArray(resolvedAnalysis?.phonemes)
@@ -305,12 +475,22 @@ function buildTokenIR({
   const syllables = Array.isArray(resolvedAnalysis?.syllables) ? resolvedAnalysis.syllables : [];
   const stressedSyllable = findPrimaryStressedSyllable(resolvedAnalysis);
   const terminalSyllable = syllables[syllables.length - 1] || null;
+  const charEnd = charStart + tokenText.length;
   const vowelFamily = Object.freeze(
     syllables
       .map((syllable) => normalizeVowelFamily(syllable.vowelFamily))
       .filter(Boolean)
   );
   const stressPattern = String(resolvedAnalysis?.stressPattern || buildStressPatternFromSyllables(syllables));
+  const phoneticDiagnostics = clonePhoneticDiagnostics(
+    deepResult?.diagnostics || basicResult?.diagnostics || {
+      source: 'unspecified_engine',
+      branch: 'external_engine',
+      fallbackPath: ['external_engine'],
+      unknownReason: phonemes.length === 0 ? 'no_phonemes_generated' : null,
+      notes: ['The phoneme engine did not expose a provenance trail for this token.'],
+    }
+  );
 
   return Object.freeze({
     id: globalTokenIndex,
@@ -321,7 +501,9 @@ function buildTokenIR({
     tokenIndexInLine,
     globalTokenIndex,
     charStart,
-    charEnd: charStart + tokenText.length,
+    charEnd,
+    graphemeStart: offsetTranslator.toGraphemeStart(charStart),
+    graphemeEnd: offsetTranslator.toGraphemeEnd(charEnd),
     syllableCount: Number(resolvedAnalysis?.syllableCount) || Number(basicAnalysis?.syllableCount) || syllables.length || 0,
     phonemes,
     stressPattern,
@@ -350,11 +532,59 @@ function buildTokenIR({
       isStopWordLike: STOP_WORD_LIKE.has(normalized),
       unknownPhonetics: phonemes.length === 0,
     }),
+    phoneticDiagnostics,
     analysis: resolvedAnalysis,
   });
 }
 
-function buildSyllableWindows(lines, tokens, maxWindowSyllables, maxWindowTokenSpan) {
+function buildSurfaceSpans(lines, tokens, offsetTranslator) {
+  const surfaceSpans = [];
+  const tokensByLineIndex = new Map();
+
+  for (const token of tokens) {
+    if (!tokensByLineIndex.has(token.lineIndex)) {
+      tokensByLineIndex.set(token.lineIndex, []);
+    }
+    tokensByLineIndex.get(token.lineIndex).push(token);
+  }
+
+  for (const line of lines) {
+    const lineTokens = tokensByLineIndex.get(line.lineIndex) || [];
+    const matches = [...line.text.matchAll(createLineTokenRegex())];
+    let tokenCursor = 0;
+
+    for (let surfaceIndexInLine = 0; surfaceIndexInLine < matches.length; surfaceIndexInLine += 1) {
+      const match = matches[surfaceIndexInLine];
+      const text = String(match?.[0] || '');
+      const charStart = line.charStart + (Number(match?.index) || 0);
+      const charEnd = charStart + text.length;
+      const isWhitespace = /^\s+$/u.test(text);
+      const isWord = WORD_TOKEN_REGEX.test(text);
+      const token = isWord ? lineTokens[tokenCursor] || null : null;
+
+      if (isWord) {
+        tokenCursor += 1;
+      }
+
+      surfaceSpans.push(Object.freeze({
+        id: surfaceSpans.length,
+        lineIndex: line.lineIndex,
+        surfaceIndexInLine,
+        kind: isWhitespace ? 'whitespace' : (isWord ? 'word' : 'punctuation'),
+        text,
+        tokenId: token?.id ?? null,
+        charStart,
+        charEnd,
+        graphemeStart: offsetTranslator.toGraphemeStart(charStart),
+        graphemeEnd: offsetTranslator.toGraphemeEnd(charEnd),
+      }));
+    }
+  }
+
+  return Object.freeze(surfaceSpans);
+}
+
+function buildSyllableWindows(lines, tokens, maxWindowSyllables, maxWindowTokenSpan, offsetTranslator) {
   const windows = [];
   const syllablesByLine = new Map();
 
@@ -404,6 +634,8 @@ function buildSyllableWindows(lines, tokens, maxWindowSyllables, maxWindowTokenS
           lineSpan: Object.freeze([line.lineIndex, line.lineIndex]),
           charStart: firstToken.charStart,
           charEnd: lastToken.charEnd,
+          graphemeStart: offsetTranslator.toGraphemeStart(firstToken.charStart),
+          graphemeEnd: offsetTranslator.toGraphemeEnd(lastToken.charEnd),
           syllableLength: windowSyllables.length,
           phonemeSpan: Object.freeze(windowSyllables.flatMap((syllable) => syllable.phonemeSpan)),
           vowelSequence: Object.freeze(vowelSequence),
@@ -488,12 +720,15 @@ function buildFeatureTables(lines, tokens, syllableWindows) {
 
 export function createEmptyVerseIR(options = {}) {
   const mode = resolveTruesightAnalysisMode(options.mode);
+  const modeConfig = getTruesightAnalysisModeConfig(mode);
+  const normalization = resolveNormalizationOptions(options.normalization);
   return Object.freeze({
     version: VERSE_IR_VERSION,
     rawText: '',
     normalizedText: '',
     lines: Object.freeze([]),
     tokens: Object.freeze([]),
+    surfaceSpans: Object.freeze([]),
     syllableWindows: Object.freeze([]),
     indexes: Object.freeze({
       tokenIdsByLineIndex: Object.freeze([]),
@@ -521,7 +756,13 @@ export function createEmptyVerseIR(options = {}) {
       lineBreakStyle: 'none',
       tokenCount: 0,
       lineCount: 0,
+      maxWindowSyllables: Number(modeConfig.maxWindowSyllables) || 0,
+      maxWindowTokenSpan: Number(modeConfig.maxWindowTokenSpan) || 0,
       syllableWindowCount: 0,
+      offsetSemantics: 'code_unit_primary',
+      graphemeAware: Boolean(GRAPHEME_SEGMENTER),
+      graphemeCount: 0,
+      normalization,
       whitespaceFidelity: true,
     }),
   });
@@ -530,13 +771,21 @@ export function createEmptyVerseIR(options = {}) {
 export function compileVerseToIR(rawText, options = {}) {
   const source = typeof rawText === 'string' ? rawText : String(rawText || '');
   const mode = resolveTruesightAnalysisMode(options.mode);
+  const normalizationOptions = resolveNormalizationOptions(options.normalization);
   if (!source) {
-    return createEmptyVerseIR({ mode });
+    return createEmptyVerseIR({
+      mode,
+      normalization: normalizationOptions,
+    });
   }
 
   const phonemeEngine = options.phonemeEngine || PhonemeEngine;
   const modeConfig = getTruesightAnalysisModeConfig(mode);
-  const lines = splitVerseLines(source);
+  const offsetTranslator = createOffsetTranslator(source);
+  const lines = splitVerseLines(source, {
+    normalization: normalizationOptions,
+    offsetTranslator,
+  });
   const tokens = [];
 
   for (const line of lines) {
@@ -551,6 +800,8 @@ export function compileVerseToIR(rawText, options = {}) {
         globalTokenIndex: tokens.length,
         totalTokensInLine: matches.length,
         phonemeEngine,
+        normalizationOptions,
+        offsetTranslator,
       });
       tokens.push(token);
       line.tokenIds.push(token.id);
@@ -560,11 +811,13 @@ export function compileVerseToIR(rawText, options = {}) {
   }
 
   const frozenTokens = Object.freeze(tokens);
+  const surfaceSpans = buildSurfaceSpans(lines, frozenTokens, offsetTranslator);
   const syllableWindows = buildSyllableWindows(
     lines,
     frozenTokens,
     modeConfig.maxWindowSyllables,
-    modeConfig.maxWindowTokenSpan
+    modeConfig.maxWindowTokenSpan,
+    offsetTranslator
   );
   const indexes = buildVerseIndexes(lines, frozenTokens, syllableWindows);
   const featureTables = buildFeatureTables(lines, frozenTokens, syllableWindows);
@@ -572,9 +825,10 @@ export function compileVerseToIR(rawText, options = {}) {
   return Object.freeze({
     version: VERSE_IR_VERSION,
     rawText: source,
-    normalizedText: normalizeSurfaceText(source),
+    normalizedText: normalizeSurfaceText(source, normalizationOptions),
     lines: Object.freeze(lines),
     tokens: frozenTokens,
+    surfaceSpans,
     syllableWindows,
     indexes,
     featureTables,
@@ -583,7 +837,13 @@ export function compileVerseToIR(rawText, options = {}) {
       lineBreakStyle: inferLineBreakStyle(source),
       tokenCount: frozenTokens.length,
       lineCount: lines.length,
+      maxWindowSyllables: Number(modeConfig.maxWindowSyllables) || 0,
+      maxWindowTokenSpan: Number(modeConfig.maxWindowTokenSpan) || 0,
       syllableWindowCount: syllableWindows.length,
+      offsetSemantics: 'code_unit_primary',
+      graphemeAware: offsetTranslator.graphemeAware,
+      graphemeCount: offsetTranslator.graphemeCount,
+      normalization: normalizationOptions,
       whitespaceFidelity: true,
     }),
   });
