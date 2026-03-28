@@ -753,16 +753,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [onScrollChange]);
 
-  const handleOverlayScroll = useCallback(() => {
-    if (truesightOverlayRef.current && textareaRef.current) {
-      const top = truesightOverlayRef.current.scrollTop;
-      textareaRef.current.scrollTop = top;
-      textareaRef.current.scrollLeft = truesightOverlayRef.current.scrollLeft;
-      setScrollTop(top);
-      onScrollChange?.(top);
-    }
-  }, [onScrollChange]);
-
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
     setIsSaving(true);
@@ -1002,13 +992,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}`}
               style={{
                 zIndex: 5,
-                pointerEvents: (isEditable && !isEditorIdle) ? 'none' : 'auto'
+                pointerEvents: (isEditable) ? 'none' : 'auto',
+                overflow: 'hidden'
               }}
               aria-hidden={isEditable || !onWordActivate}
-              onScroll={handleOverlayScroll}
             >
-              <div style={{ paddingTop, paddingBottom }}>
-                {windowedLines.map(({ lineIndex: li, tokens, lineType }) => {
+              <div>
+                {overlayLines.map(({ lineIndex: li, tokens, lineType }) => {
                   const isGroupActive = highlightedLinesSet.size > 0;
                   const isHighlighted = highlightedLinesSet.has(li);
                   const isLineDimmed = (isGroupActive && !isHighlighted) || isGhostPinned;

@@ -50,16 +50,26 @@ function calculateSchoolAffinity(vowelSummary, schoolId) {
  * Truesight overlay for the Spellbook.
  * Mirrors the textarea's text but with school-colored spans.
  */
-function SpellbookTruesightOverlay({ text, analyzedWordsByStart, scrollTop, scrollLeft }) {
+function SpellbookTruesightOverlay({ text, analyzedWordsByStart, textareaRef }) {
   const overlayRef = useRef(null);
 
-  // Sync scroll
+  // Direct ref-to-ref sync to avoid React state lag
   useEffect(() => {
-    if (overlayRef.current) {
-      overlayRef.current.scrollTop = scrollTop;
-      overlayRef.current.scrollLeft = scrollLeft;
-    }
-  }, [scrollTop, scrollLeft]);
+    const textarea = textareaRef.current;
+    const overlay = overlayRef.current;
+    if (!textarea || !overlay) return;
+
+    const handleScroll = () => {
+      overlay.scrollTop = textarea.scrollTop;
+      overlay.scrollLeft = textarea.scrollLeft;
+    };
+
+    textarea.addEventListener('scroll', handleScroll);
+    // Initial sync
+    handleScroll();
+
+    return () => textarea.removeEventListener('scroll', handleScroll);
+  }, [textareaRef]);
 
   const tokens = useMemo(() => {
     if (!text) return [];
@@ -209,8 +219,6 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
   const [text, setText]           = useState('');
   const [weave, setWeave]         = useState('');
   const [bridgeFlash, setBridgeFlash] = useState(false);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
   const textareaRef               = useRef(null);
   const weaveRef                  = useRef(null);
   const prefersReduced            = usePrefersReducedMotion();
@@ -235,19 +243,12 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
     } else {
       setText('');
       setWeave('');
-      setScrollTop(0);
-      setScrollLeft(0);
     }
   }, [isVisible]);
 
   const handleChange = useCallback((e) => {
     const val = e.target.value;
     if (val.length <= 300) setText(val);
-  }, []);
-
-  const handleScroll = useCallback((e) => {
-    setScrollTop(e.target.scrollTop);
-    setScrollLeft(e.target.scrollLeft);
   }, []);
 
   const handleWeaveChange = useCallback((e) => {
@@ -324,8 +325,7 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                 <SpellbookTruesightOverlay 
                   text={text} 
                   analyzedWordsByStart={analyzedWordsByStart}
-                  scrollTop={scrollTop}
-                  scrollLeft={scrollLeft}
+                  textareaRef={textareaRef}
                 />
               )}
               {/* Textarea (z:1 — actual input, transparent when truesight is active) */}
@@ -335,7 +335,6 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                onScroll={handleScroll}
                 placeholder="The poetry of power…"
                 maxLength={300}
                 rows={3}
@@ -503,8 +502,7 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                   <SpellbookTruesightOverlay 
                     text={text} 
                     analyzedWordsByStart={analyzedWordsByStart}
-                    scrollTop={scrollTop}
-                    scrollLeft={scrollLeft}
+                    textareaRef={textareaRef}
                   />
                 )}
               </div>
@@ -514,7 +512,6 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
                 value={text}
                 onChange={handleChange}
                 onKeyDown={handleKeyDown}
-                onScroll={handleScroll}
                 placeholder="Write your scroll here... (100 characters)"
                 maxLength={MAX_CHARS}
                 rows={4}
