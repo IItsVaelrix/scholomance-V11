@@ -1,3 +1,11 @@
+import {
+  FolderIcon,
+  SearchIcon,
+  ToolsIcon,
+  BookIcon,
+  SettingsIcon
+} from "../../components/Icons.jsx";
+import { useUserSettings } from "../../hooks/useUserSettings.js";
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Group as PanelGroup,
@@ -102,15 +110,43 @@ function applyMatchCase(sourceWord, replacement) {
 
 export default function ReadPage() {
   const { theme } = useTheme();
+  const { settings, updateSettings } = useUserSettings();
   const auroraLevel = useAuroraLevel();
   const { scrolls, saveScroll, deleteScroll, getScrollById } = useScrolls();
   const { addXP, progression } = useProgression();
   const [activeScrollId, setActiveScrollId] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [isTruesight, setIsTruesight] = useState(false);
-  const [isPredictive, setIsPredictive] = useState(false);
-  const [analysisMode, setAnalysisMode] = useState(ANALYSIS_MODES.NONE);
+  
+  // Use settings for initial state if available
+  const [isTruesight, setIsTruesight] = useState(settings?.truesightEnabled ?? false);
+  const [isPredictive, setIsPredictive] = useState(settings?.predictiveEnabled ?? false);
+  const [analysisMode, setAnalysisMode] = useState(settings?.analysisMode ?? ANALYSIS_MODES.NONE);
+
+  const handleToggleTruesight = useCallback(() => {
+    setIsTruesight(prev => {
+      const next = !prev;
+      updateSettings({ truesightEnabled: next });
+      return next;
+    });
+  }, [updateSettings]);
+
+  const handleTogglePredictive = useCallback(() => {
+    setIsPredictive(prev => {
+      const next = !prev;
+      updateSettings({ predictiveEnabled: next });
+      return next;
+    });
+  }, [updateSettings]);
+
+  const handleModeChange = useCallback((mode) => {
+    setAnalysisMode(mode);
+    updateSettings({ analysisMode: mode });
+  }, [updateSettings]);
+
+  const handleLayoutChange = useCallback((sizes) => {
+    updateSettings({ ideLayout: sizes });
+  }, [updateSettings]);
   const [editorContent, setEditorContent] = useState("");
   const [editorTitle, setEditorTitle] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
@@ -1275,35 +1311,59 @@ export default function ReadPage() {
         onCycleAuroraLevel={cycleAuroraLevel}
       />
       <main className="ide-main-content">
-        <PanelGroup direction={isNarrowViewport ? "vertical" : "horizontal"}>
+        <PanelGroup 
+          direction={isNarrowViewport ? "vertical" : "horizontal"}
+          onLayout={handleLayoutChange}
+        >
+          {/* 1. Activity Bar (Resizable/Collapsible Icons) */}
           <Panel
-            defaultSize={isNarrowViewport ? "28%" : "20%"}
-            minSize={isNarrowViewport ? "20%" : "15%"}
-            className="ide-sidebar"
+            defaultSize={settings?.ideLayout?.[0] ?? 4}
+            minSize={2}
+            maxSize={12}
+            collapsible={true}
+            className="ide-activity-bar"
           >
-            <div className="sidebar-tabs">
+            <div className="activity-bar-content">
               <button
-                className={`sidebar-tab ${sidebarTab === 'FILES' ? 'active' : ''}`}
+                className={`activity-item ${sidebarTab === 'FILES' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('FILES')}
-                title="Files"
+                title="Explorer"
               >
-                📁
+                <FolderIcon size={20} />
+                <span className="activity-label">EXPLORER</span>
               </button>
               <button
-                className={`sidebar-tab ${sidebarTab === 'SEARCH' ? 'active' : ''}`}
+                className={`activity-item ${sidebarTab === 'SEARCH' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('SEARCH')}
                 title="Search"
               >
-                🔍
+                <SearchIcon size={20} />
+                <span className="activity-label">SEARCH</span>
               </button>
               <button
-                className={`sidebar-tab ${sidebarTab === 'TOOLS' ? 'active' : ''}`}
+                className={`activity-item ${sidebarTab === 'TOOLS' ? 'active' : ''}`}
                 onClick={() => setSidebarTab('TOOLS')}
-                title="Tools"
+                title="Hex Tools"
               >
-                🛠️
+                <ToolsIcon size={20} />
+                <span className="activity-label">HEX TOOLS</span>
               </button>
             </div>
+            <div className="activity-bar-footer">
+               <button className="activity-item" title="Settings">
+                  <SettingsIcon size={20} />
+               </button>
+            </div>
+          </Panel>
+
+          <PanelResizeHandle className="activity-resize-handle" />
+
+          {/* 2. Primary Sidebar (Content) */}
+          <Panel
+            defaultSize={settings?.ideLayout?.[1] ?? (isNarrowViewport ? 28 : 18)}
+            minSize={isNarrowViewport ? 20 : 12}
+            className="ide-sidebar"
+          >
             <div className="sidebar-content">
               {sidebarTab === 'FILES' && (
                 <ScrollList
@@ -1329,7 +1389,7 @@ export default function ReadPage() {
                     isTruesight={isTruesight}
                     onToggleTruesight={handleToggleTruesight}
                     isPredictive={isPredictive}
-                    onTogglePredictive={() => setIsPredictive(prev => !prev)}
+                    onTogglePredictive={handleTogglePredictive}
                     analysisMode={analysisMode}
                     onModeChange={handleModeChange}
                     isAnalyzing={isAnalyzing}
@@ -1379,7 +1439,7 @@ export default function ReadPage() {
                 : { width: "2px", background: "var(--border-color)" }
             }
           />
-          <Panel defaultSize={isNarrowViewport ? undefined : 60} minSize={isNarrowViewport ? "40%" : "30%"}>
+          <Panel defaultSize={settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60)} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
               <div className="document-container">
                 {activeScrollId || isEditable ? (
@@ -1434,7 +1494,12 @@ export default function ReadPage() {
               <PanelResizeHandle
                 style={{ width: "2px", background: "var(--border-color)" }}
               />
-              <Panel defaultSize={25} minSize={15} collapsible={true} className="ide-right-panel">
+              <Panel 
+                defaultSize={settings?.ideLayout?.[3] ?? 25} 
+                minSize={15} 
+                collapsible={true} 
+                className="ide-right-panel"
+              >
                 <div className="right-panel-container">
                   <div className="right-panel-scroll">
                     {showScorePanel && scoreData && (

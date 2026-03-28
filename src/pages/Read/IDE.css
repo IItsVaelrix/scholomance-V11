@@ -277,38 +277,88 @@
   border-right: 1px solid rgba(100, 90, 160, 0.22);
 }
 
-.sidebar-tabs {
+/* ─── Activity Bar ─── */
+
+.ide-activity-bar {
   display: flex;
   flex-direction: column;
-  width: 48px;
+  background: rgba(0, 0, 0, 0.35);
   border-right: 1px solid rgba(100, 90, 160, 0.15);
-  background: rgba(0, 0, 0, 0.25);
+  height: 100%;
+  overflow: hidden;
+  transition: background 0.2s;
 }
 
-.sidebar-tab {
-  width: 48px;
+.activity-bar-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--space-2);
+}
+
+.activity-bar-footer {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-4);
+}
+
+.activity-item {
+  width: 100%;
   height: 48px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: 0 14px;
   background: transparent;
   border: 0;
-  color: rgba(201, 168, 64, 0.55);
-  font-size: 1.1rem;
+  color: rgba(201, 168, 64, 0.45);
   cursor: pointer;
   transition: all 0.2s;
   border-left: 2px solid transparent;
+  gap: 12px;
+  position: relative;
+  white-space: nowrap;
 }
 
-.sidebar-tab:hover {
+.activity-item:hover {
   color: rgba(201, 168, 64, 0.7);
   background: rgba(201, 168, 64, 0.05);
 }
 
-.sidebar-tab.active {
+.activity-item.active {
   color: var(--read-accent);
   background: rgba(201, 168, 64, 0.06);
   border-left-color: var(--read-accent);
+}
+
+.activity-label {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+}
+
+/* Reveal labels when activity bar is dragged wide enough */
+[data-panel-size]:not([data-panel-size="4.0"]) .activity-label {
+  opacity: 0.8;
+  transform: translateX(0);
+}
+
+.activity-resize-handle {
+  width: 1px;
+  background: rgba(100, 90, 160, 0.12);
+  transition: background 0.2s, width 0.2s;
+  position: relative;
+  z-index: 10;
+}
+
+.activity-resize-handle:hover,
+.activity-resize-handle:active {
+  background: var(--read-accent);
+  width: 2px;
 }
 
 .ide-sidebar > div[data-panel-group] {
