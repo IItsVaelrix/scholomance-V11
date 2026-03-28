@@ -76,25 +76,24 @@ function loadGutenbergEmotionPriors(priorsPath, log) {
   }
 }
 
-function getPrimaryStressedVowelFamily(analyzedWord) {
-  const syllables = Array.isArray(analyzedWord?.deepPhonetics?.syllables)
-    ? analyzedWord.deepPhonetics.syllables
+function getPrimaryStressedVowelFamily(analysis, fallbackVowelFamily = null) {
+  const syllables = Array.isArray(analysis?.syllables)
+    ? analysis.syllables
     : [];
   const stressed = syllables.find((syllable) => Number(syllable?.stress) > 0) || syllables[0];
-  const fallback = analyzedWord?.phonetics?.vowelFamily;
-  return normalizeVowelFamily(stressed?.vowelFamily || fallback);
+  return normalizeVowelFamily(stressed?.vowelFamily || fallbackVowelFamily);
 }
 
-function buildAnalysisWordProfiles(analyzedDoc, syntaxLayer = null) {
-  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
+function buildAnalysisWordProfiles(analysis, syntaxLayer = null) {
+  const lines = Array.isArray(analysis?.lines) ? analysis.lines : [];
   const profiles = [];
 
   for (const line of lines) {
-    const lineIndex = Number.isInteger(line?.number) ? line.number : 0;
+    const lineIndex = Number.isInteger(line?.lineIndex) ? line.lineIndex : 0;
     const words = Array.isArray(line?.words) ? line.words : [];
     for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
       const analyzedWord = words[wordIndex];
-      const charStart = Number.isInteger(analyzedWord?.start) ? analyzedWord.start : -1;
+      const charStart = Number.isInteger(analyzedWord?.charStart) ? analyzedWord.charStart : -1;
       const syntaxIdentity = `${lineIndex}:${wordIndex}:${charStart}`;
       const syntaxToken = syntaxLayer
         ? (
@@ -104,16 +103,16 @@ function buildAnalysisWordProfiles(analyzedDoc, syntaxLayer = null) {
         )
         : null;
       profiles.push({
-        word: String(analyzedWord?.text || ''),
-        normalizedWord: String(analyzedWord?.normalized || '').toUpperCase(),
+        word: String(analyzedWord?.word || ''),
+        normalizedWord: String(analyzedWord?.normalizedWord || analyzedWord?.word || '').toUpperCase(),
         lineIndex,
         wordIndex,
         charStart,
-        charEnd: Number.isInteger(analyzedWord?.end) ? analyzedWord.end : -1,
-        vowelFamily: getPrimaryStressedVowelFamily(analyzedWord) || null,
+        charEnd: Number.isInteger(analyzedWord?.charEnd) ? analyzedWord.charEnd : -1,
+        vowelFamily: getPrimaryStressedVowelFamily(analyzedWord?.analysis, analyzedWord?.vowelFamily) || null,
         syllableCount: Number(analyzedWord?.syllableCount) || 0,
-        rhymeKey: analyzedWord?.deepPhonetics?.rhymeKey || analyzedWord?.phonetics?.rhymeKey || null,
-        stressPattern: String(analyzedWord?.deepPhonetics?.stressPattern || ''),
+        rhymeKey: analyzedWord?.rhymeKey || analyzedWord?.analysis?.rhymeKey || null,
+        stressPattern: String(analyzedWord?.stressPattern || analyzedWord?.analysis?.stressPattern || ''),
         role: String(syntaxToken?.role || ''),
         lineRole: String(syntaxToken?.lineRole || ''),
         stressRole: String(syntaxToken?.stressRole || ''),
@@ -125,9 +124,9 @@ function buildAnalysisWordProfiles(analyzedDoc, syntaxLayer = null) {
   return profiles;
 }
 
-function buildLineSyllableCounts(analyzedDoc) {
-  const lines = Array.isArray(analyzedDoc?.lines) ? analyzedDoc.lines : [];
-  return lines.map((line) => Number(line?.syllableCount) || 0);
+function buildLineSyllableCounts(analysis) {
+  const lines = Array.isArray(analysis?.lines) ? analysis.lines : [];
+  return lines.map((line) => Number(line?.syllableTotal) || 0);
 }
 
 function toSerializableGroupEntries(value) {
@@ -195,6 +194,7 @@ function toMinimalAnalysisPayload(analysis, wordAnalyses, lineSyllableCounts) {
     schemePattern: typeof analysis.schemePattern === 'string' ? analysis.schemePattern : '',
     rhymeGroups: toSerializableGroupEntries(analysis.rhymeGroups),
     syntaxSummary: analysis.syntaxSummary || null,
+    compiler: analysis.compiler || null,
     wordAnalyses: Array.isArray(wordAnalyses) ? wordAnalyses : [],
     lineSyllableCounts: Array.isArray(lineSyllableCounts) ? lineSyllableCounts : [],
   };
@@ -509,13 +509,12 @@ export function createPanelAnalysisService(options = {}) {
         : { summary: null, tokenStateByIdentity: null };
 
       const scoreData = await scoreEngine.calculateScore(analyzedDoc);
-      const wordAnalyses = buildAnalysisWordProfiles(analyzedDoc, syntaxLayer);
-      const lineSyllableCounts = buildLineSyllableCounts(analyzedDoc);
-
       const deepAnalysis = await deepRhymeEngine.analyzeDocument(
         text,
         syntaxLayer ? { syntaxLayer } : {}
       );
+      const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer);
+      const lineSyllableCounts = buildLineSyllableCounts(deepAnalysis);
 
       const genreProfile = LiteraryClassifier.classify(analyzedDoc, deepAnalysis);
       const scheme = detectScheme(deepAnalysis.schemePattern, deepAnalysis.rhymeGroups);

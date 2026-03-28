@@ -23,7 +23,7 @@ const panelAnalysisBodySchema = z.object({
 });
 
 function getCacheKey(text) {
-  return createHash('sha256').update(String(text || '').trim()).digest('hex');
+  return createHash('sha256').update(String(text || '')).digest('hex');
 }
 
 function getFromMemoryCache(cache, key) {

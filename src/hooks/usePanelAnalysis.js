@@ -414,15 +414,15 @@ async function runClientSideAnalysis(text) {
         const st = w.syntaxToken;
         wordAnalyses.push({
           word: w.word,
-          normalizedWord: (w.word || "").toUpperCase(),
+          normalizedWord: w.normalizedWord || (w.word || "").toUpperCase(),
           lineIndex: w.lineIndex,
           wordIndex: w.wordIndex,
           charStart: w.charStart,
           charEnd: w.charEnd,
-          vowelFamily: a?.vowelFamily || null,
-          syllableCount: a?.syllableCount || 0,
-          rhymeKey: a?.rhymeKey || null,
-          stressPattern: a?.stressPattern || "",
+          vowelFamily: w.vowelFamily || a?.vowelFamily || null,
+          syllableCount: w.syllableCount || a?.syllableCount || 0,
+          rhymeKey: w.rhymeKey || a?.rhymeKey || null,
+          stressPattern: w.stressPattern || a?.stressPattern || "",
           role: st?.role || "content",
           lineRole: st?.lineRole || "line_mid",
           stressRole: st?.stressRole || "unknown",
@@ -431,15 +431,22 @@ async function runClientSideAnalysis(text) {
       }
     }
   }
-  analysis.wordAnalyses = wordAnalyses;
-  analysis.lineSyllableCounts = lineSyllableCounts;
 
   const scheme = detectScheme(analysis.schemePattern, analysis.rhymeGroups);
   const meter = analyzeMeter(analysis.lines);
   const vowelSummary = buildVowelSummaryFromAnalysis(analysis);
   return {
     data: {
-      analysis,
+      analysis: {
+        allConnections: Array.isArray(analysis.allConnections) ? analysis.allConnections : [],
+        statistics: analysis.statistics || null,
+        schemePattern: typeof analysis.schemePattern === "string" ? analysis.schemePattern : "",
+        rhymeGroups: analysis.rhymeGroups instanceof Map ? analysis.rhymeGroups : new Map(),
+        syntaxSummary: analysis.syntaxSummary || null,
+        compiler: analysis.compiler || null,
+        wordAnalyses,
+        lineSyllableCounts,
+      },
       scheme,
       meter,
       literaryDevices: [],
@@ -544,7 +551,7 @@ export function usePanelAnalysis() {
       requestIdRef.current += 1;
       const requestId = requestIdRef.current;
       setIsAnalyzing(true);
-      runClientSideAnalysis(trimmedText)
+      runClientSideAnalysis(nextText)
         .then((result) => applyResultIfCurrent(requestId, result))
         .catch(() => {
           setIsAnalyzing(false);

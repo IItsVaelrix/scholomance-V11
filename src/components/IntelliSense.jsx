@@ -167,7 +167,10 @@ const IntelliSense = memo(function IntelliSense({
               ) : (
                 <>
                   {s.isRhyme && <span className="intellisense-tag intellisense-tag--rhyme">rhyme</span>}
-                  {s.type === 'correction' && <span className="intellisense-tag intellisense-tag--fix">fix</span>}
+                  {s.type === 'correction'
+                    ? <span className="intellisense-tag intellisense-tag--fix">fix</span>
+                    : !s.isRhyme && <span className="intellisense-tag intellisense-tag--recommend">recommend</span>
+                  }
                 </>
               )}
             </button>
