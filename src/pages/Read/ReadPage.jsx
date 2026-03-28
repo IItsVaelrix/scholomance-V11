@@ -5,7 +5,7 @@ import {
   SettingsIcon
 } from "../../components/Icons.jsx";
 import { useUserSettings } from "../../hooks/useUserSettings.js";
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from "react";
 import {
   Group as PanelGroup,
   Panel,
@@ -149,6 +149,13 @@ export default function ReadPage() {
     });
     setHighlightedLines([]);
   }, [updateSettings]);
+
+  useLayoutEffect(() => {
+    // Sync initial activity bar size for CSS attribute selectors
+    const size = settings?.ideLayout?.[0] ?? 4;
+    const el = document.querySelector('.ide-activity-bar');
+    if (el) el.setAttribute('data-panel-size', size.toFixed(1));
+  }, [settings?.ideLayout]);
 
   const handleLayoutChange = useCallback((sizes) => {
     updateSettings({ ideLayout: sizes });
@@ -1341,10 +1348,13 @@ export default function ReadPage() {
           {/* 1. Activity Bar (Resizable/Collapsible Icons) */}
           <Panel
             defaultSize={settings?.ideLayout?.[0] ?? 4}
-            minSize={2}
-            maxSize={12}
-            collapsible={true}
+            minSize={4}
+            maxSize={10}
             className="ide-activity-bar"
+            onResize={(size) => {
+              const el = document.querySelector('.ide-activity-bar');
+              if (el) el.setAttribute('data-panel-size', size.toFixed(1));
+            }}
           >
             <div className="activity-bar-content">
               <button
@@ -1375,6 +1385,7 @@ export default function ReadPage() {
             <div className="activity-bar-footer">
                <button className="activity-item" title="Settings">
                   <SettingsIcon size={20} />
+                  <span className="activity-label">SETTINGS</span>
                </button>
             </div>
           </Panel>

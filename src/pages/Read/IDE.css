@@ -372,8 +372,14 @@
   pointer-events: none;
 }
 
-/* Reveal labels when activity bar is dragged wide enough */
-[data-panel-size]:not([data-panel-size="4.0"]) .activity-label {
+/* Reveal labels when activity bar is dragged wide enough (e.g. > 5.5%) */
+.ide-activity-bar[data-panel-size] .activity-label {
+  /* Simple JS-driven attribute check for labels */
+  opacity: 0;
+  transform: translateX(-4px);
+}
+
+.ide-activity-bar[data-panel-size]:not([data-panel-size^="4."]):not([data-panel-size^="5.0"]):not([data-panel-size^="5.1"]):not([data-panel-size^="5.2"]):not([data-panel-size^="5.3"]):not([data-panel-size^="5.4"]):not([data-panel-size^="5.5"]) .activity-label {
   opacity: 0.8;
   transform: translateX(0);
 }
@@ -381,15 +387,28 @@
 .activity-resize-handle {
   width: 1px;
   background: rgba(100, 90, 160, 0.12);
-  transition: background 0.2s, width 0.2s;
+  transition: background 0.2s, width 0.2s, box-shadow 0.2s;
   position: relative;
   z-index: 10;
+}
+
+/* Wider hit area for the handle */
+.activity-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  right: -6px;
+  width: 12px;
+  cursor: col-resize;
 }
 
 .activity-resize-handle:hover,
 .activity-resize-handle:active {
   background: var(--read-accent);
   width: 2px;
+  box-shadow: 0 0 8px var(--active-school-glow);
 }
 
 .ide-sidebar > div[data-panel-group] {
