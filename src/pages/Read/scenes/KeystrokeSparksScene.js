@@ -1,7 +1,9 @@
 /**
  * KeystrokeSparksScene — typing spark particles + Truesight ring effects
  *
- * Non-interactive Phaser scene overlaid on the scroll editor area.
+ * Performance: the particle emitter is pre-created in create() and reused for
+ * every keystroke. It is only rebuilt when the school color changes (infrequent).
+ * This eliminates the cost of this.add.particles() on every keypress.
  *
  * Public API:
  *   triggerSparks(x, y, colorHex)   — burst of sparks at (x, y) on keypress
@@ -22,6 +24,8 @@ export function buildSparksScene(Phaser) {
       super({ key: 'KeystrokeSparksScene' });
       this._W = 0;
       this._H = 0;
+      this._emitter = null;
+      this._currentColor = 0xc8a84b;
     }
 
     preload() {
@@ -36,42 +40,51 @@ export function buildSparksScene(Phaser) {
     create() {
       this._W = this.scale.width;
       this._H = this.scale.height;
+      this._buildEmitter(this._currentColor);
     }
 
     /**
-     * Emit a small burst of sparks from the cursor position.
-     * Called on every printable keypress.
+     * Build (or rebuild) the reusable spark emitter for a given color.
+     * Called once at create() and again only when school color changes.
+     */
+    _buildEmitter(color) {
+      if (this._emitter?.active) this._emitter.destroy();
+      this._currentColor = color;
+      try {
+        this._emitter = this.add.particles(0, 0, 'kspark-dot', {
+          speed:    { min: 25, max: 75 },
+          angle:    { min: 200, max: 340 }, // upward arc
+          scale:    { start: 0.6, end: 0 },
+          alpha:    { start: 0.75, end: 0 },
+          lifespan: { min: 250, max: 420 },
+          quantity: 5,
+          tint:     color,
+          blendMode: 'ADD',
+          frequency: -1, // manual explode only
+        });
+      } catch {
+        this._emitter = null;
+      }
+    }
+
+    /**
+     * Emit a spark burst from (x, y). Reuses the pre-built emitter;
+     * only rebuilds it when color changes (school switch).
      */
     triggerSparks(x, y, colorHex) {
       const color = hexToNum(colorHex);
       const cx = Number.isFinite(x) ? x : this._W / 2;
       const cy = Number.isFinite(y) ? y : this._H / 2;
 
-      try {
-        const emitter = this.add.particles(cx, cy, 'kspark-dot', {
-          speed: { min: 25, max: 75 },
-          angle: { min: 200, max: 340 }, // upward arc, slightly randomized
-          scale: { start: 0.6, end: 0 },
-          alpha: { start: 0.75, end: 0 },
-          lifespan: { min: 250, max: 420 },
-          quantity: 5,
-          tint: color,
-          blendMode: 'ADD',
-          frequency: -1,
-        });
-        emitter.explode(5);
-        // Self-destruct after the longest possible lifespan
-        this.time.delayedCall(480, () => {
-          if (emitter?.active) emitter.destroy();
-        });
-      } catch {
-        /* Particle system unavailable — degrade gracefully */
-      }
+      if (color !== this._currentColor) this._buildEmitter(color);
+      if (!this._emitter) return;
+
+      this._emitter.setPosition(cx, cy);
+      this._emitter.explode(5);
     }
 
     /**
      * Expanding golden ring pulse — fired when Truesight activates.
-     * Radius animates outward; alpha fades to 0.
      */
     triggerBloom(x, y, colorHex) {
       const color = hexToNum(colorHex || '#c8a84b');
@@ -92,7 +105,6 @@ export function buildSparksScene(Phaser) {
           g.clear();
           g.lineStyle(1.8, color, 0.85 * (1 - progress));
           g.strokeCircle(cx, cy, r);
-          // Second ring, slightly offset
           if (progress < 0.6) {
             g.lineStyle(0.8, color, 0.35 * (1 - progress / 0.6));
             g.strokeCircle(cx, cy, r * 0.72);
@@ -101,7 +113,6 @@ export function buildSparksScene(Phaser) {
         onComplete: () => g.destroy(),
       });
 
-      // Inner area flash
       const flash = this.add.graphics().setDepth(9);
       flash.fillStyle(color, 0.07);
       flash.fillCircle(cx, cy, maxR * 0.5);

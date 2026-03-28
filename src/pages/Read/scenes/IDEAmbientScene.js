@@ -71,7 +71,7 @@ export function buildAmbientScene(Phaser) {
       for (const m of this._motes) m.obj?.destroy();
       this._motes = [];
 
-      for (let i = 0; i < 22; i++) {
+      for (let i = 0; i < 12; i++) {
         const baseAlpha = Math.random() * 0.055 + 0.012;
         const obj = this.add.image(
           Math.random() * this._W,

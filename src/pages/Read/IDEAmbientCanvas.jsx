@@ -1,34 +1,33 @@
 /**
  * IDEAmbientCanvas — React wrapper for IDEAmbientScene
  *
- * Mounts a transparent Phaser canvas as an absolute-positioned layer
- * behind the IDE main content. Skips entirely when prefers-reduced-motion.
+ * Defers Phaser initialization to browser idle time (requestIdleCallback,
+ * 4 s timeout). This guarantees it never competes with first-interaction
+ * paint and has zero INP impact during initial load.
  *
  * Props:
  *   schoolColor {string} — hex color for the active school (e.g. "#651fff")
  */
 import { useEffect, useRef } from 'react';
 
+const useRIC = typeof requestIdleCallback !== 'undefined';
+
 export default function IDEAmbientCanvas({ schoolColor = '#c8a84b' }) {
-  const elRef       = useRef(null);
-  const gameRef     = useRef(null);
-  const colorRef    = useRef(schoolColor);
+  const elRef    = useRef(null);
+  const gameRef  = useRef(null);
+  const colorRef = useRef(schoolColor);
 
-  // Keep colorRef current so Phaser can read the latest value after async load
-  useEffect(() => {
-    colorRef.current = schoolColor;
-  }, [schoolColor]);
+  useEffect(() => { colorRef.current = schoolColor; }, [schoolColor]);
 
-  // Mount Phaser once on first render
   useEffect(() => {
     const el = elRef.current;
     if (!el) return;
-    // Respect reduced motion — skip the entire canvas
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
 
     let alive = true;
 
-    (async () => {
+    async function initPhaser() {
+      if (!alive) return;
       try {
         const [{ default: Phaser }, { buildAmbientScene }] = await Promise.all([
           import('phaser'),
@@ -56,17 +55,24 @@ export default function IDEAmbientCanvas({ schoolColor = '#c8a84b' }) {
           if (!alive) { game.destroy(true); return; }
           if (game.canvas) game.canvas.style.pointerEvents = 'none';
           gameRef.current = game;
-          // Apply the school color that may have been set before Phaser loaded
           const scene = game.scene.getScene('IDEAmbientScene');
           scene?.setSchoolColor?.(colorRef.current);
         });
       } catch {
-        /* Phaser unavailable (test env / no WebGL) — ambient layer absent */
+        /* Phaser unavailable — ambient layer absent */
       }
-    })();
+    }
+
+    // Defer to idle time so first-interaction paint is never blocked.
+    // Falls back to a 1.2 s setTimeout in browsers without RIC (Safari < 2023).
+    const idleHandle = useRIC
+      ? requestIdleCallback(initPhaser, { timeout: 4000 })
+      : setTimeout(initPhaser, 1200);
 
     return () => {
       alive = false;
+      if (useRIC) cancelIdleCallback(idleHandle);
+      else        clearTimeout(idleHandle);
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
@@ -76,9 +82,7 @@ export default function IDEAmbientCanvas({ schoolColor = '#c8a84b' }) {
 
   // Push school color updates into the live scene
   useEffect(() => {
-    const game = gameRef.current;
-    if (!game) return;
-    const scene = game.scene.getScene('IDEAmbientScene');
+    const scene = gameRef.current?.scene?.getScene('IDEAmbientScene');
     scene?.setSchoolColor?.(schoolColor);
   }, [schoolColor]);
 
