@@ -251,6 +251,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   onWordActivate,
   onCursorChange,
   onScrollChange,
+  isEditorIdle = true,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -501,7 +502,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
   // Virtualization windowing
   const visibleRange = useMemo(() => {
-    if (!isTruesight) return { start: 0, end: 0 };
+    // Always compute visible range — overlay renders in both Truesight and definition-only mode
     
     const startIdx = Math.max(0, Math.floor(scrollTop / lineHeightPx) - BUFFER);
     const endIdx = Math.min(
@@ -510,7 +511,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     );
     
     return { start: startIdx, end: endIdx };
-  }, [scrollTop, editorHeight, overlayLines.length, isTruesight, lineHeightPx]);
+  }, [scrollTop, editorHeight, overlayLines.length, lineHeightPx]);
 
   const windowedLines = useMemo(() => {
     return overlayLines.slice(visibleRange.start, visibleRange.end);
@@ -974,7 +975,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             ref={textareaRef}
             className={`editor-textarea ${isTruesight ? "truesight-transparent" : ""} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""}`}
             style={{
-              zIndex: isTruesight ? 1 : 10,
+              zIndex: isTruesight ? 1 : 2,
               pointerEvents: (!isEditable && isTruesight) ? 'none' : 'auto',
             }}
             aria-hidden={isTruesight && !isEditable && !!onWordActivate}
@@ -995,14 +996,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             aria-required={isEditable}
             aria-label={`Scroll content: ${title || "Untitled"}`}
           />
-          {isTruesight && (
-            <div
+          <div
               key={`overlay-${isTruesight}`}
               ref={truesightOverlayRef}
-              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}`}
+              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}`}
               style={{
                 zIndex: 5,
-                pointerEvents: isEditable ? 'none' : 'auto'
+                pointerEvents: (isEditable && !isEditorIdle) ? 'none' : 'auto'
               }}
               aria-hidden={isEditable || !onWordActivate}
               onScroll={handleOverlayScroll}
@@ -1110,7 +1110,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                 })}
               </div>
             </div>
-          )}
 
           {/* Ghost layer: pinned lines fly to top on pair select */}
           {isTruesight && ghostData && (

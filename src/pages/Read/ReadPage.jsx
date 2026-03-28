@@ -135,6 +135,7 @@ export default function ReadPage() {
   const [toasts, setToasts] = useState([]);
   const [infoBeamEnabled, setInfoBeamEnabled] = useState(false);
   const [infoBeamFamily, setInfoBeamFamily] = useState(null);
+  const [isEditorIdle, setIsEditorIdle] = useState(true);
 
   const addToast = useCallback((message, type = "info") => {
     const id = Date.now();
@@ -394,11 +395,12 @@ export default function ReadPage() {
     [truesightContent]
   );
 
+  // Ambient analysis: always run on content change.
+  // usePanelAnalysis internally debounces at 2.5s, so no extra debounce needed here.
   useEffect(() => {
-    if (truesightContent && (isTruesight || showScorePanel)) {
-      analyzeDocument(truesightContent);
-    }
-  }, [isTruesight, showScorePanel, truesightContent, analyzeDocument]);
+    if (!truesightContent) return;
+    analyzeDocument(truesightContent);
+  }, [truesightContent, analyzeDocument]);
 
   const bumpAutosaveContext = useCallback(() => {
     autosaveContextRef.current += 1;
@@ -602,9 +604,11 @@ export default function ReadPage() {
 
   const handleEditorContentChange = useCallback((content) => {
     isTypingRef.current = true;
+    setIsEditorIdle(false);
     clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
+      setIsEditorIdle(true);
       if (pendingCommitRef.current) {
         setCommittedColors(pendingCommitRef.current);
         pendingCommitRef.current = null;
@@ -782,7 +786,7 @@ export default function ReadPage() {
   }, []);
 
   const handleWordActivate = useCallback((activation) => {
-    if (!activation || !activation.normalizedWord || !isTruesight) {
+    if (!activation || !activation.normalizedWord) {
       return;
     }
 
@@ -868,20 +872,10 @@ export default function ReadPage() {
         lookup(activation.normalizedWord);
       }
     }
-  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition, sessionWords, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
+  }, [buildTooltipAnalysis, lookup, resetWordLookup, resolveTooltipPosition, sessionWords, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
 
-  useEffect(() => {
-    if (!isTruesight) {
-      setTooltipState((prev) => ({
-        ...prev,
-        visible: false,
-        pinned: false,
-        token: null,
-        localAnalysis: null,
-      }));
-      resetWordLookup();
-    }
-  }, [isTruesight, resetWordLookup]);
+  // Note: tooltip state is no longer cleared when Truesight turns OFF.
+  // Definitions are ambient — the tooltip persists regardless of Truesight mode.
 
   const tooltipWordData = useMemo(() => {
     if (!tooltipState.token) return null;
@@ -1082,6 +1076,7 @@ export default function ReadPage() {
             onWordActivate={handleWordActivate}
             onCursorChange={setCursorPos}
             onScrollChange={setMinimapScrollTop}
+            isEditorIdle={isEditorIdle}
           />
         ) : (
           <div className="scroll-placeholder">
@@ -1226,7 +1221,7 @@ export default function ReadPage() {
         <MobileTabBar />
 
         <AnimatePresence>
-          {isTruesight && tooltipState.token && (
+          {tooltipState.token && (
             <WordTooltip
               key="word-card"
               wordData={tooltipWordData}
@@ -1384,7 +1379,7 @@ export default function ReadPage() {
                 : { width: "2px", background: "var(--border-color)" }
             }
           />
-          <Panel minSize={isNarrowViewport ? "40%" : "30%"}>
+          <Panel defaultSize={isNarrowViewport ? undefined : 60} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
               <div className="document-container">
                 {activeScrollId || isEditable ? (
@@ -1422,6 +1417,7 @@ export default function ReadPage() {
                     onWordActivate={handleWordActivate}
                     onCursorChange={setCursorPos}
                     onScrollChange={setMinimapScrollTop}
+                    isEditorIdle={isEditorIdle}
                   />
                 ) : (
                   <div className="scroll-placeholder">
@@ -1433,6 +1429,165 @@ export default function ReadPage() {
               </div>
             </div>
           </Panel>
+          {!isNarrowViewport && (
+            <>
+              <PanelResizeHandle
+                style={{ width: "2px", background: "var(--border-color)" }}
+              />
+              <Panel defaultSize={25} minSize={15} collapsible={true} className="ide-right-panel">
+                <div className="right-panel-container">
+                  <div className="right-panel-scroll">
+                    {showScorePanel && scoreData && (
+                      <div className="right-panel-section">
+                        <div className="right-panel-section-header">
+                          <span className="right-panel-section-title">CODEx Metrics</span>
+                          <button
+                            type="button"
+                            className="right-panel-close"
+                            onClick={() => setShowScorePanel(false)}
+                            aria-label="Close CODEx Metrics"
+                          >×</button>
+                        </div>
+                        <HeuristicScorePanel
+                          scoreData={scoreData}
+                          genreProfile={genreProfile}
+                          visible={true}
+                          isEmbedded={true}
+                        />
+                      </div>
+                    )}
+
+                    {isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
+                      <div className="right-panel-section">
+                        <div className="right-panel-section-header">
+                          <span className="right-panel-section-title">Analyze</span>
+                          <button
+                            type="button"
+                            className="right-panel-close"
+                            onClick={() => handleModeChange(ANALYSIS_MODES.NONE)}
+                            aria-label="Close Analysis"
+                          >×</button>
+                        </div>
+                        <AnalysisPanel
+                          scheme={schemeDetection}
+                          meter={meterDetection}
+                          statistics={deepAnalysis?.statistics}
+                          literaryDevices={literaryDevices}
+                          emotion={emotion}
+                          genreProfile={genreProfile}
+                          hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
+                          scoreData={scoreData}
+                          rhymeAstrology={rhymeAstrology}
+                          onGroupHover={highlightRhymeGroup}
+                          onGroupLeave={clearHighlight}
+                          infoBeamEnabled={infoBeamEnabled}
+                          onInfoBeamToggle={() => setInfoBeamEnabled((prev) => !prev)}
+                          onGroupClick={handleInfoBeamClick}
+                          activeInfoBeamFamily={infoBeamFamily}
+                        />
+                      </div>
+                    )}
+
+                    {infoBeamEnabled && infoBeamFamily && (
+                      <div className="right-panel-section">
+                        <div className="right-panel-section-header">
+                          <span className="right-panel-section-title">InfoBeam — Group {infoBeamFamily}</span>
+                          <button
+                            type="button"
+                            className="right-panel-close"
+                            onClick={() => setInfoBeamFamily(null)}
+                            aria-label="Close InfoBeam"
+                          >×</button>
+                        </div>
+                        <InfoBeamPanel
+                          groupLabel={infoBeamFamily}
+                          groupColor={patternColor(infoBeamFamily)}
+                          connections={infoBeamConnections}
+                          scrollLines={scrollLines}
+                        />
+                      </div>
+                    )}
+
+                    {showMinimap && (
+                      <div className="right-panel-section">
+                        <div className="right-panel-section-header">
+                          <span className="right-panel-section-title">Minimap</span>
+                          <button
+                            type="button"
+                            className="right-panel-close"
+                            onClick={() => setShowMinimap(false)}
+                            aria-label="Close Minimap"
+                          >×</button>
+                        </div>
+                        <Minimap
+                          content={editorContent}
+                          scrollTop={minimapScrollTop}
+                          viewportHeight={editorRef.current?.clientHeight || 0}
+                          totalHeight={editorRef.current?.scrollHeight || 1}
+                          onScrollTo={(y) => {
+                            if (editorRef.current?.scrollTo) {
+                              editorRef.current.scrollTo(y);
+                            }
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {isPredictive && misspellings.length > 0 && (
+                      <div className="right-panel-section">
+                        <div className="right-panel-section-header">
+                          <span className="right-panel-section-title">Spellcheck</span>
+                          <button
+                            type="button"
+                            className="right-panel-close"
+                            onClick={() => setIsPredictive(false)}
+                            aria-label="Close Spellcheck"
+                          >×</button>
+                        </div>
+                        <div className="misspellings-list">
+                          {misspellings.map((err, i) => (
+                            <div key={i} className="misspelling-item">
+                              <button
+                                type="button"
+                                className={`error-word${err.suggestions.length > 0 ? " error-word--interactive" : ""}`}
+                                disabled={err.suggestions.length === 0}
+                                onClick={() => applySpellcheckCorrection(err.word, err.suggestions[0])}
+                                title={
+                                  err.suggestions.length > 0
+                                    ? `Replace "${err.word}" with "${err.suggestions[0]}"`
+                                    : "No suggestions available"
+                                }
+                              >
+                                {err.word}
+                              </button>
+                              <div className="error-suggestions">
+                                {err.suggestions.map((s, j) => (
+                                  <button
+                                    key={j}
+                                    className="btn-tiny"
+                                    onClick={() => applySpellcheckCorrection(err.word, s)}
+                                  >
+                                    {s}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {!showScorePanel && !(isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE) && !(infoBeamEnabled && infoBeamFamily) && !showMinimap && !(isPredictive && misspellings.length > 0) && (
+                      <div className="right-panel-empty">
+                        <div className="right-panel-empty-icon">⊘</div>
+                        <p>Enable Truesight or CODEx Metrics to see analysis here</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Panel>
+            </>
+          )}
         </PanelGroup>
       </main>
 
@@ -1444,7 +1599,8 @@ export default function ReadPage() {
         analysisError={analysisError}
       />
       
-      {showMinimap && (
+      {/* Floating panel fallback for narrow viewports only */}
+      {isNarrowViewport && showMinimap && (
         <FloatingPanel
           id="minimap-panel"
           title="Minimap"
@@ -1460,7 +1616,7 @@ export default function ReadPage() {
           zIndex={200}
           className="minimap-floating-panel"
         >
-          <Minimap 
+          <Minimap
             content={editorContent}
             scrollTop={minimapScrollTop}
             viewportHeight={editorRef.current?.clientHeight || 0}
@@ -1474,7 +1630,7 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
+      {isNarrowViewport && isTruesight && analysisMode === ANALYSIS_MODES.ANALYZE && (
         <FloatingPanel
           id="analyze-panel"
           title="Analyze"
@@ -1508,7 +1664,7 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {infoBeamEnabled && infoBeamFamily && (
+      {isNarrowViewport && infoBeamEnabled && infoBeamFamily && (
         <FloatingPanel
           id="infobeam-panel"
           title={`InfoBeam — Group ${infoBeamFamily}`}
@@ -1533,7 +1689,7 @@ export default function ReadPage() {
         </FloatingPanel>
       )}
 
-      {showScorePanel && scoreData && (
+      {isNarrowViewport && showScorePanel && scoreData && (
         <FloatingPanel
           id="score-panel"
           title="CODEx Metrics"
@@ -1556,7 +1712,7 @@ export default function ReadPage() {
       )}
 
       <AnimatePresence>
-        {isTruesight && tooltipState.token && (
+        {tooltipState.token && (
           <WordTooltip
             key="word-card"
             wordData={tooltipWordData}
@@ -1575,7 +1731,7 @@ export default function ReadPage() {
         )}
       </AnimatePresence>
 
-      {isPredictive && misspellings.length > 0 && (
+      {isNarrowViewport && isPredictive && misspellings.length > 0 && (
         <FloatingPanel
           id="spellcheck-panel"
           title="Spellcheck"

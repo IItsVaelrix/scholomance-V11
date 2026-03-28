@@ -650,6 +650,8 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  max-width: 52rem;
+  margin: 0 auto;
   padding: 0;
   gap: 0;
 }
@@ -2487,4 +2489,159 @@
     min-width: auto;
     font-size: 0.75rem;
   }
+}
+
+/* ── Right Panel (docked analysis/feedback column) ── */
+
+.ide-right-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(5, 4, 16, 0.6);
+  border-left: 1px solid var(--border-color, rgba(100, 90, 160, 0.20));
+}
+
+.right-panel-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.right-panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-3, 0.75rem);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3, 0.75rem);
+}
+
+.right-panel-section {
+  border: 1px solid rgba(100, 90, 160, 0.15);
+  border-radius: var(--radius-md, 0.5rem);
+  background: rgba(10, 8, 28, 0.5);
+  overflow: hidden;
+}
+
+.right-panel-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border-bottom: 1px solid rgba(100, 90, 160, 0.12);
+  background: rgba(5, 4, 16, 0.7);
+}
+
+.right-panel-section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(201, 168, 64, 0.8);
+}
+
+.right-panel-close {
+  all: unset;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  color: rgba(248, 249, 255, 0.4);
+  padding: 0 var(--space-1, 0.25rem);
+  border-radius: var(--radius-sm, 0.25rem);
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.right-panel-close:hover {
+  color: rgba(248, 249, 255, 0.8);
+  background: rgba(100, 90, 160, 0.15);
+}
+
+.right-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 200px;
+  color: rgba(248, 249, 255, 0.25);
+  text-align: center;
+  padding: var(--space-6, 1.5rem);
+}
+
+.right-panel-empty-icon {
+  font-size: 2rem;
+  margin-bottom: var(--space-3, 0.75rem);
+  opacity: 0.4;
+}
+
+.right-panel-empty p {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  max-width: 18ch;
+}
+
+/* Hide right panel on narrow viewports — floating panels take over */
+@media (max-width: 960px) {
+  .ide-right-panel {
+    display: none;
+  }
+}
+
+/* ── Definition-only overlay (Truesight OFF, ambient clickable words) ── */
+
+.truesight-overlay--definitions-only {
+  pointer-events: none !important;
+}
+
+.truesight-overlay--definitions-only .truesight-line {
+  pointer-events: none;
+}
+
+.truesight-overlay--definitions-only .truesight-word {
+  color: transparent !important;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+
+.truesight-overlay--definitions-only .grimoire-word--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.truesight-overlay--definitions-only .grimoire-word--interactive:hover {
+  text-decoration: underline;
+  text-decoration-color: rgba(201, 168, 64, 0.3);
+  color: transparent !important;
+}
+
+/* Light theme overrides for right panel */
+[data-theme="light"] .ide-right-panel {
+  background: rgba(245, 240, 230, 0.6);
+  border-left-color: rgba(100, 90, 160, 0.12);
+}
+
+[data-theme="light"] .right-panel-section {
+  background: rgba(255, 252, 245, 0.7);
+  border-color: rgba(100, 90, 160, 0.1);
+}
+
+[data-theme="light"] .right-panel-section-header {
+  background: rgba(245, 240, 230, 0.8);
+  border-bottom-color: rgba(100, 90, 160, 0.08);
+}
+
+[data-theme="light"] .right-panel-close {
+  color: rgba(26, 26, 46, 0.4);
+}
+
+[data-theme="light"] .right-panel-close:hover {
+  color: rgba(26, 26, 46, 0.8);
+  background: rgba(100, 90, 160, 0.08);
+}
+
+[data-theme="light"] .right-panel-empty {
+  color: rgba(26, 26, 46, 0.3);
 }
