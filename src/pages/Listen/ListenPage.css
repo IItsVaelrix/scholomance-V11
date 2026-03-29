@@ -16,6 +16,8 @@
   display: grid;
   gap: var(--space-4);
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
 .listen-header {
