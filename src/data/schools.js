@@ -43,13 +43,13 @@ export const SCHOOLS = {
   SONIC: {
     id: "SONIC",
     name: "Sonic Thaumaturgy",
-    color: "#6548b8",
-    colorHsl: { h: 265, s: 48, l: 50 },
+    color: "#3c8c82",
+    colorHsl: { h: 174, s: 45, l: 42 }, // Perfect AE Resonance
     angle: 288,
     unlockXP: 0,
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
-    vowelAffinities: ["IH", "ER"],
+    vowelAffinities: ["AE", "EH"],
     glyph: "♩",
     atmosphere: {
       auroraIntensity: 0.9,
@@ -62,12 +62,12 @@ export const SCHOOLS = {
     id: "PSYCHIC",
     name: "Psychic Schism",
     color: "#4470b8",
-    colorHsl: { h: 220, s: 48, l: 49 },
+    colorHsl: { h: 200, s: 65, l: 71 }, // Perfect IY Resonance
     angle: 72,
     unlockXP: 250,
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
-    vowelAffinities: ["IY", "AY"],
+    vowelAffinities: ["IY", "IH"],
     glyph: "◬",
     atmosphere: {
       auroraIntensity: 0.8,
@@ -80,7 +80,7 @@ export const SCHOOLS = {
     id: "VOID",
     name: "The Void",
     color: "#6a5a78",
-    colorHsl: { h: 310, s: 15, l: 41 },
+    colorHsl: { h: 171, s: 15, l: 41 }, // Perfect AX (Schwa) Resonance (Desaturated)
     angle: 0,
     unlockXP: 1500,
     description: "The space between spaces, where entropy reigns",
@@ -97,8 +97,8 @@ export const SCHOOLS = {
   ALCHEMY: {
     id: "ALCHEMY",
     name: "Verbal Alchemy",
-    color: "#b84882",
-    colorHsl: { h: 330, s: 48, l: 50 },
+    color: "#5c9aac",
+    colorHsl: { h: 185, s: 45, l: 58 }, // Perfect EY Resonance
     angle: 144,
     unlockXP: 8000,
     description: "The transmutation of meaning through spoken word",
@@ -115,13 +115,13 @@ export const SCHOOLS = {
   WILL: {
     id: "WILL",
     name: "Willpower Surge",
-    color: "#b85c48",
-    colorHsl: { h: 15, s: 48, l: 50 },
+    color: "#3c8c64",
+    colorHsl: { h: 156, s: 45, l: 53 }, // Perfect AH Resonance
     angle: 216,
     unlockXP: 25000,
     description: "Focusing raw will into reality-altering force",
     tracks: ["will"],
-    vowelAffinities: ["AE", "AH"],
+    vowelAffinities: ["AA", "AH"],
     glyph: "⚡",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -135,8 +135,8 @@ export const SCHOOLS = {
   NECROMANCY: {
     id: "NECROMANCY",
     name: "Necromancy",
-    color: "#389468",
-    colorHsl: { h: 155, s: 44, l: 40 },
+    color: "#3c8c52",
+    colorHsl: { h: 150, s: 65, l: 48 }, // Perfect AA Resonance
     angle: 36,
     unlockXP: 100000,
     description: "Communication with and manipulation of life force",
@@ -153,8 +153,8 @@ export const SCHOOLS = {
   ABJURATION: {
     id: "ABJURATION",
     name: "Abjuration",
-    color: "#38849c",
-    colorHsl: { h: 195, s: 46, l: 42 },
+    color: "#5c8c64",
+    colorHsl: { h: 136, s: 65, l: 70 }, // Perfect UW Resonance
     angle: 108,
     unlockXP: 500000,
     description: "Protective magic and negation of effects",
@@ -171,8 +171,8 @@ export const SCHOOLS = {
   DIVINATION: {
     id: "DIVINATION",
     name: "Divination",
-    color: "#a88440",
-    colorHsl: { h: 50, s: 46, l: 46 },
+    color: "#748c5c",
+    colorHsl: { h: 134, s: 45, l: 56 }, // Perfect AO Resonance
     angle: 180,
     unlockXP: 2000000,
     description: "Seeing across time and space",
