@@ -1,6 +1,7 @@
 import { commonElementAmplifier } from './plugins/commonElements.js';
 import { rareElementAmplifier } from './plugins/rareElements.js';
 import { inexplicableElementAmplifier } from './plugins/inexplicableElements.js';
+import { phoneticColorAmplifier } from './plugins/phoneticColor.js';
 import {
   clamp01,
   collectVerseIRTokenStats,
@@ -20,6 +21,7 @@ const DEFAULT_ROUTING_TOP_K = 3;
 const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
+  phoneticColorAmplifier,
   commonElementAmplifier,
   rareElementAmplifier,
   inexplicableElementAmplifier,
@@ -714,8 +716,30 @@ export async function enhanceVerseIR(verseIR, options = {}) {
 
   const verseIRAmplifier = await runVerseIRAmplifiers(verseIR, options);
 
+  // Extract authoritative bytecodes from the phonetic color amplifier
+  const colorResult = (Array.isArray(verseIRAmplifier.amplifiers) ? verseIRAmplifier.amplifiers : [])
+    .find((a) => a.id === 'phonetic_color');
+  const bytecodeMap = colorResult?.tokenBytecodes || new Map();
+
+  // Attach bytecodes to tokens in a new frozen tokens array
+  const enhancedTokens = Object.freeze(
+    (Array.isArray(verseIR.tokens) ? verseIR.tokens : []).map((token) => {
+      const visualBytecode = bytecodeMap instanceof Map 
+        ? bytecodeMap.get(token.id) 
+        : bytecodeMap?.[token.id];
+      
+      if (!visualBytecode) return token;
+
+      return Object.freeze({
+        ...token,
+        visualBytecode: Object.freeze(visualBytecode),
+      });
+    })
+  );
+
   return Object.freeze({
     ...verseIR,
+    tokens: enhancedTokens,
     semanticDepth: verseIRAmplifier.semanticDepth,
     archetypeResonance: verseIRAmplifier.archetypeResonance,
     elementMatches: verseIRAmplifier.elementMatches,

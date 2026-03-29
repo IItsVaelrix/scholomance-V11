@@ -89,9 +89,19 @@ function getPrimaryStressedVowelFamily(analysis, fallbackVowelFamily = null) {
   return normalizeVowelFamily(stressed?.vowelFamily || fallbackVowelFamily);
 }
 
-function buildAnalysisWordProfiles(analysis, syntaxLayer = null) {
+function buildAnalysisWordProfiles(analysis, syntaxLayer = null, verseIR = null) {
   const lines = Array.isArray(analysis?.lines) ? analysis.lines : [];
   const profiles = [];
+
+  // Build a lookup for VerseIR tokens by charStart for authoritative bytecode
+  const verseTokenByCharStart = new Map();
+  if (Array.isArray(verseIR?.tokens)) {
+    for (const token of verseIR.tokens) {
+      if (Number.isInteger(token?.charStart)) {
+        verseTokenByCharStart.set(token.charStart, token);
+      }
+    }
+  }
 
   for (const line of lines) {
     const lineIndex = Number.isInteger(line?.lineIndex) ? line.lineIndex : 0;
@@ -107,6 +117,9 @@ function buildAnalysisWordProfiles(analysis, syntaxLayer = null) {
           null
         )
         : null;
+
+      const verseToken = verseTokenByCharStart.get(charStart);
+
       profiles.push({
         word: String(analyzedWord?.word || ''),
         normalizedWord: String(analyzedWord?.normalizedWord || analyzedWord?.word || '').toUpperCase(),
@@ -122,6 +135,7 @@ function buildAnalysisWordProfiles(analysis, syntaxLayer = null) {
         lineRole: String(syntaxToken?.lineRole || ''),
         stressRole: String(syntaxToken?.stressRole || ''),
         rhymePolicy: String(syntaxToken?.rhymePolicy || ''),
+        visualBytecode: verseToken?.visualBytecode || null,
       });
     }
   }
@@ -784,7 +798,7 @@ export function createPanelAnalysisService(options = {}) {
       }));
       const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
       const scoreData = await scoreEngine.calculateScore(amplifiedDoc);
-      const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer);
+      const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer, verseIR);
       const lineSyllableCounts = buildLineSyllableCounts(deepAnalysis);
 
       const genreProfile = LiteraryClassifier.classify(amplifiedDoc, deepAnalysis);
