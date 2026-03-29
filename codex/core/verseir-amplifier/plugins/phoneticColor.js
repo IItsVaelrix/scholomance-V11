@@ -12,8 +12,6 @@ import { VOWEL_FAMILY_TO_SCHOOL, SCHOOLS } from '../../../../src/data/schools.js
 import { clamp01, roundTo, createAmplifierResult } from '../shared.js';
 import biophysicalData from '../../../../verseir_palette_payload.json';
 
-const DEFAULT_SCHOOL = 'VOID';
-
 /**
  * Resolves biophysical color coordinates based on cochlear place metrics.
  */
@@ -26,7 +24,6 @@ function resolveBiophysicalVowelColor(family, nativeSchoolId, vowelData, theme =
   const {
     spreadNorm = 0.5,
     sharpnessNorm = 0.5,
-    distinctNorm = 0.5,
   } = metrics;
 
   // Base saturation: high for learning, but slightly muted for non-resonant words
@@ -44,7 +41,7 @@ function resolveBiophysicalVowelColor(family, nativeSchoolId, vowelData, theme =
 /**
  * Applies contextual resonance (rhyme, anchoring) to the base biophysical color.
  */
-function applyContextualResonance(base, { glowIntensity, isAnchor, saturationBoost, hasProximity, theme }) {
+function applyContextualResonance(base, { glowIntensity, isAnchor, hasProximity, theme }) {
   const isHighEnergy = isAnchor || glowIntensity > 0.5 || hasProximity;
   const maxL = theme === 'dark' ? 90 : 25;
   
@@ -152,7 +149,7 @@ export const phoneticColorAmplifier = {
         isAnchor,
         isStopWord: token.flags?.isStopWordLike || false,
         effectClass,
-        biophysical: metrics,
+        biophysical: baseColor.metrics,
       });
     }
 
