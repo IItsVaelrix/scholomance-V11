@@ -7,6 +7,9 @@ import Gutter from "./Gutter.jsx";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 import { DEFAULT_VOWEL_COLORS } from "../../data/schoolPalettes.js";
+import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
+import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
+import { decodeBytecode, synthesizeBytecodeFromLegacy } from "./bytecodeRenderer.js";
 
 const MAX_CONTENT_LENGTH = 50000;
 const CONTENT_DEBOUNCE_MS = 300;
@@ -548,6 +551,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
   const { theme: effectiveTheme } = useTheme();
   const activeTheme = theme || effectiveTheme;
+  const reducedMotion = usePrefersReducedMotion();
 
   const allowLegacyWordFallback = useMemo(() => (
     analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
@@ -1187,9 +1191,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? (codexEntry.color || activeColors[wordVowelFamily] || fallbackColor)
                           : undefined;
                         const wordOpacity = hasScoredEntry ? (codexEntry.opacity ?? undefined) : undefined;
-                        const isMultiSyllable = hasScoredEntry && codexEntry.isMultiSyllable;
-                        const isRichMultiSyllable = hasScoredEntry && (codexEntry.syllablesMatched >= 3 || false);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
+
+                        const resolvedSchool = wordVowelFamily
+                          ? (VOWEL_FAMILY_TO_SCHOOL[wordVowelFamily] || null)
+                          : null;
+
+                        // Bytecode evolution: prioritize native bytecode from analysis if present,
+                        // otherwise synthesize it from the legacy codexEntry during the transition.
+                        const bytecode = analysis?.visualBytecode || (hasScoredEntry
+                          ? synthesizeBytecodeFromLegacy(codexEntry, resolvedSchool)
+                          : null);
+
+                        const decoded = bytecode
+                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
+                          : null;
 
                         const wordPayload = buildWordPayloadFromToken({
                           token,
@@ -1203,24 +1219,27 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
                           charStart,
                           charEnd,
-                          vowelFamily: wordVowelFamily || null,
+                          vowelFamily: hasScoredEntry ? (wordVowelFamily || null) : null,
                           isStopWord,
                         };
 
                         const wordClassName = [
                           'truesight-word',
                           hasScoredEntry ? 'grimoire-word' : 'grimoire-word--grey',
-                          isMultiSyllable ? 'word--multi-rhyme' : '',
-                          isRichMultiSyllable ? 'word--multi-rhyme--rich' : '',
+                          decoded?.className || '',
                           isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                         ].filter(Boolean).join(' ');
+
+                        // Prioritize bytecode-provided color for 100% phonetic accuracy,
+                        // falling back to legacy family-based colors.
+                        const finalColor = decoded?.color || color;
 
                         if (!onWordActivate) {
                           return (
                             <span
                               key={start}
                               className={wordClassName}
-                              style={{ color, opacity: wordOpacity, pointerEvents: isEditable ? 'none' : 'auto' }}
+                              style={{ color: finalColor, opacity: wordOpacity, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
                               data-char-start={charStart}
                             >
                               {token}
@@ -1233,7 +1252,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             key={start}
                             type="button"
                             className={`${wordClassName} grimoire-word--interactive`}
-                            style={{ color, opacity: wordOpacity, pointerEvents: isEditable ? 'none' : 'auto' }}
+                            style={{ color: finalColor, opacity: wordOpacity, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}
@@ -1277,30 +1296,43 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const analysis = analyzedWordsByIdentity.get(identityKey)
                           || derivedAnalyzedWordsByCharStart.get(charStart)
                           || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
-                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis.vowelFamily) : null;
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis.vowelFamily) : null;   
                         const shouldColor = analysis ? shouldColorWordHook(charStart, clean, wordVowelFamily) : false;
                         const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
-                        const codexEntry = shouldColor ? (activeColorMap?.get(charStart) ?? null) : null;
-                        const color = shouldColor
+                        const codexEntry = shouldColor ? (activeColorMap?.get(charStart) ?? null) : null;       
+
+                        const resolvedSchool = wordVowelFamily
+                          ? (VOWEL_FAMILY_TO_SCHOOL[wordVowelFamily] || null)
+                          : null;
+                        const bytecode = analysis?.visualBytecode || (shouldColor && codexEntry
+                          ? synthesizeBytecodeFromLegacy(codexEntry, resolvedSchool)
+                          : null);
+                        const decoded = bytecode
+                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
+                          : null;
+
+                        const color = decoded?.color || (shouldColor
                           ? (codexEntry?.color || activeColors[wordVowelFamily] || undefined)
-                          : undefined;
-                        const isMultiSyllable = shouldColor && codexEntry?.isMultiSyllable;
-                        const isRichMultiSyllable = shouldColor && (codexEntry?.syllablesMatched >= 3 || false);
+                          : undefined);
+
+                        const isMultiSyllable = shouldColor && (codexEntry?.isMultiSyllable || decoded?.syllableDepth >= 2);
+                        const isRichMultiSyllable = shouldColor && (codexEntry?.syllablesMatched >= 3 || decoded?.syllableDepth >= 3);
+
                         return (
                           <span
                             key={charStart}
                             className={[
                               "truesight-word",
                               shouldColor ? "grimoire-word" : "grimoire-word--grey",
+                              decoded?.className || "",
                               isMultiSyllable ? "word--multi-rhyme" : "",
                               isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
-                            style={{ color }}
+                            style={{ color, ...(decoded?.style || {}) }}
                           >
                             {token}
                           </span>
-                        );
-                      })}
+                        );                      })}
                     </motion.div>
                   );
                 })}
