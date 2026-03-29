@@ -1182,16 +1182,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
                         const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
                         const codexEntry = shouldColorWord ? (activeColorMap?.get(charStart) ?? null) : null;
-                        // Only apply color when there is a direct scored entry in the colorMap.
-                        // shouldColorWord=true but no codexEntry means the word is a peer-family
-                        // broadening candidate — rendering it colored causes the "skittle effect"
-                        // on freeform prose where no strong rhyme connections exist.
-                        const hasScoredEntry = shouldColorWord && codexEntry !== null;
-                        const color = hasScoredEntry
-                          ? (codexEntry.color || activeColors[wordVowelFamily] || fallbackColor)
-                          : undefined;
-                        const wordOpacity = hasScoredEntry ? (codexEntry.opacity ?? undefined) : undefined;
-                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const resolvedSchool = wordVowelFamily
                           ? (VOWEL_FAMILY_TO_SCHOOL[wordVowelFamily] || null)
@@ -1199,13 +1189,22 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
                         // Bytecode evolution: prioritize native bytecode from analysis if present,
                         // otherwise synthesize it from the legacy codexEntry during the transition.
-                        const bytecode = analysis?.visualBytecode || (hasScoredEntry
+                        const bytecode = analysis?.visualBytecode || (shouldColorWord && codexEntry !== null
                           ? synthesizeBytecodeFromLegacy(codexEntry, resolvedSchool)
                           : null);
 
                         const decoded = bytecode
                           ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
                           : null;
+
+                        // Only apply color when there is a direct scored entry in the colorMap
+                        // OR authoritative bytecode that isn't inert.
+                        const hasScoredEntry = (shouldColorWord && codexEntry !== null) || (bytecode !== null && bytecode.effectClass !== 'INERT');
+                        const color = hasScoredEntry
+                          ? (decoded?.color || codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
+                          : undefined;
+                        const wordOpacity = hasScoredEntry ? (codexEntry?.opacity ?? undefined) : undefined;
+                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordPayload = buildWordPayloadFromToken({
                           token,
