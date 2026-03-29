@@ -21,7 +21,7 @@ import { useProgression } from "../../hooks/useProgression.jsx";
 import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
-import { getVowelColorsForSchool } from "../../data/schoolPalettes.js";
+import { getVowelColorsForSchool, getRitualPalette } from "../../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { buildColorMap } from "../../lib/colorCodex.js";
@@ -126,6 +126,7 @@ export default function ReadPage() {
   const [isTruesight, setIsTruesight] = useState(settings?.truesightEnabled ?? false);
   const [isPredictive, setIsPredictive] = useState(settings?.predictiveEnabled ?? false);
   const [analysisMode, setAnalysisMode] = useState(settings?.analysisMode ?? ANALYSIS_MODES.NONE);
+  const [isActivityBarExpanded, setIsActivityBarExpanded] = useState(settings?.ideLayout?.[0] > 18);
 
   const handleToggleTruesight = useCallback(() => {
     setIsTruesight((prev) => {
@@ -227,6 +228,7 @@ export default function ReadPage() {
     genreProfile,
     scoreData,
     rhymeAstrology,
+    narrativeAMP,
     oracle,
     vowelSummary,
     isAnalyzing,
@@ -1226,6 +1228,7 @@ export default function ReadPage() {
             hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
             scoreData={scoreData}
             rhymeAstrology={rhymeAstrology}
+            narrativeAMP={narrativeAMP}
             oracle={oracle}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}
@@ -1363,9 +1366,30 @@ export default function ReadPage() {
     );
   }
 
+  const ritualPalette = useMemo(
+    () => getRitualPalette(selectedSchool, theme),
+    [selectedSchool, theme]
+  );
+
   /* ── DESKTOP RENDER ── */
   return (
-    <div className="ide-layout-wrapper">
+    <div 
+      className="ide-layout-wrapper"
+      style={{
+        '--ritual-abyss': ritualPalette.abyss,
+        '--ritual-panel': ritualPalette.panel,
+        '--ritual-parchment': ritualPalette.parchment,
+        '--ritual-ink': ritualPalette.ink,
+        '--ritual-primary': ritualPalette.primary,
+        '--ritual-secondary': ritualPalette.secondary,
+        '--ritual-tertiary': ritualPalette.tertiary,
+        '--ritual-border': ritualPalette.border,
+        '--ritual-glow': ritualPalette.glow,
+        '--ritual-aurora-start': ritualPalette.aurora_start,
+        '--ritual-aurora-end': ritualPalette.aurora_end,
+        '--active-school-glow': ritualPalette.glow + '66', // 40% alpha
+      }}
+    >
       <TopBar
         title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")}
         onOpenSearch={() => setSidebarTab('SEARCH')}
@@ -1385,188 +1409,133 @@ export default function ReadPage() {
           direction={isNarrowViewport ? "vertical" : "horizontal"}
           onLayout={handleLayoutChange}
         >
-          {/* 1+2. Activity Bar — combined icons + labels strip */}
+          {/* 1. Dedicated Activity Bar (Icons only, far left) */}
           <Panel
-            ref={activityBarRef}
-            defaultSize={(() => {
-              const layout = settings?.ideLayout;
-              if (layout?.length === 5) return layout[0] + layout[1]; // migrate old format
-              return layout?.[0] ?? 8;
-            })()}
-            minSize={4}
-            maxSize={30}
-            className="ide-activity-bar ide-activity-combined"
+            defaultSize={isNarrowViewport ? 10 : 4}
+            minSize={isNarrowViewport ? 8 : 4}
+            maxSize={isNarrowViewport ? 15 : 6}
+            className="ide-activity-bar icon-bar-anchor"
           >
-            <div className="activity-combined-inner">
-              <div className="activity-icons-col">
-                <div className="activity-bar-content">
-                  {['FILES', 'SEARCH', 'TOOLS'].map((tab) => {
-                    const Icon = tab === 'FILES' ? FolderIcon : tab === 'SEARCH' ? SearchIcon : ToolsIcon;
-                    return (
-                      <button
-                        key={tab}
-                        className={`activity-item icon-only ${sidebarTab === tab ? 'active' : ''}`}
-                        onClick={() => setSidebarTab(tab)}
-                        title={tab}
-                      >
-                        <Icon size={20} />
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="activity-bar-footer">
-                  <button 
-                    className="activity-item icon-only" 
-                    title={(() => {
-                      const el = document.querySelector('.ide-activity-combined');
-                      const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
-                      return size > 6.4 ? "Collapse Sidebar" : "Expand Sidebar";
-                    })()}
-                    onClick={() => {
-                      const panel = activityBarRef.current;
-                      if (!panel) return;
-                      const currentSize = panel.getSize();
-                      if (currentSize > 6.4) {
-                        panel.resize(4);
-                      } else {
-                        panel.resize(18);
-                      }
-                    }}
-                  >
-                    {(() => {
-                      // We need to check the attribute because the state isn't directly exposed in a simple way here
-                      // without adding more state to ReadPage.
-                      const el = document.querySelector('.ide-activity-combined');
-                      const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
-                      return size > 6.4 ? <ChevronsLeftIcon size={20} /> : <ChevronsRightIcon size={20} />;
-                    })()}
-                  </button>
-                  <button className="activity-item icon-only" title="Settings">
-                    <SettingsIcon size={20} />
-                  </button>
-                </div>
+            <div className="activity-icons-col">
+              <div className="activity-bar-content">
+                {['FILES', 'SEARCH', 'TOOLS'].map((tab) => {
+                  const Icon = tab === 'FILES' ? FolderIcon : tab === 'SEARCH' ? SearchIcon : ToolsIcon;
+                  return (
+                    <button
+                      key={tab}
+                      className={`activity-item icon-only ${sidebarTab === tab ? 'active' : ''}`}
+                      onClick={() => setSidebarTab(tab)}
+                      title={tab}
+                    >
+                      <Icon size={28} />
+                    </button>
+                  );
+                })}
               </div>
-              <div className="activity-labels-col">
-                <div className="activity-bar-content">
-                  {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
-                    const tabs = ['FILES', 'SEARCH', 'TOOLS'];
-                    return (
-                      <button
-                        key={label}
-                        className={`activity-item label-only ${sidebarTab === tabs[i] ? 'active' : ''}`}
-                        onClick={() => setSidebarTab(tabs[i])}
-                      >
-                        <span className="activity-label">{label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="activity-bar-footer">
-                  <button 
-                    className="activity-item label-only"
-                    onClick={() => {
-                      const panel = activityBarRef.current;
-                      if (!panel) return;
-                      const currentSize = panel.getSize();
-                      if (currentSize > 6.4) {
-                        panel.resize(4);
-                      } else {
-                        panel.resize(18);
-                      }
-                    }}
-                  >
-                    <span className="activity-label">
-                      {(() => {
-                        const el = document.querySelector('.ide-activity-combined');
-                        const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
-                        return size > 6.4 ? "COLLAPSE" : "EXPAND";
-                      })()}
-                    </span>
-                  </button>
-                  <button className="activity-item label-only">
-                    <span className="activity-label">SETTINGS</span>
-                  </button>
-                </div>
+              <div className="activity-bar-footer">
+                <button className="activity-item icon-only" title="Settings">
+                  <SettingsIcon size={24} />
+                </button>
               </div>
             </div>
           </Panel>
 
           <PanelResizeHandle className="sidebar-resize-handle" />
 
-          {/* 3. Primary Sidebar (Content) */}
+          {/* 2. Primary Sidebar (Labels + Content) */}
           <Panel
-            defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[2] : (settings?.ideLayout?.[1] ?? (isNarrowViewport ? 28 : 18))}
-            minSize={isNarrowViewport ? 20 : 12}
-            className="ide-sidebar"
+            defaultSize={isNarrowViewport ? 30 : 20}
+            minSize={isNarrowViewport ? 20 : 15}
+            className="ide-sidebar expandable-sidebar"
           >
-            <div className="sidebar-content">
-              {sidebarTab === 'FILES' && (
-                <ScrollList
-                  scrolls={scrolls}
-                  activeScrollId={activeScrollId}
-                  onSelect={handleSelectScroll}
-                  onDelete={deleteScroll}
-                  onNewScroll={handleNewScroll}
-                  onEdit={handleEditScrollById}
-                />
-              )}
-              {sidebarTab === 'SEARCH' && (
-                <SearchPanel
-                  content={documentContent}
-                  onJumpToLine={(line) => {
-                    editorRef.current?.jumpToLine?.(line);
-                  }}
-                />
-              )}
-              {sidebarTab === 'TOOLS' && (
-                <div className="sidebar-tools">
-                  <ToolsSidebar 
-                    isTruesight={isTruesight}
-                    onToggleTruesight={handleToggleTruesight}
-                    isPredictive={isPredictive}
-                    onTogglePredictive={handleTogglePredictive}
-                    analysisMode={analysisMode}
-                    onModeChange={handleModeChange}
-                    isAnalyzing={isAnalyzing}
-                    showScorePanel={showScorePanel}
-                    onToggleScorePanel={() => setShowScorePanel(!showScorePanel)}
-                    selectedSchool={selectedSchool}
-                    onSchoolChange={setSelectedSchool}
-                    schoolList={schoolList}
+            <div className="sidebar-combined-content">
+              {/* Header labels area */}
+              <div className="sidebar-labels-header">
+                {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
+                  const tabs = ['FILES', 'SEARCH', 'TOOLS'];
+                  return (
+                    <button
+                      key={label}
+                      className={`sidebar-label-btn ${sidebarTab === tabs[i] ? 'active' : ''}`}
+                      onClick={() => setSidebarTab(tabs[i])}
+                    >
+                      <span className="activity-label">{label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Main content area */}
+              <div className="sidebar-body-content">
+                {sidebarTab === 'FILES' && (
+                  <ScrollList
+                    scrolls={scrolls}
+                    activeScrollId={activeScrollId}
+                    onSelect={handleSelectScroll}
+                    onDelete={deleteScroll}
+                    onNewScroll={handleNewScroll}
+                    onEdit={handleEditScrollById}
                   />
-                  {analysisMode === ANALYSIS_MODES.RHYME && (
-                    <div className="sidebar-sub-panel">
-                      <RhymeDiagramPanel
-                        connections={overlayConnections}
-                        lineCount={lineCount}
-                        visible={true}
-                        onPairSelect={(lines) => {
-                          setPinnedLines(lines);
-                          if (!lines) setHighlightedLines([]);
-                          if (lines) editorRef.current?.scrollToTopSmooth?.();
-                        }}
-                        onConnectionClick={() => {
-                          editorRef.current?.scrollToTopSmooth?.();
-                        }}
-                        highlightedLines={effectiveHighlightedLines}
-                      />
-                    </div>
-                  )}
-                  {isTruesight && (
-                    <div className="sidebar-sub-panel">
-                      <VowelFamilyPanel
-                        visible={true}
-                        families={vowelSummary?.families ?? []}
-                        totalWords={vowelSummary?.totalWords ?? 0}
-                        uniqueWords={vowelSummary?.uniqueWords ?? 0}
-                        isEmbedded={true}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
+                )}
+                {sidebarTab === 'SEARCH' && (
+                  <SearchPanel
+                    content={documentContent}
+                    onJumpToLine={(line) => {
+                      editorRef.current?.jumpToLine?.(line);
+                    }}
+                  />
+                )}
+                {sidebarTab === 'TOOLS' && (
+                  <div className="sidebar-tools">
+                    <ToolsSidebar 
+                      isTruesight={isTruesight}
+                      onToggleTruesight={handleToggleTruesight}
+                      isPredictive={isPredictive}
+                      onTogglePredictive={handleTogglePredictive}
+                      analysisMode={analysisMode}
+                      onModeChange={handleModeChange}
+                      isAnalyzing={isAnalyzing}
+                      showScorePanel={showScorePanel}
+                      onToggleScorePanel={() => setShowScorePanel(!showScorePanel)}
+                      selectedSchool={selectedSchool}
+                      onSchoolChange={setSelectedSchool}
+                      schoolList={schoolList}
+                    />
+                    {analysisMode === ANALYSIS_MODES.RHYME && (
+                      <div className="sidebar-sub-panel">
+                        <RhymeDiagramPanel
+                          connections={overlayConnections}
+                          lineCount={lineCount}
+                          visible={true}
+                          onPairSelect={(lines) => {
+                            setPinnedLines(lines);
+                            if (!lines) setHighlightedLines([]);
+                            if (lines) editorRef.current?.scrollToTopSmooth?.();
+                          }}
+                          onConnectionClick={() => {
+                            editorRef.current?.scrollToTopSmooth?.();
+                          }}
+                          highlightedLines={effectiveHighlightedLines}
+                        />
+                      </div>
+                    )}
+                    {isTruesight && (
+                      <div className="sidebar-sub-panel">
+                        <VowelFamilyPanel
+                          visible={true}
+                          families={vowelSummary?.families ?? []}
+                          totalWords={vowelSummary?.totalWords ?? 0}
+                          uniqueWords={vowelSummary?.uniqueWords ?? 0}
+                          isEmbedded={true}
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </Panel>
+
           <PanelResizeHandle className="sidebar-resize-handle" />
           <Panel defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[3] : (settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60))} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
@@ -1620,9 +1589,7 @@ export default function ReadPage() {
           </Panel>
           {!isNarrowViewport && (
             <>
-              <PanelResizeHandle
-                style={{ width: "2px", background: "var(--border-color)" }}
-              />
+              <PanelResizeHandle className="sidebar-resize-handle" />
               <Panel 
                 defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[4] : (settings?.ideLayout?.[3] ?? 25)}
                 minSize={15} 
@@ -1672,6 +1639,7 @@ export default function ReadPage() {
                           hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
                           scoreData={scoreData}
                           rhymeAstrology={rhymeAstrology}
+                          narrativeAMP={narrativeAMP}
                           oracle={oracle}
                           onGroupHover={highlightRhymeGroup}
                           onGroupLeave={clearHighlight}
@@ -1850,6 +1818,7 @@ export default function ReadPage() {
             hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
             scoreData={scoreData}
             rhymeAstrology={rhymeAstrology}
+            narrativeAMP={narrativeAMP}
             oracle={oracle}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}

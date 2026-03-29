@@ -198,6 +198,91 @@ function normalizePlsPhoneticFeatures(value) {
   };
 }
 
+function normalizeNarrativeAMP(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    version: String(value.version || ""),
+    engine: String(value.engine || "VERSEIR"),
+    narrator: String(value.narrator || ""),
+    mood: String(value.mood || "OBSERVANT"),
+    summary: String(value.summary || ""),
+    beats: Array.isArray(value.beats)
+      ? value.beats.map((beat) => ({
+        id: String(beat?.id || beat?.message || ""),
+        tone: String(beat?.tone || "TECHNICAL"),
+        title: String(beat?.title || beat?.tone || "Signal"),
+        message: String(beat?.message || ""),
+        evidence: Array.isArray(beat?.evidence) ? beat.evidence : [],
+        signal: Number.isFinite(Number(beat?.signal)) ? Number(beat.signal) : null,
+      }))
+      : [],
+    revisions: Array.isArray(value.revisions)
+      ? value.revisions.map((revision) => ({
+        original: String(revision?.original || ""),
+        suggested: String(revision?.suggested || ""),
+        reason: String(revision?.reason || ""),
+        resonanceGain: Number.isFinite(Number(revision?.resonanceGain)) ? Number(revision.resonanceGain) : 0,
+      }))
+      : [],
+    resonance: value.resonance && typeof value.resonance === "object"
+      ? {
+        source: String(value.resonance.source || "VERSEIR"),
+        tokenCount: toFiniteNumber(value.resonance.tokenCount, 0),
+        lineCount: toFiniteNumber(value.resonance.lineCount, 0),
+        activeAmplifiers: toFiniteNumber(value.resonance.activeAmplifiers, 0),
+        dominantTier: String(value.resonance.dominantTier || "NONE"),
+        dominantArchetype: value.resonance.dominantArchetype && typeof value.resonance.dominantArchetype === "object"
+          ? {
+            id: String(value.resonance.dominantArchetype.id || ""),
+            label: String(value.resonance.dominantArchetype.label || ""),
+            score: toFiniteNumber(value.resonance.dominantArchetype.score, 0),
+          }
+          : null,
+        noveltySignal: toUnitNumber(value.resonance.noveltySignal),
+        semanticDepth: toUnitNumber(value.resonance.semanticDepth),
+        raritySignal: toUnitNumber(value.resonance.raritySignal),
+        trueVisionBand: value.resonance.trueVisionBand == null ? null : String(value.resonance.trueVisionBand),
+        trueVisionConfidence: toUnitNumber(value.resonance.trueVisionConfidence),
+        leadingHeuristic: value.resonance.leadingHeuristic == null ? null : String(value.resonance.leadingHeuristic),
+        leadingContribution: toFiniteNumber(value.resonance.leadingContribution, 0),
+      }
+      : null,
+  };
+}
+
+function narrativeAMPToLegacyOracle(value) {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  return {
+    version: String(value.version || ""),
+    persona: String(value.narrator || "VerseIR Narrative AMP"),
+    mood: String(value.mood || "OBSERVANT"),
+    summary: String(value.summary || ""),
+    insights: Array.isArray(value.beats)
+      ? value.beats.map((beat) => ({
+        id: String(beat?.id || beat?.message || ""),
+        category: String(beat?.tone || "TECHNICAL"),
+        message: String(beat?.message || ""),
+        evidence: Array.isArray(beat?.evidence) ? beat.evidence : [],
+        scoreImpact: Number.isFinite(Number(beat?.signal)) ? Number(beat.signal) : null,
+      }))
+      : [],
+    suggestions: Array.isArray(value.revisions)
+      ? value.revisions.map((revision) => ({
+        original: String(revision?.original || ""),
+        suggested: String(revision?.suggested || ""),
+        reason: String(revision?.reason || ""),
+        resonanceGain: Number.isFinite(Number(revision?.resonanceGain)) ? Number(revision.resonanceGain) : 0,
+      }))
+      : [],
+  };
+}
+
 function normalizeRhymeAstrology(value) {
   if (!value || typeof value !== "object") {
     return null;
@@ -426,6 +511,7 @@ function normalizePanelPayload(rawPayload) {
       scoreData: null,
       vowelSummary: EMPTY_VOWEL_SUMMARY,
       rhymeAstrology: null,
+      narrativeAMP: null,
       oracle: null,
       source: rawPayload?.source ?? null,
     };
@@ -461,6 +547,17 @@ function normalizePanelPayload(rawPayload) {
     normalizedRhymeAstrology?.features,
     verseIRBridge
   );
+  const normalizedNarrativeAMP = normalizeNarrativeAMP(payload.narrativeAMP);
+  const normalizedOracle = payload.oracle && typeof payload.oracle === "object"
+    ? {
+      version: String(payload.oracle.version || ""),
+      persona: String(payload.oracle.persona || ""),
+      mood: String(payload.oracle.mood || "OBSERVANT"),
+      summary: String(payload.oracle.summary || ""),
+      insights: Array.isArray(payload.oracle.insights) ? payload.oracle.insights : [],
+      suggestions: Array.isArray(payload.oracle.suggestions) ? payload.oracle.suggestions : [],
+    }
+    : narrativeAMPToLegacyOracle(normalizedNarrativeAMP);
 
   return {
     analysis,
@@ -481,16 +578,8 @@ function normalizePanelPayload(rawPayload) {
         features: bridgedRhymeFeatures,
       }
       : null,
-    oracle: payload.oracle && typeof payload.oracle === "object"
-      ? {
-        version: String(payload.oracle.version || ""),
-        persona: String(payload.oracle.persona || ""),
-        mood: String(payload.oracle.mood || "OBSERVANT"),
-        summary: String(payload.oracle.summary || ""),
-        insights: Array.isArray(payload.oracle.insights) ? payload.oracle.insights : [],
-        suggestions: Array.isArray(payload.oracle.suggestions) ? payload.oracle.suggestions : [],
-      }
-      : null,
+    narrativeAMP: normalizedNarrativeAMP,
+    oracle: normalizedOracle,
     genreProfile: payload.genreProfile || null,
     source: rawPayload?.source ?? payload.source ?? null,
   };
@@ -574,6 +663,7 @@ async function runClientSideAnalysis(text) {
       genreProfile: null,
       vowelSummary,
       rhymeAstrology: null,
+      narrativeAMP: null,
       oracle: null,
     },
     source: "client",
@@ -588,6 +678,7 @@ export function usePanelAnalysis() {
   const [scoreData, setScoreData] = useState(null);
   const [vowelSummary, setVowelSummary] = useState(EMPTY_VOWEL_SUMMARY);
   const [rhymeAstrology, setRhymeAstrology] = useState(null);
+  const [narrativeAMP, setNarrativeAMP] = useState(null);
   const [oracle, setOracle] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeConnections, setActiveConnections] = useState([]);
@@ -613,6 +704,7 @@ export function usePanelAnalysis() {
     setScoreData(null);
     setVowelSummary(EMPTY_VOWEL_SUMMARY);
     setRhymeAstrology(null);
+    setNarrativeAMP(null);
     setOracle(null);
     setActiveConnections([]);
     setHighlightedGroup(null);
@@ -643,6 +735,7 @@ export function usePanelAnalysis() {
       setScoreData(normalized.scoreData);
       setVowelSummary(normalized.vowelSummary);
       setRhymeAstrology(normalized.rhymeAstrology);
+      setNarrativeAMP(normalized.narrativeAMP);
       setOracle(normalized.oracle);
       setActiveConnections(allConnections);
       setHighlightedGroup(null);
@@ -820,6 +913,7 @@ export function usePanelAnalysis() {
     emotion,
     scoreData,
     rhymeAstrology,
+    narrativeAMP,
     oracle,
     genreProfile,
     vowelSummary,

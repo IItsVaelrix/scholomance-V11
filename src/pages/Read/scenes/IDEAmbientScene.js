@@ -32,7 +32,6 @@ export function buildAmbientScene(Phaser) {
       this._W = this.scale.width;
       this._H = this.scale.height;
       this._initDotTexture();
-      this._buildBloom();
       this._buildMotes();
     }
 
@@ -43,26 +42,6 @@ export function buildAmbientScene(Phaser) {
       g.fillCircle(4, 4, 4);
       g.generateTexture('iamb-dot', 8, 8);
       g.destroy();
-    }
-
-    _buildBloom() {
-      if (this._bloom) { this._bloom.destroy(); this._bloom = null; }
-      const g = this.add.graphics().setDepth(0);
-      // Soft multi-layer radial fade
-      for (let i = 6; i > 0; i--) {
-        const r = Math.min(this._W, this._H) * 0.65 * (i / 6);
-        g.fillStyle(this._color, 0.007 * i);
-        g.fillCircle(this._W / 2, this._H / 2, r);
-      }
-      this._bloom = g;
-      this.tweens.add({
-        targets: g,
-        alpha: { from: 0.5, to: 1.0 },
-        duration: 9200,
-        repeat: -1,
-        yoyo: true,
-        ease: 'Sine.easeInOut',
-      });
     }
 
     _buildMotes() {
@@ -120,7 +99,6 @@ export function buildAmbientScene(Phaser) {
       if (!hex || hex === this._colorHex) return;
       this._colorHex = hex;
       this._color = hexToNum(hex);
-      this._buildBloom();
       this._buildMotes();
     }
   };

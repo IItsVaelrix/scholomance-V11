@@ -43,8 +43,8 @@ export const SCHOOLS = {
   SONIC: {
     id: "SONIC",
     name: "Sonic Thaumaturgy",
-    color: "#3c8c82",
-    colorHsl: { h: 174, s: 45, l: 42 }, // Perfect AE Resonance
+    color: "#a855f7", // Distinctive Purple
+    colorHsl: { h: 270, s: 90, l: 65 },
     angle: 288,
     unlockXP: 0,
     description: "The art of sonic manipulation and harmonic resonance",
@@ -61,8 +61,8 @@ export const SCHOOLS = {
   PSYCHIC: {
     id: "PSYCHIC",
     name: "Psychic Schism",
-    color: "#4470b8",
-    colorHsl: { h: 200, s: 65, l: 71 }, // Perfect IY Resonance
+    color: "#3b82f6", // Distinctive Blue
+    colorHsl: { h: 217, s: 91, l: 60 },
     angle: 72,
     unlockXP: 250,
     description: "Mental discipline and psychic energy projection",
@@ -79,8 +79,8 @@ export const SCHOOLS = {
   VOID: {
     id: "VOID",
     name: "The Void",
-    color: "#6a5a78",
-    colorHsl: { h: 171, s: 15, l: 41 }, // Perfect AX (Schwa) Resonance (Desaturated)
+    color: "#94a3b8", // Neutral Slate/Grey
+    colorHsl: { h: 215, s: 15, l: 65 },
     angle: 0,
     unlockXP: 1500,
     description: "The space between spaces, where entropy reigns",
@@ -97,8 +97,8 @@ export const SCHOOLS = {
   ALCHEMY: {
     id: "ALCHEMY",
     name: "Verbal Alchemy",
-    color: "#5c9aac",
-    colorHsl: { h: 185, s: 45, l: 58 }, // Perfect EY Resonance
+    color: "#ec4899", // Distinctive Pink
+    colorHsl: { h: 330, s: 81, l: 60 },
     angle: 144,
     unlockXP: 8000,
     description: "The transmutation of meaning through spoken word",
@@ -115,8 +115,8 @@ export const SCHOOLS = {
   WILL: {
     id: "WILL",
     name: "Willpower Surge",
-    color: "#3c8c64",
-    colorHsl: { h: 156, s: 45, l: 53 }, // Perfect AH Resonance
+    color: "#ef4444", // Distinctive Red
+    colorHsl: { h: 0, s: 84, l: 60 },
     angle: 216,
     unlockXP: 25000,
     description: "Focusing raw will into reality-altering force",
@@ -135,8 +135,8 @@ export const SCHOOLS = {
   NECROMANCY: {
     id: "NECROMANCY",
     name: "Necromancy",
-    color: "#3c8c52",
-    colorHsl: { h: 150, s: 65, l: 48 }, // Perfect AA Resonance
+    color: "#22c55e", // Distinctive Green
+    colorHsl: { h: 142, s: 70, l: 45 },
     angle: 36,
     unlockXP: 100000,
     description: "Communication with and manipulation of life force",
@@ -153,8 +153,8 @@ export const SCHOOLS = {
   ABJURATION: {
     id: "ABJURATION",
     name: "Abjuration",
-    color: "#5c8c64",
-    colorHsl: { h: 136, s: 65, l: 70 }, // Perfect UW Resonance
+    color: "#06b6d4", // Distinctive Cyan
+    colorHsl: { h: 188, s: 90, l: 45 },
     angle: 108,
     unlockXP: 500000,
     description: "Protective magic and negation of effects",
@@ -171,8 +171,8 @@ export const SCHOOLS = {
   DIVINATION: {
     id: "DIVINATION",
     name: "Divination",
-    color: "#748c5c",
-    colorHsl: { h: 134, s: 45, l: 56 }, // Perfect AO Resonance
+    color: "#eab308", // Distinctive Gold/Yellow
+    colorHsl: { h: 45, s: 93, l: 47 },
     angle: 180,
     unlockXP: 2000000,
     description: "Seeing across time and space",

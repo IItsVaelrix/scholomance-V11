@@ -198,7 +198,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._archHexR = hexR;
   }
 
-  _drawArchRotating(W, H) {
+  _drawArchRotating(_W, _H) {
     // Hexagram drawn into _archRotGfx, centered on origin.
     // Container is positioned at arch center. Rotation applied in update().
     const g = this._archRotGfx;

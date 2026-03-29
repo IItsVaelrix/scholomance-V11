@@ -13,13 +13,13 @@ import { weightBalancer } from "./phonology/phoneticWeighting.js";
 const CLUSTER_MIN_SCORE = 0.60;
 
 /** Base opacity for words with no rhyme connections. */
-const BASE_OPACITY = 0.45;
+const BASE_OPACITY = 0.18;
 
 /** Opacity range mapped from connection score. */
 const OPACITY_SCALE = 0.55;
 
 /** Minimum salience required for a word to be an "anchor". */
-const GLOBAL_SALIENCE_THRESHOLD = 0.34;
+const GLOBAL_SALIENCE_THRESHOLD = 0.50;
 
 /** Max number of active color clusters per line. */
 const MAX_ACTIVE_CLUSTERS_PER_LINE = 3;
@@ -372,16 +372,26 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
 
     const bestConn = bestConnMap.get(charStart) || null;
     const balanceWeight = balancedWeights.get(charStart) || 1;
+    const bestScore = bestConn ? bestConn.score : 0;
 
     const root = uf.parent.has(charStart) ? uf.find(charStart) : null;
     const hasCluster = root !== null && clusterColor.has(root);
 
-    let baseColor = hasCluster ? clusterColor.get(root) : (palette[family] || "");
+    const isVowelMode = options.analysisMode === "vowel";
+    const eligibleForFamilyColor = 
+      hasCluster || 
+      isVowelMode ||
+      (bestConn && bestScore >= 0.60 && bestConn.type !== "assonance") ||
+      (bestConn && bestScore >= 0.72 && bestConn.type === "assonance");
+
+    let baseColor = eligibleForFamilyColor
+      ? (hasCluster ? clusterColor.get(root) : (palette[family] || ""))
+      : "";
+
     if (!baseColor) {
       baseColor = options.theme === "light" ? "#333333" : "#ffffff";
     }
 
-    const bestScore = bestConn ? bestConn.score : 0;
     const syntaxMultiplier = bestConn ? bestConn.syntaxMultiplier : 1;
     const phoneticWeight = bestConn ? (bestConn.phoneticWeight || 1) : 1;
     const weightIntensity = clamp(phoneticWeight, 0.85, 1.2);
@@ -444,13 +454,11 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
   }
 
   // 5. Anchor/Ghost pass with per-line cluster cap.
-  const mode = String(options.analysisMode || "none");
   const requestedThreshold = Number(options.salienceThreshold);
   const baseThreshold = Number.isFinite(requestedThreshold)
     ? requestedThreshold
     : GLOBAL_SALIENCE_THRESHOLD;
-  const modeOffset = mode === "vowel" ? -0.04 : 0;
-  const salienceThreshold = clamp(baseThreshold + modeOffset, 0.18, 0.75);
+  const salienceThreshold = clamp(baseThreshold, 0.18, 0.75);
 
   const requestedLineCap = Number(options.maxActiveClustersPerLine);
   const maxActiveClustersPerLine =

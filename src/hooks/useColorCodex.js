@@ -152,7 +152,7 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
   const shouldColorWord = useCallback((charStart, normalizedWord, vowelFamily) => {
     const isStopWord = STOP_WORDS.has(normalizedWord);
     const codexEntry = Number.isInteger(charStart) ? colorMap.get(charStart) : null;
-    const passesGhostFloor = !codexEntry || codexEntry.isAnchor || Number(codexEntry.salience) >= 0.15;
+    const passesGhostFloor = !codexEntry || codexEntry.isAnchor || Number(codexEntry.salience) >= 0.25;
     
     // Explicit VOWEL mode: Color all content words
     if (analysisMode === 'vowel') {

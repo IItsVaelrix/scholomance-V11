@@ -194,6 +194,7 @@ export default function AnalysisPanel({
   hhmSummary = null,
   scoreData = null,
   rhymeAstrology = null,
+  narrativeAMP = null,
   oracle = null,
   onGroupHover = null,
   onGroupLeave = null,
@@ -228,9 +229,31 @@ export default function AnalysisPanel({
       .sort((a, b) => b.contribution - a.contribution)
     : [];
   const hasLiteraryCraft = literaryDevices.length > 0 || heuristicTraces.length > 0;
-  const oracleInsights = Array.isArray(oracle?.insights) ? oracle.insights : [];
-  const oracleSuggestions = Array.isArray(oracle?.suggestions) ? oracle.suggestions : [];
-  const hasOracle = Boolean(oracle?.summary || oracleInsights.length > 0 || oracleSuggestions.length > 0);
+  const resolvedNarrativeAMP = narrativeAMP && typeof narrativeAMP === "object"
+    ? narrativeAMP
+    : oracle && typeof oracle === "object"
+      ? {
+        narrator: String(oracle.persona || ""),
+        mood: String(oracle.mood || "OBSERVANT"),
+        summary: String(oracle.summary || ""),
+        beats: Array.isArray(oracle.insights)
+          ? oracle.insights.map((insight) => ({
+            id: String(insight?.id || insight?.message || ""),
+            tone: String(insight?.category || "TECHNICAL"),
+            title: String(insight?.category || "Signal"),
+            message: String(insight?.message || ""),
+            evidence: Array.isArray(insight?.evidence) ? insight.evidence : [],
+            signal: Number.isFinite(Number(insight?.scoreImpact)) ? Number(insight.scoreImpact) : null,
+          }))
+          : [],
+        revisions: Array.isArray(oracle.suggestions) ? oracle.suggestions : [],
+      }
+      : null;
+  const narrativeBeats = Array.isArray(resolvedNarrativeAMP?.beats) ? resolvedNarrativeAMP.beats : [];
+  const narrativeRevisions = Array.isArray(resolvedNarrativeAMP?.revisions) ? resolvedNarrativeAMP.revisions : [];
+  const hasNarrativeAMP = Boolean(
+    resolvedNarrativeAMP?.summary || narrativeBeats.length > 0 || narrativeRevisions.length > 0
+  );
   const codexCommentary = hasLiteraryCraft
     ? buildCodexCommentary({
       traces: heuristicTraces,
@@ -242,7 +265,7 @@ export default function AnalysisPanel({
     : "";
   const hasContent = isAstrologySurface
     ? hasRhymeAstrology
-    : scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology || hasOracle;
+    : scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology || hasNarrativeAMP;
 
   return (
     <div className={`analyze-panel${isAstrologySurface ? " analyze-panel--astrology" : ""}`}>
@@ -263,36 +286,36 @@ export default function AnalysisPanel({
       )}
 
       {/* Phonemic Oracle — Prioritized Detailed RAG Feedback */}
-      {!isAstrologySurface && hasOracle && (
-        <section className="analyze-section analyze-oracle-section">
+      {!isAstrologySurface && hasNarrativeAMP && (
+        <section className="analyze-section analyze-narrative-amp-section">
           <h4 className="analyze-section-title">
-            <span className="analyze-glyph">&#x25C9;</span> The Phonemic Oracle
+            <span className="analyze-glyph">&#x25C9;</span> Narrative AMP
           </h4>
-          <div className={`analyze-oracle-shell analyze-oracle-shell--${String(oracle?.mood || "OBSERVANT").toLowerCase()}`}>
-            <div className="analyze-oracle-header">
-              <span className="analyze-oracle-persona">{oracle?.persona || "Technical Advisor"}</span>
-              <span className="analyze-oracle-mood">{oracle?.mood || "OBSERVANT"}</span>
+          <div className={`analyze-narrative-amp-shell analyze-narrative-amp-shell--${String(resolvedNarrativeAMP?.mood || "OBSERVANT").toLowerCase()}`}>
+            <div className="analyze-narrative-amp-header">
+              <span className="analyze-narrative-amp-persona">{resolvedNarrativeAMP?.narrator || "VerseIR Relay"}</span>
+              <span className="analyze-narrative-amp-mood">{resolvedNarrativeAMP?.mood || "OBSERVANT"}</span>
             </div>
-            {oracle?.summary && (
-              <p className="analyze-oracle-summary">{oracle.summary}</p>
+            {resolvedNarrativeAMP?.summary && (
+              <p className="analyze-narrative-amp-summary">{resolvedNarrativeAMP.summary}</p>
             )}
-            {oracleInsights.length > 0 && (
-              <div className="analyze-oracle-column">
-                <div className="analyze-craft-subtitle">Authoritative Technical Advice</div>
-                <div className="analyze-oracle-list">
-                  {oracleInsights.map((insight) => (
-                    <article key={insight.id || insight.message} className="analyze-oracle-card">
-                      <div className="analyze-oracle-card-header">
-                        <span className="analyze-oracle-category">{insight.category || "CRITIQUE"}</span>
-                        {Number.isFinite(Number(insight.scoreImpact)) && (
-                          <span className="analyze-oracle-impact">{formatPercentFromUnit(Math.abs(Number(insight.scoreImpact) || 0))} impact</span>
+            {narrativeBeats.length > 0 && (
+              <div className="analyze-narrative-amp-column">
+                <div className="analyze-craft-subtitle">VerseIR Relay Notes</div>
+                <div className="analyze-narrative-amp-list">
+                  {narrativeBeats.map((beat) => (
+                    <article key={beat.id || beat.message} className="analyze-narrative-amp-card">
+                      <div className="analyze-narrative-amp-card-header">
+                        <span className="analyze-narrative-amp-category">{beat.tone || "TECHNICAL"}</span>
+                        {Number.isFinite(Number(beat.signal)) && (
+                          <span className="analyze-narrative-amp-impact">{formatPercentFromUnit(Math.abs(Number(beat.signal) || 0))} impact</span>
                         )}
                       </div>
-                      <p className="analyze-oracle-message">{insight.message}</p>
-                      {Array.isArray(insight.evidence) && insight.evidence.length > 0 && (
-                        <div className="analyze-oracle-evidence">
-                          {insight.evidence.map((entry) => (
-                            <span key={entry} className="analyze-oracle-evidence-chip">{entry}</span>
+                      <p className="analyze-narrative-amp-message">{beat.message}</p>
+                      {Array.isArray(beat.evidence) && beat.evidence.length > 0 && (
+                        <div className="analyze-narrative-amp-evidence">
+                          {beat.evidence.map((entry) => (
+                            <span key={entry} className="analyze-narrative-amp-evidence-chip">{entry}</span>
                           ))}
                         </div>
                       )}
@@ -301,19 +324,19 @@ export default function AnalysisPanel({
                 </div>
               </div>
             )}
-            {oracleSuggestions.length > 0 && (
-              <div className="analyze-oracle-column">
-                <div className="analyze-craft-subtitle">Linguistic Swaps</div>
-                <div className="analyze-oracle-list">
-                  {oracleSuggestions.map((suggestion) => (
-                    <article key={`${suggestion.original}-${suggestion.suggested}`} className="analyze-oracle-card analyze-oracle-card--suggestion">
-                      <div className="analyze-oracle-swap">
+            {narrativeRevisions.length > 0 && (
+              <div className="analyze-narrative-amp-column">
+                <div className="analyze-craft-subtitle">Revision Paths</div>
+                <div className="analyze-narrative-amp-list">
+                  {narrativeRevisions.map((suggestion) => (
+                    <article key={`${suggestion.original}-${suggestion.suggested}`} className="analyze-narrative-amp-card analyze-narrative-amp-card--suggestion">
+                      <div className="analyze-narrative-amp-swap">
                         <span>{suggestion.original}</span>
-                        <span className="analyze-oracle-arrow">&rarr;</span>
+                        <span className="analyze-narrative-amp-arrow">&rarr;</span>
                         <span>{suggestion.suggested}</span>
                       </div>
-                      <p className="analyze-oracle-message">{suggestion.reason}</p>
-                      <span className="analyze-oracle-gain">Gain +{formatPercentFromUnit(Math.min(1, Number(suggestion.resonanceGain) || 0))}</span>
+                      <p className="analyze-narrative-amp-message">{suggestion.reason}</p>
+                      <span className="analyze-narrative-amp-gain">Gain +{formatPercentFromUnit(Math.min(1, Number(suggestion.resonanceGain) || 0))}</span>
                     </article>
                   ))}
                 </div>
@@ -632,12 +655,12 @@ export default function AnalysisPanel({
                         <span>Signal {formatPercentFromUnit(trace.rawScore)}</span>
                         <span>Weight {formatNumber(trace.weight, 2)}</span>
                       </div>
-                      <div className="analyze-council-deliberation">
+                      <div className="analyze-narrative-deliberation">
                         <p className="analyze-heuristic-explanation">{trace.commentary || trace.explanation || "No technical justification provided."}</p>
                         {trace.examples?.length > 0 && (
-                          <div className="analyze-council-citations">
+                          <div className="analyze-narrative-citations">
                             {trace.examples.slice(0, 2).map((cite, ci) => (
-                              <div key={ci} className="analyze-council-citation">
+                              <div key={ci} className="analyze-narrative-citation">
                                 <span className="analyze-cite-glyph">◈</span>
                                 <span className="analyze-cite-text">&ldquo;{cite}&rdquo;</span>
                               </div>
@@ -804,6 +827,27 @@ AnalysisPanel.propTypes = {
       cacheHitCount: PropTypes.number,
       averageQueryTimeMs: PropTypes.number,
     }),
+  }),
+  narrativeAMP: PropTypes.shape({
+    version: PropTypes.string,
+    engine: PropTypes.string,
+    narrator: PropTypes.string,
+    mood: PropTypes.string,
+    summary: PropTypes.string,
+    beats: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.string,
+      tone: PropTypes.string,
+      title: PropTypes.string,
+      message: PropTypes.string,
+      evidence: PropTypes.arrayOf(PropTypes.string),
+      signal: PropTypes.number,
+    })),
+    revisions: PropTypes.arrayOf(PropTypes.shape({
+      original: PropTypes.string,
+      suggested: PropTypes.string,
+      reason: PropTypes.string,
+      resonanceGain: PropTypes.number,
+    })),
   }),
   oracle: PropTypes.shape({
     version: PropTypes.string,

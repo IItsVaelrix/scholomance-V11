@@ -23,7 +23,7 @@ import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
 import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
-import { createPhonemicOracleService } from './phonemicOracle.service.js';
+import { createNarrativeAMPService } from './narrativeAMP.service.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -232,7 +232,42 @@ function createEmptyPanelPayload() {
     scoreData: null,
     vowelSummary: EMPTY_VOWEL_SUMMARY,
     rhymeAstrology: null,
+    narrativeAMP: null,
     oracle: null,
+  };
+}
+
+function toLegacyOraclePayload(narrativeAMP) {
+  if (!narrativeAMP || typeof narrativeAMP !== 'object') {
+    return null;
+  }
+
+  return {
+    version: String(narrativeAMP.version || ''),
+    persona: String(narrativeAMP.narrator || 'VerseIR Narrative AMP'),
+    mood: String(narrativeAMP.mood || 'OBSERVANT'),
+    summary: String(narrativeAMP.summary || ''),
+    insights: Array.isArray(narrativeAMP.beats)
+      ? narrativeAMP.beats.map((beat) => ({
+        id: String(beat?.id || beat?.message || ''),
+        category: String(beat?.tone || 'TECHNICAL'),
+        message: String(beat?.message || ''),
+        evidence: Array.isArray(beat?.evidence) ? beat.evidence : [],
+        ...(Number.isFinite(Number(beat?.signal))
+          ? { scoreImpact: Number(Number(beat.signal).toFixed(3)) }
+          : {}),
+      }))
+      : [],
+    suggestions: Array.isArray(narrativeAMP.revisions)
+      ? narrativeAMP.revisions.map((revision) => ({
+        original: String(revision?.original || ''),
+        suggested: String(revision?.suggested || ''),
+        reason: String(revision?.reason || ''),
+        resonanceGain: Number.isFinite(Number(revision?.resonanceGain))
+          ? Number(Number(revision.resonanceGain).toFixed(3))
+          : 0,
+      }))
+      : [],
   };
 }
 
@@ -615,13 +650,12 @@ export function createPanelAnalysisService(options = {}) {
 
   const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
   let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
-  const phonemicOracleService = options.phonemicOracleService || createPhonemicOracleService({
+  const narrativeAMPService = options.narrativeAMPService || options.phonemicOracleService || createNarrativeAMPService({
     log,
     lexiconAbyssService: options.lexiconAbyssService,
     wordLookupService: options.wordLookupService,
-    corpusService: options.corpusService,
   });
-  const ownsPhonemicOracleService = !options.phonemicOracleService;
+  const ownsNarrativeAMPService = !options.narrativeAMPService && !options.phonemicOracleService;
 
   if (!rhymeAstrologyQueryEngine && enableRhymeAstrology) {
     const lexiconRepo = createRhymeAstrologyLexiconRepo(rhymeAstrologyLexiconDbPath, { log });
@@ -817,7 +851,7 @@ export function createPanelAnalysisService(options = {}) {
         gutenbergPriors: gutenbergEmotionPriors,
       }).emotion;
       const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses, verseIR);
-      const oracle = await phonemicOracleService.analyzeVerse({
+      const narrativeAMP = await narrativeAMPService.analyzeVerse({
         text,
         verseIR,
         hhmSummary: hhmSignals.summary,
@@ -851,7 +885,8 @@ export function createPanelAnalysisService(options = {}) {
         scoreData: scoreDataWithPlsFeatures,
         vowelSummary: summarizeVowelFamilies(analyzedDoc),
         rhymeAstrology,
-        oracle,
+        narrativeAMP,
+        oracle: toLegacyOraclePayload(narrativeAMP),
       };
     } catch (error) {
       log?.error?.({ err: error }, '[PanelAnalysisService] Failed to analyze panel payload');
@@ -863,8 +898,8 @@ export function createPanelAnalysisService(options = {}) {
     if (!hasInjectedRhymeAstrologyQueryEngine) {
       rhymeAstrologyQueryEngine?.close?.();
     }
-    if (ownsPhonemicOracleService) {
-      phonemicOracleService.close?.();
+    if (ownsNarrativeAMPService) {
+      narrativeAMPService.close?.();
     }
   }
 

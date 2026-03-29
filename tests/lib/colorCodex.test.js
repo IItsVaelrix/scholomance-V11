@@ -43,14 +43,24 @@ describe("buildColorMap", () => {
     expect(buildColorMap(null, null, DEFAULT_VOWEL_COLORS).size).toBe(0);
   });
 
-  it("assigns base vowel family color to unclustered words", () => {
+  it("assigns neutral color to unclustered words without strong connections", () => {
     const words = [makeWord(0, "EY"), makeWord(10, "IY")];
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
-    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.EY);
-    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.IY);
+    // Default dark theme neutral color is #ffffff
+    expect(map.get(0).color).toBe("#ffffff");
+    expect(map.get(10).color).toBe("#ffffff");
     expect(map.get(0).groupId).toBeNull();
     expect(map.get(0).rhymeType).toBeNull();
+  });
+
+  it("assigns family color to unclustered words with strong connections", () => {
+    const words = [makeWord(0, "EY"), makeWord(10, "EY")];
+    const connections = [makeConnection(0, 10, 0.75, "near")];
+    const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
+
+    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.EY);
+    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.EY);
   });
 
   it("ghosts unclustered words with reduced opacity", () => {
@@ -159,9 +169,9 @@ describe("buildColorMap", () => {
     const connections = [makeConnection(0, 10, 0.90, "near", 1, 0.85)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
-    const fullOpacity = (0.45 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for EY
+    const fullOpacity = (0.18 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for EY
     const gatedOpacity = fullOpacity * 0.85; // Clamp happens AFTER multiplier
-    expect(map.get(0).opacity).toBeCloseTo(Math.min(1.0, Math.max(0.2, gatedOpacity)), 2);
+    expect(map.get(0).opacity).toBeCloseTo(Math.min(1.0, Math.max(0.22, gatedOpacity)), 2);
   });
 
   it("does not cluster connections below the minimum score threshold", () => {
@@ -172,9 +182,9 @@ describe("buildColorMap", () => {
     // Should NOT be clustered
     expect(map.get(0).groupId).toBeNull();
     expect(map.get(10).groupId).toBeNull();
-    // Colors should be same (AE family)
-    expect(map.get(0).color).toBe(DEFAULT_VOWEL_COLORS.AE);
-    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.AE);
+    // Colors should be neutral since no strong connection and no cluster
+    expect(map.get(0).color).toBe("#ffffff");
+    expect(map.get(10).color).toBe("#ffffff");
   });
 
   it("uses alphabetical tiebreaker for canonical family stability", () => {
@@ -193,7 +203,7 @@ describe("buildColorMap", () => {
     const map = buildColorMap(words, [], DEFAULT_VOWEL_COLORS);
 
     expect(map.has(0)).toBe(false); // No color for null family
-    expect(map.get(10).color).toBe(DEFAULT_VOWEL_COLORS.EY);
+    expect(map.get(10).color).toBe("#ffffff"); // Neutral color for EY word with no connections
   });
 
   it("performs within 10ms for 500 words and 200 connections", () => {

@@ -3,13 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.16** | Last updated: 2026-03-29
+**Version: 1.17** | Last updated: 2026-03-29
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
 
 ---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: VerseIR Narrative AMP contract
+- Version: 1.16 -> 1.17
+- Changed fields: added `NarrativeAMPBeat`, `NarrativeAMPRevision`, `NarrativeAMPResonance`, and `NarrativeAMPPayload`; `/api/analysis/panels` may now include `narrativeAMP`; `oracle` is retained as a compatibility alias during migration
+- Breaking: no
+- Claude impact: Read analysis surfaces should prefer `narrativeAMP` and may fall back to `oracle` while older consumers are still migrating
+- Blackbox impact: panel-analysis fixtures can include the new optional payload while continuing to accept the legacy oracle alias
 
 ## SCHEMA CHANGE NOTICE
 
@@ -469,6 +478,49 @@ interface VerseIRAmplifierPayload {
   trueVision?: VerseIRTrueVisionPayload | null;
   diagnostics: Diagnostic[];
   amplifiers: VerseIRAmplifierResult[];
+}
+
+interface NarrativeAMPBeat {
+  id: string;
+  tone: "TECHNICAL" | "STRUCTURAL" | "ARCANE" | "REVISION";
+  title: string;
+  message: string;
+  evidence?: string[];
+  signal?: number | null;
+}
+
+interface NarrativeAMPRevision {
+  original: string;
+  suggested: string;
+  reason: string;
+  resonanceGain: number;
+}
+
+interface NarrativeAMPResonance {
+  source: "VERSEIR";
+  tokenCount: number;
+  lineCount: number;
+  activeAmplifiers: number;
+  dominantTier: "COMMON" | "RARE" | "INEXPLICABLE" | "NONE";
+  dominantArchetype: VerseIRAmplifierArchetype | null;
+  noveltySignal: number;
+  semanticDepth: number;
+  raritySignal: number;
+  trueVisionBand: string | null;
+  trueVisionConfidence: number;
+  leadingHeuristic: string | null;
+  leadingContribution: number;
+}
+
+interface NarrativeAMPPayload {
+  version: string;
+  engine: "VERSEIR";
+  narrator: string;
+  mood: "ENLIGHTENED" | "CRITICAL" | "OBSERVANT" | "AWE";
+  summary: string;
+  beats: NarrativeAMPBeat[];
+  revisions: NarrativeAMPRevision[];
+  resonance: NarrativeAMPResonance;
 }
 
 interface VerseIRIndexes {
@@ -1183,6 +1235,7 @@ response body: {
       [key: string]: unknown;
     } | null;
     rhymeAstrology: RhymeAstrologyPanelPayload | null;
+    narrativeAMP: NarrativeAMPPayload | null;
     oracle: OraclePayload | null;
     [key: string]: unknown;
   };
@@ -1191,7 +1244,8 @@ response body: {
 Notes:
 - `rhymeAstrology` is optional and feature-flag gated.
 - `analysis.verseIRAmplifier` is optional and carries the Synapse Slot / VerseIR amplifier payload when the server compiled VerseIR context for the request.
-- `oracle` is optional and carries the Phonemic Oracle commentary and suggestions.
+- `narrativeAMP` is optional and carries the VerseIR-native narrative relay payload derived from compiler/amplifier state.
+- `oracle` is optional and retained as a compatibility alias for clients that still consume the older Phonemic Oracle shape.
 - When enabled, inspector anchors/windows/spans are decorative client guidance only; the server remains authoritative for scoring and persistence.
 
 ```ts
@@ -1279,6 +1333,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.14 | 2026-03-28 | Hardened VerseIR with grapheme offsets, surface spans, normalization metadata, phonetic provenance, and applied window-limit metadata | no |
 | 1.15 | 2026-03-29 | Added optional `Scroll.submittedAt` so autosaved drafts can be distinguished from first-time submissions | no |
 | 1.16 | 2026-03-29 | Added VerseIR TrueVision travelling-wave payloads plus formalized token visual/trueVision bytecodes | no |
+| 1.17 | 2026-03-29 | Added VerseIR-native `narrativeAMP` panel-analysis payloads and documented `oracle` as a compatibility alias during migration | no |
 
 ---
 

@@ -1,7 +1,7 @@
 .ide-layout-wrapper {
-  --border-color: var(--border-subtle, rgba(100, 90, 160, 0.20));
-  --read-accent: var(--school-sonic, #6548b8);
-  --read-text-strong: var(--text-primary, #ede8d4);
+  --border-color: var(--ritual-border, rgba(100, 90, 160, 0.20));
+  --read-accent: var(--ritual-primary, #6548b8);
+  --read-text-strong: var(--ritual-ink, #ede8d4);
   --read-text: var(--text-secondary, #cdc5a8);
   --read-text-muted: var(--text-tertiary, #a89d80);
   --read-text-faint: var(--text-muted, #7a6f55);
@@ -14,9 +14,11 @@
   flex-direction: column;
   min-height: calc(100dvh - 48px);
   height: calc(100dvh - 48px);
+  width: 100vw;
   color: var(--read-text-strong);
-  background: var(--bg-void, #090916);
+  background: var(--ritual-abyss, #090916);
   position: relative;
+  overflow: hidden;
 }
 
 .ide-layout-wrapper::after {
@@ -40,8 +42,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-4, 1rem);
-  border-bottom: 1px solid hsla(43, 48%, 48%, 0.22);
-  background: rgba(9, 9, 22, 0.95);
+  border-bottom: 1px solid var(--ritual-border, hsla(43, 48%, 48%, 0.22));
+  background: var(--ritual-abyss, rgba(9, 9, 22, 0.95));
   backdrop-filter: blur(12px);
   z-index: 100;
 }
@@ -233,8 +235,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-4, 1rem);
-  border-top: 1px solid hsla(43, 48%, 48%, 0.1);
-  background: rgba(9, 9, 22, 0.97);
+  border-top: 1px solid var(--ritual-border, hsla(43, 48%, 48%, 0.1));
+  background: var(--ritual-abyss, rgba(9, 9, 22, 0.97));
   font-family: var(--font-mono, "JetBrains Mono", monospace);
   font-size: var(--text-2xs);
   color: var(--read-text-muted);
@@ -343,17 +345,17 @@
 
 .activity-item {
   width: 100%;
-  height: 48px;
+  height: 56px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 16px;
   background: transparent;
   border: 0;
   color: hsla(43, 48%, 48%, 0.45);
   cursor: pointer;
   transition: all 0.2s;
   border-left: 2px solid transparent;
-  gap: 12px;
+  gap: 16px;
   position: relative;
   white-space: nowrap;
 }
@@ -386,87 +388,84 @@
   transform: none;
 }
 
-/* ─── Combined activity bar (icons + labels as one resizable unit) ─── */
-
-.ide-activity-combined {
-  background: rgba(0, 0, 0, 0.40);
-  border-right: 1px solid hsla(43, 48%, 48%, 0.08);
+/* ─── Dedicated Icon Bar Anchor (Far Left) ─── */
+.icon-bar-anchor {
+  background: var(--ritual-abyss, rgba(0, 0, 0, 0.45)) !important;
+  border-right: 1px solid var(--ritual-border, hsla(43, 48%, 48%, 0.12)) !important;
 }
 
-.activity-combined-inner {
+.icon-bar-anchor .activity-icons-col {
+  width: 100%;
+  height: 100%;
+  border-right: 0;
+  background: transparent;
+}
+
+/* ─── Expandable Sidebar (Labels + Content) ─── */
+.sidebar-combined-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--ritual-panel, linear-gradient(180deg, rgba(13, 13, 32, 0.97) 0%, rgba(9, 9, 22, 0.99) 100%));
+}
+
+.sidebar-labels-header {
   display: flex;
   flex-direction: row;
-  height: 100%;
+  padding: var(--space-3) var(--space-2) 0;
+  gap: var(--space-1);
+  border-bottom: 1px solid var(--ritual-border, hsla(43, 48%, 48%, 0.08));
+  min-height: 48px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.sidebar-labels-header::-webkit-scrollbar {
+  display: none;
+}
+
+.sidebar-label-btn {
+  background: transparent;
+  border: 0;
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.sidebar-label-btn:hover {
+  background: hsla(43, 48%, 48%, 0.05);
+}
+
+.sidebar-label-btn.active {
+  border-bottom-color: var(--read-accent);
+}
+
+.sidebar-label-btn.active .activity-label {
+  color: var(--read-accent);
+  opacity: 1;
+}
+
+.sidebar-body-content {
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
-}
-
-.activity-icons-col {
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  width: 48px;
-  background: rgba(0, 0, 0, 0.45);
-  border-right: 1px solid hsla(43, 48%, 48%, 0.06);
-}
-
-.activity-icons-col .activity-bar-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding-top: var(--space-2);
-}
-
-.activity-icons-col .activity-bar-footer {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: var(--space-4);
-}
-
-.activity-labels-col {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
-  min-width: 0;
-}
-
-.activity-labels-col .activity-bar-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  padding-top: var(--space-2);
-}
-
-.activity-labels-col .activity-bar-footer {
-  display: flex;
-  flex-direction: column;
-  padding-bottom: var(--space-4);
 }
 
 .activity-label {
   font-family: var(--font-mono, monospace);
-  font-size: 0.62rem;
+  font-size: 0.68rem;
   letter-spacing: 0.12em;
   font-weight: 600;
-  opacity: 0;
-  transform: translateX(-6px);
-  transition: opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-  pointer-events: none;
+  color: hsla(43, 48%, 48%, 0.6);
+  opacity: 0.8;
   white-space: nowrap;
-}
-
-/* Reveal labels when combined bar is expanded past ~6% */
-.ide-activity-combined[data-panel-size] .activity-label {
-  opacity: 0;
-  transform: translateX(-6px);
-}
-
-.ide-activity-combined[data-panel-size]:not([data-panel-size^="3."]):not([data-panel-size^="4."]):not([data-panel-size^="5."]):not([data-panel-size^="6.0"]):not([data-panel-size^="6.1"]):not([data-panel-size^="6.2"]):not([data-panel-size^="6.3"]):not([data-panel-size^="6.4"]) .activity-label {
-  opacity: 0.82;
-  transform: translateX(0);
-  pointer-events: auto;
+  text-transform: uppercase;
 }
 
 .sidebar-resize-handle {
@@ -833,10 +832,10 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-height: 0;
   height: 100%;
-  max-width: 52rem;
-  margin: 0 auto;
+  width: 100%;
   padding: 0;
   gap: 0;
 }
@@ -850,9 +849,9 @@
   justify-content: flex-end;
   gap: var(--space-3, 0.75rem);
   padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
-  border: 1px solid hsla(43, 48%, 48%, 0.14);
+  background: var(--ritual-panel, rgba(5, 4, 16, 0.88));
+  border: 1px solid var(--ritual-border, hsla(43, 48%, 48%, 0.14));
   border-radius: var(--radius-lg, 0.75rem);
-  background: rgba(5, 4, 16, 0.88);
   backdrop-filter: blur(12px);
   z-index: 50;
 }
@@ -996,6 +995,7 @@
 
 .ide-layout-wrapper .document-container {
   flex: 1;
+  width: 100%;
   min-height: 0;
   display: flex;
   overflow: hidden !important;
