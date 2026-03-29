@@ -209,6 +209,7 @@ export default function AnalysisPanel({
   hhmSummary = null,
   scoreData = null,
   rhymeAstrology = null,
+  oracle = null,
   onGroupHover = null,
   onGroupLeave = null,
   infoBeamEnabled = false,
@@ -241,6 +242,9 @@ export default function AnalysisPanel({
       .sort((a, b) => b.contribution - a.contribution)
     : [];
   const hasLiteraryCraft = literaryDevices.length > 0 || heuristicTraces.length > 0;
+  const oracleInsights = Array.isArray(oracle?.insights) ? oracle.insights : [];
+  const oracleSuggestions = Array.isArray(oracle?.suggestions) ? oracle.suggestions : [];
+  const hasOracle = Boolean(oracle?.summary || oracleInsights.length > 0 || oracleSuggestions.length > 0);
   const codexCommentary = hasLiteraryCraft
     ? buildCodexCommentary({
       traces: heuristicTraces,
@@ -252,7 +256,7 @@ export default function AnalysisPanel({
     : "";
   const hasContent = isAstrologySurface
     ? hasRhymeAstrology
-    : scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology;
+    : scheme || meter || statistics || hhmSummary?.enabled || hasLiteraryCraft || hasRhymeAstrology || hasOracle;
 
   return (
     <div className={`analyze-panel${isAstrologySurface ? " analyze-panel--astrology" : ""}`}>
@@ -526,6 +530,66 @@ export default function AnalysisPanel({
         </section>
       )}
 
+      {!isAstrologySurface && hasOracle && (
+        <section className="analyze-section analyze-oracle-section">
+          <h4 className="analyze-section-title">
+            <span className="analyze-glyph">&#x25C9;</span> Phonemic Oracle
+          </h4>
+          <div className={`analyze-oracle-shell analyze-oracle-shell--${String(oracle?.mood || "OBSERVANT").toLowerCase()}`}>
+            <div className="analyze-oracle-header">
+              <span className="analyze-oracle-persona">{oracle?.persona || "The Phonemic Oracle"}</span>
+              <span className="analyze-oracle-mood">{oracle?.mood || "OBSERVANT"}</span>
+            </div>
+            {oracle?.summary && (
+              <p className="analyze-oracle-summary">{oracle.summary}</p>
+            )}
+            {oracleInsights.length > 0 && (
+              <div className="analyze-oracle-column">
+                <div className="analyze-craft-subtitle">Forensic Technical Insights</div>
+                <div className="analyze-oracle-list">
+                  {oracleInsights.map((insight) => (
+                    <article key={insight.id || insight.message} className="analyze-oracle-card">
+                      <div className="analyze-oracle-card-header">
+                        <span className="analyze-oracle-category">{insight.category || "OBSERVATION"}</span>
+                        {Number.isFinite(Number(insight.scoreImpact)) && (
+                          <span className="analyze-oracle-impact">{formatPercentFromUnit(Math.min(1, Math.abs(Number(insight.scoreImpact) || 0)))}</span>
+                        )}
+                      </div>
+                      <p className="analyze-oracle-message">{insight.message}</p>
+                      {Array.isArray(insight.evidence) && insight.evidence.length > 0 && (
+                        <div className="analyze-oracle-evidence">
+                          {insight.evidence.map((entry) => (
+                            <span key={entry} className="analyze-oracle-evidence-chip">{entry}</span>
+                          ))}
+                        </div>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+            {oracleSuggestions.length > 0 && (
+              <div className="analyze-oracle-column">
+                <div className="analyze-craft-subtitle">Linguistic Swaps</div>
+                <div className="analyze-oracle-list">
+                  {oracleSuggestions.map((suggestion) => (
+                    <article key={`${suggestion.original}-${suggestion.suggested}`} className="analyze-oracle-card analyze-oracle-card--suggestion">
+                      <div className="analyze-oracle-swap">
+                        <span>{suggestion.original}</span>
+                        <span className="analyze-oracle-arrow">&rarr;</span>
+                        <span>{suggestion.suggested}</span>
+                      </div>
+                      <p className="analyze-oracle-message">{suggestion.reason}</p>
+                      <span className="analyze-oracle-gain">Gain +{formatPercentFromUnit(Math.min(1, Number(suggestion.resonanceGain) || 0))}</span>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
       {/* Literary Craft */}
       {!isAstrologySurface && hasLiteraryCraft && (
         <section className="analyze-section">
@@ -751,6 +815,25 @@ AnalysisPanel.propTypes = {
       cacheHitCount: PropTypes.number,
       averageQueryTimeMs: PropTypes.number,
     }),
+  }),
+  oracle: PropTypes.shape({
+    version: PropTypes.string,
+    persona: PropTypes.string,
+    mood: PropTypes.string,
+    summary: PropTypes.string,
+    insights: PropTypes.arrayOf(PropTypes.shape({
+      id: PropTypes.string,
+      category: PropTypes.string,
+      message: PropTypes.string,
+      evidence: PropTypes.arrayOf(PropTypes.string),
+      scoreImpact: PropTypes.number,
+    })),
+    suggestions: PropTypes.arrayOf(PropTypes.shape({
+      original: PropTypes.string,
+      suggested: PropTypes.string,
+      reason: PropTypes.string,
+      resonanceGain: PropTypes.number,
+    })),
   }),
   onGroupHover: PropTypes.func,
   onGroupLeave: PropTypes.func,

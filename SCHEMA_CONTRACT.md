@@ -3,11 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.14** | Last updated: 2026-03-28
+**Version: 1.15** | Last updated: 2026-03-29
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
+
+---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: Scroll persistence contract
+- Version: 1.14 -> 1.15
+- Changed fields: `Scroll` now exposes optional `submittedAt`; scroll persistence can distinguish autosaved drafts from first-time submitted scrolls
+- Breaking: no
+- Claude impact: Read/editor surfaces can keep autosaving drafts while reserving one-time submission behaviors such as XP awards for explicit saves
+- Blackbox impact: scroll fixtures and persistence assertions can include `submittedAt` for draft-vs-submitted coverage
 
 ---
 
@@ -63,6 +74,7 @@ interface Scroll {
   content: string;
   createdAt: number;
   updatedAt: number;
+  submittedAt?: number | null;
   authorId: string;
 }
 
@@ -1191,6 +1203,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.12 | 2026-03-28 | Added VerseIR Synapse Slot amplifier payloads and optional panel-analysis exposure for semantic depth / archetype resonance | no |
 | 1.13 | 2026-03-28 | Added `OracleInsight`, `OracleSuggestion`, and `OraclePayload` plus optional analysis oracle commentary payloads | no |
 | 1.14 | 2026-03-28 | Hardened VerseIR with grapheme offsets, surface spans, normalization metadata, phonetic provenance, and applied window-limit metadata | no |
+| 1.15 | 2026-03-29 | Added optional `Scroll.submittedAt` so autosaved drafts can be distinguished from first-time submissions | no |
 
 ---
 

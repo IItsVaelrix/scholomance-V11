@@ -426,6 +426,7 @@ function normalizePanelPayload(rawPayload) {
       scoreData: null,
       vowelSummary: EMPTY_VOWEL_SUMMARY,
       rhymeAstrology: null,
+      oracle: null,
       source: rawPayload?.source ?? null,
     };
   }
@@ -478,6 +479,16 @@ function normalizePanelPayload(rawPayload) {
       ? {
         ...normalizedRhymeAstrology,
         features: bridgedRhymeFeatures,
+      }
+      : null,
+    oracle: payload.oracle && typeof payload.oracle === "object"
+      ? {
+        version: String(payload.oracle.version || ""),
+        persona: String(payload.oracle.persona || ""),
+        mood: String(payload.oracle.mood || "OBSERVANT"),
+        summary: String(payload.oracle.summary || ""),
+        insights: Array.isArray(payload.oracle.insights) ? payload.oracle.insights : [],
+        suggestions: Array.isArray(payload.oracle.suggestions) ? payload.oracle.suggestions : [],
       }
       : null,
     genreProfile: payload.genreProfile || null,
@@ -563,6 +574,7 @@ async function runClientSideAnalysis(text) {
       genreProfile: null,
       vowelSummary,
       rhymeAstrology: null,
+      oracle: null,
     },
     source: "client",
   };
@@ -576,6 +588,7 @@ export function usePanelAnalysis() {
   const [scoreData, setScoreData] = useState(null);
   const [vowelSummary, setVowelSummary] = useState(EMPTY_VOWEL_SUMMARY);
   const [rhymeAstrology, setRhymeAstrology] = useState(null);
+  const [oracle, setOracle] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [activeConnections, setActiveConnections] = useState([]);
   const [highlightedGroup, setHighlightedGroup] = useState(null);
@@ -600,6 +613,7 @@ export function usePanelAnalysis() {
     setScoreData(null);
     setVowelSummary(EMPTY_VOWEL_SUMMARY);
     setRhymeAstrology(null);
+    setOracle(null);
     setActiveConnections([]);
     setHighlightedGroup(null);
     setLiteraryDevices([]);
@@ -629,6 +643,7 @@ export function usePanelAnalysis() {
       setScoreData(normalized.scoreData);
       setVowelSummary(normalized.vowelSummary);
       setRhymeAstrology(normalized.rhymeAstrology);
+      setOracle(normalized.oracle);
       setActiveConnections(allConnections);
       setHighlightedGroup(null);
       setLiteraryDevices(normalized.literaryDevices);
@@ -805,6 +820,7 @@ export function usePanelAnalysis() {
     emotion,
     scoreData,
     rhymeAstrology,
+    oracle,
     genreProfile,
     vowelSummary,
     isAnalyzing,

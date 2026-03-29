@@ -208,6 +208,7 @@ const scrollParamsSchema = z.object({
 const scrollBodySchema = z.object({
     title: z.string().trim().min(1).max(256),
     content: z.string().max(500000).optional().default(''),
+    submit: z.boolean().optional().default(false),
 });
 
 function toFastifySchema(zodSchema) {

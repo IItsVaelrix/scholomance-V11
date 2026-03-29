@@ -67,7 +67,8 @@ const ScrollSchema = z.object({
   title: z.string(),
   content: z.string(),
   createdAt: TimestampSchema.optional(),
-  updatedAt: TimestampSchema.optional()
+  updatedAt: TimestampSchema.optional(),
+  submittedAt: TimestampSchema.nullish(),
 }).passthrough();
 const ScrollListSchema = z.array(ScrollSchema);
 const ScrollIndexSchema = z.object({
@@ -143,6 +144,7 @@ const withDerivedFields = (rawScroll, fallbackTimestamp = new Date().toISOString
     content,
     createdAt,
     updatedAt,
+    submittedAt: rawScroll?.submittedAt ?? null,
     preview: toPreview(content),
     wordCount: countWords(content),
     charCount: content.length,
@@ -381,10 +383,13 @@ export function useScrolls() {
     const id = isNew ? generateId() : scrollData.id;
     const legacyId = scrollData.id && scrollData.id !== id ? scrollData.id : null;
     const now = new Date().toISOString();
+    const submit = Boolean(scrollData.submit);
+    const submittedAt = scrollData?.submittedAt || (submit ? now : null);
 
     const scroll = {
       title: scrollData.title?.trim() || "Untitled Scroll",
       content: scrollData.content?.trim() || "",
+      submit,
     };
 
     const localScroll = withDerivedFields({
@@ -393,6 +398,7 @@ export function useScrolls() {
       content: scroll.content,
       createdAt: scrollData.createdAt || now,
       updatedAt: now,
+      submittedAt,
     }, now);
     if (!localScroll) return null;
 

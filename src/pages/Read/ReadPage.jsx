@@ -63,6 +63,7 @@ const TOOLTIP_HEIGHT = 510;
 const TOOLTIP_MARGIN = 12;
 const TOOLTIP_OFFSET_X = 14;
 const TOOLTIP_OFFSET_Y = -8;
+const AUTOSAVE_DELAY_MS = 1200;
 
 const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanEnvFlag(
   import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER,
@@ -224,6 +225,7 @@ export default function ReadPage() {
     genreProfile,
     scoreData,
     rhymeAstrology,
+    oracle,
     vowelSummary,
     isAnalyzing,
     analyzeDocument,
@@ -262,11 +264,11 @@ export default function ReadPage() {
   const lastAutosaveFingerprintRef = useRef("");
   const autosaveInputsRef = useRef({
     isEditable: false,
-    isTruesight: false,
     editorContent: "",
     editorTitle: "",
     activeScrollTitle: "",
     activeScrollId: null,
+    activeScrollSubmittedAt: null,
   });
   const [tooltipState, setTooltipState] = useState({
     visible: false,
@@ -289,13 +291,13 @@ export default function ReadPage() {
   useEffect(() => {
     autosaveInputsRef.current = {
       isEditable,
-      isTruesight,
       editorContent,
       editorTitle,
       activeScrollTitle: String(activeScroll?.title || ""),
       activeScrollId,
+      activeScrollSubmittedAt: activeScroll?.submittedAt || null,
     };
-  }, [isEditable, isTruesight, editorContent, editorTitle, activeScroll?.title, activeScrollId]);
+  }, [isEditable, editorContent, editorTitle, activeScroll?.title, activeScroll?.submittedAt, activeScrollId]);
 
   const lineCount = useMemo(() => {
     return truesightContent.split("\n").length;
@@ -466,7 +468,7 @@ export default function ReadPage() {
     lastAutosaveFingerprintRef.current = "";
   }, []);
 
-  const runTruesightAutosave = useCallback(async (draft) => {
+  const runAutosave = useCallback(async (draft) => {
     if (!draft || draft.context !== autosaveContextRef.current) return;
 
     const normalizedDraft = {
@@ -474,6 +476,7 @@ export default function ReadPage() {
       id: draft.id || autosaveScrollIdRef.current || undefined,
       title: String(draft.title || "").trim() || "Untitled Scroll",
       content: String(draft.content || ""),
+      submittedAt: draft.submittedAt || null,
     };
     const draftFingerprint = `${normalizedDraft.id || "new"}|${normalizedDraft.title}|${normalizedDraft.content}`;
     if (draftFingerprint === lastAutosaveFingerprintRef.current) {
@@ -487,7 +490,10 @@ export default function ReadPage() {
 
     autosaveInFlightRef.current = true;
     try {
-      const savedScroll = await saveScroll(normalizedDraft);
+      const savedScroll = await saveScroll({
+        ...normalizedDraft,
+        submit: false,
+      });
       if (!savedScroll) return;
       if (normalizedDraft.context !== autosaveContextRef.current) return;
 
@@ -506,13 +512,13 @@ export default function ReadPage() {
       setEditorTitle(savedTitle);
       setSaveStatus("Saved");
     } catch (error) {
-      console.error("Truesight autosave failed:", error);
+      console.error("Autosave failed:", error);
     } finally {
       autosaveInFlightRef.current = false;
       const queuedDraft = queuedAutosaveRef.current;
       queuedAutosaveRef.current = null;
       if (queuedDraft) {
-        void runTruesightAutosave({
+        void runAutosave({
           ...queuedDraft,
           id: queuedDraft.id || autosaveScrollIdRef.current || undefined,
         });
@@ -521,26 +527,30 @@ export default function ReadPage() {
   }, [saveScroll]);
 
   useEffect(() => {
-    if (!deepAnalysis) return;
-
     const snapshot = autosaveInputsRef.current;
-    if (!snapshot.isEditable || !snapshot.isTruesight) {
+    if (!snapshot.isEditable) {
       return;
     }
 
     const content = String(snapshot.editorContent || "");
-    if (!content.trim()) {
+    const title = String(snapshot.editorTitle || snapshot.activeScrollTitle || "").trim();
+    const hasExistingDraft = Boolean(snapshot.activeScrollId || autosaveScrollIdRef.current);
+    if (!hasExistingDraft && !content.trim() && !title) {
       return;
     }
 
-    const title = String(snapshot.editorTitle || snapshot.activeScrollTitle || "").trim() || "Untitled Scroll";
-    void runTruesightAutosave({
-      context: autosaveContextRef.current,
-      id: snapshot.activeScrollId || autosaveScrollIdRef.current || undefined,
-      title,
-      content,
-    });
-  }, [deepAnalysis, runTruesightAutosave]);
+    const timerId = window.setTimeout(() => {
+      void runAutosave({
+        context: autosaveContextRef.current,
+        id: snapshot.activeScrollId || autosaveScrollIdRef.current || undefined,
+        title,
+        content,
+        submittedAt: snapshot.activeScrollSubmittedAt || null,
+      });
+    }, AUTOSAVE_DELAY_MS);
+
+    return () => window.clearTimeout(timerId);
+  }, [activeScroll?.submittedAt, activeScrollId, editorContent, editorTitle, isEditable, runAutosave]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -556,26 +566,41 @@ export default function ReadPage() {
       bumpAutosaveContext();
       setSaveStatus("Saving...");
       const isUpdate = Boolean(isEditing && activeScrollId);
-      const savedScroll = await saveScroll({ id: isUpdate ? activeScrollId : undefined, title, content });
+      const wasSubmitted = Boolean(activeScroll?.submittedAt);
+      const savedScroll = await saveScroll({
+        id: isUpdate ? activeScrollId : undefined,
+        title,
+        content,
+        submit: true,
+        submittedAt: activeScroll?.submittedAt || null,
+      });
       if (!savedScroll) {
         setSaveStatus("Error");
         addToast("Failed to save scroll", "error");
         return;
       }
-      
-      // Award XP for every save, including updates.
-      // Keep the same power-scaled formula so rewards remain consistent.
-      const totalPower = scoreData?.totalScore || 0;
-      const baseXP = 25;
-      const powerXP = Math.round(Math.pow(totalPower, 1.6));
-      const xpAwarded = baseXP + powerXP;
-      const source = totalPower > 70 ? "legendary_submission"
-        : totalPower > 40 ? "expert_submission"
-          : "basic_submission";
-      const actionLabel = isUpdate ? "Scroll Updated" : "Scroll Saved";
 
-      addXP(xpAwarded, source);
-      addToast(`${actionLabel}! +${xpAwarded} XP`, "success");
+      const didSubmitNow = !wasSubmitted && Boolean(savedScroll.submittedAt);
+      const actionLabel = didSubmitNow
+        ? "Scroll Submitted"
+        : isUpdate
+          ? "Scroll Updated"
+          : "Scroll Saved";
+
+      if (didSubmitNow) {
+        const totalPower = scoreData?.totalScore || 0;
+        const baseXP = 25;
+        const powerXP = Math.round(Math.pow(totalPower, 1.6));
+        const xpAwarded = baseXP + powerXP;
+        const source = totalPower > 70 ? "legendary_submission"
+          : totalPower > 40 ? "expert_submission"
+            : "basic_submission";
+
+        addXP(xpAwarded, source);
+        addToast(`${actionLabel}! +${xpAwarded} XP`, "success");
+      } else {
+        addToast(`${actionLabel}!`, "success");
+      }
 
       setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
@@ -586,7 +611,7 @@ export default function ReadPage() {
       setIsEditing(false);
       setIsEditable(false);
     },
-    [isEditing, activeScrollId, saveScroll, addXP, addToast, scoreData, bumpAutosaveContext]
+    [isEditing, activeScrollId, activeScroll?.submittedAt, saveScroll, addXP, addToast, scoreData, bumpAutosaveContext]
   );
 
   const handleSelectScroll = useCallback((id) => {
@@ -1193,6 +1218,7 @@ export default function ReadPage() {
             hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
             scoreData={scoreData}
             rhymeAstrology={rhymeAstrology}
+            oracle={oracle}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}
             infoBeamEnabled={infoBeamEnabled}
@@ -1589,6 +1615,7 @@ export default function ReadPage() {
                           hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
                           scoreData={scoreData}
                           rhymeAstrology={rhymeAstrology}
+                          oracle={oracle}
                           onGroupHover={highlightRhymeGroup}
                           onGroupLeave={clearHighlight}
                           infoBeamEnabled={infoBeamEnabled}
@@ -1766,6 +1793,7 @@ export default function ReadPage() {
             hhmSummary={deepAnalysis?.syntaxSummary?.hhm}
             scoreData={scoreData}
             rhymeAstrology={rhymeAstrology}
+            oracle={oracle}
             onGroupHover={highlightRhymeGroup}
             onGroupLeave={clearHighlight}
             infoBeamEnabled={infoBeamEnabled}
