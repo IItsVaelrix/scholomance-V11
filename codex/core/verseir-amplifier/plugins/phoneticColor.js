@@ -82,8 +82,10 @@ export const phoneticColorAmplifier = {
     // 1. Global Spectral Analysis (for Hygiene)
     const familyFrequency = new Map();
     const lineFamilyDensity = new Map();
+    const proximityResonance = new Map(); // Tracks if a word has a vowel peer within +/- 3 tokens
 
-    for (const token of tokens) {
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
       const rawFamily = token.primaryStressedVowelFamily || token.terminalVowelFamily;
       const family = normalizeVowelFamily(rawFamily);
       if (!family) continue;
@@ -93,6 +95,22 @@ export const phoneticColorAmplifier = {
       const lineIndex = token.lineIndex ?? 0;
       if (!lineFamilyDensity.has(lineIndex)) lineFamilyDensity.set(lineIndex, new Set());
       lineFamilyDensity.get(lineIndex).add(family);
+
+      // --- PROXIMITY CHECK (The Anti-Skittles Rule) ---
+      let hasPeer = false;
+      const lookback = Math.max(0, i - 3);
+      const lookahead = Math.min(tokens.length - 1, i + 3);
+      
+      for (let j = lookback; j <= lookahead; j++) {
+        if (i === j) continue;
+        const peer = tokens[j];
+        const peerFamily = normalizeVowelFamily(peer.primaryStressedVowelFamily || peer.terminalVowelFamily);
+        if (peerFamily === family) {
+          hasPeer = true;
+          break;
+        }
+      }
+      proximityResonance.set(token.id, hasPeer);
     }
 
     const totalResonantTokens = [...familyFrequency.values()].reduce((a, b) => a + b, 0);
@@ -127,6 +145,7 @@ export const phoneticColorAmplifier = {
 
       const isAnchor = connectionCount >= 2;
       const isStopWord = token.flags?.isStopWordLike || false;
+      const hasProximity = proximityResonance.get(token.id) || false;
       
       // --- SPECTRAL HYGIENE RULES ---
       const familyCount = familyFrequency.get(family) || 0;
@@ -135,21 +154,24 @@ export const phoneticColorAmplifier = {
       const lineFamilies = lineFamilyDensity.get(token.lineIndex ?? 0);
       const isLineNoise = (lineFamilies?.size || 0) > 4 && familyShare < 0.1;
 
+      // Anti-Skittles logic: if it's a isolated vowel sound (no proximity), severely dampen it
       let glowIntensity = isStopWord ? 0 : clamp01(connectionSignal * (isAnchor ? 1.2 : 1.0));
+      if (!hasProximity && !isAnchor) glowIntensity *= 0.2; // The "Isolated Vowel" dampen
       if (isGlobalNoise || isLineNoise) glowIntensity *= 0.3;
 
       // 3. Calculate Saturation
       let saturationBoost = isStopWord ? 0 : clamp01((token.syllableCount * 0.1) + (isAnchor ? 0.2 : 0));
+      if (!hasProximity && !isAnchor) saturationBoost = 0; // Gray out isolated Skittles
       if (isGlobalNoise || isLineNoise) saturationBoost *= 0.5;
 
       // 4. Determine Effect Tier
       let effectClass = 'INERT';
-      if (!isStopWord && glowIntensity > 0.15) {
+      if (!isStopWord && (glowIntensity > 0.15 || (hasProximity && !isLineNoise))) {
         if (token.syllableCount >= 3 && glowIntensity > 0.7 && !isGlobalNoise) {
           effectClass = 'TRANSCENDENT';
         } else if (token.syllableCount >= 2 || glowIntensity > 0.5) {
           effectClass = 'HARMONIC';
-        } else {
+        } else if (hasProximity) {
           effectClass = 'RESONANT';
         }
       }
