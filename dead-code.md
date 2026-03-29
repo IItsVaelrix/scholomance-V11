@@ -1,0 +1,210 @@
+# Dead Code Report
+
+Generated at: 2026-03-29T17:41:47.421Z
+
+## Unreachable Files
+Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
+
+- [ ] src\data\vowelPalette.js
+- [ ] src\lib\audioAdminApi.ts
+- [ ] src\lib\css\schoolStyles.js
+- [ ] src\lib\scholomanceCorpus.api.js
+- [ ] src\lib\truesight\compiler\verseIRQueries.js
+- [ ] src\lib\workers\analysis.worker.js
+- [ ] src\lib\worldApi.js
+- [ ] src\types\core\analysis.ts
+- [ ] src\types\core\combat.ts
+- [ ] src\types\core\judiciary.ts
+- [ ] src\types\core\lexical.ts
+- [ ] src\types\core\scoring.ts
+- [ ] src\types\core\scroll.ts
+- [ ] src\types\index.ts
+- [ ] src\types\lib\literary.ts
+- [ ] src\types\lib\phoneme.ts
+- [ ] src\types\lib\phonological.ts
+- [ ] src\types\lib\pls.ts
+- [ ] src\types\lib\rhyme.ts
+- [ ] src\types\runtime\runtime.ts
+- [ ] codex\core\rhyme\dataset.js
+- [ ] codex\core\rhyme\generator.js
+- [ ] codex\core\rhyme\index.js
+- [ ] codex\core\rhyme\phonology.js
+- [ ] codex\core\rhyme\predictor.js
+- [ ] codex\core\rhyme\training.js
+- [ ] codex\core\rhyme\validator.js
+- [ ] codex\server\services\rhyme-astrology\indexRepo.js
+- [ ] codex\server\services\rhyme-astrology\lexiconRepo.js
+- [ ] codex\services\adapters\index.js
+- [ ] codex\services\adapters\persistence.adapter.js
+- [ ] codex\services\adapters\transport.adapter.js
+- [ ] codex\services\token-graph\phonetic.repo.js
+
+## Potentially Unused Exports
+Symbols that are exported but not referenced in any other file. (Note: May include false positives for dynamic usage or entry point exports).
+
+- [ ] `BookIcon` in `src\components\Icons.jsx`
+- [ ] `CheckIcon` in `src\components\Icons.jsx`
+- [ ] `CloseIcon` in `src\components\Icons.jsx`
+- [ ] `SCHOOL_ANGLES` in `src\data\library.js`
+- [ ] `schoolToBadgeClass` in `src\data\library.js`
+- [ ] `XP_SOURCES` in `src\data\progression_constants.js`
+- [ ] `RHYME_SUBTYPES` in `src\data\rhymeScheme.patterns.js`
+- [ ] `SCHOOL_SKINS` in `src\data\schoolPalettes.js`
+- [ ] `SCHOOL_SKINS_LIGHT` in `src\data\schoolPalettes.js`
+- [ ] `getSchoolById` in `src\data\schools.js`
+- [ ] `isSchoolUnlocked` in `src\data\schools.js`
+- [ ] `getLockTier` in `src\data\schools.js`
+- [ ] `getNextSchool` in `src\data\schools.js`
+- [ ] `getSchoolAngle` in `src\data\schools.js`
+- [ ] `getSchoolBadgeClass` in `src\data\schools.js`
+- [ ] `getSonicStationBuckets` in `src\data\sonicStationBuckets.js`
+- [ ] `getSonicStationTrackPool` in `src\data\sonicStationBuckets.js`
+- [ ] `getSchoolForVowel` in `src\data\vowelPalette.js`
+- [ ] `getVowelsBySchool` in `src\data\vowelPalette.js`
+- [ ] `emitXPEvent` in `src\hooks\useProgression.jsx`
+- [ ] `useXPEventListener` in `src\hooks\useProgression.jsx`
+- [ ] `onXPEvent` in `src\hooks\useProgression.jsx`
+- [ ] `AMBIENT_PLAYER_EVENTS` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `createPercussivePulseState` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `getPercussivePulseLevelFromWaveform` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `AmbientPlayerService` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `SCHOOL_AUDIO_CONFIG` in `src\lib\ambient\schoolAudio.config.js`
+- [ ] `AudioAdminErrorReason` in `src\lib\audioAdminApi.ts`
+- [ ] `AudioFilePayload` in `src\lib\audioAdminApi.ts`
+- [ ] `UploadAudioResponse` in `src\lib\audioAdminApi.ts`
+- [ ] `AudioAdminErrorPayload` in `src\lib\audioAdminApi.ts`
+- [ ] `normalizeAdminToken` in `src\lib\audioAdminApi.ts`
+- [ ] `buildAudioAdminHeaders` in `src\lib\audioAdminApi.ts`
+- [ ] `configureZodForCsp` in `src\lib\config\zod.config.js`
+- [ ] `generateSchoolCSSVariables` in `src\lib\css\schoolStyles.js`
+- [ ] `generateLockedSchoolStyles` in `src\lib\css\schoolStyles.js`
+- [ ] `isLikelyDynamicImportFailure` in `src\lib\lazyWithRetry.js`
+- [ ] `GENRES` in `src\lib\literaryClassifier.js`
+- [ ] `LITERARY_DEVICES` in `src\lib\literaryDevices.detector.js`
+- [ ] `detectEmotion` in `src\lib\literaryDevices.detector.js`
+- [ ] `getMusicProvider` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoEmbedUrl` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoSongId` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoAudioUrl` in `src\lib\musicEmbeds.js`
+- [ ] `PATTERN_COLORS` in `src\lib\patternColor.js`
+- [ ] `ARPABET_CONSONANTS` in `src\lib\phonology\phoneme.constants.js`
+- [ ] `PhoneticWeightBalancer` in `src\lib\phonology\phoneticWeighting.js`
+- [ ] `PHONOLOGICAL_PROCESS_RULES` in `src\lib\phonology\phonologicalProcesses.js`
+- [ ] `getDeviceId` in `src\lib\platform\wordCache.js`
+- [ ] `deriveFeatureAdjustedWeights` in `src\lib\pls\ranker.js`
+- [ ] `getXpForLevel` in `src\lib\progressionUtils.js`
+- [ ] `PAGE_COMPONENTS` in `src\lib\routes.js`
+- [ ] `ScholomanceCorpusAPI` in `src\lib\scholomanceCorpus.api.js`
+- [ ] `SyntaxAnalyzer` in `src\lib\syntax.layer.js`
+- [ ] `classifySyntaxToken` in `src\lib\syntax.layer.js`
+- [ ] `getSyntaxIdentityKey` in `src\lib\syntax.layer.js`
+- [ ] `getVerseIrColorProjection` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `VERSE_IR_PCA_CHROMA_BASIS` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `TRUESIGHT_ANALYSIS_MODES` in `src\lib\truesight\compiler\analysisModes.js`
+- [ ] `VERSE_IR_VERSION` in `src\lib\truesight\compiler\compileVerseToIR.js`
+- [ ] `splitVerseLines` in `src\lib\truesight\compiler\compileVerseToIR.js`
+- [ ] `getTokensByIds` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getWindowsByIds` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getTokensByVowelFamily` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getTokensByRhymeTail` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getWindowsBySignature` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getLineTokens` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `neighborsOf` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `deserializeVerseIR` in `src\lib\truesight\compiler\verseIRSerialization.js`
+- [ ] `WORD_PATTERN` in `src\lib\wordTokenization.js`
+- [ ] `getSyntacticIntegrity` in `src\pages\Combat\components\Spellbook.jsx`
+- [ ] `DocumentStats` in `src\types\core\analysis.ts`
+- [ ] `DocumentParsed` in `src\types\core\analysis.ts`
+- [ ] `JudiciaryLayer` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryHhmContext` in `src\types\core\judiciary.ts`
+- [ ] `JudiciarySyntaxContext` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryCandidate` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryResult` in `src\types\core\judiciary.ts`
+- [ ] `DiagnosticSeverity` in `src\types\core\scoring.ts`
+- [ ] `ScoringResult` in `src\types\core\scoring.ts`
+- [ ] `ScoringEngine` in `src\types\core\scoring.ts`
+- [ ] `LiteraryDeviceId` in `src\types\lib\literary.ts`
+- [ ] `LiteraryDevice` in `src\types\lib\literary.ts`
+- [ ] `MultiSyllableMatch` in `src\types\lib\phoneme.ts`
+- [ ] `PhonologicalProcessResult` in `src\types\lib\phonological.ts`
+- [ ] `CandidateArbiter` in `src\types\lib\pls.ts`
+- [ ] `RhymeType` in `src\types\lib\rhyme.ts`
+- [ ] `RhymeSubtype` in `src\types\lib\rhyme.ts`
+- [ ] `SyntaxGate` in `src\types\lib\rhyme.ts`
+- [ ] `SyntaxGatingStats` in `src\types\lib\rhyme.ts`
+- [ ] `CacheEntry` in `src\types\runtime\runtime.ts`
+- [ ] `EventCallback` in `src\types\runtime\runtime.ts`
+- [ ] `SCHOOL_EFFECTIVENESS` in `codex\core\combat.balance.js`
+- [ ] `STATUS_TIER_DEFINITIONS` in `codex\core\combat.balance.js`
+- [ ] `clampNumber` in `codex\core\combat.balance.js`
+- [ ] `buildHeuristicCommentary` in `codex\core\commentary\commentary.builder.js`
+- [ ] `TEMPLATE_VOCAB` in `codex\core\commentary\phrase-bank.js`
+- [ ] `MODEL_CORPUS` in `codex\core\commentary\phrase-bank.js`
+- [ ] `abyssalResonanceHeuristic` in `codex\core\heuristics\abyssal_resonance.js`
+- [ ] `verseIRAmplifierHeuristic` in `codex\core\heuristics\verseir_amplifier.js`
+- [ ] `HiddenMarkovModel` in `codex\core\hmm.js`
+- [ ] `JudiciaryEngine` in `codex\core\judiciary.js`
+- [ ] `ABYSS_MIN_MULTIPLIER` in `codex\core\lexicon.abyss.js`
+- [ ] `ABYSS_MAX_MULTIPLIER` in `codex\core\lexicon.abyss.js`
+- [ ] `normalizeAbyssWord` in `codex\core\lexicon.abyss.js`
+- [ ] `getUnlockedSynergies` in `codex\core\nexus.registry.js`
+- [ ] `DOCTRINES` in `codex\core\opponent.engine.js`
+- [ ] `PhoneticMatcher` in `codex\core\phonetic_matcher.js`
+- [ ] `RHYME_ASTROLOGY_API_VERSION` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_MODES` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_DEFAULTS` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_LIMITS` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyQueryCompilerSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyQueryPatternSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyMatchSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyConstellationSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyDiagnosticsSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyResultSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_WEIGHTS` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `normalizeRhymeAstrologyWeights` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `buildWeightedScoreBreakdown` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `isVowelPhoneme` in `codex\core\rhyme-astrology\signatures.js`
+- [ ] `RHYME_ASTROLOGY_TYPES_VERSION` in `codex\core\rhyme-astrology\types.js`
+- [ ] `DEFAULT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
+- [ ] `COMBAT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
+- [ ] `getCombatScoringHeuristics` in `codex\core\scoring.defaults.js`
+- [ ] `cadenceClosureWeight` in `codex\core\speaking\prosody.js`
+- [ ] `parseWeave` in `codex\core\spellweave.engine.js`
+- [ ] `createTokenizer` in `codex\core\tokenizer.js`
+- [ ] `DEFAULT_VERSEIR_AMPLIFIER_WEIGHT` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `resolveAmplifierDomains` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `estimateTierAmplifierRoute` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `WORLD_ENTITY_KINDS` in `codex\core\world.entity.js`
+- [ ] `normalizeWorldEntityKind` in `codex\core\world.entity.js`
+- [ ] `inferWorldTags` in `codex\core\world.entity.js`
+- [ ] `inferWorldSchool` in `codex\core\world.entity.js`
+- [ ] `inferMudEntityType` in `codex\core\world.entity.js`
+- [ ] `inferMudRarity` in `codex\core\world.entity.js`
+- [ ] `buildWorldEntitySummary` in `codex\core\world.entity.js`
+- [ ] `hydrateFromStorage` in `codex\runtime\cache.js`
+- [ ] `deleteFromCache` in `codex\runtime\cache.js`
+- [ ] `clearAllListeners` in `codex\runtime\eventBus.js`
+- [ ] `WORD_LOOKUP_EVENTS` in `codex\runtime\pipeline.js`
+- [ ] `resetRateLimit` in `codex\runtime\rateLimit.js`
+- [ ] `requestWordLookup` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `clearWordLookupCache` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `getWordLookupCacheTTL` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `getWordLookupRateLimit` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `readHeaderAsString` in `codex\server\audioAuth.js`
+- [ ] `secureTokenEquals` in `codex\server\audioAuth.js`
+- [ ] `OWNERSHIP_MAP` in `codex\server\collab\collab.pipelines.js`
+- [ ] `isPathAllowedForRole` in `codex\server\collab\collab.pipelines.js`
+- [ ] `AgentRole` in `codex\server\collab\collab.schemas.js`
+- [ ] `TaskStatus` in `codex\server\collab\collab.schemas.js`
+- [ ] `PipelineType` in `codex\server\collab\collab.schemas.js`
+- [ ] `MAX_PAGE_LIMIT` in `codex\server\collab\collab.schemas.js`
+- [ ] `PaginationQuerySchema` in `codex\server\collab\collab.schemas.js`
+- [ ] `PipelineRunStatus` in `codex\server\collab\collab.schemas.js`
+- [ ] `readSqlitePragmas` in `codex\server\db\sqlite.migrations.js`
+- [ ] `CaptchaService` in `codex\server\services\captcha.service.js`
+- [ ] `ConsoleMailerService` in `codex\server\services\mailer.service.js`
+- [ ] `SendGridMailerService` in `codex\server\services\mailer.service.js`
+- [ ] `getPendingCount` in `codex\server\services\wordLookupCoalescer.js`
+- [ ] `FreeDictionaryAdapter` in `codex\services\adapters\freeDictionary.adapter.js`
+- [ ] `createAdapterChain` in `codex\services\adapters\index.js`
+- [ ] `createTokenGraphPhoneticRepo` in `codex\services\token-graph\phonetic.repo.js`

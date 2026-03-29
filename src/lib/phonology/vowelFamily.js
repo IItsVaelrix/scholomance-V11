@@ -9,6 +9,7 @@ const FAMILY_ALIASES = Object.freeze({
   YUW: "UW",
   IN: "IH",
   EE: "IY",
+  OH: "OW",
   OO: "UH", // OO (book) -> UH
 });
 

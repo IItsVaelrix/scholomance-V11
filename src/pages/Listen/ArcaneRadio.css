@@ -1,0 +1,835 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ArcaneRadio.css — Scholomance Signal Laboratory
+   Aesthetic: Arcane-futuristic instrument console. Dark metal, gold trim,
+   circuit traces, measurement instruments. The future is magical here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens ─────────────────────────────────────────────────────────────── */
+.arcane-radio {
+  --gold: #c9a227;
+  --gold-dim: rgba(201, 162, 39, 0.22);
+  --gold-glow: rgba(201, 162, 39, 0.35);
+  --panel-bg: rgba(8, 6, 14, 0.92);
+  --console-bg: #06040d;
+  --border-panel: rgba(201, 162, 39, 0.18);
+  --border-panel-strong: rgba(201, 162, 39, 0.42);
+  --school-glow: color-mix(in srgb, var(--active-school-color, #c9a227) 40%, transparent);
+  --school-glow-bright: color-mix(in srgb, var(--active-school-color, #c9a227) 65%, transparent);
+}
+
+/* ── Root Container ─────────────────────────────────────────────────────── */
+.arcane-radio {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 2rem 2rem 1.75rem;
+  max-width: 980px;
+  margin: 0 auto;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(201,162,39,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 60% at 10% 80%, var(--school-glow) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 60% at 90% 80%, var(--school-glow) 0%, transparent 55%),
+    linear-gradient(180deg, #0b0812 0%, #060410 40%, #040309 100%);
+  border: 1px solid var(--border-panel-strong);
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    0 30px 80px rgba(0, 0, 0, 0.85),
+    0 0 60px var(--school-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    inset 0 0 40px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  transition: box-shadow 0.6s ease, background 0.6s ease;
+}
+
+/* Circuit trace pattern overlay */
+.arcane-radio::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    repeating-linear-gradient(
+      90deg,
+      rgba(201,162,39,0.025) 0px,
+      transparent 1px,
+      transparent 48px,
+      rgba(201,162,39,0.015) 48px,
+      transparent 49px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(201,162,39,0.025) 0px,
+      transparent 1px,
+      transparent 48px,
+      rgba(201,162,39,0.015) 48px,
+      transparent 49px
+    );
+  border-radius: inherit;
+}
+
+/* ── Corner Bracket Decorations ─────────────────────────────────────────── */
+.arcane-corner {
+  position: absolute;
+  width: 28px;
+  height: 28px;
+  z-index: 2;
+  pointer-events: none;
+}
+.arcane-corner::before,
+.arcane-corner::after {
+  content: '';
+  position: absolute;
+  background: var(--gold);
+  opacity: 0.65;
+}
+.arcane-corner--tl { top: 10px; left: 10px; }
+.arcane-corner--tr { top: 10px; right: 10px; }
+.arcane-corner--bl { bottom: 10px; left: 10px; }
+.arcane-corner--br { bottom: 10px; right: 10px; }
+
+/* Horizontal bar of L */
+.arcane-corner::before { width: 100%; height: 2px; top: 0; left: 0; }
+/* Vertical bar of L */
+.arcane-corner::after  { width: 2px; height: 100%; top: 0; left: 0; }
+
+.arcane-corner--tr::before { left: auto; right: 0; }
+.arcane-corner--tr::after  { left: auto; right: 0; }
+.arcane-corner--bl::before { top: auto; bottom: 0; }
+.arcane-corner--br::before { top: auto; bottom: 0; left: auto; right: 0; }
+.arcane-corner--br::after  { top: auto; bottom: 0; left: auto; right: 0; }
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.arcane-lab-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.25rem;
+  border-bottom: 1px solid var(--border-panel);
+  padding-bottom: 0.9rem;
+}
+
+.arcane-lab-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--gold);
+  text-shadow: 0 0 14px rgba(201,162,39,0.45);
+}
+
+.arcane-lab-badge {
+  font-size: 1.1rem;
+  opacity: 0.8;
+}
+
+.arcane-lab-status {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.arcane-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.arcane-status-dot.is-live {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+  animation: status-pulse 1.8s ease-in-out infinite;
+}
+.arcane-status-dot.is-tuning {
+  background: var(--active-school-color, var(--gold));
+  box-shadow: 0 0 10px var(--active-school-color, var(--gold));
+  animation: status-pulse 0.7s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.4; }
+}
+
+.arcane-status-sep { opacity: 0.25; }
+
+.arcane-status-station {
+  color: var(--active-school-color, var(--gold));
+  opacity: 0.9;
+}
+
+/* ── Main Console ───────────────────────────────────────────────────────── */
+.arcane-console {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 180px 1fr 200px;
+  gap: 1.5rem;
+  align-items: center;
+}
+
+/* ── Side Panels ────────────────────────────────────────────────────────── */
+.arcane-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem 1rem;
+  background: var(--panel-bg);
+  border: 1px solid var(--border-panel);
+  border-radius: 16px;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.04),
+    inset 0 0 24px rgba(0,0,0,0.5),
+    0 8px 24px rgba(0,0,0,0.4);
+  height: 100%;
+}
+
+.arcane-panel-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(201, 162, 39, 0.5);
+  align-self: stretch;
+  text-align: center;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(201,162,39,0.1);
+}
+
+/* ── Knob Styles ────────────────────────────────────────────────────────── */
+.arcane-knob-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.arcane-knob-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(201,162,39,0.65);
+}
+
+.arcane-knob-mount {
+  position: relative;
+  border-radius: 50%;
+  outline: none;
+}
+.arcane-knob-mount:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--active-school-color, var(--gold)) 50%, transparent);
+}
+.arcane-knob-mount.is-dragging {
+  filter: drop-shadow(0 0 8px var(--active-school-color, var(--gold)));
+}
+
+.arcane-knob-svg {
+  display: block;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.7));
+}
+
+.arcane-knob-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--gold);
+  letter-spacing: 0.02em;
+}
+
+.arcane-knob-unit {
+  font-size: 0.6rem;
+  opacity: 0.65;
+  margin-left: 1px;
+}
+
+/* ── VU Meter ───────────────────────────────────────────────────────────── */
+.arcane-vu-meter {
+  display: flex;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.arcane-vu-bars {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+  flex: 1;
+}
+
+.arcane-vu-bar {
+  height: 7px;
+  border-radius: 2px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: background 0.08s ease, box-shadow 0.08s ease;
+}
+.arcane-vu-bar.is-active {
+  background: var(--active-school-color, var(--gold));
+  box-shadow: 0 0 6px var(--school-glow-bright);
+}
+.arcane-vu-bar.is-warm.is-active {
+  background: #f59e0b;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+.arcane-vu-bar.is-hot.is-active {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+}
+
+.arcane-vu-scale {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.52rem;
+  color: rgba(255,255,255,0.25);
+  text-align: right;
+  padding: 1px 0;
+  letter-spacing: -0.02em;
+}
+
+/* ── Readouts ────────────────────────────────────────────────────────────── */
+.arcane-readouts {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.arcane-readout {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(201,162,39,0.1);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.62rem;
+}
+
+.arcane-readout-key {
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(201,162,39,0.45);
+}
+
+.arcane-readout-val {
+  color: var(--active-school-color, var(--gold));
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* ── Orb Chamber ─────────────────────────────────────────────────────────── */
+.arcane-orb-chamber {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+}
+
+.arcane-chamber-surround {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 360px;
+  height: 360px;
+  pointer-events: none;
+}
+
+.arcane-ring-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  animation: ring-rotate 90s linear infinite;
+}
+
+@keyframes ring-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Cardinal labels */
+.arcane-ring-label {
+  position: absolute;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  color: rgba(201,162,39,0.45);
+}
+.arcane-ring-n { top:  2px; left: 50%; transform: translateX(-50%); }
+.arcane-ring-s { bottom: 2px; left: 50%; transform: translateX(-50%); }
+.arcane-ring-e { right: 4px; top: 50%; transform: translateY(-50%); }
+.arcane-ring-w { left:  4px; top: 50%; transform: translateY(-50%); }
+
+/* Orb focal / container */
+.arcane-orb-focal {
+  position: relative;
+  z-index: 1;
+  border-radius: 50%;
+  box-shadow:
+    0 0 50px var(--school-glow),
+    0 0 100px color-mix(in srgb, var(--active-school-color, #c9a227) 20%, transparent),
+    inset 0 0 20px rgba(0,0,0,0.5);
+}
+
+/* Station nameplate */
+.arcane-station-plate {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 1rem;
+  background: rgba(0,0,0,0.55);
+  border: 1px solid rgba(201,162,39,0.2);
+  border-radius: 100px;
+  backdrop-filter: blur(8px);
+  margin-top: -0.25rem;
+}
+
+.arcane-plate-glyph {
+  font-size: 1rem;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+.arcane-plate-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.07em;
+  color: rgba(255,255,255,0.8);
+}
+
+.arcane-plate-empty {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.25);
+}
+
+/* ── Oscilloscope ────────────────────────────────────────────────────────── */
+.arcane-oscilloscope {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.arcane-scope-label {
+  display: flex;
+  justify-content: space-between;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.3);
+}
+
+.arcane-scope-live {
+  transition: color 0.3s;
+}
+.arcane-scope-live.is-on {
+  color: #22c55e;
+}
+
+.arcane-oscilloscope-canvas {
+  display: block;
+  width: 100%;
+  border: 1px solid rgba(201,162,39,0.12);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.55);
+}
+
+/* ── Transport Buttons ───────────────────────────────────────────────────── */
+.arcane-transport {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.arcane-transport-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.arcane-t-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: 1px solid rgba(201,162,39,0.3);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 40% 35%, rgba(42,33,14,0.9), rgba(8,6,12,0.97));
+  color: rgba(201,162,39,0.8);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+  box-shadow:
+    0 4px 12px rgba(0,0,0,0.6),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 0 0 2px rgba(201,162,39,0.06);
+}
+
+/* Hover effect — outer ring appears */
+.arcane-t-btn::before {
+  content: '';
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+
+.arcane-t-btn:hover::before {
+  border-color: var(--active-school-color, var(--gold));
+  box-shadow: 0 0 12px var(--school-glow);
+}
+
+.arcane-t-btn:hover {
+  border-color: rgba(201,162,39,0.65);
+  color: var(--gold);
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 16px rgba(0,0,0,0.7),
+    0 0 14px var(--school-glow),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.arcane-t-btn:active {
+  transform: translateY(1px) scale(0.97);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.8);
+}
+
+.arcane-t-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
+}
+
+/* Small button */
+.arcane-t-btn--sm {
+  width: 48px;
+  height: 48px;
+}
+
+/* Large play/pause button */
+.arcane-t-btn--lg {
+  width: 64px;
+  height: 64px;
+  border-color: rgba(201,162,39,0.45);
+  box-shadow:
+    0 6px 20px rgba(0,0,0,0.7),
+    0 0 24px var(--school-glow),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.arcane-t-btn--lg svg {
+  width: 20px;
+  height: 20px;
+}
+
+.arcane-t-btn--lg.is-playing {
+  border-color: var(--active-school-color, var(--gold));
+  color: var(--active-school-color, var(--gold));
+  box-shadow:
+    0 6px 20px rgba(0,0,0,0.7),
+    0 0 28px var(--school-glow-bright),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  animation: play-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes play-pulse {
+  0%, 100% { box-shadow: 0 6px 20px rgba(0,0,0,0.7), 0 0 28px var(--school-glow-bright), inset 0 1px 0 rgba(255,255,255,0.1); }
+  50%       { box-shadow: 0 6px 20px rgba(0,0,0,0.7), 0 0 44px var(--school-glow-bright), inset 0 1px 0 rgba(255,255,255,0.1); }
+}
+
+.arcane-t-btn--lg.is-tuning {
+  border-color: rgba(201,162,39,0.6);
+  color: var(--gold);
+}
+
+/* Aux buttons (replay, mute) */
+.arcane-t-btn--aux {
+  width: 54px;
+  height: 54px;
+  border-radius: 12px; /* rectangular-ish to differentiate */
+}
+.arcane-t-btn--aux::before {
+  border-radius: 16px;
+}
+
+.arcane-t-btn--aux.is-muted {
+  border-color: rgba(239,68,68,0.5);
+  color: #ef4444;
+}
+
+.arcane-t-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+/* Spin animation for tuning icon */
+.arcane-spin {
+  animation: arcane-rotate 1s linear infinite;
+}
+@keyframes arcane-rotate {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Frequency Bar Row ───────────────────────────────────────────────────── */
+.arcane-freq-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.arcane-freq-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(201,162,39,0.4);
+  flex-shrink: 0;
+}
+
+.arcane-freq-bars {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  flex: 1;
+}
+
+.arcane-freq-bar {
+  flex: 1;
+  height: 14px;
+  border-radius: 2px 2px 0 0;
+  background: rgba(255,255,255,0.06);
+  transition: background 0.08s ease, box-shadow 0.08s ease;
+  /* Variable height creates a spectrum analyzer silhouette */
+  max-height: calc(6px + var(--bar-n, 0) * 0.8px);
+  min-height: 3px;
+}
+.arcane-freq-bar.is-active {
+  background: var(--active-school-color, var(--gold));
+  box-shadow: 0 0 4px var(--school-glow);
+}
+
+/* ── Station Grid ────────────────────────────────────────────────────────── */
+.arcane-stations {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.7rem;
+  border-top: 1px solid rgba(201,162,39,0.1);
+  padding-top: 1.25rem;
+}
+
+.arcane-station-card {
+  --station-color: var(--active-school-color, #c9a227);
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "dot glyph name"
+    ".   .     id";
+  align-items: center;
+  column-gap: 0.45rem;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px;
+  background: rgba(8,6,14,0.75);
+  color: rgba(255,255,255,0.65);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.arcane-station-card:hover {
+  border-color: color-mix(in srgb, var(--station-color) 45%, transparent);
+  transform: translateY(-1px);
+  box-shadow:
+    0 8px 20px rgba(0,0,0,0.5),
+    0 0 12px color-mix(in srgb, var(--station-color) 25%, transparent);
+}
+
+.arcane-station-card.is-active {
+  border-color: color-mix(in srgb, var(--station-color) 70%, rgba(255,255,255,0.2));
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--station-color) 10%, rgba(8,6,14,0.9)), rgba(8,6,14,0.92));
+  box-shadow:
+    0 0 24px color-mix(in srgb, var(--station-color) 30%, transparent),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.9);
+}
+
+.arcane-station-dot {
+  grid-area: dot;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--station-color);
+  box-shadow: 0 0 8px var(--station-color);
+  opacity: 0.4;
+  transition: opacity 0.2s;
+}
+
+.arcane-station-card.is-active .arcane-station-dot {
+  opacity: 1;
+  animation: status-pulse 1.8s ease-in-out infinite;
+}
+
+.arcane-station-glyph {
+  grid-area: glyph;
+  font-size: 1.1rem;
+  color: var(--station-color);
+  filter: drop-shadow(0 0 5px var(--station-color));
+  line-height: 1;
+}
+
+.arcane-station-name {
+  grid-area: name;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.arcane-station-id-label {
+  grid-area: id;
+  grid-column: 3;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--station-color);
+  opacity: 0.5;
+}
+
+.arcane-station-card.is-active .arcane-station-id-label {
+  opacity: 0.85;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────────── */
+@media (max-width: 860px) {
+  .arcane-console {
+    grid-template-columns: 160px 1fr 180px;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .arcane-console {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+  .arcane-panel--left {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    height: auto;
+  }
+  .arcane-panel--right {
+    height: auto;
+  }
+  .arcane-radio {
+    padding: 1.25rem;
+  }
+}
+
+/* ── Light theme overrides ──────────────────────────────────────────────── */
+[data-theme="light"] .arcane-radio {
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(201,162,39,0.06) 0%, transparent 60%),
+    linear-gradient(180deg, #f9f7f0 0%, #f2eede 100%);
+  border-color: rgba(139, 107, 35, 0.4);
+  box-shadow:
+    0 30px 80px rgba(100, 80, 20, 0.2),
+    0 0 40px rgba(201,162,39,0.1),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+[data-theme="light"] .arcane-radio::after {
+  background-image:
+    repeating-linear-gradient(90deg, rgba(139,107,35,0.04) 0px, transparent 1px, transparent 48px, rgba(139,107,35,0.03) 48px, transparent 49px),
+    repeating-linear-gradient(0deg, rgba(139,107,35,0.04) 0px, transparent 1px, transparent 48px, rgba(139,107,35,0.03) 48px, transparent 49px);
+}
+
+[data-theme="light"] .arcane-panel {
+  background: rgba(255,252,244,0.92);
+  border-color: rgba(139,107,35,0.2);
+  box-shadow: 0 4px 16px rgba(100,80,20,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+[data-theme="light"] .arcane-readout {
+  background: rgba(255,252,244,0.8);
+  border-color: rgba(139,107,35,0.15);
+}
+
+[data-theme="light"] .arcane-t-btn {
+  background: radial-gradient(circle at 40% 35%, #fff8e8, #f5edd8);
+  border-color: rgba(139,107,35,0.35);
+  color: rgba(139,107,35,0.9);
+  box-shadow: 0 4px 12px rgba(100,80,20,0.15);
+}
+
+[data-theme="light"] .arcane-station-card {
+  background: rgba(255,252,244,0.85);
+  border-color: rgba(139,107,35,0.15);
+  color: rgba(30,20,5,0.7);
+}
+
+[data-theme="light"] .arcane-station-card.is-active {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--station-color) 8%, #fff8e8), #fff8e8);
+}
+
+[data-theme="light"] .arcane-lab-title {
+  color: rgba(139,107,35,0.9);
+}
+
+[data-theme="light"] .arcane-oscilloscope-canvas {
+  background: rgba(255,252,244,0.6);
+  border-color: rgba(139,107,35,0.15);
+}
+
+[data-theme="light"] .arcane-corner::before,
+[data-theme="light"] .arcane-corner::after {
+  background: rgba(139,107,35,0.55);
+}

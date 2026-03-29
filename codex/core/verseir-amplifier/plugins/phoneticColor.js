@@ -9,10 +9,18 @@
 
 import { normalizeVowelFamily } from '../../../../src/lib/phonology/vowelFamily.js';
 import { VOWEL_FAMILY_TO_SCHOOL } from '../../../../src/data/schools.js';
-import { SCHOOL_SKINS } from '../../../../src/data/schoolPalettes.js';
+import { resolveVerseIrColor } from '../../../../src/data/schoolPalettes.js';
 import { clamp01, roundTo, createAmplifierResult } from '../shared.js';
 
 const DEFAULT_SCHOOL = 'DEFAULT';
+
+function resolveColorFamily(rawFamily, normalizedFamily) {
+  const raw = String(rawFamily || '').trim().toUpperCase();
+  if (raw && VOWEL_FAMILY_TO_SCHOOL[raw]) {
+    return raw;
+  }
+  return normalizedFamily;
+}
 
 /**
  * Research-backed palettes
@@ -120,7 +128,8 @@ export const phoneticColorAmplifier = {
       // 1. Resolve Color based on Visual Mode
       const rawFamily = token.primaryStressedVowelFamily || token.terminalVowelFamily;
       const family = normalizeVowelFamily(rawFamily);
-      const school = VOWEL_FAMILY_TO_SCHOOL[family] || DEFAULT_SCHOOL;
+      const colorFamily = resolveColorFamily(rawFamily, family);
+      const school = VOWEL_FAMILY_TO_SCHOOL[colorFamily] || DEFAULT_SCHOOL;
       
       let color;
       if (visualMode === 'FORENSIC') {
@@ -133,9 +142,8 @@ export const phoneticColorAmplifier = {
         const heat = Math.min(1, (rhymePeers.length - 1) * 0.25);
         color = interpolateHeatmap(heat);
       } else {
-        // Default AESTHETIC: School-based authoritative coloring
-        const skin = SCHOOL_SKINS[school] || SCHOOL_SKINS.DEFAULT;
-        color = skin[family] || skin.A || '#888888';
+        // Default AESTHETIC: school identity projected through the shared PCA chroma basis
+        color = resolveVerseIrColor(colorFamily || family || rawFamily, school, { theme: 'dark' }).hex;
       }
 
       // 2. Calculate Visual Resonance (Glow)
