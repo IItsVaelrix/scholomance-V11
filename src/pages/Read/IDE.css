@@ -466,6 +466,7 @@
 .ide-activity-combined[data-panel-size]:not([data-panel-size^="3."]):not([data-panel-size^="4."]):not([data-panel-size^="5."]):not([data-panel-size^="6.0"]):not([data-panel-size^="6.1"]):not([data-panel-size^="6.2"]):not([data-panel-size^="6.3"]):not([data-panel-size^="6.4"]) .activity-label {
   opacity: 0.82;
   transform: translateX(0);
+  pointer-events: auto;
 }
 
 .sidebar-resize-handle {

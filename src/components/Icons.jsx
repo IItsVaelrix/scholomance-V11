@@ -155,6 +155,26 @@ export function CloseIcon(props) {
   );
 }
 
+/** Double chevron right — Expand sidebar */
+export function ChevronsRightIcon(props) {
+  return (
+    <Icon {...props}>
+      <polyline points="13 17 18 12 13 7" />
+      <polyline points="6 17 11 12 6 7" />
+    </Icon>
+  );
+}
+
+/** Double chevron left — Collapse sidebar */
+export function ChevronsLeftIcon(props) {
+  return (
+    <Icon {...props}>
+      <polyline points="11 17 6 12 11 7" />
+      <polyline points="18 17 13 12 18 7" />
+    </Icon>
+  );
+}
+
 /** Gear — Settings */
 export function SettingsIcon(props) {
   return (

@@ -2,7 +2,9 @@ import {
   FolderIcon,
   SearchIcon,
   ToolsIcon,
-  SettingsIcon
+  SettingsIcon,
+  ChevronsRightIcon,
+  ChevronsLeftIcon
 } from "../../components/Icons.jsx";
 import { useUserSettings } from "../../hooks/useUserSettings.js";
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from "react";
@@ -251,6 +253,7 @@ export default function ReadPage() {
   const [lookupOverride, setLookupOverride] = useState(null);
 
   const editorRef = useRef(null);
+  const activityBarRef = useRef(null);
   const focusReturnRef = useRef(null);
   const tooltipCloseGuardRef = useRef({
     expiresAt: 0,
@@ -1378,13 +1381,14 @@ export default function ReadPage() {
         >
           {/* 1+2. Activity Bar — combined icons + labels strip */}
           <Panel
+            ref={activityBarRef}
             defaultSize={(() => {
               const layout = settings?.ideLayout;
               if (layout?.length === 5) return layout[0] + layout[1]; // migrate old format
               return layout?.[0] ?? 8;
             })()}
             minSize={4}
-            maxSize={22}
+            maxSize={30}
             className="ide-activity-bar ide-activity-combined"
           >
             <div className="activity-combined-inner">
@@ -1405,6 +1409,32 @@ export default function ReadPage() {
                   })}
                 </div>
                 <div className="activity-bar-footer">
+                  <button 
+                    className="activity-item icon-only" 
+                    title={(() => {
+                      const el = document.querySelector('.ide-activity-combined');
+                      const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
+                      return size > 6.4 ? "Collapse Sidebar" : "Expand Sidebar";
+                    })()}
+                    onClick={() => {
+                      const panel = activityBarRef.current;
+                      if (!panel) return;
+                      const currentSize = panel.getSize();
+                      if (currentSize > 6.4) {
+                        panel.resize(4);
+                      } else {
+                        panel.resize(18);
+                      }
+                    }}
+                  >
+                    {(() => {
+                      // We need to check the attribute because the state isn't directly exposed in a simple way here
+                      // without adding more state to ReadPage.
+                      const el = document.querySelector('.ide-activity-combined');
+                      const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
+                      return size > 6.4 ? <ChevronsLeftIcon size={20} /> : <ChevronsRightIcon size={20} />;
+                    })()}
+                  </button>
                   <button className="activity-item icon-only" title="Settings">
                     <SettingsIcon size={20} />
                   </button>
@@ -1426,6 +1456,27 @@ export default function ReadPage() {
                   })}
                 </div>
                 <div className="activity-bar-footer">
+                  <button 
+                    className="activity-item label-only"
+                    onClick={() => {
+                      const panel = activityBarRef.current;
+                      if (!panel) return;
+                      const currentSize = panel.getSize();
+                      if (currentSize > 6.4) {
+                        panel.resize(4);
+                      } else {
+                        panel.resize(18);
+                      }
+                    }}
+                  >
+                    <span className="activity-label">
+                      {(() => {
+                        const el = document.querySelector('.ide-activity-combined');
+                        const size = parseFloat(el?.getAttribute('data-panel-size') || '0');
+                        return size > 6.4 ? "COLLAPSE" : "EXPAND";
+                      })()}
+                    </span>
+                  </button>
                   <button className="activity-item label-only">
                     <span className="activity-label">SETTINGS</span>
                   </button>
