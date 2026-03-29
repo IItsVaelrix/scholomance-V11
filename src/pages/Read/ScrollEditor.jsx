@@ -226,6 +226,7 @@ function getCursorCoordsFromTextarea(textarea) {
 }
 
 const ScrollEditor = forwardRef(function ScrollEditor({
+  documentIdentity = "new",
   initialTitle = "",
   initialContent = "",
   onSave,
@@ -276,6 +277,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const markdownRef = useRef(null);
   const isReadOnlyTruesight = isTruesight && !isEditable;
   const isReadOnlyPlain = !isTruesight && !isEditable;
+  const documentIdentityRef = useRef(documentIdentity);
 
   const getViewportNode = useCallback(() => {
     if (isReadOnlyTruesight) return truesightOverlayRef.current;
@@ -752,6 +754,32 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     setTitle(initialTitle);
     setContent(initialContent);
   }, [initialTitle, initialContent, isEditable]);
+
+  useEffect(() => {
+    if (documentIdentity === documentIdentityRef.current) {
+      return;
+    }
+
+    documentIdentityRef.current = documentIdentity;
+    scrollTopRef.current = 0;
+    setScrollTop(0);
+    setTitle(initialTitle);
+    setContent(initialContent);
+    setIsSaving(false);
+    setIntellisenseSuggestions([]);
+    setIntellisenseIndex(0);
+    setGhostData(null);
+    setIsGhostPinned(false);
+
+    requestAnimationFrame(() => {
+      const viewport = getViewportNode();
+      if (!viewport) return;
+
+      viewport.scrollTop = 0;
+      viewport.scrollLeft = 0;
+      syncScrollPosition(0, 0, viewport);
+    });
+  }, [documentIdentity, getViewportNode, initialContent, initialTitle, syncScrollPosition]);
 
   useEffect(() => {
     const textarea = textareaRef.current;

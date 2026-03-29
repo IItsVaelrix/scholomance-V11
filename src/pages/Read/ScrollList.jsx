@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef, useState, useEffect, useCallback } from "react";
 
 const VIRTUALIZE_AFTER_COUNT = 12;
+// Keep in sync with --scroll-list-row-height in IDE.css.
 const LIST_ROW_HEIGHT = 120;
 const LIST_OVERSCAN = 6;
 const PINNED_STORAGE_KEY = "scholomance-pinned-scrolls";

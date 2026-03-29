@@ -95,14 +95,29 @@ def lookup_rhymes(conn: sqlite3.Connection, word: str, limit: int = 50) -> Dict[
     ).fetchall()
     return {"family": family, "words": [r["word_lower"] for r in rhyme_rows]}
 
-def batch_lookup_families(conn: sqlite3.Connection, words: List[str]) -> Dict[str, str]:
+def batch_lookup_families(conn: sqlite3.Connection, words: List[str]) -> Dict[str, Dict[str, Any]]:
     if not words: return {}
     placeholders = ', '.join('?' for _ in words)
+    # We use rhyme_index for the family, and entry for the ipa (which stores arpabet)
+    # Joining them to get authoritative data for both.
     rows = conn.execute(
-        f"SELECT word_lower, rhyme_family FROM rhyme_index WHERE word_lower IN ({placeholders})",
+        f"""
+        SELECT ri.word_lower, ri.rhyme_family, e.ipa 
+        FROM rhyme_index ri
+        LEFT JOIN entry e ON e.headword_lower = ri.word_lower
+        WHERE ri.word_lower IN ({placeholders})
+        """,
         [w.lower() for w in words]
     ).fetchall()
-    return {row["word_lower"].upper(): row["rhyme_family"] for row in rows}
+    
+    results = {}
+    for row in rows:
+        word_upper = row["word_lower"].upper()
+        results[word_upper] = {
+            "family": row["rhyme_family"],
+            "phonemes": row["ipa"].split() if row["ipa"] else None
+        }
+    return results
 
 def batch_validate_words(conn: sqlite3.Connection, words: List[str]) -> List[str]:
     normalized = sorted({word.strip().lower() for word in words if isinstance(word, str) and word.strip()})

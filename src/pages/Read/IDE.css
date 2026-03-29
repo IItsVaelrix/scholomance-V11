@@ -1014,6 +1014,7 @@
 }
 
 .ide-layout-wrapper .scroll-list {
+  --scroll-list-row-height: 120px;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -1080,6 +1081,7 @@
 .ide-layout-wrapper .scroll-item {
   display: flex;
   align-items: stretch;
+  min-height: calc(var(--scroll-list-row-height) - var(--space-2, 0.5rem));
   margin-bottom: var(--space-2, 0.5rem);
   border-radius: var(--radius-lg, 0.75rem);
   border: 1px solid transparent;
@@ -1119,6 +1121,7 @@
 
 .ide-layout-wrapper .scroll-item-preview {
   margin-top: 2px;
+  min-height: calc(1.45em * 2);
   color: var(--read-text-muted);
   font-size: var(--text-xs, 0.75rem);
   line-height: 1.45;

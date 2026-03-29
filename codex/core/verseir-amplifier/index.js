@@ -2,6 +2,7 @@ import { commonElementAmplifier } from './plugins/commonElements.js';
 import { rareElementAmplifier } from './plugins/rareElements.js';
 import { inexplicableElementAmplifier } from './plugins/inexplicableElements.js';
 import { phoneticColorAmplifier } from './plugins/phoneticColor.js';
+import { lexicalResonanceAmplifier } from './plugins/lexicalResonance.js';
 import {
   clamp01,
   collectVerseIRTokenStats,
@@ -22,6 +23,7 @@ const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
   phoneticColorAmplifier,
+  lexicalResonanceAmplifier,
   commonElementAmplifier,
   rareElementAmplifier,
   inexplicableElementAmplifier,

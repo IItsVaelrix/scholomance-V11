@@ -795,7 +795,10 @@ export function createPanelAnalysisService(options = {}) {
       const verseIR = await enhanceVerseIRWithServerPolicy(compileVerseToIR(text, {
         phonemeEngine: PhonemeEngine,
         mode: deepAnalysis?.compiler?.mode || 'balanced',
-      }));
+      }), {
+        gutenbergPriors: gutenbergEmotionPriors,
+        wordNetEnabled: true,
+      });
       const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
       const scoreData = await scoreEngine.calculateScore(amplifiedDoc);
       const wordAnalyses = buildAnalysisWordProfiles(deepAnalysis, syntaxLayer, verseIR);

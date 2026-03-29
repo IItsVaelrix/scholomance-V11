@@ -285,7 +285,8 @@ export default function ReadPage() {
   useEffect(() => { pruneOldCaches(); }, []);
   const activeScroll = activeScrollId ? getScrollById(activeScrollId) : null;
   const activeScrollContent = String(activeScroll?.content || "");
-  const truesightContent = isEditable ? editorContent : activeScrollContent;
+  const documentContent = isEditable ? editorContent : activeScrollContent;
+  const truesightContent = documentContent;
 
   useEffect(() => {
     autosaveScrollIdRef.current = activeScrollId || null;
@@ -619,15 +620,12 @@ export default function ReadPage() {
 
   const handleSelectScroll = useCallback((id) => {
     bumpAutosaveContext();
-    const selected = getScrollById(id);
     setActiveScrollId(id);
-    setEditorTitle(String(selected?.title || ""));
-    setEditorContent(String(selected?.content || ""));
     setIsEditing(false);
     setIsEditable(false);
     setHighlightedLines([]);
     setSaveStatus("Saved");
-  }, [getScrollById, bumpAutosaveContext]);
+  }, [bumpAutosaveContext]);
 
   const handleNewScroll = useCallback(() => {
     bumpAutosaveContext();
@@ -1063,7 +1061,7 @@ export default function ReadPage() {
 
   // Document-wide spellcheck (debounced via editorContent)
   useEffect(() => {
-    if (!isPredictive || !predictorReady || !editorContent) {
+    if (!isEditable || !isPredictive || !predictorReady || !editorContent) {
       setMisspellings([]);
       return;
     }
@@ -1105,7 +1103,7 @@ export default function ReadPage() {
     return () => {
       cancelled = true;
     };
-  }, [editorContent, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
+  }, [editorContent, isEditable, isPredictive, predictorReady, checkSpelling, getSpellingSuggestions]);
 
   /* ── Shared content blocks used in both mobile and desktop ── */
   const isAstrologyMode = analysisMode === ANALYSIS_MODES.ASTROLOGY;
@@ -1120,7 +1118,7 @@ export default function ReadPage() {
         {activeScrollId || isEditable ? (
           <ScrollEditor
             ref={editorRef}
-            key={activeScrollId || "new"}
+            documentIdentity={activeScrollId || "new"}
             initialTitle={activeScroll?.title || ""}
             initialContent={activeScroll?.content || ""}
             onSave={handleSaveScroll}
@@ -1506,7 +1504,7 @@ export default function ReadPage() {
               )}
               {sidebarTab === 'SEARCH' && (
                 <SearchPanel
-                  content={editorContent}
+                  content={documentContent}
                   onJumpToLine={(line) => {
                     editorRef.current?.jumpToLine?.(line);
                   }}
@@ -1569,7 +1567,7 @@ export default function ReadPage() {
                 {activeScrollId || isEditable ? (
                   <ScrollEditor
                     ref={editorRef}
-                    key={activeScrollId || "new"}
+                    documentIdentity={activeScrollId || "new"}
                     initialTitle={activeScroll?.title || ""}
                     initialContent={activeScroll?.content || ""}
                     onSave={handleSaveScroll}
@@ -1710,7 +1708,7 @@ export default function ReadPage() {
                           >×</button>
                         </div>
                         <Minimap
-                          content={editorContent}
+                          content={documentContent}
                           scrollTop={minimapScrollTop}
                           viewportHeight={editorRef.current?.clientHeight || 0}
                           totalHeight={editorRef.current?.scrollHeight || 1}
@@ -1807,7 +1805,7 @@ export default function ReadPage() {
           className="minimap-floating-panel"
         >
           <Minimap
-            content={editorContent}
+            content={documentContent}
             scrollTop={minimapScrollTop}
             viewportHeight={editorRef.current?.clientHeight || 0}
             totalHeight={editorRef.current?.scrollHeight || 1}

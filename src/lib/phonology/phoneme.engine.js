@@ -211,9 +211,10 @@ export const PhonemeEngine = {
     const missing = words.filter(w => !this.AUTHORITY_CACHE.has(w.toUpperCase()));
     if (!missing.length) return;
     try {
-        const families = await ScholomanceDictionaryAPI.lookupBatch(missing);
-        for (const [word, family] of Object.entries(families)) {
-            this.AUTHORITY_CACHE.set(word.toUpperCase(), family);
+        const batchResults = await ScholomanceDictionaryAPI.lookupBatch(missing);
+        for (const [word, data] of Object.entries(batchResults)) {
+            // data is { family: string, phonemes: string[] | null }
+            this.AUTHORITY_CACHE.set(word.toUpperCase(), data);
         }
     } catch (_e) { /* noop — authority lookup is best-effort */ }
   },
@@ -295,6 +296,50 @@ export const PhonemeEngine = {
       this.WORD_DIAGNOSTICS_CACHE.set(upper, diagnostics);
       return { analysis, diagnostics };
     };
+
+    // 1. Authoritative Override: Scholomance Dictionary
+    const authorityData = this.AUTHORITY_CACHE.get(upper);
+    if (authorityData && (authorityData.family || authorityData.phonemes)) {
+      const phonemes = Array.isArray(authorityData.phonemes) 
+        ? authorityData.phonemes 
+        : this.splitToPhonemes(upper); // fallback to heuristics for phonemes if missing
+      
+      const processed = this.applyPhonologicalProcesses(phonemes);
+      const syllables = Syllabifier.syllabify(processed);
+      
+      const lastSyl = syllables[syllables.length - 1] || [];
+      const lastVowelP = lastSyl.find(p => ARPABET_VOWELS.has(p.replace(/[0-9]/g, '')));
+      const vIdx = lastVowelP ? lastSyl.indexOf(lastVowelP) : -1;
+      const lastBaseV = lastVowelP ? lastVowelP.replace(/[0-9]/g, '') : 'AH';
+
+      // Find stressed vowel for the primary vowelFamily fallback
+      const stressedSyl = syllables.find(s => s.some(p => p.endsWith('1'))) || syllables[0] || lastSyl;
+      const stressedVowelP = stressedSyl.find(p => ARPABET_VOWELS.has(p.replace(/[0-9]/g, '')));
+      const stressedBaseV = stressedVowelP ? stressedVowelP.replace(/[0-9]/g, '') : lastBaseV;
+
+      let vowelFamily = authorityData.family;
+      if (!vowelFamily) vowelFamily = normalizeVowelFamily(VOWEL_TO_BASE_FAMILY[stressedBaseV] || 'A');
+      else vowelFamily = normalizeVowelFamily(vowelFamily);
+
+      const codaParts = vIdx >= 0 ? lastSyl.slice(vIdx + 1).map(p => p.replace(/[0-9]/g, '')) : [];
+      const coda = codaParts.length > 0 ? codaParts.join('') : null;
+      
+      const finalFamily = normalizeVowelFamily(VOWEL_TO_BASE_FAMILY[lastBaseV] || 'A');
+      const analysis = { vowelFamily, phonemes: processed, coda, rhymeKey: `${finalFamily}-${coda || "open"}`, syllableCount: syllables.length };
+      
+      return cacheResult(analysis, createPhoneticDiagnostics({
+        source: 'scholomance_dictionary',
+        branch: 'authority_lookup',
+        fallbackPath: authorityData.phonemes ? ['scholomance_dictionary'] : ['scholomance_dictionary', 'heuristic_fallback'],
+        authoritySource: 'scholomance_dictionary_batch',
+        usedAuthorityCache: true,
+        notes: [
+          authorityData.phonemes 
+            ? 'Authoritative phonemes and vowel family resolved from the Scholomance dictionary.'
+            : 'Authoritative vowel family resolved from Scholomance dictionary; phonemes generated via heuristic fallback.'
+        ],
+      }));
+    }
 
     if (upper.length === 1 && ALPHABET_PHONETIC_MAP[upper]) {
       const phonemes = ALPHABET_PHONETIC_MAP[upper];

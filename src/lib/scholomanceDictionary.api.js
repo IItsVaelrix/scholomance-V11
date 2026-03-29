@@ -53,7 +53,10 @@ const HEALTH_CACHE_TTL_MS = 15000;
 const OFFLINE_RETRY_COOLDOWN_MS = 30000;
 
 const BatchLookupSchema = z.object({
-  families: z.record(z.string())
+  families: z.record(z.object({
+    family: z.string().nullable(),
+    phonemes: z.array(z.string()).nullable()
+  }))
 });
 
 const ValidateBatchSchema = z.object({

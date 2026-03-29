@@ -21,6 +21,25 @@ function normalizeCombatText(rawText) {
 }
 
 const DEFAULT_CORPUS_PATH = path.resolve(process.cwd(), 'public', 'corpus.json');
+const DEFAULT_RHYME_ASTROLOGY_EMOTION_PRIORS_PATH = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology', 'rhyme_emotion_priors.json');
+
+function loadGutenbergEmotionPriors(priorsPath = DEFAULT_RHYME_ASTROLOGY_EMOTION_PRIORS_PATH) {
+  if (!priorsPath || !existsSync(priorsPath)) return null;
+
+  try {
+    const parsed = JSON.parse(readFileSync(priorsPath, 'utf8'));
+    const emotions = parsed?.emotions;
+    if (!emotions || typeof emotions !== 'object') return null;
+
+    return {
+      version: Number(parsed?.version) || 1,
+      generatedAt: String(parsed?.generatedAt || ''),
+      emotions,
+    };
+  } catch {
+    return null;
+  }
+}
 
 function loadCorpusRanks(corpusPath = DEFAULT_CORPUS_PATH) {
   if (!existsSync(corpusPath)) {
@@ -49,8 +68,14 @@ export function createCombatScoreService(options = {}) {
   async function scoreScroll(rawText, context = {}) {
     const scrollText = normalizeCombatText(rawText);
     const analyzedDoc = analyzeText(scrollText);
+    const gutenbergEmotionPriors = loadGutenbergEmotionPriors();
+
     const verseIR = await enhanceVerseIRWithServerPolicy(
-      compileVerseToIR(scrollText, { mode: 'balanced' })
+      compileVerseToIR(scrollText, { mode: 'balanced' }),
+      {
+        gutenbergPriors: gutenbergEmotionPriors,
+        wordNetEnabled: true,
+      }
     );
     const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
     const baseScoreData = await scoringEngine.calculateScore(amplifiedDoc);
