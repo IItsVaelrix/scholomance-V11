@@ -1,7 +1,8 @@
 import { createLexiconAbyssService } from './lexiconAbyss.service.js';
 import { createWordLookupService } from './wordLookup.service.js';
+import { createCorpusService } from './corpus.service.js';
 
-const ORACLE_VERSION = '0.1.0';
+const ORACLE_VERSION = '0.2.0';
 const GENERIC_PERSONA = 'The Phonemic Oracle';
 const DECAY_WARNING_THRESHOLD = 0.85;
 const MIN_GAIN_THRESHOLD = 0.05;
@@ -109,6 +110,45 @@ function buildHhmInsights(hhmSummary) {
   }
 
   return insights;
+}
+
+function getAuthorAdvice(author, title) {
+  const authorLower = author?.toLowerCase() || '';
+  if (authorLower.includes('hemingway')) return 'The Abyss notes a Hemingway-esque economy here. Stripping the connective tissue has increased the structural integrity of this verse.';
+  if (authorLower.includes('poe')) return 'A phonetic resonance reminiscent of Poe. The internal vowel recurrence is creating a stable, haunting cadence.';
+  if (authorLower.includes('shakespeare')) return 'The meter reflects a classical Elizabethan density. The Pulse Arbiter recognizes this iambic alignment.';
+  if (authorLower.includes('lovecraft')) return 'The semantic choices are leaking Void energy. An inexplicable resonance, not unlike Lovecraft, is manifesting.';
+  
+  const titleInfo = title ? ` in "${title}"` : '';
+  const authorInfo = author && author !== 'Unknown' ? ` by ${author}` : '';
+  return `Your current semantic pattern echoes the cadence found${titleInfo}${authorInfo}. The Abyss recognizes this arrangement as stable.`;
+}
+
+async function buildRAGInsight(text, corpusService) {
+  if (!corpusService) return null;
+
+  // Extract content-heavy tokens (4+ chars, not stop words)
+  const tokens = (text.toLowerCase().match(/\b[a-z]{4,}\b/g) || [])
+    .slice(0, 10); // Take first 10 significant tokens
+
+  if (tokens.length === 0) return null;
+
+  try {
+    const examples = await corpusService.findLiteraryExamples(tokens, 3);
+    if (examples.length === 0) return null;
+
+    const top = examples[0];
+    const message = getAuthorAdvice(top.author, top.title);
+
+    return createInsight(
+      'rag-literary-echo',
+      'AUTHORITATIVE',
+      message,
+      [`source:${top.source_type}`, `context:"${top.text.slice(0, 40)}..."`]
+    );
+  } catch (_e) {
+    return null;
+  }
 }
 
 function buildAmplifierInsight(verseIRAmplifier) {
@@ -241,12 +281,20 @@ export function createPhonemicOracleService(options = {}) {
   const lexiconAbyssService = options.lexiconAbyssService || createLexiconAbyssService({ log });
   const ownsLexiconAbyssService = !options.lexiconAbyssService;
   const wordLookupService = options.wordLookupService || createWordLookupService({ log });
+  const corpusService = options.corpusService || createCorpusService({ log });
 
   async function analyzeVerse({ text = '', verseIR = null, hhmSummary = null, scoreData = null, verseIRAmplifier = null } = {}) {
     const normalizedText = String(text || '');
     if (!normalizedText.trim()) return null;
 
     const insights = [];
+    
+    // 1. RAG: Literary Echoes from Super Corpus
+    const ragInsight = await buildRAGInsight(normalizedText, corpusService);
+    if (ragInsight) {
+      insights.push(ragInsight);
+    }
+
     insights.push(...buildHhmInsights(hhmSummary));
 
     const amplifierInsight = buildAmplifierInsight(verseIRAmplifier);
@@ -308,6 +356,7 @@ export function createPhonemicOracleService(options = {}) {
     if (ownsLexiconAbyssService) {
       lexiconAbyssService.close?.();
     }
+    corpusService?.close?.();
   }
 
   return {

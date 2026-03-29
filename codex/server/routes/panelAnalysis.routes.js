@@ -77,6 +77,7 @@ export async function panelAnalysisRoutes(fastify, opts = {}) {
   const panelAnalysisService = opts.panelAnalysisService || createPanelAnalysisService({
     log: fastify.log,
     enableRhymeAstrology: opts.enableRhymeAstrology ?? fastify.featureFlags?.rhymeAstrology,
+    corpusService: opts.corpusService,
   });
   const memoryCache = new Map();
 

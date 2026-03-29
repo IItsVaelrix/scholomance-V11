@@ -618,6 +618,7 @@ export function createPanelAnalysisService(options = {}) {
     log,
     lexiconAbyssService: options.lexiconAbyssService,
     wordLookupService: options.wordLookupService,
+    corpusService: options.corpusService,
   });
   const ownsPhonemicOracleService = !options.phonemicOracleService;
 

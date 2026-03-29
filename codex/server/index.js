@@ -40,6 +40,7 @@ import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
 import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
 import { createCorpusAdapter } from './adapters/corpus.sqlite.adapter.js';
+import { createCorpusService } from './services/corpus.service.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
 import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
 
@@ -158,6 +159,7 @@ fastify.decorate('featureFlags', Object.freeze({
 }));
 const lexiconAdapter = createLexiconAdapter(SCHOLOMANCE_DICT_PATH, { log: fastify.log });
 const corpusAdapter = createCorpusAdapter(SCHOLOMANCE_CORPUS_PATH, { log: fastify.log });
+const corpusService = createCorpusService({ dbPath: SCHOLOMANCE_CORPUS_PATH, log: fastify.log });
 
 // Register multipart for uploads
 fastify.register(multipart, {
@@ -713,6 +715,7 @@ fastify.addHook('onSend', async (request, _reply, payload) => {
 fastify.register(wordLookupRoutes);
 fastify.register(panelAnalysisRoutes, {
     enableRhymeAstrology: fastify.featureFlags?.rhymeAstrology,
+    corpusService,
 });
 fastify.register(combatRoutes);
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
@@ -841,6 +844,11 @@ function closePersistenceConnections() {
         corpusAdapter.close?.();
     } catch (error) {
         fastify.log.warn({ err: error }, '[DB:corpus] Failed to close cleanly.');
+    }
+    try {
+        corpusService.close?.();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[Service:corpus] Failed to close cleanly.');
     }
 }
 
