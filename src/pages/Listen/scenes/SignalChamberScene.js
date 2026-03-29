@@ -1048,7 +1048,7 @@ export class SignalChamberScene extends Phaser.Scene {
 
   updateState(data) {
     let stationsChanged = false;
-    let colChanged = false;
+    let _colChanged = false;
     let playChanged = false;
 
     if (data.signalLevel  !== undefined) this._sig = data.signalLevel;

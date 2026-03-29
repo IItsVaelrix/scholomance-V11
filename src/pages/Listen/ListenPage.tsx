@@ -21,13 +21,6 @@ export default function ListenPage() {
         >
           <SignalChamberConsole />
         </motion.div>
-
-        <footer className="listen-footer">
-          <p>
-            Current Signal: <strong>Stabilized</strong> |
-            Protocol: <strong>Scholomance v11.3</strong>
-          </p>
-        </footer>
       </div>
     </section>
   );

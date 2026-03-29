@@ -169,7 +169,7 @@ describe("buildColorMap", () => {
     const connections = [makeConnection(0, 10, 0.90, "near", 1, 0.85)];
     const map = buildColorMap(words, connections, DEFAULT_VOWEL_COLORS);
 
-    const fullOpacity = (0.18 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for EY
+    const fullOpacity = (0.35 + (0.90 * 0.55)) * 1.1; // balanceWeight = 1.1 for EY
     const gatedOpacity = fullOpacity * 0.85; // Clamp happens AFTER multiplier
     expect(map.get(0).opacity).toBeCloseTo(Math.min(1.0, Math.max(0.22, gatedOpacity)), 2);
   });

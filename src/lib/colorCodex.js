@@ -13,7 +13,7 @@ import { weightBalancer } from "./phonology/phoneticWeighting.js";
 const CLUSTER_MIN_SCORE = 0.60;
 
 /** Base opacity for words with no rhyme connections. */
-const BASE_OPACITY = 0.18;
+const BASE_OPACITY = 0.35;
 
 /** Opacity range mapped from connection score. */
 const OPACITY_SCALE = 0.55;
@@ -377,10 +377,13 @@ export function buildColorMap(wordAnalyses, allConnections, palette, options = {
     const root = uf.parent.has(charStart) ? uf.find(charStart) : null;
     const hasCluster = root !== null && clusterColor.has(root);
 
-    const isVowelMode = options.analysisMode === "vowel";
+    const isVowelMode = options.analysisMode === "vowel" || options.analysisMode === "none";
+    
+    // In vowel/truesight mode, all content words get their family color.
+    // Otherwise, only clusters and strong connections earn color.
     const eligibleForFamilyColor = 
       hasCluster || 
-      isVowelMode ||
+      (isVowelMode && !profile.flags?.isStopWordLike) ||
       (bestConn && bestScore >= 0.60 && bestConn.type !== "assonance") ||
       (bestConn && bestScore >= 0.72 && bestConn.type === "assonance");
 

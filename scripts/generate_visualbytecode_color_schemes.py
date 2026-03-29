@@ -438,74 +438,44 @@ def pick_shadow_school(dominant_school: str, shares: Dict[str, float], schools: 
 def derive_theme_palette(profile: Dict[str, object], theme: str) -> Dict[str, str]:
     schools = profile["schools"]
     dominant_school = profile["dominant_school"]
-    accent_school = profile["accent_school"]
-    shadow_school = profile["shadow_school"]
     entropy = float(profile["entropy"])
     resonance = float(profile["resonance"])
-    warm_bias = float(profile["warm_bias"])
     ritual_hue = float(profile["ritual_hue"])
-    dominant_share = float(profile["school_shares"].get(dominant_school, 0.0))
 
-    dominant_color = safe_text((schools.get(dominant_school) or {}).get("color") or "#6548b8")
-    accent_color = safe_text((schools.get(accent_school) or {}).get("color") or dominant_color)
-    shadow_color = safe_text((schools.get(shadow_school) or {}).get("color") or dominant_color)
-
-    dominant_h, dominant_s, dominant_l = hex_to_hsl(dominant_color)
-    accent_h, accent_s, accent_l = hex_to_hsl(accent_color)
-    _, _, shadow_l = hex_to_hsl(shadow_color)
+    dominant_meta = schools.get(dominant_school) or {"color": "#ef4444", "colorHsl": {"h": 0, "s": 85, "l": 48}}
+    h = float(dominant_meta["colorHsl"]["h"])
+    s = float(dominant_meta["colorHsl"]["s"])
+    l = float(dominant_meta["colorHsl"]["l"])
 
     if theme == "dark":
-        abyss = hsl_to_hex(
-            ritual_hue,
-            18 + entropy * 14,
-            6 + resonance * 3 + warm_bias * 1.5,
-        )
-        panel = adjust_hsl(
-            mix_hex(dominant_color, shadow_color, 0.56),
-            saturation=24 + entropy * 10,
-            lightness=13 + dominant_share * 5,
-        )
-        parchment = ensure_contrast(
-            adjust_hsl(mix_hex("#f4ead8", accent_color, 0.08), saturation=18, lightness=91 - entropy * 4),
-            abyss,
-            9.2,
-            prefer_light=True,
-        )
-        ink = ensure_contrast(
-            adjust_hsl(mix_hex("#fffaf2", dominant_color, 0.04), saturation=16, lightness=96 - entropy * 3),
-            panel,
-            10.0,
-            prefer_light=True,
-        )
-        primary = adjust_hsl(dominant_color, saturation=clamp(dominant_s + 6 + resonance * 8, 22, 92), lightness=clamp(dominant_l + 6 + resonance * 10, 42, 72))
-        secondary = adjust_hsl(accent_color, saturation=clamp(accent_s + 8 + entropy * 6, 24, 94), lightness=clamp(accent_l + 5 + warm_bias * 4, 44, 74))
-        tertiary = adjust_hsl(mix_hex(accent_color, shadow_color, 0.34), saturation=28 + entropy * 10, lightness=40 + entropy * 12)
-        border = adjust_hsl(mix_hex(primary, secondary, 0.36), saturation=30 + entropy * 12, lightness=44 + resonance * 12)
-        glow = adjust_hsl(mix_hex(primary, "#ffffff", 0.25 + resonance * 0.22), saturation=52 + resonance * 18, lightness=70 + resonance * 8)
-        aurora_start = adjust_hsl(mix_hex(primary, secondary, 0.18 + entropy * 0.10), saturation=44 + entropy * 18, lightness=58 + resonance * 10)
-        aurora_end = adjust_hsl(mix_hex(secondary, shadow_color, 0.24), saturation=34 + entropy * 16, lightness=52 + entropy * 8)
+        # 4 Neutral/Structural Slots
+        abyss = hsl_to_hex(ritual_hue, 20, 6)
+        panel = hsl_to_hex(h, 25, 12)
+        parchment = "#e6e4da"
+        ink = "#f1efec"
+
+        # 7 Distinct Functional Slots (The 7-Color System)
+        # We space these around the dominant hue using harmonic intervals (72 deg = Pentadic harmony)
+        primary = dominant_meta["color"]
+        secondary = hsl_to_hex((h + 72) % 360, 60, 55)
+        tertiary = hsl_to_hex((h + 144) % 360, 50, 45)
+        border = hsl_to_hex(h, 30, 30)
+        glow = hsl_to_hex(h, 80, 75)
+        aurora_start = hsl_to_hex(h, 70, 60)
+        aurora_end = hsl_to_hex((h + 45) % 360, 60, 50)
     else:
-        abyss = hsl_to_hex(ritual_hue, 26 + entropy * 10, 93 - resonance * 3)
-        panel = adjust_hsl(mix_hex("#fff8ef", dominant_color, 0.10), saturation=22 + entropy * 6, lightness=96 - dominant_share * 4)
-        parchment = ensure_contrast(
-            adjust_hsl(mix_hex("#fffdf8", accent_color, 0.04), saturation=12, lightness=99 - entropy * 2),
-            abyss,
-            1.1,
-            prefer_light=False,
-        )
-        ink = ensure_contrast(
-            adjust_hsl(mix_hex(dominant_color, shadow_color, 0.34), saturation=28 + entropy * 8, lightness=18 - warm_bias * 2),
-            panel,
-            10.0,
-            prefer_light=False,
-        )
-        primary = adjust_hsl(dominant_color, saturation=clamp(dominant_s + 2 + resonance * 4, 20, 90), lightness=clamp(dominant_l - 6, 20, 56))
-        secondary = adjust_hsl(accent_color, saturation=clamp(accent_s + 3 + entropy * 5, 20, 90), lightness=clamp(accent_l - 4, 24, 58))
-        tertiary = adjust_hsl(mix_hex(accent_color, shadow_color, 0.28), saturation=22 + entropy * 8, lightness=30 + entropy * 8)
-        border = adjust_hsl(mix_hex(primary, secondary, 0.32), saturation=24 + entropy * 10, lightness=62 - resonance * 6)
-        glow = adjust_hsl(mix_hex(primary, "#ffffff", 0.20), saturation=48 + resonance * 12, lightness=62 + resonance * 6)
-        aurora_start = adjust_hsl(mix_hex(primary, secondary, 0.24), saturation=38 + entropy * 12, lightness=70 - resonance * 4)
-        aurora_end = adjust_hsl(mix_hex(secondary, shadow_color, 0.18), saturation=32 + entropy * 10, lightness=64 - entropy * 4)
+        abyss = hsl_to_hex(ritual_hue, 15, 95)
+        panel = hsl_to_hex(h, 20, 90)
+        parchment = "#333333"
+        ink = "#090916"
+
+        primary = dominant_meta["color"]
+        secondary = hsl_to_hex((h + 72) % 360, 50, 45)
+        tertiary = hsl_to_hex((h + 144) % 360, 40, 35)
+        border = hsl_to_hex(h, 20, 70)
+        glow = hsl_to_hex(h, 60, 40)
+        aurora_start = hsl_to_hex(h, 50, 50)
+        aurora_end = hsl_to_hex((h + 45) % 360, 40, 60)
 
     return {
         "abyss": abyss,

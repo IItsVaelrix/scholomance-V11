@@ -3,8 +3,6 @@ import {
   SearchIcon,
   ToolsIcon,
   SettingsIcon,
-  ChevronsRightIcon,
-  ChevronsLeftIcon
 } from "../../components/Icons.jsx";
 import { useUserSettings } from "../../hooks/useUserSettings.js";
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from "react";
@@ -126,7 +124,7 @@ export default function ReadPage() {
   const [isTruesight, setIsTruesight] = useState(settings?.truesightEnabled ?? false);
   const [isPredictive, setIsPredictive] = useState(settings?.predictiveEnabled ?? false);
   const [analysisMode, setAnalysisMode] = useState(settings?.analysisMode ?? ANALYSIS_MODES.NONE);
-  const [isActivityBarExpanded, setIsActivityBarExpanded] = useState(settings?.ideLayout?.[0] > 18);
+  const [_isActivityBarExpanded, _setIsActivityBarExpanded] = useState(settings?.ideLayout?.[0] > 18);
 
   const handleToggleTruesight = useCallback(() => {
     setIsTruesight((prev) => {
@@ -255,7 +253,7 @@ export default function ReadPage() {
   const [lookupOverride, setLookupOverride] = useState(null);
 
   const editorRef = useRef(null);
-  const activityBarRef = useRef(null);
+  const _activityBarRef = useRef(null);
   const focusReturnRef = useRef(null);
   const tooltipCloseGuardRef = useRef({
     expiresAt: 0,
@@ -1290,6 +1288,11 @@ export default function ReadPage() {
     </div>
   );
 
+  const ritualPalette = useMemo(
+    () => getRitualPalette(selectedSchool, theme),
+    [selectedSchool, theme]
+  );
+
   /* ── MOBILE RENDER ── */
   if (isMobileViewport) {
     return (
@@ -1365,11 +1368,6 @@ export default function ReadPage() {
       </div>
     );
   }
-
-  const ritualPalette = useMemo(
-    () => getRitualPalette(selectedSchool, theme),
-    [selectedSchool, theme]
-  );
 
   /* ── DESKTOP RENDER ── */
   return (

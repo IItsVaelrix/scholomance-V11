@@ -37,6 +37,7 @@ The blueprint or manual setup requires:
 - `USER_DB_PATH=/var/data/scholomance_user.sqlite`
 - `COLLAB_DB_PATH=/var/data/scholomance_collab.sqlite`
 - `AUDIO_STORAGE_PATH=/var/data/audio`
+- `RHYME_ASTROLOGY_OUTPUT_DIR=/var/data/rhyme-astrology` (required when `ENABLE_RHYME_ASTROLOGY=true`)
 - `ENABLE_COLLAB_API=false` (enable only if intentionally exposing collab API)
 - `AUDIO_ADMIN_TOKEN` (required; set a long random secret)
 - `REDIS_URL` (from Upstash)
