@@ -4,6 +4,7 @@ export interface Scroll {
   content: string;
   createdAt: number;
   updatedAt: number;
+  submittedAt?: number | null;
   authorId: string;
 }
 

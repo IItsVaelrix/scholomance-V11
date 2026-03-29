@@ -621,14 +621,71 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     return `linear-gradient(to bottom, ${stops.join(', ')})`;
   }, [highlightedLinesSet, isTruesight, scrollTop, lineHeightPx]);
 
+  const buildWordPayloadFromToken = useCallback((tokenEntry) => {
+    const token = String(tokenEntry?.token || "");
+    if (!WORD_TOKEN_REGEX.test(token)) return null;
+
+    const lineIndex = Number(tokenEntry?.lineIndex);
+    const wordIndex = Number(tokenEntry?.wordIndex);
+    const charStart = Number(tokenEntry?.start);
+    if (!Number.isInteger(lineIndex) || !Number.isInteger(charStart)) {
+      return null;
+    }
+
+    const clean = token.toUpperCase();
+    const charEnd = charStart + token.length;
+    const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+    const analysis = (
+      analyzedWordsByIdentity.get(identityKey) ||
+      derivedAnalyzedWordsByCharStart.get(charStart) ||
+      (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
+    );
+
+    return {
+      word: token,
+      normalizedWord: clean,
+      lineIndex,
+      wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
+      charStart,
+      charEnd,
+      vowelFamily: normalizeVowelFamily(analysis?.vowelFamily) || null,
+      isStopWord: STOP_WORDS.has(clean),
+    };
+  }, [
+    analyzedWords,
+    analyzedWordsByIdentity,
+    allowLegacyWordFallback,
+    derivedAnalyzedWordsByCharStart,
+  ]);
+
+  const resolveWordTokenAtOffset = useCallback((offset) => {
+    const candidateOffsets = [Number(offset), Number(offset) - 1]
+      .filter((value) => Number.isInteger(value) && value >= 0);
+
+    for (const candidateOffset of candidateOffsets) {
+      const match = allOverlayTokens.find((tokenEntry) => {
+        if (!WORD_TOKEN_REGEX.test(tokenEntry?.token || "")) return false;
+        const start = Number(tokenEntry?.start);
+        const end = start + String(tokenEntry?.token || "").length;
+        return candidateOffset >= start && candidateOffset < end;
+      });
+      if (match) return match;
+    }
+
+    return null;
+  }, [allOverlayTokens]);
+
   const emitWordActivation = useCallback((trigger, payload, event) => {
     if (!onWordActivate || !payload) return;
 
-    const rect = event?.currentTarget?.getBoundingClientRect?.();
+    const rect = event?.currentTarget?.getBoundingClientRect?.() || event?.anchorRect || null;
+    const source = typeof event?.source === "string"
+      ? event.source
+      : (trigger === "pin" && Number(event?.detail) === 0 ? "keyboard" : "pointer");
     onWordActivate({
       ...payload,
       trigger,
-      source: trigger === "pin" && Number(event?.detail) === 0 ? "keyboard" : "pointer",
+      source,
       anchorRect: rect
         ? {
           left: rect.left,
@@ -930,6 +987,45 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     emitCursorChange(event.target);
   }, [emitCursorChange]);
 
+  const handleTextareaClick = useCallback((event) => {
+    const textarea = event.currentTarget;
+    emitCursorChange(textarea);
+
+    if (!isEditable || !onWordActivate || textarea.selectionStart !== textarea.selectionEnd) {
+      return;
+    }
+
+    const tokenEntry = resolveWordTokenAtOffset(textarea.selectionStart);
+    const wordPayload = buildWordPayloadFromToken(tokenEntry);
+    if (!wordPayload) {
+      return;
+    }
+
+    const caretCoords = getCursorCoordsFromTextarea(textarea);
+    const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || DEFAULT_LINE_HEIGHT;
+    emitWordActivation("pin", wordPayload, {
+      anchorRect: {
+        left: caretCoords.x,
+        right: caretCoords.x + 1,
+        top: caretCoords.y - lineHeight,
+        bottom: caretCoords.y,
+        width: 1,
+        height: lineHeight,
+      },
+      clientX: Number.isFinite(event.clientX) ? event.clientX : caretCoords.x,
+      clientY: Number.isFinite(event.clientY) ? event.clientY : caretCoords.y,
+      detail: event.detail,
+      source: "pointer",
+    });
+  }, [
+    buildWordPayloadFromToken,
+    emitCursorChange,
+    emitWordActivation,
+    isEditable,
+    onWordActivate,
+    resolveWordTokenAtOffset,
+  ]);
+
   const handleContentChange = useCallback((event) => {
     const nextValue = event.target.value;
     if (nextValue.length > MAX_CONTENT_LENGTH) {
@@ -1022,7 +1118,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             onChange={handleContentChange}
             onKeyDown={isEditable ? handleKeyDown : undefined}
             onKeyUp={handleCursorChange}
-            onClick={handleCursorChange}
+            onClick={handleTextareaClick}
             onBlur={() => setIntellisenseSuggestions([])}
             onScroll={handleTextareaScroll}
             disabled={disabled || isSaving}
@@ -1095,14 +1191,19 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const isRichMultiSyllable = hasScoredEntry && (codexEntry.syllablesMatched >= 3 || false);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
-                        const wordPayload = {
+                        const wordPayload = buildWordPayloadFromToken({
+                          token,
+                          start,
+                          lineIndex,
+                          wordIndex,
+                        }) || {
                           word: token,
                           normalizedWord: clean,
                           lineIndex,
                           wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
                           charStart,
                           charEnd,
-                          vowelFamily: hasScoredEntry ? (wordVowelFamily || null) : null,
+                          vowelFamily: wordVowelFamily || null,
                           isStopWord,
                         };
 

@@ -145,6 +145,15 @@ const USER_MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 9,
+    name: 'add_scroll_submission_timestamp',
+    up(database) {
+      database.exec(`
+        ALTER TABLE scrolls ADD COLUMN submittedAt DATETIME;
+      `);
+    },
+  },
 ];
 
 let db;
@@ -410,7 +419,7 @@ function recordWorldEntityInspect(entityId) {
 // --- Scrolls ---
 function getScrolls(userId) {
   const stmt = db.prepare(
-    'SELECT id, title, content, createdAt, updatedAt FROM scrolls WHERE userId = ? ORDER BY updatedAt DESC',
+    'SELECT id, title, content, createdAt, updatedAt, submittedAt FROM scrolls WHERE userId = ? ORDER BY updatedAt DESC',
   );
   return stmt.all(userId);
 }
@@ -425,15 +434,19 @@ function findScrollById(scrollId) {
   return stmt.get(scrollId);
 }
 
-function saveScroll(scrollId, userId, { title, content }) {
+function saveScroll(scrollId, userId, { title, content, submit = false }) {
   const now = new Date().toISOString();
+  const existing = getScroll(scrollId, userId);
+  const createdAt = existing?.createdAt || now;
+  const submittedAt = existing?.submittedAt || (submit ? now : null);
   const stmt = db.prepare(`
-    INSERT INTO scrolls (id, userId, title, content, createdAt, updatedAt)
-    VALUES (:id, :userId, :title, :content, :createdAt, :updatedAt)
+    INSERT INTO scrolls (id, userId, title, content, createdAt, updatedAt, submittedAt)
+    VALUES (:id, :userId, :title, :content, :createdAt, :updatedAt, :submittedAt)
     ON CONFLICT(id) DO UPDATE SET
       title = excluded.title,
       content = excluded.content,
-      updatedAt = excluded.updatedAt
+      updatedAt = excluded.updatedAt,
+      submittedAt = excluded.submittedAt
     WHERE scrolls.userId = excluded.userId
   `);
   stmt.run({
@@ -441,8 +454,9 @@ function saveScroll(scrollId, userId, { title, content }) {
     userId,
     title,
     content,
-    createdAt: now,
+    createdAt,
     updatedAt: now,
+    submittedAt,
   });
   return getScroll(scrollId, userId);
 }

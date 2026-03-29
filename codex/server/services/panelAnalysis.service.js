@@ -23,6 +23,7 @@ import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
 import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
+import { createPhonemicOracleService } from './phonemicOracle.service.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -216,6 +217,7 @@ function createEmptyPanelPayload() {
     scoreData: null,
     vowelSummary: EMPTY_VOWEL_SUMMARY,
     rhymeAstrology: null,
+    oracle: null,
   };
 }
 
@@ -598,6 +600,12 @@ export function createPanelAnalysisService(options = {}) {
 
   const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
   let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
+  const phonemicOracleService = options.phonemicOracleService || createPhonemicOracleService({
+    log,
+    lexiconAbyssService: options.lexiconAbyssService,
+    wordLookupService: options.wordLookupService,
+  });
+  const ownsPhonemicOracleService = !options.phonemicOracleService;
 
   if (!rhymeAstrologyQueryEngine && enableRhymeAstrology) {
     const lexiconRepo = createRhymeAstrologyLexiconRepo(rhymeAstrologyLexiconDbPath, { log });
@@ -790,6 +798,13 @@ export function createPanelAnalysisService(options = {}) {
         gutenbergPriors: gutenbergEmotionPriors,
       }).emotion;
       const rhymeAstrology = await buildRhymeAstrologyPayload(wordAnalyses, verseIR);
+      const oracle = await phonemicOracleService.analyzeVerse({
+        text,
+        verseIR,
+        hhmSummary: hhmSignals.summary,
+        scoreData,
+        verseIRAmplifier: verseIR?.verseIRAmplifier || null,
+      });
       const scoreDataWithPlsFeatures = scoreData && rhymeAstrology?.features
         ? {
           ...scoreData,
@@ -817,6 +832,7 @@ export function createPanelAnalysisService(options = {}) {
         scoreData: scoreDataWithPlsFeatures,
         vowelSummary: summarizeVowelFamilies(analyzedDoc),
         rhymeAstrology,
+        oracle,
       };
     } catch (error) {
       log?.error?.({ err: error }, '[PanelAnalysisService] Failed to analyze panel payload');
@@ -827,6 +843,9 @@ export function createPanelAnalysisService(options = {}) {
   function close() {
     if (!hasInjectedRhymeAstrologyQueryEngine) {
       rhymeAstrologyQueryEngine?.close?.();
+    }
+    if (ownsPhonemicOracleService) {
+      phonemicOracleService.close?.();
     }
   }
 
