@@ -204,7 +204,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     const g = this._archRotGfx;
     g.clear();
 
-    const hexR = this._archHexR ?? Math.min(W * 0.32, 285) * 0.53;
+    const hexR = this._archHexR ?? Math.min(_W * 0.32, 285) * 0.53;
 
     // Two overlapping triangles (star of David / hexagram)
     for (let tri = 0; tri < 2; tri++) {

@@ -83,7 +83,7 @@ export default function ChroniclePanel({ currentLineText = "" }) {
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ delay: idx * 0.1 }}
             >
-              <p className="chronicle-text">"{match.text}"</p>
+              <p className="chronicle-text">&ldquo;{match.text}&rdquo;</p>
               <div className="chronicle-meta">
                 {match.author && <span className="chronicle-author">— {match.author}</span>}
                 {match.title && <span className="chronicle-work">in {match.title}</span>}
