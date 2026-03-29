@@ -1,0 +1,2429 @@
+{
+  "metadata": {
+    "generatedAt": "2026-03-29T14:18:42.082Z",
+    "mode": "balanced",
+    "visualMode": "AESTHETIC",
+    "amplifiers": [
+      "phonetic_color"
+    ],
+    "textLength": 211,
+    "tokenCount": 34,
+    "lineCount": 4,
+    "sha256": "b7283c930f35c42e8bb1ee9a977bed19ce3424ce1580db99c7cc09ab488a87f4"
+  },
+  "paletteContext": {
+    "schools": {
+      "SONIC": {
+        "id": "SONIC",
+        "name": "Sonic Thaumaturgy",
+        "color": "#6548b8",
+        "colorHsl": {
+          "h": 265,
+          "s": 48,
+          "l": 50
+        },
+        "description": "The art of sonic manipulation and harmonic resonance",
+        "glyph": "♩",
+        "atmosphere": {
+          "auroraIntensity": 0.9,
+          "saturation": 90,
+          "vignetteStrength": 0.7,
+          "scanlineOpacity": 0
+        }
+      },
+      "PSYCHIC": {
+        "id": "PSYCHIC",
+        "name": "Psychic Schism",
+        "color": "#4470b8",
+        "colorHsl": {
+          "h": 220,
+          "s": 48,
+          "l": 49
+        },
+        "description": "Mental discipline and psychic energy projection",
+        "glyph": "◬",
+        "atmosphere": {
+          "auroraIntensity": 0.8,
+          "saturation": 85,
+          "vignetteStrength": 0.65,
+          "scanlineOpacity": 0
+        }
+      },
+      "VOID": {
+        "id": "VOID",
+        "name": "The Void",
+        "color": "#6a5a78",
+        "colorHsl": {
+          "h": 310,
+          "s": 15,
+          "l": 41
+        },
+        "description": "The space between spaces, where entropy reigns",
+        "glyph": "∅",
+        "atmosphere": {
+          "auroraIntensity": 0.15,
+          "saturation": 15,
+          "vignetteStrength": 0.92,
+          "scanlineOpacity": 0.02
+        }
+      },
+      "ALCHEMY": {
+        "id": "ALCHEMY",
+        "name": "Verbal Alchemy",
+        "color": "#b84882",
+        "colorHsl": {
+          "h": 330,
+          "s": 48,
+          "l": 50
+        },
+        "description": "The transmutation of meaning through spoken word",
+        "glyph": "⚗",
+        "atmosphere": {
+          "auroraIntensity": 1.1,
+          "saturation": 105,
+          "vignetteStrength": 0.6,
+          "scanlineOpacity": 0
+        }
+      },
+      "WILL": {
+        "id": "WILL",
+        "name": "Willpower Surge",
+        "color": "#b85c48",
+        "colorHsl": {
+          "h": 15,
+          "s": 48,
+          "l": 50
+        },
+        "description": "Focusing raw will into reality-altering force",
+        "glyph": "⚡",
+        "atmosphere": {
+          "auroraIntensity": 1,
+          "saturation": 95,
+          "vignetteStrength": 0.62,
+          "scanlineOpacity": 0
+        }
+      },
+      "NECROMANCY": {
+        "id": "NECROMANCY",
+        "name": "Necromancy",
+        "color": "#389468",
+        "colorHsl": {
+          "h": 155,
+          "s": 44,
+          "l": 40
+        },
+        "description": "Communication with and manipulation of life force",
+        "glyph": "☠",
+        "atmosphere": {
+          "auroraIntensity": 0.6,
+          "saturation": 55,
+          "vignetteStrength": 0.82,
+          "scanlineOpacity": 0.01
+        }
+      },
+      "ABJURATION": {
+        "id": "ABJURATION",
+        "name": "Abjuration",
+        "color": "#38849c",
+        "colorHsl": {
+          "h": 195,
+          "s": 46,
+          "l": 42
+        },
+        "description": "Protective magic and negation of effects",
+        "glyph": "◇",
+        "atmosphere": {
+          "auroraIntensity": 0.5,
+          "saturation": 50,
+          "vignetteStrength": 0.5,
+          "scanlineOpacity": 0
+        }
+      },
+      "DIVINATION": {
+        "id": "DIVINATION",
+        "name": "Divination",
+        "color": "#a88440",
+        "colorHsl": {
+          "h": 50,
+          "s": 46,
+          "l": 46
+        },
+        "description": "Seeing across time and space",
+        "glyph": "◉",
+        "atmosphere": {
+          "auroraIntensity": 0.85,
+          "saturation": 88,
+          "vignetteStrength": 0.55,
+          "scanlineOpacity": 0
+        }
+      }
+    },
+    "schoolSkins": {
+      "DEFAULT": {
+        "IY": "#4470b8",
+        "IH": "#6548b8",
+        "EY": "#b84882",
+        "AE": "#b85c48",
+        "A": "#389468",
+        "AO": "#a88440",
+        "OW": "#38849c",
+        "UW": "#6a5a78"
+      },
+      "SONIC": {
+        "IY": "#c8b8f0",
+        "UW": "#b09ee6",
+        "EY": "#9580d9",
+        "OW": "#7b63cc",
+        "IH": "#6548b8",
+        "AO": "#5236a0",
+        "AE": "#3e2580",
+        "A": "#221450"
+      },
+      "PSYCHIC": {
+        "IY": "#b0cef0",
+        "UW": "#94b8e8",
+        "EY": "#78a0dc",
+        "OW": "#5c86cc",
+        "IH": "#4470b8",
+        "AO": "#34589e",
+        "AE": "#264280",
+        "A": "#162850"
+      },
+      "VOID": {
+        "IY": "#d0c4d4",
+        "UW": "#b8a8be",
+        "EY": "#9e8ca6",
+        "OW": "#847290",
+        "IH": "#6a5a78",
+        "AO": "#524460",
+        "AE": "#3c3048",
+        "A": "#221a2c"
+      },
+      "ALCHEMY": {
+        "IY": "#f0b8d4",
+        "UW": "#e89ec2",
+        "EY": "#dc80ae",
+        "OW": "#cc6098",
+        "IH": "#b84882",
+        "AO": "#a03468",
+        "AE": "#802654",
+        "A": "#501838"
+      },
+      "WILL": {
+        "IY": "#f0c4b0",
+        "UW": "#e8ac94",
+        "EY": "#dc9078",
+        "OW": "#cc7460",
+        "IH": "#b85c48",
+        "AO": "#a04834",
+        "AE": "#803626",
+        "A": "#502018"
+      },
+      "DIVINATION": {
+        "IY": "#f0dca8",
+        "UW": "#e6cc8c",
+        "EY": "#d4b470",
+        "OW": "#c09c56",
+        "IH": "#a88440",
+        "AO": "#8c6c30",
+        "AE": "#6e5424",
+        "A": "#443416"
+      },
+      "NECROMANCY": {
+        "IY": "#a8e0c4",
+        "UW": "#88d0ac",
+        "EY": "#68bc94",
+        "OW": "#4ca87c",
+        "IH": "#389468",
+        "AO": "#2a7c54",
+        "AE": "#1e6240",
+        "A": "#123c28"
+      },
+      "ABJURATION": {
+        "IY": "#a8d4e0",
+        "UW": "#88c2d2",
+        "EY": "#68aec2",
+        "OW": "#4c98b0",
+        "IH": "#38849c",
+        "AO": "#286e84",
+        "AE": "#1e5668",
+        "A": "#123642"
+      }
+    },
+    "schoolSkinsLight": {
+      "DEFAULT": {
+        "IY": "#264280",
+        "IH": "#3e2580",
+        "EY": "#802654",
+        "AE": "#803626",
+        "A": "#1e6240",
+        "AO": "#6e5424",
+        "OW": "#1e5668",
+        "UW": "#3c3048"
+      },
+      "SONIC": {
+        "IY": "#9580d9",
+        "UW": "#7b63cc",
+        "EY": "#6548b8",
+        "OW": "#5236a0",
+        "IH": "#3e2580",
+        "AO": "#321e6c",
+        "AE": "#261858",
+        "A": "#160e38"
+      },
+      "PSYCHIC": {
+        "IY": "#78a0dc",
+        "UW": "#5c86cc",
+        "EY": "#4470b8",
+        "OW": "#34589e",
+        "IH": "#264280",
+        "AO": "#1e346a",
+        "AE": "#182858",
+        "A": "#0e1838"
+      },
+      "VOID": {
+        "IY": "#9e8ca6",
+        "UW": "#847290",
+        "EY": "#6a5a78",
+        "OW": "#524460",
+        "IH": "#3c3048",
+        "AO": "#302838",
+        "AE": "#261e30",
+        "A": "#181220"
+      },
+      "ALCHEMY": {
+        "IY": "#dc80ae",
+        "UW": "#cc6098",
+        "EY": "#b84882",
+        "OW": "#a03468",
+        "IH": "#802654",
+        "AO": "#6c1e46",
+        "AE": "#58183a",
+        "A": "#380e24"
+      },
+      "WILL": {
+        "IY": "#dc9078",
+        "UW": "#cc7460",
+        "EY": "#b85c48",
+        "OW": "#a04834",
+        "IH": "#803626",
+        "AO": "#6c2c1e",
+        "AE": "#582418",
+        "A": "#38140e"
+      },
+      "DIVINATION": {
+        "IY": "#d4b470",
+        "UW": "#c09c56",
+        "EY": "#a88440",
+        "OW": "#8c6c30",
+        "IH": "#6e5424",
+        "AO": "#5c461e",
+        "AE": "#4a3816",
+        "A": "#302410"
+      },
+      "NECROMANCY": {
+        "IY": "#68bc94",
+        "UW": "#4ca87c",
+        "EY": "#389468",
+        "OW": "#2a7c54",
+        "IH": "#1e6240",
+        "AO": "#185234",
+        "AE": "#12422a",
+        "A": "#0c2c1c"
+      },
+      "ABJURATION": {
+        "IY": "#68aec2",
+        "UW": "#4c98b0",
+        "EY": "#38849c",
+        "OW": "#286e84",
+        "IH": "#1e5668",
+        "AO": "#184856",
+        "AE": "#123a46",
+        "A": "#0c262e"
+      }
+    },
+    "vowelFamilyToSchool": {
+      "IY": "PSYCHIC",
+      "IH": "SONIC",
+      "EY": "ALCHEMY",
+      "AE": "WILL",
+      "A": "NECROMANCY",
+      "AO": "NECROMANCY",
+      "OW": "ABJURATION",
+      "UW": "ABJURATION",
+      "AA": "DIVINATION",
+      "AH": "WILL",
+      "AX": "VOID",
+      "AW": "DIVINATION",
+      "EH": "WILL",
+      "AY": "PSYCHIC",
+      "OY": "ALCHEMY",
+      "OH": "ABJURATION",
+      "UH": "VOID",
+      "OO": "ABJURATION",
+      "ER": "SONIC",
+      "UR": "SONIC"
+    }
+  },
+  "verseIR": {
+    "version": "1.1.0",
+    "rawText": "Resonant thunder braids the oracle of glass.\nMercurial roses open where the warding vowels burn.\nI cast my will through silver breath and grave-green dusk.\nThe abyss answers softly, but the bright sigils return.",
+    "normalizedText": "resonant thunder braids the oracle of glass.\nmercurial roses open where the warding vowels burn.\ni cast my will through silver breath and grave-green dusk.\nthe abyss answers softly, but the bright sigils return.",
+    "lines": [
+      {
+        "lineIndex": 0,
+        "text": "Resonant thunder braids the oracle of glass.",
+        "normalizedText": "resonant thunder braids the oracle of glass.",
+        "tokenIds": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "charStart": 0,
+        "charEnd": 44,
+        "isTerminalLine": false
+      },
+      {
+        "lineIndex": 1,
+        "text": "Mercurial roses open where the warding vowels burn.",
+        "normalizedText": "mercurial roses open where the warding vowels burn.",
+        "tokenIds": [
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14
+        ],
+        "charStart": 45,
+        "charEnd": 96,
+        "isTerminalLine": false
+      },
+      {
+        "lineIndex": 2,
+        "text": "I cast my will through silver breath and grave-green dusk.",
+        "normalizedText": "i cast my will through silver breath and grave-green dusk.",
+        "tokenIds": [
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ],
+        "charStart": 97,
+        "charEnd": 155,
+        "isTerminalLine": false
+      },
+      {
+        "lineIndex": 3,
+        "text": "The abyss answers softly, but the bright sigils return.",
+        "normalizedText": "the abyss answers softly, but the bright sigils return.",
+        "tokenIds": [
+          25,
+          26,
+          27,
+          28,
+          29,
+          30,
+          31,
+          32,
+          33
+        ],
+        "charStart": 156,
+        "charEnd": 211,
+        "isTerminalLine": true
+      }
+    ],
+    "tokens": [
+      {
+        "id": 0,
+        "text": "Resonant",
+        "normalized": "resonant",
+        "normalizedUpper": "RESONANT",
+        "lineIndex": 0,
+        "tokenIndexInLine": 0,
+        "globalTokenIndex": 0,
+        "charStart": 0,
+        "charEnd": 8,
+        "syllableCount": 3,
+        "phonemes": [
+          "R",
+          "EH0",
+          "S",
+          "AA0",
+          "N",
+          "AE1",
+          "N",
+          "T"
+        ],
+        "stressPattern": "001",
+        "onset": [
+          "R"
+        ],
+        "nucleus": [
+          "EH",
+          "AA",
+          "AE"
+        ],
+        "coda": [
+          "N",
+          "T"
+        ],
+        "vowelFamily": [
+          "AE",
+          "A",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-NT",
+        "consonantSkeleton": "RSNNT",
+        "flags": {
+          "isLineStart": true,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 1,
+        "text": "thunder",
+        "normalized": "thunder",
+        "normalizedUpper": "THUNDER",
+        "lineIndex": 0,
+        "tokenIndexInLine": 1,
+        "globalTokenIndex": 1,
+        "charStart": 9,
+        "charEnd": 16,
+        "syllableCount": 2,
+        "phonemes": [
+          "TH",
+          "AH0",
+          "N",
+          "D",
+          "EH1",
+          "R"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "TH"
+        ],
+        "nucleus": [
+          "AH",
+          "EH"
+        ],
+        "coda": [
+          "R"
+        ],
+        "vowelFamily": [
+          "A",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-R",
+        "consonantSkeleton": "THNDR",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 2,
+        "text": "braids",
+        "normalized": "braids",
+        "normalizedUpper": "BRAIDS",
+        "lineIndex": 0,
+        "tokenIndexInLine": 2,
+        "globalTokenIndex": 2,
+        "charStart": 17,
+        "charEnd": 23,
+        "syllableCount": 1,
+        "phonemes": [
+          "B",
+          "R",
+          "EY1",
+          "D",
+          "S"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "B",
+          "R"
+        ],
+        "nucleus": [
+          "EY"
+        ],
+        "coda": [
+          "D",
+          "S"
+        ],
+        "vowelFamily": [
+          "EY"
+        ],
+        "primaryStressedVowelFamily": "EY",
+        "terminalVowelFamily": "EY",
+        "rhymeTailSignature": "EY-DS",
+        "consonantSkeleton": "BRDS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 3,
+        "text": "the",
+        "normalized": "the",
+        "normalizedUpper": "THE",
+        "lineIndex": 0,
+        "tokenIndexInLine": 3,
+        "globalTokenIndex": 3,
+        "charStart": 24,
+        "charEnd": 27,
+        "syllableCount": 1,
+        "phonemes": [
+          "TH",
+          "EH1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "TH"
+        ],
+        "nucleus": [
+          "EH"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-open",
+        "consonantSkeleton": "TH",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 4,
+        "text": "oracle",
+        "normalized": "oracle",
+        "normalizedUpper": "ORACLE",
+        "lineIndex": 0,
+        "tokenIndexInLine": 4,
+        "globalTokenIndex": 4,
+        "charStart": 28,
+        "charEnd": 34,
+        "syllableCount": 3,
+        "phonemes": [
+          "AA0",
+          "R",
+          "AE0",
+          "K",
+          "L",
+          "EH1"
+        ],
+        "stressPattern": "001",
+        "onset": [],
+        "nucleus": [
+          "AA",
+          "AE",
+          "EH"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "A",
+          "AE",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-open",
+        "consonantSkeleton": "RKL",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 5,
+        "text": "of",
+        "normalized": "of",
+        "normalizedUpper": "OF",
+        "lineIndex": 0,
+        "tokenIndexInLine": 5,
+        "globalTokenIndex": 5,
+        "charStart": 35,
+        "charEnd": 37,
+        "syllableCount": 1,
+        "phonemes": [
+          "AA1",
+          "F"
+        ],
+        "stressPattern": "1",
+        "onset": [],
+        "nucleus": [
+          "AA"
+        ],
+        "coda": [
+          "F"
+        ],
+        "vowelFamily": [
+          "A"
+        ],
+        "primaryStressedVowelFamily": "A",
+        "terminalVowelFamily": "A",
+        "rhymeTailSignature": "A-F",
+        "consonantSkeleton": "F",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 6,
+        "text": "glass",
+        "normalized": "glass",
+        "normalizedUpper": "GLASS",
+        "lineIndex": 0,
+        "tokenIndexInLine": 6,
+        "globalTokenIndex": 6,
+        "charStart": 38,
+        "charEnd": 43,
+        "syllableCount": 1,
+        "phonemes": [
+          "G",
+          "L",
+          "AE1",
+          "S",
+          "S"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "G",
+          "L"
+        ],
+        "nucleus": [
+          "AE"
+        ],
+        "coda": [
+          "S",
+          "S"
+        ],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-SS",
+        "consonantSkeleton": "GLSS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": true,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 7,
+        "text": "Mercurial",
+        "normalized": "mercurial",
+        "normalizedUpper": "MERCURIAL",
+        "lineIndex": 1,
+        "tokenIndexInLine": 0,
+        "globalTokenIndex": 7,
+        "charStart": 45,
+        "charEnd": 54,
+        "syllableCount": 3,
+        "phonemes": [
+          "M",
+          "EH0",
+          "R",
+          "K",
+          "UR0",
+          "AE1",
+          "L"
+        ],
+        "stressPattern": "001",
+        "onset": [
+          "M"
+        ],
+        "nucleus": [
+          "EH",
+          "UR",
+          "AE"
+        ],
+        "coda": [
+          "L"
+        ],
+        "vowelFamily": [
+          "AE",
+          "IH",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-L",
+        "consonantSkeleton": "MRKURL",
+        "flags": {
+          "isLineStart": true,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 8,
+        "text": "roses",
+        "normalized": "roses",
+        "normalizedUpper": "ROSES",
+        "lineIndex": 1,
+        "tokenIndexInLine": 1,
+        "globalTokenIndex": 8,
+        "charStart": 55,
+        "charEnd": 60,
+        "syllableCount": 2,
+        "phonemes": [
+          "R",
+          "AA0",
+          "S",
+          "EH1",
+          "S"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "R"
+        ],
+        "nucleus": [
+          "AA",
+          "EH"
+        ],
+        "coda": [
+          "S"
+        ],
+        "vowelFamily": [
+          "A",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-S",
+        "consonantSkeleton": "RSS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 9,
+        "text": "open",
+        "normalized": "open",
+        "normalizedUpper": "OPEN",
+        "lineIndex": 1,
+        "tokenIndexInLine": 2,
+        "globalTokenIndex": 9,
+        "charStart": 61,
+        "charEnd": 65,
+        "syllableCount": 2,
+        "phonemes": [
+          "AA0",
+          "P",
+          "EH1",
+          "N"
+        ],
+        "stressPattern": "01",
+        "onset": [],
+        "nucleus": [
+          "AA",
+          "EH"
+        ],
+        "coda": [
+          "N"
+        ],
+        "vowelFamily": [
+          "A",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-N",
+        "consonantSkeleton": "PN",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 10,
+        "text": "where",
+        "normalized": "where",
+        "normalizedUpper": "WHERE",
+        "lineIndex": 1,
+        "tokenIndexInLine": 3,
+        "globalTokenIndex": 10,
+        "charStart": 66,
+        "charEnd": 71,
+        "syllableCount": 1,
+        "phonemes": [
+          "W",
+          "IY1",
+          "R"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "W"
+        ],
+        "nucleus": [
+          "IY"
+        ],
+        "coda": [
+          "R"
+        ],
+        "vowelFamily": [
+          "IY"
+        ],
+        "primaryStressedVowelFamily": "IY",
+        "terminalVowelFamily": "IY",
+        "rhymeTailSignature": "IY-R",
+        "consonantSkeleton": "WR",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 11,
+        "text": "the",
+        "normalized": "the",
+        "normalizedUpper": "THE",
+        "lineIndex": 1,
+        "tokenIndexInLine": 4,
+        "globalTokenIndex": 11,
+        "charStart": 72,
+        "charEnd": 75,
+        "syllableCount": 1,
+        "phonemes": [
+          "TH",
+          "EH1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "TH"
+        ],
+        "nucleus": [
+          "EH"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-open",
+        "consonantSkeleton": "TH",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 12,
+        "text": "warding",
+        "normalized": "warding",
+        "normalizedUpper": "WARDING",
+        "lineIndex": 1,
+        "tokenIndexInLine": 5,
+        "globalTokenIndex": 12,
+        "charStart": 76,
+        "charEnd": 83,
+        "syllableCount": 2,
+        "phonemes": [
+          "W",
+          "AE1",
+          "R",
+          "D",
+          "IH0",
+          "NG"
+        ],
+        "stressPattern": "10",
+        "onset": [
+          "W"
+        ],
+        "nucleus": [
+          "AE",
+          "IH"
+        ],
+        "coda": [
+          "NG"
+        ],
+        "vowelFamily": [
+          "AE",
+          "IH"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "IH",
+        "rhymeTailSignature": "IH-NG",
+        "consonantSkeleton": "WRDNG",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 13,
+        "text": "vowels",
+        "normalized": "vowels",
+        "normalizedUpper": "VOWELS",
+        "lineIndex": 1,
+        "tokenIndexInLine": 6,
+        "globalTokenIndex": 13,
+        "charStart": 84,
+        "charEnd": 90,
+        "syllableCount": 2,
+        "phonemes": [
+          "V",
+          "AW0",
+          "EH1",
+          "L",
+          "S"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "V"
+        ],
+        "nucleus": [
+          "AW",
+          "EH"
+        ],
+        "coda": [
+          "L",
+          "S"
+        ],
+        "vowelFamily": [
+          "A",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-LS",
+        "consonantSkeleton": "VLS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 14,
+        "text": "burn",
+        "normalized": "burn",
+        "normalizedUpper": "BURN",
+        "lineIndex": 1,
+        "tokenIndexInLine": 7,
+        "globalTokenIndex": 14,
+        "charStart": 91,
+        "charEnd": 95,
+        "syllableCount": 1,
+        "phonemes": [
+          "B",
+          "AH1",
+          "R",
+          "N"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "B"
+        ],
+        "nucleus": [
+          "AH"
+        ],
+        "coda": [
+          "R",
+          "N"
+        ],
+        "vowelFamily": [
+          "A"
+        ],
+        "primaryStressedVowelFamily": "A",
+        "terminalVowelFamily": "A",
+        "rhymeTailSignature": "A-RN",
+        "consonantSkeleton": "BRN",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": true,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 15,
+        "text": "I",
+        "normalized": "i",
+        "normalizedUpper": "I",
+        "lineIndex": 2,
+        "tokenIndexInLine": 0,
+        "globalTokenIndex": 15,
+        "charStart": 97,
+        "charEnd": 98,
+        "syllableCount": 1,
+        "phonemes": [
+          "AY1"
+        ],
+        "stressPattern": "1",
+        "onset": [],
+        "nucleus": [
+          "AY"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "EY"
+        ],
+        "primaryStressedVowelFamily": "EY",
+        "terminalVowelFamily": "EY",
+        "rhymeTailSignature": "EY-open",
+        "consonantSkeleton": "",
+        "flags": {
+          "isLineStart": true,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "alphabet_literal",
+          "branch": "single_letter_map",
+          "fallbackPath": [
+            "alphabet_phonetic_map"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Single-letter token resolved through the alphabet phonetic map."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 16,
+        "text": "cast",
+        "normalized": "cast",
+        "normalizedUpper": "CAST",
+        "lineIndex": 2,
+        "tokenIndexInLine": 1,
+        "globalTokenIndex": 16,
+        "charStart": 99,
+        "charEnd": 103,
+        "syllableCount": 1,
+        "phonemes": [
+          "K",
+          "AE1",
+          "S",
+          "T"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "K"
+        ],
+        "nucleus": [
+          "AE"
+        ],
+        "coda": [
+          "S",
+          "T"
+        ],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-ST",
+        "consonantSkeleton": "KST",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 17,
+        "text": "my",
+        "normalized": "my",
+        "normalizedUpper": "MY",
+        "lineIndex": 2,
+        "tokenIndexInLine": 2,
+        "globalTokenIndex": 17,
+        "charStart": 104,
+        "charEnd": 106,
+        "syllableCount": 1,
+        "phonemes": [
+          "M",
+          "AY1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "M"
+        ],
+        "nucleus": [
+          "AY"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "EY"
+        ],
+        "primaryStressedVowelFamily": "EY",
+        "terminalVowelFamily": "EY",
+        "rhymeTailSignature": "EY-open",
+        "consonantSkeleton": "M",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 18,
+        "text": "will",
+        "normalized": "will",
+        "normalizedUpper": "WILL",
+        "lineIndex": 2,
+        "tokenIndexInLine": 3,
+        "globalTokenIndex": 18,
+        "charStart": 107,
+        "charEnd": 111,
+        "syllableCount": 1,
+        "phonemes": [
+          "W",
+          "IH1",
+          "L",
+          "L"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "W"
+        ],
+        "nucleus": [
+          "IH"
+        ],
+        "coda": [
+          "L",
+          "L"
+        ],
+        "vowelFamily": [
+          "IH"
+        ],
+        "primaryStressedVowelFamily": "IH",
+        "terminalVowelFamily": "IH",
+        "rhymeTailSignature": "IH-LL",
+        "consonantSkeleton": "WLL",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 19,
+        "text": "through",
+        "normalized": "through",
+        "normalizedUpper": "THROUGH",
+        "lineIndex": 2,
+        "tokenIndexInLine": 4,
+        "globalTokenIndex": 19,
+        "charStart": 112,
+        "charEnd": 119,
+        "syllableCount": 1,
+        "phonemes": [
+          "TH",
+          "R",
+          "UW1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "TH",
+          "R"
+        ],
+        "nucleus": [
+          "UW"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "UW"
+        ],
+        "primaryStressedVowelFamily": "UW",
+        "terminalVowelFamily": "UW",
+        "rhymeTailSignature": "UW-open",
+        "consonantSkeleton": "THR",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "word_override",
+          "branch": "override_lookup",
+          "fallbackPath": [
+            "word_override",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 20,
+        "text": "silver",
+        "normalized": "silver",
+        "normalizedUpper": "SILVER",
+        "lineIndex": 2,
+        "tokenIndexInLine": 5,
+        "globalTokenIndex": 20,
+        "charStart": 120,
+        "charEnd": 126,
+        "syllableCount": 2,
+        "phonemes": [
+          "S",
+          "IH0",
+          "L",
+          "V",
+          "EH1",
+          "R"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "S"
+        ],
+        "nucleus": [
+          "IH",
+          "EH"
+        ],
+        "coda": [
+          "R"
+        ],
+        "vowelFamily": [
+          "IH",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-R",
+        "consonantSkeleton": "SLVR",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 21,
+        "text": "breath",
+        "normalized": "breath",
+        "normalizedUpper": "BREATH",
+        "lineIndex": 2,
+        "tokenIndexInLine": 6,
+        "globalTokenIndex": 21,
+        "charStart": 127,
+        "charEnd": 133,
+        "syllableCount": 1,
+        "phonemes": [
+          "B",
+          "R",
+          "IY1",
+          "TH"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "B",
+          "R"
+        ],
+        "nucleus": [
+          "IY"
+        ],
+        "coda": [
+          "TH"
+        ],
+        "vowelFamily": [
+          "IY"
+        ],
+        "primaryStressedVowelFamily": "IY",
+        "terminalVowelFamily": "IY",
+        "rhymeTailSignature": "IY-TH",
+        "consonantSkeleton": "BRTH",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 22,
+        "text": "and",
+        "normalized": "and",
+        "normalizedUpper": "AND",
+        "lineIndex": 2,
+        "tokenIndexInLine": 7,
+        "globalTokenIndex": 22,
+        "charStart": 134,
+        "charEnd": 137,
+        "syllableCount": 1,
+        "phonemes": [
+          "AE1",
+          "N",
+          "D"
+        ],
+        "stressPattern": "1",
+        "onset": [],
+        "nucleus": [
+          "AE"
+        ],
+        "coda": [
+          "N",
+          "D"
+        ],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-ND",
+        "consonantSkeleton": "ND",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 23,
+        "text": "grave-green",
+        "normalized": "grave-green",
+        "normalizedUpper": "GRAVE-GREEN",
+        "lineIndex": 2,
+        "tokenIndexInLine": 8,
+        "globalTokenIndex": 23,
+        "charStart": 138,
+        "charEnd": 149,
+        "syllableCount": 3,
+        "phonemes": [
+          "G",
+          "R",
+          "AE0",
+          "V",
+          "EH0",
+          "G",
+          "R",
+          "IY1",
+          "N"
+        ],
+        "stressPattern": "001",
+        "onset": [
+          "G",
+          "R"
+        ],
+        "nucleus": [
+          "AE",
+          "EH",
+          "IY"
+        ],
+        "coda": [
+          "N"
+        ],
+        "vowelFamily": [
+          "AE",
+          "AE",
+          "IY"
+        ],
+        "primaryStressedVowelFamily": "IY",
+        "terminalVowelFamily": "IY",
+        "rhymeTailSignature": "IY-N",
+        "consonantSkeleton": "GRVGRN",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 24,
+        "text": "dusk",
+        "normalized": "dusk",
+        "normalizedUpper": "DUSK",
+        "lineIndex": 2,
+        "tokenIndexInLine": 9,
+        "globalTokenIndex": 24,
+        "charStart": 150,
+        "charEnd": 154,
+        "syllableCount": 1,
+        "phonemes": [
+          "D",
+          "AH1",
+          "S",
+          "K"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "D"
+        ],
+        "nucleus": [
+          "AH"
+        ],
+        "coda": [
+          "S",
+          "K"
+        ],
+        "vowelFamily": [
+          "A"
+        ],
+        "primaryStressedVowelFamily": "A",
+        "terminalVowelFamily": "A",
+        "rhymeTailSignature": "A-SK",
+        "consonantSkeleton": "DSK",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": true,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 25,
+        "text": "The",
+        "normalized": "the",
+        "normalizedUpper": "THE",
+        "lineIndex": 3,
+        "tokenIndexInLine": 0,
+        "globalTokenIndex": 25,
+        "charStart": 156,
+        "charEnd": 159,
+        "syllableCount": 1,
+        "phonemes": [
+          "TH",
+          "EH1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "TH"
+        ],
+        "nucleus": [
+          "EH"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-open",
+        "consonantSkeleton": "TH",
+        "flags": {
+          "isLineStart": true,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 26,
+        "text": "abyss",
+        "normalized": "abyss",
+        "normalizedUpper": "ABYSS",
+        "lineIndex": 3,
+        "tokenIndexInLine": 1,
+        "globalTokenIndex": 26,
+        "charStart": 160,
+        "charEnd": 165,
+        "syllableCount": 1,
+        "phonemes": [
+          "AE1",
+          "B",
+          "Y",
+          "S",
+          "S"
+        ],
+        "stressPattern": "1",
+        "onset": [],
+        "nucleus": [
+          "AE"
+        ],
+        "coda": [
+          "B",
+          "Y",
+          "S",
+          "S"
+        ],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-BYSS",
+        "consonantSkeleton": "BYSS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 27,
+        "text": "answers",
+        "normalized": "answers",
+        "normalizedUpper": "ANSWERS",
+        "lineIndex": 3,
+        "tokenIndexInLine": 2,
+        "globalTokenIndex": 27,
+        "charStart": 166,
+        "charEnd": 173,
+        "syllableCount": 2,
+        "phonemes": [
+          "AE0",
+          "N",
+          "S",
+          "W",
+          "EH1",
+          "R",
+          "S"
+        ],
+        "stressPattern": "01",
+        "onset": [],
+        "nucleus": [
+          "AE",
+          "EH"
+        ],
+        "coda": [
+          "R",
+          "S"
+        ],
+        "vowelFamily": [
+          "AE",
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-RS",
+        "consonantSkeleton": "NSWRS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 28,
+        "text": "softly",
+        "normalized": "softly",
+        "normalizedUpper": "SOFTLY",
+        "lineIndex": 3,
+        "tokenIndexInLine": 3,
+        "globalTokenIndex": 28,
+        "charStart": 174,
+        "charEnd": 180,
+        "syllableCount": 2,
+        "phonemes": [
+          "S",
+          "AA0",
+          "F",
+          "T",
+          "L",
+          "AY1"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "S"
+        ],
+        "nucleus": [
+          "AA",
+          "AY"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "A",
+          "EY"
+        ],
+        "primaryStressedVowelFamily": "EY",
+        "terminalVowelFamily": "EY",
+        "rhymeTailSignature": "EY-open",
+        "consonantSkeleton": "SFTL",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 29,
+        "text": "but",
+        "normalized": "but",
+        "normalizedUpper": "BUT",
+        "lineIndex": 3,
+        "tokenIndexInLine": 4,
+        "globalTokenIndex": 29,
+        "charStart": 182,
+        "charEnd": 185,
+        "syllableCount": 1,
+        "phonemes": [
+          "B",
+          "AH1",
+          "T"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "B"
+        ],
+        "nucleus": [
+          "AH"
+        ],
+        "coda": [
+          "T"
+        ],
+        "vowelFamily": [
+          "A"
+        ],
+        "primaryStressedVowelFamily": "A",
+        "terminalVowelFamily": "A",
+        "rhymeTailSignature": "A-T",
+        "consonantSkeleton": "BT",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 30,
+        "text": "the",
+        "normalized": "the",
+        "normalizedUpper": "THE",
+        "lineIndex": 3,
+        "tokenIndexInLine": 5,
+        "globalTokenIndex": 30,
+        "charStart": 186,
+        "charEnd": 189,
+        "syllableCount": 1,
+        "phonemes": [
+          "TH",
+          "EH1"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "TH"
+        ],
+        "nucleus": [
+          "EH"
+        ],
+        "coda": [],
+        "vowelFamily": [
+          "AE"
+        ],
+        "primaryStressedVowelFamily": "AE",
+        "terminalVowelFamily": "AE",
+        "rhymeTailSignature": "AE-open",
+        "consonantSkeleton": "TH",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": true,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 31,
+        "text": "bright",
+        "normalized": "bright",
+        "normalizedUpper": "BRIGHT",
+        "lineIndex": 3,
+        "tokenIndexInLine": 6,
+        "globalTokenIndex": 31,
+        "charStart": 190,
+        "charEnd": 196,
+        "syllableCount": 1,
+        "phonemes": [
+          "B",
+          "R",
+          "IH1",
+          "G",
+          "T"
+        ],
+        "stressPattern": "1",
+        "onset": [
+          "B",
+          "R"
+        ],
+        "nucleus": [
+          "IH"
+        ],
+        "coda": [
+          "G",
+          "T"
+        ],
+        "vowelFamily": [
+          "IH"
+        ],
+        "primaryStressedVowelFamily": "IH",
+        "terminalVowelFamily": "IH",
+        "rhymeTailSignature": "IH-GT",
+        "consonantSkeleton": "BRGT",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 32,
+        "text": "sigils",
+        "normalized": "sigils",
+        "normalizedUpper": "SIGILS",
+        "lineIndex": 3,
+        "tokenIndexInLine": 7,
+        "globalTokenIndex": 32,
+        "charStart": 197,
+        "charEnd": 203,
+        "syllableCount": 2,
+        "phonemes": [
+          "S",
+          "IH0",
+          "G",
+          "IH1",
+          "L",
+          "S"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "S"
+        ],
+        "nucleus": [
+          "IH",
+          "IH"
+        ],
+        "coda": [
+          "L",
+          "S"
+        ],
+        "vowelFamily": [
+          "IH",
+          "IH"
+        ],
+        "primaryStressedVowelFamily": "IH",
+        "terminalVowelFamily": "IH",
+        "rhymeTailSignature": "IH-LS",
+        "consonantSkeleton": "SGLS",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": false,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      },
+      {
+        "id": 33,
+        "text": "return",
+        "normalized": "return",
+        "normalizedUpper": "RETURN",
+        "lineIndex": 3,
+        "tokenIndexInLine": 8,
+        "globalTokenIndex": 33,
+        "charStart": 204,
+        "charEnd": 210,
+        "syllableCount": 2,
+        "phonemes": [
+          "R",
+          "EH0",
+          "T",
+          "AH1",
+          "R",
+          "N"
+        ],
+        "stressPattern": "01",
+        "onset": [
+          "R"
+        ],
+        "nucleus": [
+          "EH",
+          "AH"
+        ],
+        "coda": [
+          "R",
+          "N"
+        ],
+        "vowelFamily": [
+          "AE",
+          "A"
+        ],
+        "primaryStressedVowelFamily": "A",
+        "terminalVowelFamily": "A",
+        "rhymeTailSignature": "A-RN",
+        "consonantSkeleton": "RTRN",
+        "flags": {
+          "isLineStart": false,
+          "isLineEnd": true,
+          "isStopWordLike": false,
+          "unknownPhonetics": false
+        },
+        "phoneticDiagnostics": {
+          "source": "heuristic_fallback",
+          "branch": "rule_based_split",
+          "fallbackPath": [
+            "grapheme_rules",
+            "phonological_processes",
+            "syllabifier"
+          ],
+          "authoritySource": null,
+          "usedAuthorityCache": false,
+          "unknownReason": null,
+          "notes": [
+            "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
+          ]
+        },
+        "visualBytecode": null
+      }
+    ]
+  }
+}

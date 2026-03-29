@@ -1,0 +1,76 @@
+VERSE IR — LINGUISTIC ENERGY COLOR MANIFEST
+MODEL: TRAVELLING-WAVE FILTER BANK (COCHLEAR POSITIONING)
+============================================================
+
+PHONEME: [IY]
+  - SPECTRAL BYTECODE: 0x010e08f207a0
+  - RESONANCE HUE:    200°
+  - ACOUSTIC MASS:    29%
+  - PERFECT COLOR:    hsl(200, 65%, 71%)
+------------------------------
+PHONEME: [IH]
+  - SPECTRAL BYTECODE: 0x018607c60742
+  - RESONANCE HUE:    191°
+  - ACOUSTIC MASS:    35%
+  - PERFECT COLOR:    hsl(191, 45%, 65%)
+------------------------------
+PHONEME: [EY]
+  - SPECTRAL BYTECODE: 0x02120730070e
+  - RESONANCE HUE:    185°
+  - ACOUSTIC MASS:    42%
+  - PERFECT COLOR:    hsl(185, 45%, 58%)
+------------------------------
+PHONEME: [EH]
+  - SPECTRAL BYTECODE: 0x026206b806e1
+  - RESONANCE HUE:    181°
+  - ACOUSTIC MASS:    46%
+  - PERFECT COLOR:    hsl(181, 45%, 54%)
+------------------------------
+PHONEME: [AE]
+  - SPECTRAL BYTECODE: 0x035c060e069d
+  - RESONANCE HUE:    174°
+  - ACOUSTIC MASS:    58%
+  - PERFECT COLOR:    hsl(174, 45%, 42%)
+------------------------------
+PHONEME: [AA]
+  - SPECTRAL BYTECODE: 0x02da044205bb
+  - RESONANCE HUE:    150°
+  - ACOUSTIC MASS:    52%
+  - PERFECT COLOR:    hsl(150, 65%, 48%)
+------------------------------
+PHONEME: [AO]
+  - SPECTRAL BYTECODE: 0x023a0348051a
+  - RESONANCE HUE:    134°
+  - ACOUSTIC MASS:    44%
+  - PERFECT COLOR:    hsl(134, 45%, 56%)
+------------------------------
+PHONEME: [OW]
+  - SPECTRAL BYTECODE: 0x01cc044c05c0
+  - RESONANCE HUE:    151°
+  - ACOUSTIC MASS:    38%
+  - PERFECT COLOR:    hsl(151, 45%, 62%)
+------------------------------
+PHONEME: [UH]
+  - SPECTRAL BYTECODE: 0x01b803fc0591
+  - RESONANCE HUE:    146°
+  - ACOUSTIC MASS:    37%
+  - PERFECT COLOR:    hsl(146, 45%, 63%)
+------------------------------
+PHONEME: [UW]
+  - SPECTRAL BYTECODE: 0x012c0366052f
+  - RESONANCE HUE:    136°
+  - ACOUSTIC MASS:    30%
+  - PERFECT COLOR:    hsl(136, 65%, 70%)
+------------------------------
+PHONEME: [AH]
+  - SPECTRAL BYTECODE: 0x028004a605f2
+  - RESONANCE HUE:    156°
+  - ACOUSTIC MASS:    47%
+  - PERFECT COLOR:    hsl(156, 45%, 53%)
+------------------------------
+PHONEME: [AX]
+  - SPECTRAL BYTECODE: 0x01f405dc0687
+  - RESONANCE HUE:    171°
+  - ACOUSTIC MASS:    40%
+  - PERFECT COLOR:    hsl(171, 45%, 60%)
+------------------------------
