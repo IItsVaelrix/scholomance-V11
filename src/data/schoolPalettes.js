@@ -21,25 +21,17 @@
 // ─── DEFAULT ────────────────────────────────────────────────────────────────
 // Rainbow fallback — one mid-stop from each school to showcase the full jewel vocabulary.
 export const DEFAULT_VOWEL_COLORS = {
-  IY: "#4470b8",   // Sapphire (Psychic - 200°)
-  IH: "#5c9aac",   // Ethereal Teal (Alchemy - 185°)
-  EY: "#3c8c82",   // Deep Teal (Sonic - 174°)
-  AE: "#3c8c64",   // Malachite (Will - 156°)
-  A:  "#3c8c52",   // Emerald (Necromancy - 150°)
-  AO: "#748c5c",   // Topaz-Green (Divination - 134°)
-  OW: "#5c8c64",   // Aquamarine (Abjuration - 136°)
-  UW: "#6a5a78",   // Obsidian (Void - 171°)
+  IY: "#4470b8", IH: "#5c9aac", EY: "#3c8c82", EH: "#3c8c64", AE: "#3c8c52",
+  AA: "#748c5c", AH: "#5c8c64", AO: "#6a5a78", OW: "#4470b8", UH: "#5c9aac",
+  UW: "#3c8c82", ER: "#3c8c64", AX: "#3c8c52", AY: "#748c5c", AW: "#5c8c64",
+  OY: "#6a5a78", UR: "#4470b8", OH: "#5c9aac", OO: "#3c8c82", YUW: "#3c8c64"
 };
 
 const DEFAULT_LIGHT_COLORS = {
-  IY: "#264280",
-  IH: "#1e5668",
-  EY: "#1e6258",
-  AE: "#1e6240",
-  A:  "#1e6232",
-  AO: "#4a5c38",
-  OW: "#1e5640",
-  UW: "#3c3048",
+  IY: "#264280", IH: "#1e5668", EY: "#1e6258", EH: "#1e6240", AE: "#1e6232",
+  AA: "#4a5c38", AH: "#1e5640", AO: "#3c3048", OW: "#264280", UH: "#1e5668",
+  UW: "#1e6258", ER: "#1e6240", AX: "#1e6232", AA: "#4a5c38", AW: "#1e5640",
+  OY: "#3c3048", UR: "#264280", OH: "#1e5668", OO: "#1e6258", YUW: "#1e6240"
 };
 
 // ─── SONIC — Deep Teal (H:174) ─────────────────────────────────────────────

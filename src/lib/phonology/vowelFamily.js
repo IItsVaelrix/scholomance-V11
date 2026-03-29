@@ -4,25 +4,12 @@
  */
 
 const FAMILY_ALIASES = Object.freeze({
-  // Consolidations to 8 Core Families
-  AA: "A",
-  AH: "A",
-  AX: "A",
-  AW: "A",
-  EH: "AE",
-  AY: "EY",
-  OY: "OW",
-  OH: "OW",
-  UH: "UW",
-  OO: "UW",
+  // Only actual phonetic aliases/equivalents, no more aggressive consolidation to 8.
   YOO: "UW",
   YUW: "UW",
-  ER: "IH",
-  UR: "IH",
-  
-  // Keep core families distinct
-  EE: "IY",
   IN: "IH",
+  EE: "IY",
+  OO: "UH", // OO (book) -> UH
 });
 
 /**
