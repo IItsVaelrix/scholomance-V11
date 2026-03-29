@@ -1,5 +1,6 @@
 const DEFAULT_SONIC_STATION_BUCKETS = Object.freeze({
   SONIC: Object.freeze([
+    "https://suno.com/song/44c7a9b9-4053-4d1e-84e3-2b8252f0f57b",
     "https://suno.com/song/236e9f87-4d38-43da-a98a-b39447256d21",
   ]),
   PSYCHIC: Object.freeze([]),
