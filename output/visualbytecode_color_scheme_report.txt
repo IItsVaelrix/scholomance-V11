@@ -3,7 +3,7 @@ VISUALBYTECODE COLOR SCHEME REPORT
 
 INPUT
 -----
-Generated at: 2026-03-29T14:18:42.082Z
+Generated at: 2026-03-29T14:19:52.094Z
 VerseIR version: 1.1.0
 Token count: 34
 Line count: 4
@@ -26,108 +26,108 @@ SPECTRAL FIELD
 Dominant school: WILL
 Accent school: NECROMANCY
 Shadow school: WILL
-Ritual hue: 352.62
-Entropy: 0.8010
-Resonance: 0.0000
-Warm bias: 0.6173
+Ritual hue: 352.66
+Entropy: 0.7987
+Resonance: 0.1459
+Warm bias: 0.6260
 
 SCHOOL ENERGY
 -------------
-- WILL        energy= 8.975 share=51.380% tokens=18  base=#b85c48
-- ALCHEMY     energy= 2.295 share=13.136% tokens=4   base=#b84882
-- NECROMANCY  energy= 2.203 share=12.610% tokens=5   base=#389468
-- PSYCHIC     energy= 1.733 share=9.920% tokens=3   base=#4470b8
-- SONIC       energy= 1.721 share=9.853% tokens=3   base=#6548b8
-- ABJURATION  energy= 0.542 share=3.101% tokens=1   base=#38849c
+- WILL        energy= 9.672 share=50.970% tokens=18  base=#b85c48
+- ALCHEMY     energy= 2.937 share=15.477% tokens=4   base=#b84882
+- NECROMANCY  energy= 2.316 share=12.203% tokens=5   base=#389468
+- PSYCHIC     energy= 1.757 share=9.258% tokens=3   base=#4470b8
+- SONIC       energy= 1.749 share=9.217% tokens=3   base=#6548b8
+- ABJURATION  energy= 0.546 share=2.875% tokens=1   base=#38849c
 
 TOP TOKENS
 ----------
-- oracle         energy=0.689 school=WILL        family=AE  effect=INERT
-- Resonant       energy=0.641 school=WILL        family=AE  effect=INERT
-- grave-green    energy=0.638 school=PSYCHIC     family=IY  effect=INERT
-- Mercurial      energy=0.637 school=WILL        family=AE  effect=INERT
-- return         energy=0.633 school=NECROMANCY  family=A   effect=INERT
-- softly         energy=0.631 school=ALCHEMY     family=EY  effect=INERT
-- thunder        energy=0.623 school=WILL        family=AE  effect=INERT
-- silver         energy=0.619 school=WILL        family=AE  effect=INERT
+- oracle         energy=0.939 school=WILL        family=AE  effect=TRANSCENDENT anchor
+- softly         energy=0.848 school=ALCHEMY     family=EY  effect=HARMONIC anchor
+- my             energy=0.801 school=ALCHEMY     family=EY  effect=HARMONIC anchor
+- I              energy=0.716 school=ALCHEMY     family=EY  effect=HARMONIC anchor
+- return         energy=0.689 school=NECROMANCY  family=A   effect=HARMONIC
+- thunder        energy=0.679 school=WILL        family=AE  effect=HARMONIC
+- silver         energy=0.676 school=WILL        family=AE  effect=HARMONIC
+- Resonant       energy=0.665 school=WILL        family=AE  effect=INERT
 
 PALETTE BYTECODE
 ----------------
 - PALETTE_BYTECODE v1
-- LOAD_SCHOOL WILL share=0.5138 energy=8.9751 h=15.0 s=48.0 l=50.0
-- LOAD_SCHOOL ALCHEMY share=0.1314 energy=2.2945 h=330.0 s=48.0 l=50.0
-- LOAD_SCHOOL NECROMANCY share=0.1261 energy=2.2027 h=155.0 s=44.0 l=40.0
-- LOAD_SCHOOL PSYCHIC share=0.0992 energy=1.7328 h=220.0 s=48.0 l=49.0
-- LOAD_SCHOOL SONIC share=0.0985 energy=1.7212 h=265.0 s=48.0 l=50.0
-- SET_DOMINANT WILL share=0.5138
+- LOAD_SCHOOL WILL share=0.5097 energy=9.6725 h=15.0 s=48.0 l=50.0
+- LOAD_SCHOOL ALCHEMY share=0.1548 energy=2.9369 h=330.0 s=48.0 l=50.0
+- LOAD_SCHOOL NECROMANCY share=0.1220 energy=2.3157 h=155.0 s=44.0 l=40.0
+- LOAD_SCHOOL PSYCHIC share=0.0926 energy=1.7568 h=220.0 s=48.0 l=49.0
+- LOAD_SCHOOL SONIC share=0.0922 energy=1.7492 h=265.0 s=48.0 l=50.0
+- SET_DOMINANT WILL share=0.5097
 - SET_ACCENT NECROMANCY hue_distance=140.00
 - SET_SHADOW WILL
-- SET_FIELD ritual_hue=352.62 entropy=0.8010 resonance=0.0000 warmth=0.6173
-- EMIT_SLOT DARK ABYSS #170d0e
-- EMIT_SLOT DARK PANEL #34201b
-- EMIT_SLOT DARK PARCHMENT #e5e4da
+- SET_FIELD ritual_hue=352.66 entropy=0.7987 resonance=0.1459 warmth=0.6260
+- EMIT_SLOT DARK ABYSS #180d0f
+- EMIT_SLOT DARK PANEL #341f1b
+- EMIT_SLOT DARK PARCHMENT #e6e4da
 - EMIT_SLOT DARK INK #f1efec
-- EMIT_SLOT DARK PRIMARY #c76b57
+- EMIT_SLOT DARK PRIMARY #ca6f5c
 - EMIT_SLOT DARK SECONDARY #33bf7c
 - EMIT_SLOT DARK TERTIARY #63ac51
-- EMIT_SLOT DARK BORDER #9d8b44
-- EMIT_SLOT DARK GLOW #da998b
-- EMIT_SLOT DARK AURORA_START #d29455
+- EMIT_SLOT DARK BORDER #a39246
+- EMIT_SLOT DARK GLOW #de9c8d
+- EMIT_SLOT DARK AURORA_START #d4995b
 - EMIT_SLOT DARK AURORA_END #63c786
-- EMIT_SLOT LIGHT ABYSS #f3e7e9
+- EMIT_SLOT LIGHT ABYSS #f2e6e7
 - EMIT_SLOT LIGHT PANEL #f4efeb
 - EMIT_SLOT LIGHT PARCHMENT #f9f9f8
 - EMIT_SLOT LIGHT INK #39211c
-- EMIT_SLOT LIGHT PRIMARY #a54f3d
+- EMIT_SLOT LIGHT PRIMARY #a54f3c
 - EMIT_SLOT LIGHT SECONDARY #2c8c5e
 - EMIT_SLOT LIGHT TERTIARY #427746
-- EMIT_SLOT LIGHT BORDER #bd9e7f
-- EMIT_SLOT LIGHT GLOW #cd7f70
-- EMIT_SLOT LIGHT AURORA_START #d7a98e
+- EMIT_SLOT LIGHT BORDER #bc9c7c
+- EMIT_SLOT LIGHT GLOW #cf8271
+- EMIT_SLOT LIGHT AURORA_START #d6a88c
 - EMIT_SLOT LIGHT AURORA_END #73c38e
 
 DARK RITUAL SCHEME
 ------------------
-- abyss         #170d0e
-- panel         #34201b
-- parchment     #e5e4da
+- abyss         #180d0f
+- panel         #341f1b
+- parchment     #e6e4da
 - ink           #f1efec
-- primary       #c76b57
+- primary       #ca6f5c
 - secondary     #33bf7c
 - tertiary      #63ac51
-- border        #9d8b44
-- glow          #da998b
-- aurora_start  #d29455
+- border        #a39246
+- glow          #de9c8d
+- aurora_start  #d4995b
 - aurora_end    #63c786
 
 LIGHT RITUAL SCHEME
 -------------------
-- abyss         #f3e7e9
+- abyss         #f2e6e7
 - panel         #f4efeb
 - parchment     #f9f9f8
 - ink           #39211c
-- primary       #a54f3d
+- primary       #a54f3c
 - secondary     #2c8c5e
 - tertiary      #427746
-- border        #bd9e7f
-- glow          #cd7f70
-- aurora_start  #d7a98e
+- border        #bc9c7c
+- glow          #cf8271
+- aurora_start  #d6a88c
 - aurora_end    #73c38e
 
 DARK FAMILY REFINEMENTS
 -----------------------
-- IY  #aeccef school=PSYCHIC     energy=1.733
-- IH  #6448b4 school=SONIC       energy=1.721
-- EY  #db80ad school=ALCHEMY     energy=2.295
-- AE  #993b27 school=WILL        energy=8.975
-- A   #123a27 school=NECROMANCY  energy=2.203
-- UW  #84bece school=ABJURATION  energy=0.542
+- IY  #aeccee school=PSYCHIC     energy=1.757
+- IH  #6448b4 school=SONIC       energy=1.749
+- EY  #dc81ae school=ALCHEMY     energy=2.937
+- AE  #993b27 school=WILL        energy=9.672
+- A   #123a27 school=NECROMANCY  energy=2.316
+- UW  #84bece school=ABJURATION  energy=0.546
 
 LIGHT FAMILY REFINEMENTS
 ------------------------
-- IY  #628fd2 school=PSYCHIC     energy=1.733
-- IH  #332065 school=SONIC       energy=1.721
-- EY  #a04272 school=ALCHEMY     energy=2.295
-- AE  #4d1f14 school=WILL        energy=8.975
-- A   #0e2f1f school=NECROMANCY  energy=2.203
-- UW  #458295 school=ABJURATION  energy=0.542
+- IY  #628fd2 school=PSYCHIC     energy=1.757
+- IH  #332065 school=SONIC       energy=1.749
+- EY  #a14273 school=ALCHEMY     energy=2.937
+- AE  #4d1f14 school=WILL        energy=9.672
+- A   #0e2f1f school=NECROMANCY  energy=2.316
+- UW  #458195 school=ABJURATION  energy=0.546

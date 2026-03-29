@@ -403,7 +403,7 @@ function normalizeAmplifierResult(rawResult, amplifier, index) {
       .filter(Boolean)
   ).slice(0, MAX_MATCHES_PER_TIER);
 
-  return createAmplifierResult({
+  const normalized = createAmplifierResult({
     id: amplifierId,
     label: amplifierLabel,
     tier: normalizeAmplifierTier(rawResult?.tier || amplifier?.tier),
@@ -416,6 +416,22 @@ function normalizeAmplifierResult(rawResult, amplifier, index) {
     diagnostics: normalizeAmplifierDiagnostics(rawResult?.diagnostics, amplifierId),
     commentary: String(rawResult?.commentary || `${amplifierLabel} found no viable signal.`),
   });
+
+  if (rawResult?.tokenBytecodes instanceof Map) {
+    return Object.freeze({
+      ...normalized,
+      tokenBytecodes: new Map(rawResult.tokenBytecodes),
+    });
+  }
+
+  if (rawResult?.tokenBytecodes && typeof rawResult.tokenBytecodes === 'object') {
+    return Object.freeze({
+      ...normalized,
+      tokenBytecodes: { ...rawResult.tokenBytecodes },
+    });
+  }
+
+  return normalized;
 }
 
 function freezeMatchesByTier(results) {

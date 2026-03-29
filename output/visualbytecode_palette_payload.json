@@ -1,6 +1,6 @@
 {
   "metadata": {
-    "generatedAt": "2026-03-29T14:18:42.082Z",
+    "generatedAt": "2026-03-29T14:19:52.094Z",
     "mode": "balanced",
     "visualMode": "AESTHETIC",
     "amplifiers": [
@@ -510,7 +510,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.3,
+          "syllableDepth": 3,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 1,
@@ -571,7 +582,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0.45,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       },
       {
         "id": 2,
@@ -631,7 +653,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "ALCHEMY",
+          "rarity": "COMMON",
+          "color": "#dc80ae",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 3,
@@ -684,7 +717,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 4,
@@ -743,7 +787,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 1,
+          "saturationBoost": 0.5,
+          "syllableDepth": 3,
+          "isAnchor": true,
+          "isStopWord": false,
+          "effectClass": "TRANSCENDENT"
+        }
       },
       {
         "id": 5,
@@ -796,7 +851,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "NECROMANCY",
+          "rarity": "COMMON",
+          "color": "#123c28",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 6,
@@ -856,7 +922,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 7,
@@ -920,7 +997,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.3,
+          "syllableDepth": 3,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 8,
@@ -980,7 +1068,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 9,
@@ -1037,7 +1136,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 10,
@@ -1093,7 +1203,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "PSYCHIC",
+          "rarity": "COMMON",
+          "color": "#b0cef0",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 11,
@@ -1146,7 +1267,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 12,
@@ -1207,7 +1339,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 13,
@@ -1268,7 +1411,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 14,
@@ -1326,7 +1480,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "NECROMANCY",
+          "rarity": "COMMON",
+          "color": "#123c28",
+          "glowIntensity": 0.45,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "RESONANT"
+        }
       },
       {
         "id": 15,
@@ -1374,7 +1539,18 @@
             "Single-letter token resolved through the alphabet phonetic map."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "ALCHEMY",
+          "rarity": "COMMON",
+          "color": "#dc80ae",
+          "glowIntensity": 0.72,
+          "saturationBoost": 0.3,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       },
       {
         "id": 16,
@@ -1432,7 +1608,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 17,
@@ -1485,7 +1672,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "ALCHEMY",
+          "rarity": "COMMON",
+          "color": "#dc80ae",
+          "glowIntensity": 0.72,
+          "saturationBoost": 0.3,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       },
       {
         "id": 18,
@@ -1543,7 +1741,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "SONIC",
+          "rarity": "COMMON",
+          "color": "#6548b8",
+          "glowIntensity": 0,
+          "saturationBoost": 0.05,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 19,
@@ -1598,7 +1807,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "ABJURATION",
+          "rarity": "COMMON",
+          "color": "#88c2d2",
+          "glowIntensity": 0,
+          "saturationBoost": 0.05,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 20,
@@ -1659,7 +1879,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0.45,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       },
       {
         "id": 21,
@@ -1717,7 +1948,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "PSYCHIC",
+          "rarity": "COMMON",
+          "color": "#b0cef0",
+          "glowIntensity": 0,
+          "saturationBoost": 0.05,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 22,
@@ -1772,7 +2014,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 23,
@@ -1839,7 +2092,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "PSYCHIC",
+          "rarity": "COMMON",
+          "color": "#b0cef0",
+          "glowIntensity": 0,
+          "saturationBoost": 0.15,
+          "syllableDepth": 3,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 24,
@@ -1897,7 +2161,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "NECROMANCY",
+          "rarity": "COMMON",
+          "color": "#123c28",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 25,
@@ -1950,7 +2225,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 26,
@@ -2009,7 +2295,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 27,
@@ -2070,7 +2367,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 28,
@@ -2129,7 +2437,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "ALCHEMY",
+          "rarity": "COMMON",
+          "color": "#dc80ae",
+          "glowIntensity": 0.72,
+          "saturationBoost": 0.4,
+          "syllableDepth": 2,
+          "isAnchor": true,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       },
       {
         "id": 29,
@@ -2185,7 +2504,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "NECROMANCY",
+          "rarity": "COMMON",
+          "color": "#123c28",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 30,
@@ -2238,7 +2568,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "WILL",
+          "rarity": "COMMON",
+          "color": "#803626",
+          "glowIntensity": 0,
+          "saturationBoost": 0,
+          "syllableDepth": 1,
+          "isAnchor": true,
+          "isStopWord": true,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 31,
@@ -2298,7 +2639,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "SONIC",
+          "rarity": "COMMON",
+          "color": "#6548b8",
+          "glowIntensity": 0,
+          "saturationBoost": 0.1,
+          "syllableDepth": 1,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 32,
@@ -2360,7 +2712,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "SONIC",
+          "rarity": "COMMON",
+          "color": "#6548b8",
+          "glowIntensity": 0,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "INERT"
+        }
       },
       {
         "id": 33,
@@ -2422,7 +2785,18 @@
             "Heuristic grapheme-to-phoneme fallback generated the pronunciation."
           ]
         },
-        "visualBytecode": null
+        "visualBytecode": {
+          "version": 1,
+          "school": "NECROMANCY",
+          "rarity": "COMMON",
+          "color": "#123c28",
+          "glowIntensity": 0.45,
+          "saturationBoost": 0.2,
+          "syllableDepth": 2,
+          "isAnchor": false,
+          "isStopWord": false,
+          "effectClass": "HARMONIC"
+        }
       }
     ]
   }
