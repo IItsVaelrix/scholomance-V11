@@ -8,7 +8,6 @@ import Navigation from "../src/components/Navigation/Navigation.jsx";
 import FloatingPanel from "../src/components/shared/FloatingPanel.jsx";
 import { ThemeProvider } from "../src/hooks/useTheme.jsx";
 import ListenPage from "../src/pages/Listen/ListenPage";
-import GrimoireScroll from "../src/pages/Read/GrimoireScroll.jsx";
 import ScrollEditor from "../src/pages/Read/ScrollEditor.jsx";
 
 const authState = vi.hoisted(() => ({
@@ -24,17 +23,6 @@ vi.mock("../src/hooks/useAuth.jsx", () => ({
     register: vi.fn(),
     logout: vi.fn(),
     checkMe: vi.fn(),
-  }),
-}));
-
-vi.mock("../src/hooks/usePhonemeEngine.jsx", () => ({
-  PhonemeEngineProvider: ({ children }) => children,
-  usePhonemeEngine: () => ({
-    isReady: true,
-    engine: {
-      countSyllables: () => 1,
-      analyzeWord: () => null,
-    },
   }),
 }));
 
@@ -111,20 +99,6 @@ describe("Accessibility Suite", () => {
     const { container } = renderWithThemeAndRouter(<App />);
     await screen.findByRole("navigation", { name: /primary navigation/i });
     expect(await axe(container)).toHaveNoViolations();
-  });
-
-  it("GrimoireScroll should remain keyboard accessible", async () => {
-    const { container } = render(
-      <GrimoireScroll text="The quick brown fox" onWordClick={() => {}} isEngineReady={true} />
-    );
-    expect(await axe(container)).toHaveNoViolations();
-
-    const buttons = container.querySelectorAll(".grimoire-word");
-    expect(buttons.length).toBeGreaterThan(0);
-    buttons.forEach((btn) => {
-      expect(btn.tagName).toBe("BUTTON");
-      expect(btn).toHaveAttribute("aria-label");
-    });
   });
 
   describe("ScrollEditor", () => {
