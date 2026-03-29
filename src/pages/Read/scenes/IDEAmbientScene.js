@@ -26,7 +26,6 @@ export function buildAmbientScene(Phaser) {
       this._H = 0;
       this._bloom = null;
       this._motes = [];
-      this._arcContainers = [];
     }
 
     create() {
@@ -35,7 +34,6 @@ export function buildAmbientScene(Phaser) {
       this._initDotTexture();
       this._buildBloom();
       this._buildMotes();
-      this._buildCornerArcs();
     }
 
     _initDotTexture() {
@@ -103,57 +101,6 @@ export function buildAmbientScene(Phaser) {
       }
     }
 
-    _buildCornerArcs() {
-      for (const c of this._arcContainers) c?.destroy();
-      this._arcContainers = [];
-
-      const { _W: W, _H: H, _color: color } = this;
-      const r = Math.min(W, H) * 0.22;
-
-      [
-        { x: 0, y: 0, a: 0,             d: 1  },
-        { x: W, y: 0, a: Math.PI / 2,   d: -1 },
-        { x: W, y: H, a: Math.PI,        d: 1  },
-        { x: 0, y: H, a: Math.PI * 1.5, d: -1 },
-      ].forEach(({ x, y, a, d }, idx) => {
-        const container = this.add.container(x, y).setDepth(2).setAlpha(0.11);
-        const g = this.add.graphics();
-
-        // Outer arc
-        g.lineStyle(0.75, color, 0.8);
-        g.beginPath();
-        g.arc(0, 0, r, a + 0.06, a + Math.PI * 0.3, false);
-        g.strokePath();
-
-        // Inner echo arc
-        g.lineStyle(0.35, color, 0.4);
-        g.beginPath();
-        g.arc(0, 0, r * 0.68, a + 0.14, a + Math.PI * 0.22, false);
-        g.strokePath();
-
-        // Tick marks along the outer arc
-        for (let t = 0; t < 6; t++) {
-          const ta = a + 0.07 + (t / 5) * Math.PI * 0.27;
-          g.lineStyle(0.5, color, 0.55);
-          g.lineBetween(
-            Math.cos(ta) * r * 0.93, Math.sin(ta) * r * 0.93,
-            Math.cos(ta) * r * 1.0,  Math.sin(ta) * r * 1.0
-          );
-        }
-
-        container.add(g);
-        this._arcContainers.push(container);
-
-        this.tweens.add({
-          targets: container,
-          rotation: d * Math.PI * 2,
-          duration: 58000 + idx * 9500,
-          repeat: -1,
-          ease: 'Linear',
-        });
-      });
-    }
-
     update() {
       // Drift motes upward and wrap vertically
       for (const m of this._motes) {
@@ -175,7 +122,6 @@ export function buildAmbientScene(Phaser) {
       this._color = hexToNum(hex);
       this._buildBloom();
       this._buildMotes();
-      this._buildCornerArcs();
     }
   };
 }
