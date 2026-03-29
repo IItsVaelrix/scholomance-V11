@@ -25,9 +25,26 @@ DEFAULT_DB_PATH = "scholomance_corpus.sqlite"
 DEFAULT_DICT_PATH = "scholomance_dict.sqlite"
 MANUAL_CORPUS_PATH = "docs/references/DATA-SET 1.md"
 
-# Seed Project Gutenberg IDs
-# 84: Frankenstein, 43: Jekyll & Hyde, 1533: Macbeth, 100: Shakespeare Sonnets, 2701: Moby Dick, etc.
-GUTENBERG_SEEDS = [84, 43, 1533, 100, 2701, 11, 1342, 1661, 2591, 1524, 1112]
+# Expanded Gutenberg IDs (1850-1923 Prominent Authors)
+GUTENBERG_SEEDS = [
+    84, 43, 1533, 100, 2701, 11, 1342, 1661, 2591, 1524, 1112, # Original seeds
+    1400, 1023, 564, # Dickens (Great Expectations, Bleak House, Mystery of Edwin Drood)
+    174, 1002, 110, # Wilde (Dorian Gray, Happy Prince, Importance of Being Earnest)
+    76, 74, 86, # Twain (Huckleberry Finn, Tom Sawyer, Connecticut Yankee)
+    2600, 1032, 689, # Tolstoy (War and Peace, Anna Karenina, 23 Tales)
+    2554, 2632, 600, # Dostoevsky (Crime and Punishment, The Idiot, Notes from Underground)
+    71865, 30229, 1245, # Woolf (Mrs Dalloway, To the Lighthouse, A Room of One's Own - via IDs)
+    4300, 2814, 2805, # Joyce (Ulysses, Dubliners, Portrait of the Artist)
+    5200, 7837, # Kafka (Metamorphosis, The Trial)
+    1322, # Whitman (Leaves of Grass)
+    12242, # Dickinson (Poems)
+    17393, # Browning (Men and Women)
+    610, # Tennyson (Idylls of the King)
+    41, 42, # Mary Shelley (The Last Man, etc)
+    205, # Thoreau (Walden)
+    345, # Stoker (Dracula)
+    158, # Jane Austen (Emma)
+]
 
 def init_db(db_path, overwrite=False):
     if os.path.exists(db_path) and overwrite:

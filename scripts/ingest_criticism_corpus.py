@@ -48,6 +48,31 @@ CRITICISM_SOURCES = [
         "title": "Preface to Lyrical Ballads",
         "author": "William Wordsworth",
     },
+    {
+        "pg_id": 5676,
+        "title": "The Sacred Wood",
+        "author": "T.S. Eliot",
+    },
+    {
+        "pg_id": 64459,
+        "title": "The Common Reader",
+        "author": "Virginia Woolf",
+    },
+    {
+        "pg_id": 41162,
+        "title": "Instigations",
+        "author": "Ezra Pound",
+    },
+    {
+        "pg_id": 1459,
+        "title": "Prufrock and Other Observations",
+        "author": "T.S. Eliot",
+    },
+    {
+        "pg_id": 3026,
+        "title": "North of Boston",
+        "author": "Robert Frost",
+    }
 ]
 
 START_MARKERS = [
