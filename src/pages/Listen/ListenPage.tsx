@@ -1,36 +1,38 @@
 import { motion } from "framer-motion";
-import { ArcaneRadio } from "./ArcaneRadio";
+import { SignalChamberConsole } from "./SignalChamberConsole";
+import { AlchemicalLabBackground } from "./AlchemicalLabBackground";
 import "./ListenPage.css";
 
 /**
  * ListenPage — The Scholomance Signal Chamber.
- * Redesigned to feature the Arcane Radio and Crystal Ball.
+ * Immersive ritual cockpit based on Sonic Thaumaturgy console design.
  */
 export default function ListenPage() {
   return (
     <section className="section listen-page">
+      <AlchemicalLabBackground />
+      <div className="listen-background-fx" />
       <div className="container listen-shell">
         <header className="listen-header">
-          <div className="kicker">Aetheric Radio</div>
-          <h1 className="title">Scholomance Signal Chamber</h1>
+          <div className="kicker">Signal Chamber</div>
+          <h1 className="title">Sonic Thaumaturgy</h1>
           <p className="subtitle">
-            A dedicated ritual console for station control. The active ambience persists through every page except{" "}
-            <strong>Watch</strong>.
+            Aetheric ritual console. Tuning to specific phonemic anchors stabilizes the reality-grid.
           </p>
         </header>
 
-        <motion.div 
+        <motion.div
           className="listen-main-content"
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
-          <ArcaneRadio />
+          <SignalChamberConsole />
         </motion.div>
 
         <footer className="listen-footer">
           <p>
-            Current Signal: <strong>Stabilized</strong> | 
+            Current Signal: <strong>Stabilized</strong> |
             Protocol: <strong>Scholomance v11.3</strong>
           </p>
         </footer>
