@@ -1082,14 +1082,17 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
                         const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
                         const codexEntry = shouldColorWord ? (activeColorMap?.get(charStart) ?? null) : null;
-                        const color = shouldColorWord
-                          ? (codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
+                        // Only apply color when there is a direct scored entry in the colorMap.
+                        // shouldColorWord=true but no codexEntry means the word is a peer-family
+                        // broadening candidate — rendering it colored causes the "skittle effect"
+                        // on freeform prose where no strong rhyme connections exist.
+                        const hasScoredEntry = shouldColorWord && codexEntry !== null;
+                        const color = hasScoredEntry
+                          ? (codexEntry.color || activeColors[wordVowelFamily] || fallbackColor)
                           : undefined;
-                        const wordOpacity = shouldColorWord
-                          ? (codexEntry?.opacity ?? undefined)
-                          : undefined;
-                        const isMultiSyllable = shouldColorWord && codexEntry?.isMultiSyllable;
-                        const isRichMultiSyllable = shouldColorWord && (codexEntry?.syllablesMatched >= 3 || false);
+                        const wordOpacity = hasScoredEntry ? (codexEntry.opacity ?? undefined) : undefined;
+                        const isMultiSyllable = hasScoredEntry && codexEntry.isMultiSyllable;
+                        const isRichMultiSyllable = hasScoredEntry && (codexEntry.syllablesMatched >= 3 || false);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordPayload = {
@@ -1099,13 +1102,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
                           charStart,
                           charEnd,
-                          vowelFamily: shouldColorWord ? (wordVowelFamily || null) : null,
+                          vowelFamily: hasScoredEntry ? (wordVowelFamily || null) : null,
                           isStopWord,
                         };
 
                         const wordClassName = [
                           'truesight-word',
-                          shouldColorWord ? 'grimoire-word' : 'grimoire-word--grey',
+                          hasScoredEntry ? 'grimoire-word' : 'grimoire-word--grey',
                           isMultiSyllable ? 'word--multi-rhyme' : '',
                           isRichMultiSyllable ? 'word--multi-rhyme--rich' : '',
                           isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',

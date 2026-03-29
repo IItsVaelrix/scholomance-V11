@@ -12,8 +12,8 @@
   --editor-line-box: calc(var(--editor-content-font-size) * var(--editor-content-line-height));
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 48px);
-  height: calc(100vh - 48px);
+  min-height: calc(100dvh - 48px);
+  height: calc(100dvh - 48px);
   color: var(--read-text-strong);
   background: var(--bg-void, #090916);
   position: relative;
@@ -2032,8 +2032,8 @@
 
 @media (max-width: 960px) {
   .ide-layout-wrapper {
-    min-height: calc(100vh - 68px);
-    height: calc(100vh - 68px);
+    min-height: calc(100dvh - 68px);
+    height: calc(100dvh - 68px);
     padding: var(--space-4, 1rem) var(--space-3, 0.75rem);
   }
 
@@ -2692,6 +2692,39 @@
   .ide-layout-wrapper .toast-item {
     min-width: auto;
     font-size: var(--text-xs);
+  }
+
+  /* ── Mobile: Truesight word tap targets ──────────────────────────────────────
+     Interactive word buttons in Truesight mode can be too small to tap reliably
+     on touch screens. Expand their hit area via padding + negative margin so
+     the visual layout is unchanged but the touch target meets Apple HIG (44px).
+  */
+  .ide-layout-wrapper .grimoire-word--interactive,
+  .ide-layout-wrapper .truesight-word-token {
+    padding-top: 0.35em;
+    padding-bottom: 0.35em;
+    margin-top: -0.35em;
+    margin-bottom: -0.35em;
+    min-height: 2.2rem;
+    vertical-align: middle;
+  }
+
+  /* ── Mobile: Prevent iOS input zoom (font-size ≥ 16px) ─────────────────────
+     iOS zooms the viewport when an input/textarea is focused with font-size
+     below 16px. Force 16px minimum on all text inputs inside the IDE.
+  */
+  .ide-layout-wrapper .editor-textarea,
+  .ide-layout-wrapper .editor-title-input,
+  .ide-layout-wrapper input[type="text"],
+  .ide-layout-wrapper input[type="search"] {
+    font-size: max(1rem, var(--editor-content-font-size, 1rem));
+  }
+
+  /* ── Mobile: Safe area on editor wrapper ────────────────────────────────────
+     Ensure the editor doesn't underlap the home indicator on notched iPhones.
+  */
+  .ide-layout-wrapper--mobile {
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
   }
 }
 
