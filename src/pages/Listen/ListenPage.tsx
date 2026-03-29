@@ -13,14 +13,6 @@ export default function ListenPage() {
       <AlchemicalLabBackground />
       <div className="listen-background-fx" />
       <div className="container listen-shell">
-        <header className="listen-header">
-          <div className="kicker">Signal Chamber</div>
-          <h1 className="title">Sonic Thaumaturgy</h1>
-          <p className="subtitle">
-            Aetheric ritual console. Tuning to specific phonemic anchors stabilizes the reality-grid.
-          </p>
-        </header>
-
         <motion.div
           className="listen-main-content"
           initial={{ opacity: 0, y: 20 }}
