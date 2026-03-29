@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, beforeEach, afterEach, vi } from "vitest";
 import { usePanelAnalysis } from "../../../src/hooks/usePanelAnalysis.js";
 import {
   installPanelAnalysisFetchMock,

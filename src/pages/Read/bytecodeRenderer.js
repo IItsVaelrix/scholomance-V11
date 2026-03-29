@@ -96,7 +96,6 @@ export function synthesizeBytecodeFromLegacy(codexEntry, school) {
     syllablesMatched = 0,
     bestScore = 0,
     phoneticWeight = 0,
-    salience = 0,
     isAnchor = false,
     syntaxMultiplier = 1,
     color = null,
