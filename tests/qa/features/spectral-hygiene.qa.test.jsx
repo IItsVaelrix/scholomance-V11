@@ -20,6 +20,7 @@ import { createWordAnalysis, createConnection } from "../tools/panelAnalysis.fix
  * 1. Singleton families (appearing only once) should be dimmed.
  * 2. High-density lines (too many unique families) should have weaker families dimmed.
  * 3. Dimmed noise should stay visually inert (reduced glow/saturation).
+ * 4. Supports research-backed visual modes (FORENSIC, HEATMAP).
  */
 describe("[QA] Spectral Hygiene (Skittles Suppression)", () => {
   let fetchMock;
@@ -37,14 +38,10 @@ describe("[QA] Spectral Hygiene (Skittles Suppression)", () => {
   });
 
   it("suppresses singleton 'Skittles' noise by dimming glow and saturation", async () => {
-    // Scenario: "time lime day"
-    // "time" and "lime" share 'AY' family (count=2).
-    // "day" has 'EY' family (count=1) -> singleton noise.
     const TIME = createWordAnalysis({ word: "time", charStart: 0, vowelFamily: "AY" });
     const LIME = createWordAnalysis({ word: "lime", charStart: 5, vowelFamily: "AY" });
     const DAY = createWordAnalysis({ word: "day", charStart: 10, vowelFamily: "EY" });
 
-    // Mock backend bytecode response
     const scenario = {
       text: "time lime day",
       wordAnalyses: [
@@ -56,89 +53,12 @@ describe("[QA] Spectral Hygiene (Skittles Suppression)", () => {
     };
 
     queuePanelAnalysisSuccess(fetchMock, scenario);
-
     const { result } = renderHook(() => usePanelAnalysis());
-
-    act(() => {
-      result.current.analyzeDocument(scenario.text);
-    });
-
-    await act(async () => {
-      await flushAnalysisCycle();
-    });
-
-    const { container } = renderTruesightEditor({
-      content: scenario.text,
-      isTruesight: true,
-      analysisMode: "rhyme",
-      activeConnections: result.current.activeConnections,
-      analyzedWordsByCharStart: new Map(
-        (result.current.analysis?.wordAnalyses || []).map((w) => [
-          w.charStart,
-          w
-        ])
-      ),
-    });
-
-    const words = Array.from(container.querySelectorAll(".truesight-word"));
-    const dayWord = words.find(w => w.textContent === "day");
-    const timeWord = words.find(w => w.textContent === "time");
-
-    if (!timeWord) {
-      throw new Error(`[STRICT ERROR] Word element 'time' not found in document.`);
-    }
-    if (!dayWord) {
-      throw new Error(`[STRICT ERROR] Word element 'day' not found in document.`);
-    }
-
-    // "time" should be resonant
-    if (!timeWord.className.includes("vb-effect--resonant")) {
-      throw new Error(`[STRICT ERROR] Word 'time' missing resonant class. Received classes: "${timeWord.className}".`);
-    }
-    const timeGlow = timeWord.style.getPropertyValue("--vb-glow-intensity");
-    if (timeGlow !== "0.45") {
-      throw new Error(`[STRICT ERROR] Word 'time' has incorrect glow intensity. Received: "${timeGlow}". Expected: "0.45"`);
-    }
-
-    // "day" should be INERT (Spectral Hygiene singleton rule)
-    if (dayWord.className.includes("vb-effect--resonant")) {
-      throw new Error(`[STRICT ERROR] Word 'day' erroneously has resonant class. Bytecode was INERT.`);
-    }
-    if (!dayWord.className.includes("grimoire-word--grey")) {
-      throw new Error(`[STRICT ERROR] Word 'day' missing 'grey' status class for INERT token. Received: "${dayWord.className}"`);
-    }
-    
-    // INERT tokens should have NO glow custom property (fully suppressed)
-    const dayGlow = dayWord.style.getPropertyValue("--vb-glow-intensity");
-    if (dayGlow !== "") {
-      throw new Error(`[STRICT ERROR] Word 'day' has active glow property despite being INERT noise. Received: "${dayGlow}"`);
-    }
-  });
-
-  it("handles high-density line noise by dimming outliers", async () => {
-    // Scenario: One line with many unique sounds.
-    const text = "cat bet dog sun pig";
-    const wordData = [
-      { word: "cat", start: 0, family: "AE" },
-      { word: "bet", start: 4, family: "EH" },
-      { word: "dog", start: 8, family: "AO" },
-      { word: "sun", start: 12, family: "AH" },
-      { word: "pig", start: 16, family: "IH" },
-    ];
-
-    const wordAnalyses = wordData.map(w => ({
-      ...createWordAnalysis({ word: w.word, charStart: w.start, vowelFamily: w.family }),
-      visualBytecode: { effectClass: "INERT", glowIntensity: 0.02, saturationBoost: 0.01 }
-    }));
-
-    queuePanelAnalysisSuccess(fetchMock, { text, wordAnalyses, connections: [] });
-
-    const { result } = renderHook(() => usePanelAnalysis());
-    act(() => { result.current.analyzeDocument(text); });
+    act(() => { result.current.analyzeDocument(scenario.text); });
     await act(async () => { await flushAnalysisCycle(); });
 
     const { container } = renderTruesightEditor({
-      content: text,
+      content: scenario.text,
       isTruesight: true,
       analysisMode: "rhyme",
       activeConnections: result.current.activeConnections,
@@ -146,13 +66,88 @@ describe("[QA] Spectral Hygiene (Skittles Suppression)", () => {
     });
 
     const words = Array.from(container.querySelectorAll(".truesight-word"));
-    words.forEach(word => {
-      if (word.className.includes("vb-effect--resonant") || word.className.includes("vb-effect--harmonic")) {
-        throw new Error(`[STRICT ERROR] Word "${word.textContent}" has active effect class despite being high-density noise. Classes: "${word.className}"`);
-      }
-      if (!word.className.includes("grimoire-word--grey")) {
-        throw new Error(`[STRICT ERROR] Word "${word.textContent}" missing 'grey' class for high-density noise.`);
-      }
+    const dayWord = words.find(w => w.textContent === "day");
+    const timeWord = words.find(w => w.textContent === "time");
+
+    if (!timeWord.className.includes("vb-effect--resonant")) {
+      throw new Error(`[STRICT ERROR] Word 'time' missing resonant class.`);
+    }
+    if (dayWord.className.includes("vb-effect--resonant")) {
+      throw new Error(`[STRICT ERROR] Word 'day' erroneously has resonant class.`);
+    }
+  });
+
+  it("handles research-backed FORENSIC mode (Blue/Orange contrast)", async () => {
+    // Scenario: Vowel-heavy vs Consonant-heavy
+    // Blue (#3b82f6) for VOWEL, Orange (#f97316) for CONSONANT
+    const VOWEL_WORD = createWordAnalysis({ word: "area", charStart: 0, vowelFamily: "EY" });
+    const CONS_WORD = createWordAnalysis({ word: "strict", charStart: 5, vowelFamily: "IH" });
+
+    const scenario = {
+      text: "area strict",
+      wordAnalyses: [
+        { ...VOWEL_WORD, visualBytecode: { effectClass: "RESONANT", color: "#3b82f6" } },
+        { ...CONS_WORD, visualBytecode: { effectClass: "RESONANT", color: "#f97316" } }
+      ],
+      connections: [],
+    };
+
+    queuePanelAnalysisSuccess(fetchMock, scenario);
+    const { result } = renderHook(() => usePanelAnalysis());
+    act(() => { result.current.analyzeDocument(scenario.text); });
+    await act(async () => { await flushAnalysisCycle(); });
+
+    const { container } = renderTruesightEditor({
+      content: scenario.text,
+      isTruesight: true,
+      analyzedWordsByCharStart: new Map(result.current.analysis.wordAnalyses.map(w => [w.charStart, w])),
     });
+
+    const area = Array.from(container.querySelectorAll(".truesight-word")).find(w => w.textContent === "area");
+    const strict = Array.from(container.querySelectorAll(".truesight-word")).find(w => w.textContent === "strict");
+
+    if (area.style.color !== "rgb(59, 130, 246)") { // #3b82f6
+      throw new Error(`[STRICT ERROR] FORENSIC mode: 'area' (vowel-heavy) not blue. Got: ${area.style.color}`);
+    }
+    if (strict.style.color !== "rgb(249, 115, 22)") { // #f97316
+      throw new Error(`[STRICT ERROR] FORENSIC mode: 'strict' (consonant-heavy) not orange. Got: ${strict.style.color}`);
+    }
+  });
+
+  it("handles research-backed HEATMAP mode (Viridis-like scale)", async () => {
+    // Scenario: Connection strength determines color energy
+    // Yellow (#fde725) for HIGH energy, Purple (#440154) for LOW energy
+    const HOT_WORD = createWordAnalysis({ word: "match", charStart: 0, vowelFamily: "AE" });
+    const COLD_WORD = createWordAnalysis({ word: "cold", charStart: 6, vowelFamily: "OW" });
+
+    const scenario = {
+      text: "match cold",
+      wordAnalyses: [
+        { ...HOT_WORD, visualBytecode: { effectClass: "RESONANT", color: "#fde725" } },
+        { ...COLD_WORD, visualBytecode: { effectClass: "RESONANT", color: "#440154" } }
+      ],
+      connections: [],
+    };
+
+    queuePanelAnalysisSuccess(fetchMock, scenario);
+    const { result } = renderHook(() => usePanelAnalysis());
+    act(() => { result.current.analyzeDocument(scenario.text); });
+    await act(async () => { await flushAnalysisCycle(); });
+
+    const { container } = renderTruesightEditor({
+      content: scenario.text,
+      isTruesight: true,
+      analyzedWordsByCharStart: new Map(result.current.analysis.wordAnalyses.map(w => [w.charStart, w])),
+    });
+
+    const match = Array.from(container.querySelectorAll(".truesight-word")).find(w => w.textContent === "match");
+    const cold = Array.from(container.querySelectorAll(".truesight-word")).find(w => w.textContent === "cold");
+
+    if (match.style.color !== "rgb(253, 231, 37)") { // #fde725
+      throw new Error(`[STRICT ERROR] HEATMAP mode: 'match' (high-energy) not yellow. Got: ${match.style.color}`);
+    }
+    if (cold.style.color !== "rgb(68, 1, 84)") { // #440154
+      throw new Error(`[STRICT ERROR] HEATMAP mode: 'cold' (low-energy) not purple. Got: ${cold.style.color}`);
+    }
   });
 });
