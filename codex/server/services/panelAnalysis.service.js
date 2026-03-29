@@ -136,6 +136,7 @@ function buildAnalysisWordProfiles(analysis, syntaxLayer = null, verseIR = null)
         stressRole: String(syntaxToken?.stressRole || ''),
         rhymePolicy: String(syntaxToken?.rhymePolicy || ''),
         visualBytecode: verseToken?.visualBytecode || null,
+        trueVisionBytecode: verseToken?.trueVisionBytecode || null,
       });
     }
   }

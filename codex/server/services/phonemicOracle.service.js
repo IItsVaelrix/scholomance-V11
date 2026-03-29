@@ -172,6 +172,27 @@ function buildAmplifierInsight(verseIRAmplifier) {
   );
 }
 
+function buildTrueVisionInsight(verseIRAmplifier) {
+  const confidence = Number(verseIRAmplifier?.trueVision?.confidence) || 0;
+  const dominantBand = String(verseIRAmplifier?.trueVision?.dominantBand?.label || '').trim();
+  const salientWindows = Array.isArray(verseIRAmplifier?.trueVision?.salientWindows)
+    ? verseIRAmplifier.trueVision.salientWindows
+    : [];
+  if (!dominantBand || confidence < 0.45) {
+    return null;
+  }
+
+  return createInsight(
+    'truevision-lock',
+    'TECHNICAL',
+    `${dominantBand} is carrying the travelling-wave front-end. The verse is holding cochlear lock at ${(confidence * 100).toFixed(0)}% confidence.`,
+    salientWindows
+      .slice(0, 3)
+      .map((window) => `${String(window?.signature || 'window').slice(0, 48)}:${Number(window?.confidence || 0).toFixed(2)}`),
+    Math.max(0.05, confidence * 0.12)
+  );
+}
+
 async function buildDecaySuggestions(decayedDetails, { text, wordLookupService, lexiconAbyssService, log }) {
   const usedTokens = collectVerseTokens(text);
   const suggestions = [];
@@ -300,6 +321,11 @@ export function createPhonemicOracleService(options = {}) {
     const amplifierInsight = buildAmplifierInsight(verseIRAmplifier);
     if (amplifierInsight) {
       insights.push(amplifierInsight);
+    }
+
+    const trueVisionInsight = buildTrueVisionInsight(verseIRAmplifier);
+    if (trueVisionInsight) {
+      insights.push(trueVisionInsight);
     }
 
     let suggestions = [];

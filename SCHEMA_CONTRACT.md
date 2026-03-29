@@ -3,13 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.15** | Last updated: 2026-03-29
+**Version: 1.16** | Last updated: 2026-03-29
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
 
 ---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: VerseIR TrueVision travelling-wave contract
+- Version: 1.15 -> 1.16
+- Changed fields: `VerseTokenIR` now optionally exposes `visualBytecode` and `trueVisionBytecode`; `VerseIRAmplifierResult` may carry plugin `payload`; `VerseIRAmplifierPayload` and `VerseIR` can now optionally expose `trueVision`
+- Breaking: no
+- Claude impact: Read/editor surfaces can keep using `visualBytecode` and may optionally consume `trueVisionBytecode` / `trueVision` for deeper Truesight overlays later
+- Blackbox impact: VerseIR fixtures, panel-analysis fixtures, and serialization snapshots can include the new optional bytecode and TrueVision payloads
 
 ## SCHEMA CHANGE NOTICE
 
@@ -269,6 +278,66 @@ interface PhoneticDiagnosticTrail {
   notes: string[];
 }
 
+interface VerseTokenVisualBytecode {
+  version: number;
+  school: School | null;
+  rarity: string;
+  color: string;
+  glowIntensity: number;
+  saturationBoost: number;
+  syllableDepth: number;
+  isAnchor: boolean;
+  isStopWord: boolean;
+  effectClass: string;
+}
+
+interface VerseIRTrueVisionBand {
+  id: string;
+  label: string;
+  centerHz: number;
+  energy: number;
+}
+
+interface VerseIRTrueVisionTokenBytecode {
+  symbol: string;
+  dominantBand: string | null;
+  bandEnergy: number;
+  modulationDepth: number;
+  synchronousLock: number;
+  noiseFloor: number;
+  noiseSuppression: number;
+  confidence: number;
+  onsetSharpness: number;
+  codaDamping: number;
+  spectralTilt: number;
+  windowCoupling: number;
+}
+
+interface VerseIRTrueVisionWindowSummary {
+  windowId: number;
+  signature: string;
+  dominantBand: string | null;
+  tokenSpan: [number, number];
+  lineSpan: [number, number];
+  modulationDepth: number;
+  synchronousLock: number;
+  confidence: number;
+}
+
+interface VerseIRTrueVisionPayload {
+  version: string;
+  tokenCount: number;
+  trackedTokenCount: number;
+  dominantBand: VerseIRTrueVisionBand | null;
+  bandDistribution: VerseIRTrueVisionBand[];
+  synchronousLock: number;
+  modulationDepth: number;
+  noiseFloor: number;
+  noiseSuppression: number;
+  confidence: number;
+  salientWindows: VerseIRTrueVisionWindowSummary[];
+}
+
 interface VerseTokenIR {
   id: number;
   text: string;
@@ -300,6 +369,8 @@ interface VerseTokenIR {
     unknownPhonetics: boolean;
   };
   phoneticDiagnostics?: PhoneticDiagnosticTrail | null;
+  visualBytecode?: VerseTokenVisualBytecode | null;
+  trueVisionBytecode?: VerseIRTrueVisionTokenBytecode | null;
 }
 
 interface SyllableWindowIR {
@@ -373,6 +444,7 @@ interface VerseIRAmplifierResult {
   archetypes: VerseIRAmplifierArchetype[];
   diagnostics: Diagnostic[];
   commentary: string;
+  payload?: Record<string, unknown> | null;
 }
 
 interface VerseIRAmplifierPayload {
@@ -394,6 +466,7 @@ interface VerseIRAmplifierPayload {
     rare: VerseIRAmplifierMatch[];
     inexplicable: VerseIRAmplifierMatch[];
   };
+  trueVision?: VerseIRTrueVisionPayload | null;
   diagnostics: Diagnostic[];
   amplifiers: VerseIRAmplifierResult[];
 }
@@ -443,6 +516,7 @@ interface VerseIR {
   semanticDepth?: number;
   archetypeResonance?: VerseIRAmplifierArchetype[];
   elementMatches?: VerseIRAmplifierPayload["elementMatches"];
+  trueVision?: VerseIRTrueVisionPayload | null;
   verseIRAmplifier?: VerseIRAmplifierPayload | null;
   metadata: {
     mode: TruesightAnalysisMode;
@@ -1204,6 +1278,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.13 | 2026-03-28 | Added `OracleInsight`, `OracleSuggestion`, and `OraclePayload` plus optional analysis oracle commentary payloads | no |
 | 1.14 | 2026-03-28 | Hardened VerseIR with grapheme offsets, surface spans, normalization metadata, phonetic provenance, and applied window-limit metadata | no |
 | 1.15 | 2026-03-29 | Added optional `Scroll.submittedAt` so autosaved drafts can be distinguished from first-time submissions | no |
+| 1.16 | 2026-03-29 | Added VerseIR TrueVision travelling-wave payloads plus formalized token visual/trueVision bytecodes | no |
 
 ---
 

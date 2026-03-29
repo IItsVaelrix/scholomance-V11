@@ -38,6 +38,8 @@ function scoreVerseIRAmplifier(doc) {
 
   const dominantTier = tierLabel(payload?.dominantTier);
   const dominantArchetype = String(payload?.dominantArchetype?.label || '').trim();
+  const trueVisionBand = String(payload?.trueVision?.dominantBand?.label || '').trim();
+  const trueVisionConfidence = clamp01(Number(payload?.trueVision?.confidence) || 0);
   const matchLabels = collectMatchLabels(payload);
   const matchText = matchLabels.length > 0 ? matchLabels.join(', ') : 'no stable domains';
   const noveltySignal = clamp01(Number(payload?.noveltySignal) || 0);
@@ -50,8 +52,8 @@ function scoreVerseIRAmplifier(doc) {
     heuristic: 'verseir_amplifier',
     rawScore,
     explanation: dominantArchetype
-      ? `${dominantTier} synapse resonance leans toward ${dominantArchetype}. Domains: ${matchText}. Precision ${Math.round(clamp01(payload?.precisionScalar) * 100)}%.`
-      : `${dominantTier} synapse resonance surfaces through ${matchText}. Precision ${Math.round(clamp01(payload?.precisionScalar) * 100)}%.`,
+      ? `${dominantTier} synapse resonance leans toward ${dominantArchetype}. Domains: ${matchText}. Precision ${Math.round(clamp01(payload?.precisionScalar) * 100)}%.${trueVisionBand ? ` TrueVision tracks ${trueVisionBand} at ${Math.round(trueVisionConfidence * 100)}% confidence.` : ''}`
+      : `${dominantTier} synapse resonance surfaces through ${matchText}. Precision ${Math.round(clamp01(payload?.precisionScalar) * 100)}%.${trueVisionBand ? ` TrueVision tracks ${trueVisionBand} at ${Math.round(trueVisionConfidence * 100)}% confidence.` : ''}`,
     diagnostics,
   };
 }

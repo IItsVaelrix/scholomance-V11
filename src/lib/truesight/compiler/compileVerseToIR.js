@@ -3,7 +3,7 @@ import { normalizeVowelFamily } from '../../phonology/vowelFamily.js';
 import { LINE_TOKEN_REGEX, WORD_REGEX_GLOBAL, WORD_TOKEN_REGEX } from '../../wordTokenization.js';
 import { getTruesightAnalysisModeConfig, resolveTruesightAnalysisMode } from './analysisModes.js';
 
-export const VERSE_IR_VERSION = '1.1.0';
+export const VERSE_IR_VERSION = '1.2.0';
 
 const STOP_WORD_LIKE = new Set([
   'a', 'an', 'and', 'as', 'at', 'be', 'but', 'by', 'for', 'from', 'if',

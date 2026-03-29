@@ -1,4 +1,4 @@
-import { enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
+import { DEFAULT_VERSEIR_AMPLIFIERS, enhanceVerseIR } from '../../core/verseir-amplifier/index.js';
 
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_CACHE_MAX_ENTRIES = 250;
@@ -39,7 +39,7 @@ function buildCacheKey(verseIR, options) {
 
   const amplifiers = Array.isArray(options?.amplifiers) && options.amplifiers.length > 0
     ? options.amplifiers.map((amplifier, index) => String(amplifier?.id || amplifier?.label || `custom_${index + 1}`))
-    : ['common_elements', 'rare_elements', 'inexplicable_elements'];
+    : DEFAULT_VERSEIR_AMPLIFIERS.map((amplifier, index) => String(amplifier?.id || amplifier?.label || `default_${index + 1}`));
 
   return stableSerialize({
     version: verseIR.version || '',

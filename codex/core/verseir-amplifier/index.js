@@ -3,6 +3,7 @@ import { rareElementAmplifier } from './plugins/rareElements.js';
 import { inexplicableElementAmplifier } from './plugins/inexplicableElements.js';
 import { phoneticColorAmplifier } from './plugins/phoneticColor.js';
 import { lexicalResonanceAmplifier } from './plugins/lexicalResonance.js';
+import { travellingWaveFilterBankAmplifier } from './plugins/travellingWaveFilterBank.js';
 import {
   clamp01,
   collectVerseIRTokenStats,
@@ -23,6 +24,7 @@ const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
   phoneticColorAmplifier,
+  travellingWaveFilterBankAmplifier,
   lexicalResonanceAmplifier,
   commonElementAmplifier,
   rareElementAmplifier,
@@ -327,6 +329,22 @@ function normalizeAmplifierArchetype(archetype) {
   });
 }
 
+function freezeAmplifierPayload(value) {
+  if (Array.isArray(value)) {
+    return Object.freeze(value.map(freezeAmplifierPayload));
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.freeze(
+      Object.fromEntries(
+        Object.entries(value).map(([key, nestedValue]) => [key, freezeAmplifierPayload(nestedValue)])
+      )
+    );
+  }
+
+  return value;
+}
+
 function normalizeAmplifierDiagnostics(diagnostics, amplifierId) {
   return Object.freeze(
     (Array.isArray(diagnostics) ? diagnostics : [])
@@ -418,16 +436,37 @@ function normalizeAmplifierResult(rawResult, amplifier, index) {
   });
 
   if (rawResult?.tokenBytecodes instanceof Map) {
-    return Object.freeze({
+    const normalizedWithBytecodes = Object.freeze({
       ...normalized,
       tokenBytecodes: new Map(rawResult.tokenBytecodes),
     });
+    if (rawResult?.payload && typeof rawResult.payload === 'object') {
+      return Object.freeze({
+        ...normalizedWithBytecodes,
+        payload: freezeAmplifierPayload(rawResult.payload),
+      });
+    }
+    return normalizedWithBytecodes;
   }
 
   if (rawResult?.tokenBytecodes && typeof rawResult.tokenBytecodes === 'object') {
-    return Object.freeze({
+    const normalizedWithBytecodes = Object.freeze({
       ...normalized,
       tokenBytecodes: { ...rawResult.tokenBytecodes },
+    });
+    if (rawResult?.payload && typeof rawResult.payload === 'object') {
+      return Object.freeze({
+        ...normalizedWithBytecodes,
+        payload: freezeAmplifierPayload(rawResult.payload),
+      });
+    }
+    return normalizedWithBytecodes;
+  }
+
+  if (rawResult?.payload && typeof rawResult.payload === 'object') {
+    return Object.freeze({
+      ...normalized,
+      payload: freezeAmplifierPayload(rawResult.payload),
     });
   }
 
@@ -702,6 +741,7 @@ export async function runVerseIRAmplifiers(verseIR, options = {}) {
   const matchesByTier = freezeMatchesByTier(results);
   const archetypeResonance = mergeArchetypes(results, precisionScalar);
   const dominantArchetype = archetypeResonance[0] || null;
+  const trueVision = results.find((result) => result?.id === 'travelling_wave_filter_bank')?.payload || null;
 
   return Object.freeze({
     version: VERSEIR_AMPLIFIER_VERSION,
@@ -718,6 +758,7 @@ export async function runVerseIRAmplifiers(verseIR, options = {}) {
     dominantArchetype,
     archetypeResonance,
     elementMatches: matchesByTier,
+    trueVision,
     diagnostics: collectDiagnostics(results),
     amplifiers: results,
   });
@@ -737,20 +778,30 @@ export async function enhanceVerseIR(verseIR, options = {}) {
   // Extract authoritative bytecodes from the phonetic color amplifier
   const colorResult = (Array.isArray(verseIRAmplifier.amplifiers) ? verseIRAmplifier.amplifiers : [])
     .find((a) => a.id === 'phonetic_color');
-  const bytecodeMap = colorResult?.tokenBytecodes || new Map();
+  const trueVisionResult = (Array.isArray(verseIRAmplifier.amplifiers) ? verseIRAmplifier.amplifiers : [])
+    .find((a) => a.id === 'travelling_wave_filter_bank');
+  const colorBytecodeMap = colorResult?.tokenBytecodes || new Map();
+  const trueVisionBytecodeMap = trueVisionResult?.tokenBytecodes || new Map();
+  const trueVision = verseIRAmplifier?.trueVision && typeof verseIRAmplifier.trueVision === 'object'
+    ? Object.freeze(verseIRAmplifier.trueVision)
+    : null;
 
   // Attach bytecodes to tokens in a new frozen tokens array
   const enhancedTokens = Object.freeze(
     (Array.isArray(verseIR.tokens) ? verseIR.tokens : []).map((token) => {
-      const visualBytecode = bytecodeMap instanceof Map 
-        ? bytecodeMap.get(token.id) 
-        : bytecodeMap?.[token.id];
-      
-      if (!visualBytecode) return token;
+      const visualBytecode = colorBytecodeMap instanceof Map
+        ? colorBytecodeMap.get(token.id)
+        : colorBytecodeMap?.[token.id];
+      const trueVisionBytecode = trueVisionBytecodeMap instanceof Map
+        ? trueVisionBytecodeMap.get(token.id)
+        : trueVisionBytecodeMap?.[token.id];
+
+      if (!visualBytecode && !trueVisionBytecode) return token;
 
       return Object.freeze({
         ...token,
-        visualBytecode: Object.freeze(visualBytecode),
+        ...(visualBytecode ? { visualBytecode: Object.freeze(visualBytecode) } : {}),
+        ...(trueVisionBytecode ? { trueVisionBytecode: Object.freeze(trueVisionBytecode) } : {}),
       });
     })
   );
@@ -761,6 +812,7 @@ export async function enhanceVerseIR(verseIR, options = {}) {
     semanticDepth: verseIRAmplifier.semanticDepth,
     archetypeResonance: verseIRAmplifier.archetypeResonance,
     elementMatches: verseIRAmplifier.elementMatches,
+    ...(trueVision ? { trueVision } : {}),
     verseIRAmplifier,
   });
 }

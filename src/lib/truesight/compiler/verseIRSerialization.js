@@ -124,6 +124,8 @@ function serializeToken(token) {
         }
       : null,
     analysis: token?.analysis ? cloneJsonValue(token.analysis) : null,
+    visualBytecode: token?.visualBytecode ? cloneJsonValue(token.visualBytecode) : null,
+    trueVisionBytecode: token?.trueVisionBytecode ? cloneJsonValue(token.trueVisionBytecode) : null,
   };
 }
 
@@ -162,6 +164,8 @@ function hydrateToken(token) {
       : null,
     phoneticDiagnostics: token?.phoneticDiagnostics ? cloneJsonValue(token.phoneticDiagnostics) : null,
     analysis: token?.analysis ? cloneJsonValue(token.analysis) : null,
+    visualBytecode: token?.visualBytecode ? cloneJsonValue(token.visualBytecode) : null,
+    trueVisionBytecode: token?.trueVisionBytecode ? cloneJsonValue(token.trueVisionBytecode) : null,
   });
 }
 
@@ -261,6 +265,7 @@ export function serializeVerseIR(verseIR) {
     semanticDepth: typeof verseIR?.semanticDepth === 'number' ? verseIR.semanticDepth : undefined,
     archetypeResonance: verseIR?.archetypeResonance ? cloneJsonValue(verseIR.archetypeResonance) : undefined,
     elementMatches: verseIR?.elementMatches ? cloneJsonValue(verseIR.elementMatches) : undefined,
+    trueVision: verseIR?.trueVision ? cloneJsonValue(verseIR.trueVision) : undefined,
     verseIRAmplifier: verseIR?.verseIRAmplifier === undefined
       ? undefined
       : cloneJsonValue(verseIR.verseIRAmplifier),
@@ -380,6 +385,7 @@ export function deserializeVerseIR(payload) {
     semanticDepth: typeof payload?.semanticDepth === 'number' ? payload.semanticDepth : undefined,
     archetypeResonance: payload?.archetypeResonance ? cloneJsonValue(payload.archetypeResonance) : undefined,
     elementMatches: payload?.elementMatches ? cloneJsonValue(payload.elementMatches) : undefined,
+    trueVision: payload?.trueVision ? cloneJsonValue(payload.trueVision) : undefined,
     verseIRAmplifier: payload?.verseIRAmplifier === undefined
       ? undefined
       : cloneJsonValue(payload.verseIRAmplifier),
