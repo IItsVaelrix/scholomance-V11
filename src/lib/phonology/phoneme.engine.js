@@ -164,16 +164,18 @@ export const PhonemeEngine = {
       try {
         let dictRaw, rulesRaw;
 
-        if (typeof window === "undefined") {
+        const isServer = typeof window === "undefined" && typeof self === "undefined";
+
+        if (isServer) {
           // Server-side: Use fs to read from public folder
           const fs = await import("fs");
           const path = await import("path");
           const publicPath = path.join(globalThis.process.cwd(), "public");
-          
+
           dictRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "phoneme_dictionary_v2.json"), "utf8"));
           rulesRaw = JSON.parse(fs.readFileSync(path.join(publicPath, "rhyme_matching_rules_v2.json"), "utf8"));
         } else {
-          // Browser-side: Use fetch
+          // Browser-side (Main thread or Web Worker): Use fetch
           const [d, r] = await Promise.all([
             fetch("/phoneme_dictionary_v2.json").then((res) => res.json()),
             fetch("/rhyme_matching_rules_v2.json").then((res) => res.json()),
@@ -186,11 +188,11 @@ export const PhonemeEngine = {
         this.RULES_V2 = rulesRaw;
         await CmuPhonemeEngine.init();
         return this.DICT_V2?.vowel_families?.length || 8;
-      } catch (err) { 
-        if (typeof window === "undefined") {
+        } catch (err) {
+        const isServer = typeof window === "undefined" && typeof self === "undefined";
+        if (isServer) {
           console.error("[PhonemeEngine] Failed to load dictionaries on server:", err);
-        }
-        return 8; 
+        }        return 8; 
       }
     })();
 
