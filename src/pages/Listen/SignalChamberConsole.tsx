@@ -93,7 +93,7 @@ export const SignalChamberConsole: React.FC = () => {
           width:           CANVAS_W,
           height:          CANVAS_H,
         },
-        fps: { target: 60 },
+        fps: { target: 30 },
       });
 
       game.events.once('ready', () => {

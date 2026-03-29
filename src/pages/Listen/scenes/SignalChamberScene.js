@@ -67,7 +67,7 @@ const GAUGE_L  = { x: 510, y: 715, r: 54 };  // signal gauge
 const GAUGE_R  = { x: 1410, y: 715, r: 54 };  // volume gauge
 
 // BC: Bottom control strip — lower center inside console
-const CTRL     = { x: 960, y: 845, w: 460, h: 78 };
+const _CTRL    = { x: 960, y: 845, w: 460, h: 78 }; // reserved for future control plate ref
 const BTN_PLAY = { x: 855, y: 845, r: 34 };    // BC-02/03/04
 const VOL_SLD  = { x: 985, y: 845, w: 230, h: 8 }; // horizontal vol slider
 
@@ -583,7 +583,6 @@ export class SignalChamberScene extends Phaser.Scene {
   }
 
   _drawGaugeFaces() {
-    const ms = this._ms;
     this._drawGaugeFace(this._gauLFace, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, PAL.dimGold);
     this._drawGaugeFace(this._gauRFace, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, PAL.dimGold);
   }
@@ -1070,7 +1069,6 @@ export class SignalChamberScene extends Phaser.Scene {
       this._col        = this._hexToInt(data.schoolColor);
       this._inTransition = true;
       this._transAlpha = 0;
-      colChanged = true;
     }
 
     if (data.schoolId !== undefined) this._schoolId = data.schoolId;
@@ -1114,8 +1112,8 @@ export class SignalChamberScene extends Phaser.Scene {
     const scanRad = Phaser.Math.DegToRad(this._scanAngle - 90);
 
     this._rdScan.clear();
-    for (let i = 0; i < 22; i++) {
-      const fadeAlpha = (1 - i / 22) * (0.3 + sig * 0.35) * ta;
+    for (let i = 0; i < 14; i++) {
+      const fadeAlpha = (1 - i / 14) * (0.3 + sig * 0.35) * ta;
       const ang = scanRad - i * 0.011;
       this._rdScan.lineStyle(2, col, fadeAlpha);
       this._rdScan.lineBetween(cx, cy, cx + Math.cos(ang) * r, cy + Math.sin(ang) * r);
@@ -1148,7 +1146,7 @@ export class SignalChamberScene extends Phaser.Scene {
     this._rdWave.beginPath();
     const wLeft = cx - r * 0.9, wRight = cx + r * 0.9;
     let firstWave = true;
-    for (let wx = wLeft; wx <= wRight; wx += 2) {
+    for (let wx = wLeft; wx <= wRight; wx += 4) {
       const nx = (wx - wLeft) / (wRight - wLeft);
       const w1 = Math.sin(nx * Math.PI * 4 + time * 0.0048) * amp;
       const w2 = Math.sin(nx * Math.PI * 11 + time * 0.0085) * (amp * 0.22);
