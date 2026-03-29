@@ -13,6 +13,7 @@ import {
 } from './combatVoiceProfiles.service.js';
 import { createLexiconAbyssService } from './lexiconAbyss.service.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
+import { resolveRhymeAstrologyArtifactPaths } from '../utils/rhymeAstrologyPaths.js';
 
 function normalizeCombatText(rawText) {
   if (typeof rawText === 'string') return rawText;
@@ -21,9 +22,8 @@ function normalizeCombatText(rawText) {
 }
 
 const DEFAULT_CORPUS_PATH = path.resolve(process.cwd(), 'public', 'corpus.json');
-const DEFAULT_RHYME_ASTROLOGY_EMOTION_PRIORS_PATH = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology', 'rhyme_emotion_priors.json');
 
-function loadGutenbergEmotionPriors(priorsPath = DEFAULT_RHYME_ASTROLOGY_EMOTION_PRIORS_PATH) {
+function loadGutenbergEmotionPriors(priorsPath) {
   if (!priorsPath || !existsSync(priorsPath)) return null;
 
   try {
@@ -64,11 +64,19 @@ export function createCombatScoreService(options = {}) {
     abyssProvider: lexiconAbyssService.createHeuristicProvider(),
   });
   const corpusRanks = options.corpusRanks || loadCorpusRanks(options.corpusPath);
+  const rhymeAstrologyPaths = resolveRhymeAstrologyArtifactPaths({
+    outputDir: options.rhymeAstrologyOutputDir ?? process.env.RHYME_ASTROLOGY_OUTPUT_DIR,
+    emotionPriorsPath: options.rhymeEmotionPriorsPath ?? process.env.RHYME_EMOTION_PRIORS_PATH,
+    projectRoot: options.projectRoot,
+    persistentDataDir: options.persistentDataDir,
+    isProduction: options.isProduction,
+  });
+  const gutenbergEmotionPriors = options.gutenbergEmotionPriors
+    ?? loadGutenbergEmotionPriors(rhymeAstrologyPaths.emotionPriorsPath);
 
   async function scoreScroll(rawText, context = {}) {
     const scrollText = normalizeCombatText(rawText);
     const analyzedDoc = analyzeText(scrollText);
-    const gutenbergEmotionPriors = loadGutenbergEmotionPriors();
 
     const verseIR = await enhanceVerseIRWithServerPolicy(
       compileVerseToIR(scrollText, { mode: 'balanced' }),

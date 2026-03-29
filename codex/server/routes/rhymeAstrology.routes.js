@@ -1,4 +1,3 @@
-import path from 'path';
 import {
   RHYME_ASTROLOGY_QUERY_ROUTE,
   normalizeRhymeAstrologyQuery,
@@ -7,8 +6,7 @@ import {
 import { createRhymeAstrologyQueryEngine } from '../../runtime/rhyme-astrology/queryEngine.js';
 import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/lexiconRepo.js';
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
-
-const DEFAULT_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
+import { resolveRhymeAstrologyArtifactPaths } from '../utils/rhymeAstrologyPaths.js';
 const DEFAULT_CACHE_SIZE = 500;
 const DEFAULT_BUCKET_QUERY_CAP = 200;
 const DEFAULT_QUERY_MAX_CLUSTERS = 12;
@@ -22,28 +20,6 @@ function toPositiveInteger(value, fallback) {
   const numeric = Number(value);
   if (!Number.isInteger(numeric) || numeric <= 0) return fallback;
   return numeric;
-}
-
-/**
- * @param {string | null | undefined} value
- * @returns {string | null}
- */
-function toResolvedPath(value) {
-  if (typeof value !== 'string' || !value.trim()) return null;
-  return path.resolve(value.trim());
-}
-
-function resolveArtifactPaths(options) {
-  const outputDir = toResolvedPath(options.outputDir || process.env.RHYME_ASTROLOGY_OUTPUT_DIR)
-    || DEFAULT_OUTPUT_DIR;
-  return {
-    lexiconDbPath: toResolvedPath(options.lexiconDbPath || process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH)
-      || path.join(outputDir, 'rhyme_lexicon.sqlite'),
-    indexDbPath: toResolvedPath(options.indexDbPath || process.env.RHYME_ASTROLOGY_INDEX_DB_PATH)
-      || path.join(outputDir, 'rhyme_index.sqlite'),
-    edgesDbPath: toResolvedPath(options.edgesDbPath || process.env.RHYME_ASTROLOGY_EDGES_DB_PATH)
-      || path.join(outputDir, 'rhyme_edges.sqlite'),
-  };
 }
 
 /**
@@ -79,7 +55,14 @@ export async function rhymeAstrologyRoutes(fastify, options = {}) {
   let queryEngine = options.queryEngine || null;
 
   if (!queryEngine) {
-    const artifactPaths = resolveArtifactPaths(options);
+    const artifactPaths = resolveRhymeAstrologyArtifactPaths(options);
+    if (artifactPaths.usedExistingArtifactsFallback || artifactPaths.usedProductionPersistentFallback) {
+      fastify.log.warn({
+        configuredOutputDir: artifactPaths.configuredOutputDir,
+        resolvedOutputDir: artifactPaths.outputDir,
+        candidateOutputDirs: artifactPaths.candidateOutputDirs,
+      }, '[RhymeAstrologyRoute] Falling back to detected artifact bundle.');
+    }
     const lexiconRepo = createRhymeAstrologyLexiconRepo(artifactPaths.lexiconDbPath, {
       log: fastify.log,
     });

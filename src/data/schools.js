@@ -44,7 +44,7 @@ export const SCHOOLS = {
     id: "SONIC",
     name: "Sonic Thaumaturgy",
     color: "#a855f7", // Distinctive Purple
-    colorHsl: { h: 270, s: 90, l: 65 },
+    colorHsl: { h: 275, s: 85, l: 55 },
     angle: 288,
     unlockXP: 0,
     description: "The art of sonic manipulation and harmonic resonance",
@@ -62,7 +62,7 @@ export const SCHOOLS = {
     id: "PSYCHIC",
     name: "Psychic Schism",
     color: "#3b82f6", // Distinctive Blue
-    colorHsl: { h: 217, s: 91, l: 60 },
+    colorHsl: { h: 220, s: 90, l: 60 },
     angle: 72,
     unlockXP: 250,
     description: "Mental discipline and psychic energy projection",
@@ -80,7 +80,7 @@ export const SCHOOLS = {
     id: "VOID",
     name: "The Void",
     color: "#94a3b8", // Neutral Slate/Grey
-    colorHsl: { h: 215, s: 15, l: 65 },
+    colorHsl: { h: 215, s: 15, l: 41 },
     angle: 0,
     unlockXP: 1500,
     description: "The space between spaces, where entropy reigns",
@@ -98,7 +98,7 @@ export const SCHOOLS = {
     id: "ALCHEMY",
     name: "Verbal Alchemy",
     color: "#ec4899", // Distinctive Pink
-    colorHsl: { h: 330, s: 81, l: 60 },
+    colorHsl: { h: 325, s: 80, l: 58 },
     angle: 144,
     unlockXP: 8000,
     description: "The transmutation of meaning through spoken word",
@@ -116,7 +116,7 @@ export const SCHOOLS = {
     id: "WILL",
     name: "Willpower Surge",
     color: "#ef4444", // Distinctive Red
-    colorHsl: { h: 0, s: 84, l: 60 },
+    colorHsl: { h: 0, s: 85, l: 48 },
     angle: 216,
     unlockXP: 25000,
     description: "Focusing raw will into reality-altering force",
@@ -136,7 +136,7 @@ export const SCHOOLS = {
     id: "NECROMANCY",
     name: "Necromancy",
     color: "#22c55e", // Distinctive Green
-    colorHsl: { h: 142, s: 70, l: 45 },
+    colorHsl: { h: 120, s: 75, l: 40 },
     angle: 36,
     unlockXP: 100000,
     description: "Communication with and manipulation of life force",
@@ -154,7 +154,7 @@ export const SCHOOLS = {
     id: "ABJURATION",
     name: "Abjuration",
     color: "#06b6d4", // Distinctive Cyan
-    colorHsl: { h: 188, s: 90, l: 45 },
+    colorHsl: { h: 180, s: 80, l: 68 },
     angle: 108,
     unlockXP: 500000,
     description: "Protective magic and negation of effects",
@@ -172,7 +172,7 @@ export const SCHOOLS = {
     id: "DIVINATION",
     name: "Divination",
     color: "#eab308", // Distinctive Gold/Yellow
-    colorHsl: { h: 45, s: 93, l: 47 },
+    colorHsl: { h: 45, s: 90, l: 68 },
     angle: 180,
     unlockXP: 2000000,
     description: "Seeing across time and space",

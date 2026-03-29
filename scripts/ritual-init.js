@@ -2,15 +2,28 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseBooleanFlag } from '../codex/server/utils/envFlags.js';
+import {
+  hasRhymeAstrologyArtifactBundle,
+  resolveRhymeAstrologyArtifactPaths,
+} from '../codex/server/utils/rhymeAstrologyPaths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = path.resolve(__dirname, '..');
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const ENABLE_RHYME_ASTROLOGY = parseBooleanFlag(process.env.ENABLE_RHYME_ASTROLOGY, false);
 
 // Production persistent disk paths
-const DATA_DIR = process.env.NODE_ENV === 'production' ? '/var/data' : PROJECT_ROOT;
+const DATA_DIR = IS_PRODUCTION ? '/var/data' : PROJECT_ROOT;
 const DICT_PATH = path.join(DATA_DIR, 'scholomance_dict.sqlite');
 const CORPUS_PATH = path.join(DATA_DIR, 'scholomance_corpus.sqlite');
 const OEWN_XML_PATH = path.join(PROJECT_ROOT, 'english-wordnet-2024.xml.gz');
+const RHYME_ASTROLOGY_PATHS = resolveRhymeAstrologyArtifactPaths({
+  projectRoot: PROJECT_ROOT,
+  isProduction: IS_PRODUCTION,
+});
+const RHYME_ASTROLOGY_READY = () => hasRhymeAstrologyArtifactBundle(RHYME_ASTROLOGY_PATHS)
+  && existsSync(RHYME_ASTROLOGY_PATHS.emotionPriorsPath);
 
 // 1. Ensure /var/data/audio exists
 const AUDIO_DIR = path.join(DATA_DIR, 'audio');
@@ -19,10 +32,15 @@ if (!existsSync(AUDIO_DIR)) {
   mkdirSync(AUDIO_DIR, { recursive: true });
 }
 
-function runCommand(command, args) {
+function runCommand(command, args, options = {}) {
   return new Promise((resolve, reject) => {
     console.log(`[RITUAL] Executing: ${command} ${args.join(' ')}`);
-    const proc = spawn(command, args, { stdio: 'inherit', shell: true });
+    const proc = spawn(command, args, {
+      stdio: 'inherit',
+      shell: true,
+      cwd: options.cwd || PROJECT_ROOT,
+      env: options.env || process.env,
+    });
     proc.on('close', (code) => {
       if (code === 0) resolve();
       else reject(new Error(`${command} exited with code ${code}`));
@@ -74,6 +92,38 @@ async function main() {
     }
   } else {
     console.log('[RITUAL] Super Corpus already exists on persistent storage.');
+  }
+
+  // 3. Rhyme Astrology artifact initialization
+  if (ENABLE_RHYME_ASTROLOGY) {
+    if (RHYME_ASTROLOGY_PATHS.usedExistingArtifactsFallback || RHYME_ASTROLOGY_PATHS.usedProductionPersistentFallback) {
+      console.warn(
+        `[RITUAL] Rhyme Astrology output fallback engaged.` +
+        ` configured=${RHYME_ASTROLOGY_PATHS.configuredOutputDir || 'unset'}` +
+        ` resolved=${RHYME_ASTROLOGY_PATHS.outputDir}`
+      );
+    }
+
+    if (!RHYME_ASTROLOGY_READY()) {
+      console.log(`[RITUAL] Rhyme Astrology artifacts missing. Building into ${RHYME_ASTROLOGY_PATHS.outputDir}...`);
+      try {
+        mkdirSync(RHYME_ASTROLOGY_PATHS.outputDir, { recursive: true });
+        await runCommand(process.execPath, ['scripts/buildRhymeAstrologyIndex.js'], {
+          env: {
+            ...process.env,
+            SCHOLOMANCE_DICT_PATH: DICT_PATH,
+            SCHOLOMANCE_CORPUS_PATH: CORPUS_PATH,
+            RHYME_ASTROLOGY_OUTPUT_DIR: RHYME_ASTROLOGY_PATHS.outputDir,
+          },
+        });
+      } catch (err) {
+        console.error('[RITUAL] Rhyme Astrology artifact build failed:', err.message);
+      }
+    } else {
+      console.log(`[RITUAL] Rhyme Astrology artifacts already exist at ${RHYME_ASTROLOGY_PATHS.outputDir}.`);
+    }
+  } else {
+    console.log('[RITUAL] Rhyme Astrology initialization skipped; feature flag is disabled.');
   }
 
   console.log('[RITUAL] Initialization Complete. Launching Scholomance CODEx.');

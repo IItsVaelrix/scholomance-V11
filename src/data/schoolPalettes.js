@@ -3,69 +3,67 @@ import {
   resolveVerseIrColor,
   VERSE_IR_PALETTE_FAMILIES,
 } from '../lib/truesight/color/pcaChroma.js';
+import palettePayload from '../../verseir_palette_payload.json';
 
 /**
- * Universal Phonetic Teaching Palette.
- * Maps every vowel family to a PERMANENT distinctive color based on its native school.
- * This consistency allows the user to learn that "Blue = Psychic family", etc.
+ * Universal Biophysical Teaching Palette.
+ * Maps every vowel family to its PERMANENT distinctive color derived from its native school.
+ * Consistency is key for phonetic learning: "Red always means WILL family", etc.
  */
-
-function buildVowelPalette(activeSkinId, theme = 'dark') {
-  const palette = {};
-  const activeSkin = String(activeSkinId || 'DEFAULT').toUpperCase();
-
+function buildUniversalVowelPalette(theme = 'dark') {
+  const result = {};
+  
   VERSE_IR_PALETTE_FAMILIES.forEach((family) => {
-    const nativeSchoolId = VOWEL_FAMILY_TO_SCHOOL[family] || 'DEFAULT';
-    const school = SCHOOLS[nativeSchoolId] || SCHOOLS.SONIC;
+    const nativeSchoolId = VOWEL_FAMILY_TO_SCHOOL[family] || 'VOID';
+    // Access the authoritative biophysical color from the Python engine payload
+    const schoolColors = palettePayload[nativeSchoolId] || palettePayload.VOID;
+    const vowelData = schoolColors[family] || schoolColors.AX;
     
-    // Base color from the native school (The 'Learning' color)
-    let color = school.color;
+    // We use the HSL from the payload to ensure biophysical accuracy
+    const { hue, metrics = {} } = vowelData;
+    const { spreadNorm = 0.5, sharpnessNorm = 0.5 } = metrics;
 
-    // Thematic Resonance: If the vowel belongs to the active skin, make it more vibrant.
-    // Otherwise, keep it as the clear native color but slightly more ambient.
-    if (activeSkin !== 'DEFAULT' && activeSkin !== 'NONE') {
-      const isNativeToSkin = nativeSchoolId === activeSkin;
-      
-      if (!isNativeToSkin) {
-        // Not native: slightly desaturate/dim to let the skin's core vowels pop
-        // but keep the HUE distinctive for learning.
-        const { h, s, l } = school.colorHsl;
-        color = `hsl(${h}, ${Math.max(15, s - 30)}%, ${theme === 'dark' ? Math.max(25, l - 15) : Math.min(85, l + 15)}%)`;
-      } else {
-        // Native: ensure maximum vibrancy and brightness
-        const { h, s, l } = school.colorHsl;
-        color = `hsl(${h}, ${Math.min(100, s + 10)}%, ${theme === 'dark' ? Math.min(85, l + 10) : Math.max(20, l - 10)}%)`;
-      }
-    }
-
-    palette[family] = color;
+    const saturation = nativeSchoolId === 'VOID' ? 15 : 85;
+    
+    // Identical lightness logic to phoneticColor.js for 100% fidelity
+    const lightness = theme === 'dark' 
+      ? 60 - (spreadNorm * 5) + (sharpnessNorm * 5)
+      : 45 + (spreadNorm * 5);
+    
+    result[family] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   });
-
-  return Object.freeze(palette);
+  
+  return Object.freeze(result);
 }
 
-/** Rainbow fallback - resolved through each vowel family's mapped school basis. */
-export const DEFAULT_VOWEL_COLORS = buildVowelPalette('DEFAULT', 'dark');
-const DEFAULT_LIGHT_COLORS = buildVowelPalette('DEFAULT', 'light');
+/** The authoritative 7-color phonetic rainbow. */
+export const DEFAULT_VOWEL_COLORS = buildUniversalVowelPalette('dark');
+const DEFAULT_LIGHT_COLORS = buildUniversalVowelPalette('light');
+
+/** 
+ * School skins now all use the SAME universal vowel colors to ensure
+ * phonetic consistency. The "Skin" aspect is handled via UI variables
+ * and localized resonance (glow/vibrancy) in the renderer.
+ */
+const UNIVERSAL_SKINS = Object.freeze(Object.fromEntries(
+  ['DEFAULT', ...Object.keys(SCHOOLS)].map(id => [id, DEFAULT_VOWEL_COLORS])
+));
+
+const UNIVERSAL_SKINS_LIGHT = Object.freeze(Object.fromEntries(
+  ['DEFAULT', ...Object.keys(SCHOOLS)].map(id => [id, DEFAULT_LIGHT_COLORS])
+));
 
 /** All school skins - dark mode. */
-export const SCHOOL_SKINS = Object.freeze(Object.fromEntries(
-  ['DEFAULT', ...Object.keys(SCHOOLS)].map(id => [id, buildVowelPalette(id, 'dark')])
-));
+export const SCHOOL_SKINS = UNIVERSAL_SKINS;
 
 /** All school skins - light mode. */
-export const SCHOOL_SKINS_LIGHT = Object.freeze(Object.fromEntries(
-  ['DEFAULT', ...Object.keys(SCHOOLS)].map(id => [id, buildVowelPalette(id, 'light')])
-));
+export const SCHOOL_SKINS_LIGHT = UNIVERSAL_SKINS_LIGHT;
 
 /**
  * Returns the vowel color map for a given school skin, theme-aware.
  */
 export function getVowelColorsForSchool(school, theme = 'dark') {
-  const skins = theme === 'light' ? SCHOOL_SKINS_LIGHT : SCHOOL_SKINS;
-  const defaults = theme === 'light' ? DEFAULT_LIGHT_COLORS : DEFAULT_VOWEL_COLORS;
-  const schoolId = String(school || 'DEFAULT').trim().toUpperCase() || 'DEFAULT';
-  return skins[schoolId] || defaults;
+  return theme === 'light' ? DEFAULT_LIGHT_COLORS : DEFAULT_VOWEL_COLORS;
 }
 
 /**

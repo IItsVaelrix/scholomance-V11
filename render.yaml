@@ -18,6 +18,8 @@ services:
         value: /var/data/scholomance_dict.sqlite
       - key: SCHOLOMANCE_CORPUS_PATH
         value: /var/data/scholomance_corpus.sqlite
+      - key: RHYME_ASTROLOGY_OUTPUT_DIR
+        value: /var/data/rhyme-astrology
       - key: USER_DB_PATH
         value: /var/data/scholomance_user.sqlite
       - key: COLLAB_DB_PATH

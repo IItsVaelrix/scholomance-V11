@@ -2,14 +2,10 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import PropTypes from "prop-types";
 import { VOWEL_FAMILY_TO_SCHOOL, SCHOOLS } from "../data/schools.js";
+import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
+import { useTheme } from "../hooks/useTheme.jsx";
 import "./VowelFamilyPanel.css";
-
-function getSchoolColor(familyId) {
-  const normalized = normalizeVowelFamily(familyId);
-  const schoolId = normalized ? VOWEL_FAMILY_TO_SCHOOL[normalized] : null;
-  return SCHOOLS[schoolId]?.color || "#94a3b8";
-}
 
 function getSchoolName(familyId) {
   const normalized = normalizeVowelFamily(familyId);
@@ -18,6 +14,13 @@ function getSchoolName(familyId) {
 }
 
 export default function VowelFamilyPanel({ visible, families, totalWords, uniqueWords, isEmbedded }) {
+  const { theme } = useTheme();
+  
+  const vowelColors = useMemo(
+    () => getVowelColorsForSchool('DEFAULT', theme),
+    [theme]
+  );
+
   const topFamilies = useMemo(
     () => (Array.isArray(families) ? families.slice(0, 8) : []),
     [families]
@@ -45,7 +48,7 @@ export default function VowelFamilyPanel({ visible, families, totalWords, unique
       ) : (
         <div className="vfp-families">
           {topFamilies.map((family) => {
-            const color = getSchoolColor(family.id);
+            const color = vowelColors[family.id] || "#94a3b8";
             const schoolName = getSchoolName(family.id);
             const pct = Math.round((family.percent || 0) * 100);
             return (

@@ -4,7 +4,6 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs';
-import path from 'path';
 import { analyzeText } from '../../core/analysis.pipeline.js';
 import { createDefaultScoringEngine } from '../../core/scoring.defaults.js';
 import { buildPlsPhoneticFeatures } from '../../core/rhyme-astrology/scoring.js';
@@ -24,6 +23,7 @@ import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/in
 import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
 import { createNarrativeAMPService } from './narrativeAMP.service.js';
+import { resolveRhymeAstrologyArtifactPaths } from '../utils/rhymeAstrologyPaths.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
   families: [],
@@ -31,7 +31,6 @@ const EMPTY_VOWEL_SUMMARY = Object.freeze({
   uniqueWords: 0,
 });
 
-const DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR = path.resolve(process.cwd(), 'dict_data', 'rhyme-astrology');
 const DEFAULT_RHYME_ASTROLOGY_ANCHOR_LIMIT = 14;
 const DEFAULT_RHYME_ASTROLOGY_MATCH_LIMIT = 6;
 const DEFAULT_RHYME_ASTROLOGY_MIN_SCORE = 0.35;
@@ -39,7 +38,6 @@ const DEFAULT_RHYME_ASTROLOGY_MAX_CLUSTERS = 4;
 const DEFAULT_RHYME_ASTROLOGY_BUCKET_CAP = 200;
 const DEFAULT_RHYME_ASTROLOGY_CACHE_SIZE = 500;
 const DEFAULT_RHYME_ASTROLOGY_WINDOW_LIMIT = 12;
-const DEFAULT_RHYME_EMOTION_PRIORS_PATH = path.resolve(DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_emotion_priors.json');
 
 function parsePositiveInt(value, fallback) {
   const parsed = Number(value);
@@ -53,13 +51,6 @@ function parseScore(value, fallback) {
   if (parsed < 0) return 0;
   if (parsed > 1) return 1;
   return parsed;
-}
-
-function resolveArtifactPath(rawPath, fallbackPath) {
-  if (typeof rawPath === 'string' && rawPath.trim()) {
-    return path.resolve(rawPath.trim());
-  }
-  return fallbackPath;
 }
 
 function loadGutenbergEmotionPriors(priorsPath, log) {
@@ -625,28 +616,18 @@ export function createPanelAnalysisService(options = {}) {
     options.rhymeAstrologyMinScore ?? process.env.RHYME_ASTROLOGY_PANEL_MIN_SCORE,
     DEFAULT_RHYME_ASTROLOGY_MIN_SCORE
   );
-  const rhymeAstrologyOutputDir = resolveArtifactPath(
-    options.rhymeAstrologyOutputDir ?? process.env.RHYME_ASTROLOGY_OUTPUT_DIR,
-    DEFAULT_RHYME_ASTROLOGY_OUTPUT_DIR
-  );
-  const rhymeAstrologyLexiconDbPath = resolveArtifactPath(
-    options.rhymeAstrologyLexiconDbPath ?? process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH,
-    path.join(rhymeAstrologyOutputDir, 'rhyme_lexicon.sqlite')
-  );
-  const rhymeAstrologyIndexDbPath = resolveArtifactPath(
-    options.rhymeAstrologyIndexDbPath ?? process.env.RHYME_ASTROLOGY_INDEX_DB_PATH,
-    path.join(rhymeAstrologyOutputDir, 'rhyme_index.sqlite')
-  );
-  const rhymeAstrologyEdgesDbPath = resolveArtifactPath(
-    options.rhymeAstrologyEdgesDbPath ?? process.env.RHYME_ASTROLOGY_EDGES_DB_PATH,
-    path.join(rhymeAstrologyOutputDir, 'rhyme_edges.sqlite')
-  );
-  const rhymeEmotionPriorsPath = resolveArtifactPath(
-    options.rhymeEmotionPriorsPath ?? process.env.RHYME_EMOTION_PRIORS_PATH,
-    DEFAULT_RHYME_EMOTION_PRIORS_PATH
-  );
+  const rhymeAstrologyPaths = resolveRhymeAstrologyArtifactPaths({
+    outputDir: options.rhymeAstrologyOutputDir ?? process.env.RHYME_ASTROLOGY_OUTPUT_DIR,
+    lexiconDbPath: options.rhymeAstrologyLexiconDbPath ?? process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH,
+    indexDbPath: options.rhymeAstrologyIndexDbPath ?? process.env.RHYME_ASTROLOGY_INDEX_DB_PATH,
+    edgesDbPath: options.rhymeAstrologyEdgesDbPath ?? process.env.RHYME_ASTROLOGY_EDGES_DB_PATH,
+    emotionPriorsPath: options.rhymeEmotionPriorsPath ?? process.env.RHYME_EMOTION_PRIORS_PATH,
+    projectRoot: options.projectRoot,
+    persistentDataDir: options.persistentDataDir,
+    isProduction: options.isProduction,
+  });
   const gutenbergEmotionPriors = options.gutenbergEmotionPriors
-    ?? loadGutenbergEmotionPriors(rhymeEmotionPriorsPath, log);
+    ?? loadGutenbergEmotionPriors(rhymeAstrologyPaths.emotionPriorsPath, log);
 
   const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
   let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
@@ -658,10 +639,17 @@ export function createPanelAnalysisService(options = {}) {
   const ownsNarrativeAMPService = !options.narrativeAMPService && !options.phonemicOracleService;
 
   if (!rhymeAstrologyQueryEngine && enableRhymeAstrology) {
-    const lexiconRepo = createRhymeAstrologyLexiconRepo(rhymeAstrologyLexiconDbPath, { log });
+    if (rhymeAstrologyPaths.usedExistingArtifactsFallback || rhymeAstrologyPaths.usedProductionPersistentFallback) {
+      log?.warn?.({
+        configuredOutputDir: rhymeAstrologyPaths.configuredOutputDir,
+        resolvedOutputDir: rhymeAstrologyPaths.outputDir,
+        candidateOutputDirs: rhymeAstrologyPaths.candidateOutputDirs,
+      }, '[PanelAnalysisService] Falling back to detected rhyme-astrology artifact bundle.');
+    }
+    const lexiconRepo = createRhymeAstrologyLexiconRepo(rhymeAstrologyPaths.lexiconDbPath, { log });
     const indexRepo = createRhymeAstrologyIndexRepo({
-      indexDbPath: rhymeAstrologyIndexDbPath,
-      edgesDbPath: rhymeAstrologyEdgesDbPath,
+      indexDbPath: rhymeAstrologyPaths.indexDbPath,
+      edgesDbPath: rhymeAstrologyPaths.edgesDbPath,
       log,
     });
     rhymeAstrologyQueryEngine = createRhymeAstrologyQueryEngine({

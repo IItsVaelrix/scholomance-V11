@@ -1,978 +1,2098 @@
 {
-  "SONIC": {
-    "IY": {
-      "hex": "hsl(176, 65%, 75%)",
-      "bytecode": "0x10e08f20b0",
-      "hue": 176,
-      "mass": 25
-    },
-    "IH": {
-      "hex": "hsl(175, 55%, 66%)",
-      "bytecode": "0x18607c60af",
-      "hue": 175,
-      "mass": 34
-    },
-    "EY": {
-      "hex": "hsl(174, 55%, 57%)",
-      "bytecode": "0x21207300ae",
-      "hue": 174,
-      "mass": 43
-    },
-    "EH": {
-      "hex": "hsl(174, 55%, 51%)",
-      "bytecode": "0x26206b80ae",
-      "hue": 174,
-      "mass": 49
-    },
-    "AE": {
-      "hex": "hsl(173, 55%, 35%)",
-      "bytecode": "0x35c060e0ad",
-      "hue": 173,
-      "mass": 65
-    },
-    "AA": {
-      "hex": "hsl(170, 65%, 43%)",
-      "bytecode": "0x2da04420aa",
-      "hue": 170,
-      "mass": 57
-    },
-    "AH": {
-      "hex": "hsl(171, 55%, 49%)",
-      "bytecode": "0x28004a60ab",
-      "hue": 171,
-      "mass": 51
-    },
-    "AO": {
-      "hex": "hsl(168, 55%, 54%)",
-      "bytecode": "0x23a03480a8",
-      "hue": 168,
-      "mass": 46
-    },
-    "OW": {
-      "hex": "hsl(170, 55%, 62%)",
-      "bytecode": "0x1cc044c0aa",
-      "hue": 170,
-      "mass": 38
-    },
-    "UH": {
-      "hex": "hsl(170, 55%, 63%)",
-      "bytecode": "0x1b803fc0aa",
-      "hue": 170,
-      "mass": 37
-    },
-    "UW": {
-      "hex": "hsl(169, 65%, 72%)",
-      "bytecode": "0x12c03660a9",
-      "hue": 169,
-      "mass": 28
-    },
-    "ER": {
-      "hex": "hsl(172, 55%, 60%)",
-      "bytecode": "0x1ea05460ac",
-      "hue": 172,
-      "mass": 40
-    },
-    "AX": {
-      "hex": "hsl(173, 55%, 59%)",
-      "bytecode": "0x1f405dc0ad",
-      "hue": 173,
-      "mass": 41
-    },
-    "AY": {
-      "hex": "hsl(174, 55%, 48%)",
-      "bytecode": "0x29406b80ae",
-      "hue": 174,
-      "mass": 52
-    },
-    "AW": {
-      "hex": "hsl(172, 55%, 41%)",
-      "bytecode": "0x2f805280ac",
-      "hue": 172,
-      "mass": 59
-    },
-    "OY": {
-      "hex": "hsl(170, 55%, 59%)",
-      "bytecode": "0x1f403e80aa",
-      "hue": 170,
-      "mass": 41
-    },
-    "UR": {
-      "hex": "hsl(171, 55%, 62%)",
-      "bytecode": "0x1c204b00ab",
-      "hue": 171,
-      "mass": 38
-    },
-    "OH": {
-      "hex": "hsl(169, 55%, 56%)",
-      "bytecode": "0x22603b60a9",
-      "hue": 169,
-      "mass": 44
-    },
-    "OO": {
-      "hex": "hsl(169, 55%, 66%)",
-      "bytecode": "0x19003840a9",
-      "hue": 169,
-      "mass": 34
-    },
-    "YUW": {
-      "hex": "hsl(174, 55%, 69%)",
-      "bytecode": "0x15e07080ae",
-      "hue": 174,
-      "mass": 31
-    }
-  },
-  "PSYCHIC": {
-    "IY": {
-      "hex": "hsl(202, 75%, 80%)",
-      "bytecode": "0x10e08f20ca",
-      "hue": 202,
-      "mass": 20
-    },
-    "IH": {
-      "hex": "hsl(201, 65%, 71%)",
-      "bytecode": "0x18607c60c9",
-      "hue": 201,
-      "mass": 29
-    },
-    "EY": {
-      "hex": "hsl(200, 65%, 62%)",
-      "bytecode": "0x21207300c8",
-      "hue": 200,
-      "mass": 38
-    },
-    "EH": {
-      "hex": "hsl(200, 65%, 56%)",
-      "bytecode": "0x26206b80c8",
-      "hue": 200,
-      "mass": 44
-    },
-    "AE": {
-      "hex": "hsl(199, 65%, 40%)",
-      "bytecode": "0x35c060e0c7",
-      "hue": 199,
-      "mass": 60
-    },
-    "AA": {
-      "hex": "hsl(196, 75%, 48%)",
-      "bytecode": "0x2da04420c4",
-      "hue": 196,
-      "mass": 52
-    },
-    "AH": {
-      "hex": "hsl(197, 65%, 54%)",
-      "bytecode": "0x28004a60c5",
-      "hue": 197,
-      "mass": 46
-    },
-    "AO": {
-      "hex": "hsl(194, 65%, 59%)",
-      "bytecode": "0x23a03480c2",
-      "hue": 194,
-      "mass": 41
-    },
-    "OW": {
-      "hex": "hsl(196, 65%, 67%)",
-      "bytecode": "0x1cc044c0c4",
-      "hue": 196,
-      "mass": 33
-    },
-    "UH": {
-      "hex": "hsl(196, 65%, 68%)",
-      "bytecode": "0x1b803fc0c4",
-      "hue": 196,
-      "mass": 32
-    },
-    "UW": {
-      "hex": "hsl(195, 75%, 77%)",
-      "bytecode": "0x12c03660c3",
-      "hue": 195,
-      "mass": 23
-    },
-    "ER": {
-      "hex": "hsl(198, 65%, 65%)",
-      "bytecode": "0x1ea05460c6",
-      "hue": 198,
-      "mass": 35
-    },
-    "AX": {
-      "hex": "hsl(199, 65%, 64%)",
-      "bytecode": "0x1f405dc0c7",
-      "hue": 199,
-      "mass": 36
-    },
-    "AY": {
-      "hex": "hsl(200, 65%, 53%)",
-      "bytecode": "0x29406b80c8",
-      "hue": 200,
-      "mass": 47
-    },
-    "AW": {
-      "hex": "hsl(198, 65%, 46%)",
-      "bytecode": "0x2f805280c6",
-      "hue": 198,
-      "mass": 54
-    },
-    "OY": {
-      "hex": "hsl(196, 65%, 64%)",
-      "bytecode": "0x1f403e80c4",
-      "hue": 196,
-      "mass": 36
-    },
-    "UR": {
-      "hex": "hsl(197, 65%, 67%)",
-      "bytecode": "0x1c204b00c5",
-      "hue": 197,
-      "mass": 33
-    },
-    "OH": {
-      "hex": "hsl(195, 65%, 61%)",
-      "bytecode": "0x22603b60c3",
-      "hue": 195,
-      "mass": 39
-    },
-    "OO": {
-      "hex": "hsl(195, 65%, 71%)",
-      "bytecode": "0x19003840c3",
-      "hue": 195,
-      "mass": 29
-    },
-    "YUW": {
-      "hex": "hsl(200, 65%, 74%)",
-      "bytecode": "0x15e07080c8",
-      "hue": 200,
-      "mass": 26
-    }
-  },
-  "VOID": {
-    "IY": {
-      "hex": "hsl(173, 25%, 60%)",
-      "bytecode": "0x10e08f20ad",
-      "hue": 173,
-      "mass": 40
-    },
-    "IH": {
-      "hex": "hsl(172, 15%, 51%)",
-      "bytecode": "0x18607c60ac",
-      "hue": 172,
-      "mass": 49
-    },
-    "EY": {
-      "hex": "hsl(171, 15%, 42%)",
-      "bytecode": "0x21207300ab",
-      "hue": 171,
-      "mass": 58
-    },
-    "EH": {
-      "hex": "hsl(171, 15%, 36%)",
-      "bytecode": "0x26206b80ab",
-      "hue": 171,
-      "mass": 64
-    },
-    "AE": {
-      "hex": "hsl(170, 15%, 20%)",
-      "bytecode": "0x35c060e0aa",
-      "hue": 170,
-      "mass": 80
-    },
-    "AA": {
-      "hex": "hsl(167, 25%, 28%)",
-      "bytecode": "0x2da04420a7",
-      "hue": 167,
-      "mass": 72
-    },
-    "AH": {
-      "hex": "hsl(168, 15%, 34%)",
-      "bytecode": "0x28004a60a8",
-      "hue": 168,
-      "mass": 66
-    },
-    "AO": {
-      "hex": "hsl(165, 15%, 39%)",
-      "bytecode": "0x23a03480a5",
-      "hue": 165,
-      "mass": 61
-    },
-    "OW": {
-      "hex": "hsl(167, 15%, 47%)",
-      "bytecode": "0x1cc044c0a7",
-      "hue": 167,
-      "mass": 53
-    },
-    "UH": {
-      "hex": "hsl(167, 15%, 48%)",
-      "bytecode": "0x1b803fc0a7",
-      "hue": 167,
-      "mass": 52
-    },
-    "UW": {
-      "hex": "hsl(166, 25%, 57%)",
-      "bytecode": "0x12c03660a6",
-      "hue": 166,
-      "mass": 43
-    },
-    "ER": {
-      "hex": "hsl(169, 15%, 45%)",
-      "bytecode": "0x1ea05460a9",
-      "hue": 169,
-      "mass": 55
-    },
-    "AX": {
-      "hex": "hsl(170, 15%, 44%)",
-      "bytecode": "0x1f405dc0aa",
-      "hue": 170,
-      "mass": 56
-    },
-    "AY": {
-      "hex": "hsl(171, 15%, 33%)",
-      "bytecode": "0x29406b80ab",
-      "hue": 171,
-      "mass": 67
-    },
-    "AW": {
-      "hex": "hsl(169, 15%, 26%)",
-      "bytecode": "0x2f805280a9",
-      "hue": 169,
-      "mass": 74
-    },
-    "OY": {
-      "hex": "hsl(167, 15%, 44%)",
-      "bytecode": "0x1f403e80a7",
-      "hue": 167,
-      "mass": 56
-    },
-    "UR": {
-      "hex": "hsl(168, 15%, 47%)",
-      "bytecode": "0x1c204b00a8",
-      "hue": 168,
-      "mass": 53
-    },
-    "OH": {
-      "hex": "hsl(166, 15%, 41%)",
-      "bytecode": "0x22603b60a6",
-      "hue": 166,
-      "mass": 59
-    },
-    "OO": {
-      "hex": "hsl(166, 15%, 51%)",
-      "bytecode": "0x19003840a6",
-      "hue": 166,
-      "mass": 49
-    },
-    "YUW": {
-      "hex": "hsl(171, 15%, 54%)",
-      "bytecode": "0x15e07080ab",
-      "hue": 171,
-      "mass": 46
-    }
-  },
-  "ALCHEMY": {
-    "IY": {
-      "hex": "hsl(187, 60%, 70%)",
-      "bytecode": "0x10e08f20bb",
-      "hue": 187,
-      "mass": 30
-    },
-    "IH": {
-      "hex": "hsl(186, 50%, 64%)",
-      "bytecode": "0x18607c60ba",
-      "hue": 186,
-      "mass": 36
-    },
-    "EY": {
-      "hex": "hsl(185, 50%, 58%)",
-      "bytecode": "0x21207300b9",
-      "hue": 185,
-      "mass": 42
-    },
-    "EH": {
-      "hex": "hsl(185, 50%, 55%)",
-      "bytecode": "0x26206b80b9",
-      "hue": 185,
-      "mass": 45
-    },
-    "AE": {
-      "hex": "hsl(184, 50%, 45%)",
-      "bytecode": "0x35c060e0b8",
-      "hue": 184,
-      "mass": 55
-    },
-    "AA": {
-      "hex": "hsl(181, 60%, 50%)",
-      "bytecode": "0x2da04420b5",
-      "hue": 181,
-      "mass": 50
-    },
-    "AH": {
-      "hex": "hsl(182, 50%, 54%)",
-      "bytecode": "0x28004a60b6",
-      "hue": 182,
-      "mass": 46
-    },
-    "AO": {
-      "hex": "hsl(179, 50%, 57%)",
-      "bytecode": "0x23a03480b3",
-      "hue": 179,
-      "mass": 43
-    },
-    "OW": {
-      "hex": "hsl(181, 50%, 61%)",
-      "bytecode": "0x1cc044c0b5",
-      "hue": 181,
-      "mass": 39
-    },
-    "UH": {
-      "hex": "hsl(181, 50%, 62%)",
-      "bytecode": "0x1b803fc0b5",
-      "hue": 181,
-      "mass": 38
-    },
-    "UW": {
-      "hex": "hsl(180, 60%, 68%)",
-      "bytecode": "0x12c03660b4",
-      "hue": 180,
-      "mass": 32
-    },
-    "ER": {
-      "hex": "hsl(183, 50%, 60%)",
-      "bytecode": "0x1ea05460b7",
-      "hue": 183,
-      "mass": 40
-    },
-    "AX": {
-      "hex": "hsl(184, 50%, 60%)",
-      "bytecode": "0x1f405dc0b8",
-      "hue": 184,
-      "mass": 40
-    },
-    "AY": {
-      "hex": "hsl(185, 50%, 53%)",
-      "bytecode": "0x29406b80b9",
-      "hue": 185,
-      "mass": 47
-    },
-    "AW": {
-      "hex": "hsl(183, 50%, 49%)",
-      "bytecode": "0x2f805280b7",
-      "hue": 183,
-      "mass": 51
-    },
-    "OY": {
-      "hex": "hsl(181, 50%, 60%)",
-      "bytecode": "0x1f403e80b5",
-      "hue": 181,
-      "mass": 40
-    },
-    "UR": {
-      "hex": "hsl(182, 50%, 62%)",
-      "bytecode": "0x1c204b00b6",
-      "hue": 182,
-      "mass": 38
-    },
-    "OH": {
-      "hex": "hsl(180, 50%, 58%)",
-      "bytecode": "0x22603b60b4",
-      "hue": 180,
-      "mass": 42
-    },
-    "OO": {
-      "hex": "hsl(180, 50%, 64%)",
-      "bytecode": "0x19003840b4",
-      "hue": 180,
-      "mass": 36
-    },
-    "YUW": {
-      "hex": "hsl(185, 50%, 66%)",
-      "bytecode": "0x15e07080b9",
-      "hue": 185,
-      "mass": 34
-    }
-  },
   "WILL": {
     "IY": {
-      "hex": "hsl(158, 60%, 65%)",
-      "bytecode": "0x10e08f209e",
-      "hue": 158,
-      "mass": 35
+      "hex": "hsl(2, 95%, 65%)",
+      "bytecode": "0x10e08f2002",
+      "hue": 2,
+      "mass": 35,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
     },
     "IH": {
-      "hex": "hsl(157, 50%, 57%)",
-      "bytecode": "0x18607c609d",
-      "hue": 157,
-      "mass": 43
+      "hex": "hsl(1, 85%, 57%)",
+      "bytecode": "0x18607c6001",
+      "hue": 1,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
     },
     "EY": {
-      "hex": "hsl(156, 50%, 49%)",
-      "bytecode": "0x212073009c",
-      "hue": 156,
-      "mass": 51
+      "hex": "hsl(0, 85%, 49%)",
+      "bytecode": "0x2120730000",
+      "hue": 0,
+      "mass": 51,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
     },
     "EH": {
-      "hex": "hsl(156, 50%, 44%)",
-      "bytecode": "0x26206b809c",
-      "hue": 156,
-      "mass": 56
+      "hex": "hsl(0, 85%, 44%)",
+      "bytecode": "0x26206b8000",
+      "hue": 0,
+      "mass": 56,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
     },
     "AE": {
-      "hex": "hsl(155, 50%, 30%)",
-      "bytecode": "0x35c060e09b",
-      "hue": 155,
-      "mass": 70
+      "hex": "hsl(0, 85%, 30%)",
+      "bytecode": "0x35c060e000",
+      "hue": 0,
+      "mass": 70,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
     },
     "AA": {
-      "hex": "hsl(152, 60%, 37%)",
-      "bytecode": "0x2da0442098",
-      "hue": 152,
-      "mass": 63
+      "hex": "hsl(356, 95%, 37%)",
+      "bytecode": "0x2da0442164",
+      "hue": 356,
+      "mass": 63,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
     },
     "AH": {
-      "hex": "hsl(153, 50%, 43%)",
-      "bytecode": "0x28004a6099",
-      "hue": 153,
-      "mass": 57
+      "hex": "hsl(357, 85%, 43%)",
+      "bytecode": "0x28004a6165",
+      "hue": 357,
+      "mass": 57,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
     },
     "AO": {
-      "hex": "hsl(150, 50%, 47%)",
-      "bytecode": "0x23a0348096",
-      "hue": 150,
-      "mass": 53
+      "hex": "hsl(354, 85%, 47%)",
+      "bytecode": "0x23a0348162",
+      "hue": 354,
+      "mass": 53,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
     },
     "OW": {
-      "hex": "hsl(152, 50%, 53%)",
-      "bytecode": "0x1cc044c098",
-      "hue": 152,
-      "mass": 47
+      "hex": "hsl(357, 85%, 53%)",
+      "bytecode": "0x1cc044c165",
+      "hue": 357,
+      "mass": 47,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
     },
     "UH": {
-      "hex": "hsl(152, 50%, 54%)",
-      "bytecode": "0x1b803fc098",
-      "hue": 152,
-      "mass": 46
+      "hex": "hsl(356, 85%, 54%)",
+      "bytecode": "0x1b803fc164",
+      "hue": 356,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
     },
     "UW": {
-      "hex": "hsl(151, 60%, 63%)",
-      "bytecode": "0x12c0366097",
-      "hue": 151,
-      "mass": 37
+      "hex": "hsl(354, 95%, 63%)",
+      "bytecode": "0x12c0366162",
+      "hue": 354,
+      "mass": 37,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
     },
     "ER": {
-      "hex": "hsl(154, 50%, 51%)",
-      "bytecode": "0x1ea054609a",
-      "hue": 154,
-      "mass": 49
+      "hex": "hsl(358, 85%, 51%)",
+      "bytecode": "0x1ea0546166",
+      "hue": 358,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
     },
     "AX": {
-      "hex": "hsl(155, 50%, 51%)",
-      "bytecode": "0x1f405dc09b",
-      "hue": 155,
-      "mass": 49
+      "hex": "hsl(359, 85%, 51%)",
+      "bytecode": "0x1f405dc167",
+      "hue": 359,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
     },
     "AY": {
-      "hex": "hsl(156, 50%, 41%)",
-      "bytecode": "0x29406b809c",
-      "hue": 156,
-      "mass": 59
+      "hex": "hsl(0, 85%, 41%)",
+      "bytecode": "0x29406b8000",
+      "hue": 0,
+      "mass": 59,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
     },
     "AW": {
-      "hex": "hsl(154, 50%, 35%)",
-      "bytecode": "0x2f8052809a",
-      "hue": 154,
-      "mass": 65
+      "hex": "hsl(358, 85%, 35%)",
+      "bytecode": "0x2f80528166",
+      "hue": 358,
+      "mass": 65,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
     },
     "OY": {
-      "hex": "hsl(152, 50%, 51%)",
-      "bytecode": "0x1f403e8098",
-      "hue": 152,
-      "mass": 49
+      "hex": "hsl(356, 85%, 51%)",
+      "bytecode": "0x1f403e8164",
+      "hue": 356,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
     },
     "UR": {
-      "hex": "hsl(153, 50%, 54%)",
-      "bytecode": "0x1c204b0099",
-      "hue": 153,
-      "mass": 46
+      "hex": "hsl(357, 85%, 54%)",
+      "bytecode": "0x1c204b0165",
+      "hue": 357,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
     },
     "OH": {
-      "hex": "hsl(151, 50%, 48%)",
-      "bytecode": "0x22603b6097",
-      "hue": 151,
-      "mass": 52
+      "hex": "hsl(355, 85%, 48%)",
+      "bytecode": "0x22603b6163",
+      "hue": 355,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
     },
     "OO": {
-      "hex": "hsl(151, 50%, 57%)",
-      "bytecode": "0x1900384097",
-      "hue": 151,
-      "mass": 43
+      "hex": "hsl(355, 85%, 57%)",
+      "bytecode": "0x1900384163",
+      "hue": 355,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
     },
     "YUW": {
-      "hex": "hsl(156, 50%, 60%)",
-      "bytecode": "0x15e070809c",
-      "hue": 156,
-      "mass": 40
-    }
-  },
-  "NECROMANCY": {
-    "IY": {
-      "hex": "hsl(152, 70%, 55%)",
-      "bytecode": "0x10e08f2098",
-      "hue": 152,
-      "mass": 45
-    },
-    "IH": {
-      "hex": "hsl(151, 60%, 48%)",
-      "bytecode": "0x18607c6097",
-      "hue": 151,
-      "mass": 52
-    },
-    "EY": {
-      "hex": "hsl(150, 60%, 41%)",
-      "bytecode": "0x2120730096",
-      "hue": 150,
-      "mass": 59
-    },
-    "EH": {
-      "hex": "hsl(150, 60%, 37%)",
-      "bytecode": "0x26206b8096",
-      "hue": 150,
-      "mass": 63
-    },
-    "AE": {
-      "hex": "hsl(149, 60%, 25%)",
-      "bytecode": "0x35c060e095",
-      "hue": 149,
-      "mass": 75
-    },
-    "AA": {
-      "hex": "hsl(146, 70%, 31%)",
-      "bytecode": "0x2da0442092",
-      "hue": 146,
-      "mass": 69
-    },
-    "AH": {
-      "hex": "hsl(147, 60%, 36%)",
-      "bytecode": "0x28004a6093",
-      "hue": 147,
-      "mass": 64
-    },
-    "AO": {
-      "hex": "hsl(144, 60%, 39%)",
-      "bytecode": "0x23a0348090",
-      "hue": 144,
-      "mass": 61
-    },
-    "OW": {
-      "hex": "hsl(146, 60%, 45%)",
-      "bytecode": "0x1cc044c092",
-      "hue": 146,
-      "mass": 55
-    },
-    "UH": {
-      "hex": "hsl(146, 60%, 46%)",
-      "bytecode": "0x1b803fc092",
-      "hue": 146,
-      "mass": 54
-    },
-    "UW": {
-      "hex": "hsl(145, 70%, 53%)",
-      "bytecode": "0x12c0366091",
-      "hue": 145,
-      "mass": 47
-    },
-    "ER": {
-      "hex": "hsl(148, 60%, 43%)",
-      "bytecode": "0x1ea0546094",
-      "hue": 148,
-      "mass": 57
-    },
-    "AX": {
-      "hex": "hsl(149, 60%, 43%)",
-      "bytecode": "0x1f405dc095",
-      "hue": 149,
-      "mass": 57
-    },
-    "AY": {
-      "hex": "hsl(150, 60%, 35%)",
-      "bytecode": "0x29406b8096",
-      "hue": 150,
-      "mass": 65
-    },
-    "AW": {
-      "hex": "hsl(148, 60%, 30%)",
-      "bytecode": "0x2f80528094",
-      "hue": 148,
-      "mass": 70
-    },
-    "OY": {
-      "hex": "hsl(146, 60%, 43%)",
-      "bytecode": "0x1f403e8092",
-      "hue": 146,
-      "mass": 57
-    },
-    "UR": {
-      "hex": "hsl(147, 60%, 45%)",
-      "bytecode": "0x1c204b0093",
-      "hue": 147,
-      "mass": 55
-    },
-    "OH": {
-      "hex": "hsl(145, 60%, 40%)",
-      "bytecode": "0x22603b6091",
-      "hue": 145,
-      "mass": 60
-    },
-    "OO": {
-      "hex": "hsl(145, 60%, 48%)",
-      "bytecode": "0x1900384091",
-      "hue": 145,
-      "mass": 52
-    },
-    "YUW": {
-      "hex": "hsl(150, 60%, 50%)",
-      "bytecode": "0x15e0708096",
-      "hue": 150,
-      "mass": 50
-    }
-  },
-  "ABJURATION": {
-    "IY": {
-      "hex": "hsl(138, 65%, 85%)",
-      "bytecode": "0x10e08f208a",
-      "hue": 138,
-      "mass": 15
-    },
-    "IH": {
-      "hex": "hsl(137, 55%, 77%)",
-      "bytecode": "0x18607c6089",
-      "hue": 137,
-      "mass": 23
-    },
-    "EY": {
-      "hex": "hsl(136, 55%, 69%)",
-      "bytecode": "0x2120730088",
-      "hue": 136,
-      "mass": 31
-    },
-    "EH": {
-      "hex": "hsl(136, 55%, 64%)",
-      "bytecode": "0x26206b8088",
-      "hue": 136,
-      "mass": 36
-    },
-    "AE": {
-      "hex": "hsl(135, 55%, 50%)",
-      "bytecode": "0x35c060e087",
-      "hue": 135,
-      "mass": 50
-    },
-    "AA": {
-      "hex": "hsl(132, 65%, 57%)",
-      "bytecode": "0x2da0442084",
-      "hue": 132,
-      "mass": 43
-    },
-    "AH": {
-      "hex": "hsl(133, 55%, 63%)",
-      "bytecode": "0x28004a6085",
-      "hue": 133,
-      "mass": 37
-    },
-    "AO": {
-      "hex": "hsl(130, 55%, 67%)",
-      "bytecode": "0x23a0348082",
-      "hue": 130,
-      "mass": 33
-    },
-    "OW": {
-      "hex": "hsl(132, 55%, 73%)",
-      "bytecode": "0x1cc044c084",
-      "hue": 132,
-      "mass": 27
-    },
-    "UH": {
-      "hex": "hsl(132, 55%, 74%)",
-      "bytecode": "0x1b803fc084",
-      "hue": 132,
-      "mass": 26
-    },
-    "UW": {
-      "hex": "hsl(131, 65%, 83%)",
-      "bytecode": "0x12c0366083",
-      "hue": 131,
-      "mass": 17
-    },
-    "ER": {
-      "hex": "hsl(134, 55%, 71%)",
-      "bytecode": "0x1ea0546086",
-      "hue": 134,
-      "mass": 29
-    },
-    "AX": {
-      "hex": "hsl(135, 55%, 71%)",
-      "bytecode": "0x1f405dc087",
-      "hue": 135,
-      "mass": 29
-    },
-    "AY": {
-      "hex": "hsl(136, 55%, 61%)",
-      "bytecode": "0x29406b8088",
-      "hue": 136,
-      "mass": 39
-    },
-    "AW": {
-      "hex": "hsl(134, 55%, 55%)",
-      "bytecode": "0x2f80528086",
-      "hue": 134,
-      "mass": 45
-    },
-    "OY": {
-      "hex": "hsl(132, 55%, 71%)",
-      "bytecode": "0x1f403e8084",
-      "hue": 132,
-      "mass": 29
-    },
-    "UR": {
-      "hex": "hsl(133, 55%, 74%)",
-      "bytecode": "0x1c204b0085",
-      "hue": 133,
-      "mass": 26
-    },
-    "OH": {
-      "hex": "hsl(131, 55%, 68%)",
-      "bytecode": "0x22603b6083",
-      "hue": 131,
-      "mass": 32
-    },
-    "OO": {
-      "hex": "hsl(131, 55%, 77%)",
-      "bytecode": "0x1900384083",
-      "hue": 131,
-      "mass": 23
-    },
-    "YUW": {
-      "hex": "hsl(136, 55%, 80%)",
-      "bytecode": "0x15e0708088",
-      "hue": 136,
-      "mass": 20
+      "hex": "hsl(0, 85%, 60%)",
+      "bytecode": "0x15e0708000",
+      "hue": 0,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
     }
   },
   "DIVINATION": {
     "IY": {
-      "hex": "hsl(136, 55%, 80%)",
-      "bytecode": "0x10e08f2088",
-      "hue": 136,
-      "mass": 20
+      "hex": "hsl(47, 100%, 80%)",
+      "bytecode": "0x10e08f202f",
+      "hue": 47,
+      "mass": 20,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
     },
     "IH": {
-      "hex": "hsl(135, 45%, 74%)",
-      "bytecode": "0x18607c6087",
-      "hue": 135,
-      "mass": 26
+      "hex": "hsl(46, 90%, 74%)",
+      "bytecode": "0x18607c602e",
+      "hue": 46,
+      "mass": 26,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
     },
     "EY": {
-      "hex": "hsl(134, 45%, 68%)",
-      "bytecode": "0x2120730086",
-      "hue": 134,
-      "mass": 32
+      "hex": "hsl(45, 90%, 68%)",
+      "bytecode": "0x212073002d",
+      "hue": 45,
+      "mass": 32,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
     },
     "EH": {
-      "hex": "hsl(134, 45%, 65%)",
-      "bytecode": "0x26206b8086",
-      "hue": 134,
-      "mass": 35
+      "hex": "hsl(45, 90%, 65%)",
+      "bytecode": "0x26206b802d",
+      "hue": 45,
+      "mass": 35,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
     },
     "AE": {
-      "hex": "hsl(133, 45%, 55%)",
-      "bytecode": "0x35c060e085",
-      "hue": 133,
-      "mass": 45
+      "hex": "hsl(44, 90%, 55%)",
+      "bytecode": "0x35c060e02c",
+      "hue": 44,
+      "mass": 45,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
     },
     "AA": {
-      "hex": "hsl(130, 55%, 60%)",
-      "bytecode": "0x2da0442082",
-      "hue": 130,
-      "mass": 40
+      "hex": "hsl(40, 100%, 60%)",
+      "bytecode": "0x2da0442028",
+      "hue": 40,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
     },
     "AH": {
-      "hex": "hsl(131, 45%, 64%)",
-      "bytecode": "0x28004a6083",
-      "hue": 131,
-      "mass": 36
+      "hex": "hsl(41, 90%, 64%)",
+      "bytecode": "0x28004a6029",
+      "hue": 41,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
     },
     "AO": {
-      "hex": "hsl(128, 45%, 67%)",
-      "bytecode": "0x23a0348080",
-      "hue": 128,
-      "mass": 33
+      "hex": "hsl(38, 90%, 67%)",
+      "bytecode": "0x23a0348026",
+      "hue": 38,
+      "mass": 33,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
     },
     "OW": {
-      "hex": "hsl(130, 45%, 71%)",
-      "bytecode": "0x1cc044c082",
-      "hue": 130,
-      "mass": 29
+      "hex": "hsl(41, 90%, 71%)",
+      "bytecode": "0x1cc044c029",
+      "hue": 41,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
     },
     "UH": {
-      "hex": "hsl(130, 45%, 72%)",
-      "bytecode": "0x1b803fc082",
-      "hue": 130,
-      "mass": 28
+      "hex": "hsl(40, 90%, 72%)",
+      "bytecode": "0x1b803fc028",
+      "hue": 40,
+      "mass": 28,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
     },
     "UW": {
-      "hex": "hsl(129, 55%, 78%)",
-      "bytecode": "0x12c0366081",
-      "hue": 129,
-      "mass": 22
+      "hex": "hsl(38, 100%, 78%)",
+      "bytecode": "0x12c0366026",
+      "hue": 38,
+      "mass": 22,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
     },
     "ER": {
-      "hex": "hsl(132, 45%, 70%)",
-      "bytecode": "0x1ea0546084",
-      "hue": 132,
-      "mass": 30
+      "hex": "hsl(42, 90%, 70%)",
+      "bytecode": "0x1ea054602a",
+      "hue": 42,
+      "mass": 30,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
     },
     "AX": {
-      "hex": "hsl(133, 45%, 70%)",
-      "bytecode": "0x1f405dc085",
-      "hue": 133,
-      "mass": 30
+      "hex": "hsl(43, 90%, 70%)",
+      "bytecode": "0x1f405dc02b",
+      "hue": 43,
+      "mass": 30,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
     },
     "AY": {
-      "hex": "hsl(134, 45%, 63%)",
-      "bytecode": "0x29406b8086",
-      "hue": 134,
-      "mass": 37
+      "hex": "hsl(45, 90%, 63%)",
+      "bytecode": "0x29406b802d",
+      "hue": 45,
+      "mass": 37,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
     },
     "AW": {
-      "hex": "hsl(132, 45%, 59%)",
-      "bytecode": "0x2f80528084",
-      "hue": 132,
-      "mass": 41
+      "hex": "hsl(42, 90%, 59%)",
+      "bytecode": "0x2f8052802a",
+      "hue": 42,
+      "mass": 41,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
     },
     "OY": {
-      "hex": "hsl(130, 45%, 70%)",
-      "bytecode": "0x1f403e8082",
-      "hue": 130,
-      "mass": 30
+      "hex": "hsl(40, 90%, 70%)",
+      "bytecode": "0x1f403e8028",
+      "hue": 40,
+      "mass": 30,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
     },
     "UR": {
-      "hex": "hsl(131, 45%, 72%)",
-      "bytecode": "0x1c204b0083",
-      "hue": 131,
-      "mass": 28
+      "hex": "hsl(41, 90%, 72%)",
+      "bytecode": "0x1c204b0029",
+      "hue": 41,
+      "mass": 28,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
     },
     "OH": {
-      "hex": "hsl(129, 45%, 68%)",
-      "bytecode": "0x22603b6081",
-      "hue": 129,
-      "mass": 32
+      "hex": "hsl(39, 90%, 68%)",
+      "bytecode": "0x22603b6027",
+      "hue": 39,
+      "mass": 32,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
     },
     "OO": {
-      "hex": "hsl(129, 45%, 74%)",
-      "bytecode": "0x1900384081",
-      "hue": 129,
-      "mass": 26
+      "hex": "hsl(39, 90%, 74%)",
+      "bytecode": "0x1900384027",
+      "hue": 39,
+      "mass": 26,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
     },
     "YUW": {
-      "hex": "hsl(134, 45%, 76%)",
-      "bytecode": "0x15e0708086",
-      "hue": 134,
-      "mass": 24
+      "hex": "hsl(45, 90%, 76%)",
+      "bytecode": "0x15e070802d",
+      "hue": 45,
+      "mass": 24,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "NECROMANCY": {
+    "IY": {
+      "hex": "hsl(122, 85%, 55%)",
+      "bytecode": "0x10e08f207a",
+      "hue": 122,
+      "mass": 45,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(121, 75%, 48%)",
+      "bytecode": "0x18607c6079",
+      "hue": 121,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(120, 75%, 41%)",
+      "bytecode": "0x2120730078",
+      "hue": 120,
+      "mass": 59,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(120, 75%, 37%)",
+      "bytecode": "0x26206b8078",
+      "hue": 120,
+      "mass": 63,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(119, 75%, 25%)",
+      "bytecode": "0x35c060e077",
+      "hue": 119,
+      "mass": 75,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(115, 85%, 31%)",
+      "bytecode": "0x2da0442073",
+      "hue": 115,
+      "mass": 69,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(116, 75%, 36%)",
+      "bytecode": "0x28004a6074",
+      "hue": 116,
+      "mass": 64,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(113, 75%, 39%)",
+      "bytecode": "0x23a0348071",
+      "hue": 113,
+      "mass": 61,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(116, 75%, 45%)",
+      "bytecode": "0x1cc044c074",
+      "hue": 116,
+      "mass": 55,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(115, 75%, 46%)",
+      "bytecode": "0x1b803fc073",
+      "hue": 115,
+      "mass": 54,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(113, 85%, 53%)",
+      "bytecode": "0x12c0366071",
+      "hue": 113,
+      "mass": 47,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(117, 75%, 43%)",
+      "bytecode": "0x1ea0546075",
+      "hue": 117,
+      "mass": 57,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(118, 75%, 43%)",
+      "bytecode": "0x1f405dc076",
+      "hue": 118,
+      "mass": 57,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(120, 75%, 35%)",
+      "bytecode": "0x29406b8078",
+      "hue": 120,
+      "mass": 65,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(117, 75%, 30%)",
+      "bytecode": "0x2f80528075",
+      "hue": 117,
+      "mass": 70,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(115, 75%, 43%)",
+      "bytecode": "0x1f403e8073",
+      "hue": 115,
+      "mass": 57,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(116, 75%, 45%)",
+      "bytecode": "0x1c204b0074",
+      "hue": 116,
+      "mass": 55,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(114, 75%, 40%)",
+      "bytecode": "0x22603b6072",
+      "hue": 114,
+      "mass": 60,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(114, 75%, 48%)",
+      "bytecode": "0x1900384072",
+      "hue": 114,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(120, 75%, 50%)",
+      "bytecode": "0x15e0708078",
+      "hue": 120,
+      "mass": 50,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "ABJURATION": {
+    "IY": {
+      "hex": "hsl(182, 90%, 85%)",
+      "bytecode": "0x10e08f20b6",
+      "hue": 182,
+      "mass": 15,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(181, 80%, 77%)",
+      "bytecode": "0x18607c60b5",
+      "hue": 181,
+      "mass": 23,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(180, 80%, 69%)",
+      "bytecode": "0x21207300b4",
+      "hue": 180,
+      "mass": 31,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(180, 80%, 64%)",
+      "bytecode": "0x26206b80b4",
+      "hue": 180,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(179, 80%, 50%)",
+      "bytecode": "0x35c060e0b3",
+      "hue": 179,
+      "mass": 50,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(175, 90%, 57%)",
+      "bytecode": "0x2da04420af",
+      "hue": 175,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(176, 80%, 63%)",
+      "bytecode": "0x28004a60b0",
+      "hue": 176,
+      "mass": 37,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(173, 80%, 67%)",
+      "bytecode": "0x23a03480ad",
+      "hue": 173,
+      "mass": 33,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(176, 80%, 73%)",
+      "bytecode": "0x1cc044c0b0",
+      "hue": 176,
+      "mass": 27,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(175, 80%, 74%)",
+      "bytecode": "0x1b803fc0af",
+      "hue": 175,
+      "mass": 26,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(173, 90%, 83%)",
+      "bytecode": "0x12c03660ad",
+      "hue": 173,
+      "mass": 17,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(177, 80%, 71%)",
+      "bytecode": "0x1ea05460b1",
+      "hue": 177,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(178, 80%, 71%)",
+      "bytecode": "0x1f405dc0b2",
+      "hue": 178,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(180, 80%, 61%)",
+      "bytecode": "0x29406b80b4",
+      "hue": 180,
+      "mass": 39,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(177, 80%, 55%)",
+      "bytecode": "0x2f805280b1",
+      "hue": 177,
+      "mass": 45,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(175, 80%, 71%)",
+      "bytecode": "0x1f403e80af",
+      "hue": 175,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(176, 80%, 74%)",
+      "bytecode": "0x1c204b00b0",
+      "hue": 176,
+      "mass": 26,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(174, 80%, 68%)",
+      "bytecode": "0x22603b60ae",
+      "hue": 174,
+      "mass": 32,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(174, 80%, 77%)",
+      "bytecode": "0x19003840ae",
+      "hue": 174,
+      "mass": 23,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(180, 80%, 80%)",
+      "bytecode": "0x15e07080b4",
+      "hue": 180,
+      "mass": 20,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "PSYCHIC": {
+    "IY": {
+      "hex": "hsl(222, 100%, 80%)",
+      "bytecode": "0x10e08f20de",
+      "hue": 222,
+      "mass": 20,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(221, 90%, 71%)",
+      "bytecode": "0x18607c60dd",
+      "hue": 221,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(220, 90%, 62%)",
+      "bytecode": "0x21207300dc",
+      "hue": 220,
+      "mass": 38,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(220, 90%, 56%)",
+      "bytecode": "0x26206b80dc",
+      "hue": 220,
+      "mass": 44,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(219, 90%, 40%)",
+      "bytecode": "0x35c060e0db",
+      "hue": 219,
+      "mass": 60,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(215, 100%, 48%)",
+      "bytecode": "0x2da04420d7",
+      "hue": 215,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(216, 90%, 54%)",
+      "bytecode": "0x28004a60d8",
+      "hue": 216,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(213, 90%, 59%)",
+      "bytecode": "0x23a03480d5",
+      "hue": 213,
+      "mass": 41,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(216, 90%, 67%)",
+      "bytecode": "0x1cc044c0d8",
+      "hue": 216,
+      "mass": 33,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(215, 90%, 68%)",
+      "bytecode": "0x1b803fc0d7",
+      "hue": 215,
+      "mass": 32,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(213, 100%, 77%)",
+      "bytecode": "0x12c03660d5",
+      "hue": 213,
+      "mass": 23,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(217, 90%, 65%)",
+      "bytecode": "0x1ea05460d9",
+      "hue": 217,
+      "mass": 35,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(218, 90%, 64%)",
+      "bytecode": "0x1f405dc0da",
+      "hue": 218,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(220, 90%, 53%)",
+      "bytecode": "0x29406b80dc",
+      "hue": 220,
+      "mass": 47,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(217, 90%, 46%)",
+      "bytecode": "0x2f805280d9",
+      "hue": 217,
+      "mass": 54,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(215, 90%, 64%)",
+      "bytecode": "0x1f403e80d7",
+      "hue": 215,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(216, 90%, 67%)",
+      "bytecode": "0x1c204b00d8",
+      "hue": 216,
+      "mass": 33,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(214, 90%, 61%)",
+      "bytecode": "0x22603b60d6",
+      "hue": 214,
+      "mass": 39,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(214, 90%, 71%)",
+      "bytecode": "0x19003840d6",
+      "hue": 214,
+      "mass": 29,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(220, 90%, 74%)",
+      "bytecode": "0x15e07080dc",
+      "hue": 220,
+      "mass": 26,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "SONIC": {
+    "IY": {
+      "hex": "hsl(277, 95%, 75%)",
+      "bytecode": "0x10e08f2115",
+      "hue": 277,
+      "mass": 25,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(276, 85%, 66%)",
+      "bytecode": "0x18607c6114",
+      "hue": 276,
+      "mass": 34,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(275, 85%, 57%)",
+      "bytecode": "0x2120730113",
+      "hue": 275,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(275, 85%, 51%)",
+      "bytecode": "0x26206b8113",
+      "hue": 275,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(274, 85%, 35%)",
+      "bytecode": "0x35c060e112",
+      "hue": 274,
+      "mass": 65,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(270, 95%, 43%)",
+      "bytecode": "0x2da044210e",
+      "hue": 270,
+      "mass": 57,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(271, 85%, 49%)",
+      "bytecode": "0x28004a610f",
+      "hue": 271,
+      "mass": 51,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(268, 85%, 54%)",
+      "bytecode": "0x23a034810c",
+      "hue": 268,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(271, 85%, 62%)",
+      "bytecode": "0x1cc044c10f",
+      "hue": 271,
+      "mass": 38,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(270, 85%, 63%)",
+      "bytecode": "0x1b803fc10e",
+      "hue": 270,
+      "mass": 37,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(268, 95%, 72%)",
+      "bytecode": "0x12c036610c",
+      "hue": 268,
+      "mass": 28,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(272, 85%, 60%)",
+      "bytecode": "0x1ea0546110",
+      "hue": 272,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(273, 85%, 59%)",
+      "bytecode": "0x1f405dc111",
+      "hue": 273,
+      "mass": 41,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(275, 85%, 48%)",
+      "bytecode": "0x29406b8113",
+      "hue": 275,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(272, 85%, 41%)",
+      "bytecode": "0x2f80528110",
+      "hue": 272,
+      "mass": 59,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(270, 85%, 59%)",
+      "bytecode": "0x1f403e810e",
+      "hue": 270,
+      "mass": 41,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(271, 85%, 62%)",
+      "bytecode": "0x1c204b010f",
+      "hue": 271,
+      "mass": 38,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(269, 85%, 56%)",
+      "bytecode": "0x22603b610d",
+      "hue": 269,
+      "mass": 44,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(269, 85%, 66%)",
+      "bytecode": "0x190038410d",
+      "hue": 269,
+      "mass": 34,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(275, 85%, 69%)",
+      "bytecode": "0x15e0708113",
+      "hue": 275,
+      "mass": 31,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "ALCHEMY": {
+    "IY": {
+      "hex": "hsl(327, 90%, 70%)",
+      "bytecode": "0x10e08f2147",
+      "hue": 327,
+      "mass": 30,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(326, 80%, 64%)",
+      "bytecode": "0x18607c6146",
+      "hue": 326,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(325, 80%, 58%)",
+      "bytecode": "0x2120730145",
+      "hue": 325,
+      "mass": 42,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(325, 80%, 55%)",
+      "bytecode": "0x26206b8145",
+      "hue": 325,
+      "mass": 45,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(324, 80%, 45%)",
+      "bytecode": "0x35c060e144",
+      "hue": 324,
+      "mass": 55,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(320, 90%, 50%)",
+      "bytecode": "0x2da0442140",
+      "hue": 320,
+      "mass": 50,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(321, 80%, 54%)",
+      "bytecode": "0x28004a6141",
+      "hue": 321,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(318, 80%, 57%)",
+      "bytecode": "0x23a034813e",
+      "hue": 318,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(321, 80%, 61%)",
+      "bytecode": "0x1cc044c141",
+      "hue": 321,
+      "mass": 39,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(320, 80%, 62%)",
+      "bytecode": "0x1b803fc140",
+      "hue": 320,
+      "mass": 38,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(318, 90%, 68%)",
+      "bytecode": "0x12c036613e",
+      "hue": 318,
+      "mass": 32,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(322, 80%, 60%)",
+      "bytecode": "0x1ea0546142",
+      "hue": 322,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(323, 80%, 60%)",
+      "bytecode": "0x1f405dc143",
+      "hue": 323,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(325, 80%, 53%)",
+      "bytecode": "0x29406b8145",
+      "hue": 325,
+      "mass": 47,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(322, 80%, 49%)",
+      "bytecode": "0x2f80528142",
+      "hue": 322,
+      "mass": 51,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(320, 80%, 60%)",
+      "bytecode": "0x1f403e8140",
+      "hue": 320,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(321, 80%, 62%)",
+      "bytecode": "0x1c204b0141",
+      "hue": 321,
+      "mass": 38,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(319, 80%, 58%)",
+      "bytecode": "0x22603b613f",
+      "hue": 319,
+      "mass": 42,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(319, 80%, 64%)",
+      "bytecode": "0x190038413f",
+      "hue": 319,
+      "mass": 36,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(325, 80%, 66%)",
+      "bytecode": "0x15e0708145",
+      "hue": 325,
+      "mass": 34,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    }
+  },
+  "VOID": {
+    "IY": {
+      "hex": "hsl(217, 25%, 60%)",
+      "bytecode": "0x10e08f20d9",
+      "hue": 217,
+      "mass": 40,
+      "metrics": {
+        "centroidNorm": 0.5579,
+        "spreadNorm": 0.3577,
+        "skewNorm": -0.7642,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.5267
+      }
+    },
+    "IH": {
+      "hex": "hsl(216, 15%, 51%)",
+      "bytecode": "0x18607c60d8",
+      "hue": 216,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.5309,
+        "spreadNorm": 0.2804,
+        "skewNorm": -0.608,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3267
+      }
+    },
+    "EY": {
+      "hex": "hsl(215, 15%, 42%)",
+      "bytecode": "0x21207300d7",
+      "hue": 215,
+      "mass": 58,
+      "metrics": {
+        "centroidNorm": 0.516,
+        "spreadNorm": 0.219,
+        "skewNorm": -0.4239,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2267
+      }
+    },
+    "EH": {
+      "hex": "hsl(215, 15%, 36%)",
+      "bytecode": "0x26206b80d7",
+      "hue": 215,
+      "mass": 64,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1838,
+        "skewNorm": -0.2907,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AE": {
+      "hex": "hsl(214, 15%, 20%)",
+      "bytecode": "0x35c060e0d6",
+      "hue": 214,
+      "mass": 80,
+      "metrics": {
+        "centroidNorm": 0.4837,
+        "spreadNorm": 0.1064,
+        "skewNorm": 0.1097,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0333
+      }
+    },
+    "AA": {
+      "hex": "hsl(210, 25%, 28%)",
+      "bytecode": "0x2da04420d2",
+      "hue": 210,
+      "mass": 72,
+      "metrics": {
+        "centroidNorm": 0.4192,
+        "spreadNorm": 0.0699,
+        "skewNorm": 0.3394,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.2733
+      }
+    },
+    "AH": {
+      "hex": "hsl(211, 15%, 34%)",
+      "bytecode": "0x28004a60d3",
+      "hue": 211,
+      "mass": 66,
+      "metrics": {
+        "centroidNorm": 0.435,
+        "spreadNorm": 0.1076,
+        "skewNorm": 0.0756,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2067
+      }
+    },
+    "AO": {
+      "hex": "hsl(208, 15%, 39%)",
+      "bytecode": "0x23a03480d0",
+      "hue": 208,
+      "mass": 61,
+      "metrics": {
+        "centroidNorm": 0.3732,
+        "spreadNorm": 0.0647,
+        "skewNorm": 0.3571,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.44
+      }
+    },
+    "OW": {
+      "hex": "hsl(211, 15%, 47%)",
+      "bytecode": "0x1cc044c0d3",
+      "hue": 211,
+      "mass": 53,
+      "metrics": {
+        "centroidNorm": 0.4208,
+        "spreadNorm": 0.1457,
+        "skewNorm": -0.1636,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2667
+      }
+    },
+    "UH": {
+      "hex": "hsl(210, 15%, 48%)",
+      "bytecode": "0x1b803fc0d2",
+      "hue": 210,
+      "mass": 52,
+      "metrics": {
+        "centroidNorm": 0.4073,
+        "spreadNorm": 0.139,
+        "skewNorm": -0.1373,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.32
+      }
+    },
+    "UW": {
+      "hex": "hsl(208, 25%, 57%)",
+      "bytecode": "0x12c03660d0",
+      "hue": 208,
+      "mass": 43,
+      "metrics": {
+        "centroidNorm": 0.3793,
+        "spreadNorm": 0.1654,
+        "skewNorm": -0.3103,
+        "sharpnessNorm": 0.8,
+        "distinctNorm": 0.42
+      }
+    },
+    "ER": {
+      "hex": "hsl(212, 15%, 45%)",
+      "bytecode": "0x1ea05460d4",
+      "hue": 212,
+      "mass": 55,
+      "metrics": {
+        "centroidNorm": 0.4581,
+        "spreadNorm": 0.1733,
+        "skewNorm": -0.2741,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1
+      }
+    },
+    "AX": {
+      "hex": "hsl(213, 15%, 44%)",
+      "bytecode": "0x1f405dc0d5",
+      "hue": 213,
+      "mass": 56,
+      "metrics": {
+        "centroidNorm": 0.4776,
+        "spreadNorm": 0.1897,
+        "skewNorm": -0.3333,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.0
+      }
+    },
+    "AY": {
+      "hex": "hsl(215, 15%, 33%)",
+      "bytecode": "0x29406b80d7",
+      "hue": 215,
+      "mass": 67,
+      "metrics": {
+        "centroidNorm": 0.5033,
+        "spreadNorm": 0.1708,
+        "skewNorm": -0.2326,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.1467
+      }
+    },
+    "AW": {
+      "hex": "hsl(212, 15%, 26%)",
+      "bytecode": "0x2f805280d4",
+      "hue": 212,
+      "mass": 74,
+      "metrics": {
+        "centroidNorm": 0.454,
+        "spreadNorm": 0.0979,
+        "skewNorm": 0.1515,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.12
+      }
+    },
+    "OY": {
+      "hex": "hsl(210, 15%, 44%)",
+      "bytecode": "0x1f403e80d2",
+      "hue": 210,
+      "mass": 56,
+      "metrics": {
+        "centroidNorm": 0.4038,
+        "spreadNorm": 0.1159,
+        "skewNorm": 0.0,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3333
+      }
+    },
+    "UR": {
+      "hex": "hsl(211, 15%, 47%)",
+      "bytecode": "0x1c204b00d3",
+      "hue": 211,
+      "mass": 53,
+      "metrics": {
+        "centroidNorm": 0.4365,
+        "spreadNorm": 0.1648,
+        "skewNorm": -0.25,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
+    },
+    "OH": {
+      "hex": "hsl(209, 15%, 41%)",
+      "bytecode": "0x22603b60d1",
+      "hue": 209,
+      "mass": 59,
+      "metrics": {
+        "centroidNorm": 0.3947,
+        "spreadNorm": 0.0918,
+        "skewNorm": 0.1579,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.3667
+      }
+    },
+    "OO": {
+      "hex": "hsl(209, 15%, 51%)",
+      "bytecode": "0x19003840d1",
+      "hue": 209,
+      "mass": 49,
+      "metrics": {
+        "centroidNorm": 0.3852,
+        "spreadNorm": 0.131,
+        "skewNorm": -0.1111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.4
+      }
+    },
+    "YUW": {
+      "hex": "hsl(215, 15%, 54%)",
+      "bytecode": "0x15e07080d7",
+      "hue": 215,
+      "mass": 46,
+      "metrics": {
+        "centroidNorm": 0.5119,
+        "spreadNorm": 0.2768,
+        "skewNorm": -0.6111,
+        "sharpnessNorm": 0.4,
+        "distinctNorm": 0.2
+      }
     }
   }
 }

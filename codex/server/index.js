@@ -43,6 +43,7 @@ import { createCorpusAdapter } from './adapters/corpus.sqlite.adapter.js';
 import { createCorpusService } from './services/corpus.service.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
 import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
+import { resolveRhymeAstrologyArtifactPaths } from './utils/rhymeAstrologyPaths.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -178,22 +179,10 @@ const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
     existsSync(FRONTEND_INDEX_PATH);
-const RHYME_ASTROLOGY_OUTPUT_DIR = typeof process.env.RHYME_ASTROLOGY_OUTPUT_DIR === 'string' &&
-    process.env.RHYME_ASTROLOGY_OUTPUT_DIR.trim().length > 0
-    ? path.resolve(process.env.RHYME_ASTROLOGY_OUTPUT_DIR)
-    : path.join(PROJECT_ROOT, 'dict_data', 'rhyme-astrology');
-const RHYME_ASTROLOGY_LEXICON_DB_PATH = typeof process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH === 'string' &&
-    process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH.trim().length > 0
-    ? path.resolve(process.env.RHYME_ASTROLOGY_LEXICON_DB_PATH)
-    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_lexicon.sqlite');
-const RHYME_ASTROLOGY_INDEX_DB_PATH = typeof process.env.RHYME_ASTROLOGY_INDEX_DB_PATH === 'string' &&
-    process.env.RHYME_ASTROLOGY_INDEX_DB_PATH.trim().length > 0
-    ? path.resolve(process.env.RHYME_ASTROLOGY_INDEX_DB_PATH)
-    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_index.sqlite');
-const RHYME_ASTROLOGY_EDGES_DB_PATH = typeof process.env.RHYME_ASTROLOGY_EDGES_DB_PATH === 'string' &&
-    process.env.RHYME_ASTROLOGY_EDGES_DB_PATH.trim().length > 0
-    ? path.resolve(process.env.RHYME_ASTROLOGY_EDGES_DB_PATH)
-    : path.join(RHYME_ASTROLOGY_OUTPUT_DIR, 'rhyme_edges.sqlite');
+const RHYME_ASTROLOGY_PATHS = resolveRhymeAstrologyArtifactPaths({
+    projectRoot: PROJECT_ROOT,
+    isProduction: IS_PRODUCTION,
+});
 const RHYME_ASTROLOGY_CACHE_SIZE = parsePositiveIntEnv('RHYME_ASTROLOGY_CACHE_SIZE', 500);
 const RHYME_ASTROLOGY_BUCKET_QUERY_CAP = parsePositiveIntEnv('RHYME_ASTROLOGY_BUCKET_QUERY_CAP', 200);
 const RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS = parsePositiveIntEnv('RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS', 12);
@@ -722,10 +711,24 @@ fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapte
 fastify.register(worldRoutes, { prefix: '/api/world', adapter: lexiconAdapter, persistence });
 fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
 if (ENABLE_RHYME_ASTROLOGY) {
+    if (RHYME_ASTROLOGY_PATHS.usedExistingArtifactsFallback || RHYME_ASTROLOGY_PATHS.usedProductionPersistentFallback) {
+        fastify.log.warn({
+            configuredOutputDir: RHYME_ASTROLOGY_PATHS.configuredOutputDir,
+            resolvedOutputDir: RHYME_ASTROLOGY_PATHS.outputDir,
+            candidateOutputDirs: RHYME_ASTROLOGY_PATHS.candidateOutputDirs,
+        }, '[RhymeAstrology] Falling back to detected artifact bundle.');
+    }
+    if (!RHYME_ASTROLOGY_PATHS.hasCompleteDbSet) {
+        fastify.log.warn({
+            lexiconDbPath: RHYME_ASTROLOGY_PATHS.lexiconDbPath,
+            indexDbPath: RHYME_ASTROLOGY_PATHS.indexDbPath,
+            edgesDbPath: RHYME_ASTROLOGY_PATHS.edgesDbPath,
+        }, '[RhymeAstrology] Artifact bundle is incomplete; runtime will degrade until artifacts are built or mounted.');
+    }
     fastify.register(rhymeAstrologyRoutes, {
-        lexiconDbPath: RHYME_ASTROLOGY_LEXICON_DB_PATH,
-        indexDbPath: RHYME_ASTROLOGY_INDEX_DB_PATH,
-        edgesDbPath: RHYME_ASTROLOGY_EDGES_DB_PATH,
+        lexiconDbPath: RHYME_ASTROLOGY_PATHS.lexiconDbPath,
+        indexDbPath: RHYME_ASTROLOGY_PATHS.indexDbPath,
+        edgesDbPath: RHYME_ASTROLOGY_PATHS.edgesDbPath,
         cacheSize: RHYME_ASTROLOGY_CACHE_SIZE,
         bucketCandidateCap: RHYME_ASTROLOGY_BUCKET_QUERY_CAP,
         maxClusters: RHYME_ASTROLOGY_QUERY_MAX_CLUSTERS,

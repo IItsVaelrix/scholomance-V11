@@ -79,7 +79,7 @@ npm run build
 npm start                    # runs ritual-init.js then Fastify server
 ```
 
-`ritual-init.js` automatically builds the dictionary and corpus on first boot if missing from persistent storage.
+`ritual-init.js` automatically builds the dictionary and corpus on first boot if missing from persistent storage. When `ENABLE_RHYME_ASTROLOGY=true`, it also builds the rhyme-astrology artifact bundle into the resolved output directory before Fastify starts.
 
 ## Environment Variables
 
@@ -100,6 +100,7 @@ npm start                    # runs ritual-init.js then Fastify server
 | `ENABLE_DEV_AUTH` | No | `false` | Dev-only auth bypass. |
 | `ENABLE_COLLAB_API` | No | `true` dev / `false` prod | Enables `/collab/*` routes. |
 | `ENABLE_RHYME_ASTROLOGY` | No | `false` | Enables `/api/rhyme-astrology/*` routes. |
+| `RHYME_ASTROLOGY_OUTPUT_DIR` | No | `./dict_data/rhyme-astrology` locally, `/var/data/rhyme-astrology` in production | Directory holding the rhyme-astrology SQLite artifacts and emotion priors JSON. |
 | `ENABLE_REDIS_SESSIONS` | No | `false` | Force Redis sessions in dev. |
 | `VITE_USE_CODEX_PIPELINE` | No | `true` | Client CODEx pipeline toggle. |
 | `VITE_USE_SERVER_PANEL_ANALYSIS` | No | `true` | Client panel analysis toggle. |
@@ -158,7 +159,7 @@ npm start                    # runs ritual-init.js then Fastify server
 
 ### Render
 
-`render.yaml` defines a Docker web service with a 500GB persistent disk at `/var/data`. Set `REDIS_URL` and `SESSION_SECRET` in Render dashboard. Health checks use `/health/ready`.
+`render.yaml` defines a Docker web service with a 500GB persistent disk at `/var/data`. Set `REDIS_URL` and `SESSION_SECRET` in Render dashboard. When rhyme astrology is enabled, point `RHYME_ASTROLOGY_OUTPUT_DIR` at `/var/data/rhyme-astrology`. Health checks use `/health/ready`.
 
 ### Docker
 
