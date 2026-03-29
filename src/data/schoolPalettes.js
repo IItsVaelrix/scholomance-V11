@@ -43,195 +43,125 @@ const DEFAULT_LIGHT_COLORS = {
 };
 
 // ─── SONIC — Deep Teal (H:174) ─────────────────────────────────────────────
-// Perfect AE Resonance. Intense harmonic focus.
+// Perfect Resonance Matrix. Intense harmonic focus.
 const SONIC_COLORS = {
-  IY: "#bcece8",   // hsl(174, 62%, 83%)
-  UW: "#a2e6e0",   // hsl(174, 64%, 76%)
-  EY: "#80d9d2",   // hsl(174, 56%, 68%)
-  OW: "#63ccc4",   // hsl(174, 52%, 59%)
-  IH: "#3c8c82",   // hsl(174, 45%, 42%) — ANCHOR
-  AO: "#36a096",   // hsl(174, 52%, 42%)
-  AE: "#258078",   // hsl(174, 54%, 32%)
-  A:  "#14504a",   // hsl(174, 60%, 20%)
+  IY: "#bcece8", IH: "#a6dfd9", EY: "#8ed2cc", EH: "#76c5be", AE: "#3c8c82", 
+  AA: "#52a096", AH: "#6ea096", AO: "#86ccc4", OW: "#9ed9d2", UH: "#b2e6e0", 
+  UW: "#c8f0ec", ER: "#8ed2cc", AX: "#76c5be", AY: "#a6dfd9", AW: "#3c8c82", 
+  OY: "#52a096", UR: "#6ea096", OH: "#86ccc4", OO: "#9ed9d2", YUW: "#b2e6e0"
 };
 
 const SONIC_LIGHT_COLORS = {
-  IY: "#80d9d2",
-  UW: "#63ccc4",
-  EY: "#3c8c82",
-  OW: "#36a096",
-  IH: "#258078",
-  AO: "#1e6c65",
-  AE: "#185853",
-  A:  "#0e3835",
+  IY: "#8ed2cc", IH: "#76c5be", EY: "#3c8c82", EH: "#258078", AE: "#14504a",
+  AA: "#1e6c65", AH: "#2a7c74", AO: "#36a096", OW: "#63ccc4", UH: "#80d9d2",
+  UW: "#a2e6e0", ER: "#3c8c82", AX: "#258078", AY: "#76c5be", AW: "#14504a",
+  OY: "#1e6c65", UR: "#2a7c74", OH: "#36a096", OO: "#63ccc4", YUW: "#80d9d2"
 };
 
 // ─── PSYCHIC — Sapphire (H:200) ────────────────────────────────────────────
-// Perfect IY Resonance. High-frequency mental clarity.
+// Perfect Resonance Matrix. High-frequency mental clarity.
 const PSYCHIC_COLORS = {
-  IY: "#b0cef0",   // hsl(200, 62%, 82%)
-  UW: "#94b8e8",   // hsl(200, 65%, 75%)
-  EY: "#78a0dc",   // hsl(200, 58%, 67%)
-  OW: "#5c86cc",   // hsl(200, 52%, 58%)
-  IH: "#4470b8",   // hsl(200, 48%, 49%) — ANCHOR
-  AO: "#34589e",   // hsl(200, 52%, 41%)
-  AE: "#264280",   // hsl(200, 54%, 33%)
-  A:  "#162850",   // hsl(200, 56%, 20%)
+  IY: "#b0cef0", IH: "#94b8e8", EY: "#78a0dc", EH: "#5c86cc", AE: "#4470b8",
+  AA: "#34589e", AH: "#264280", AO: "#162850", OW: "#0e1838", UH: "#0a1020",
+  UW: "#c8e0f8", ER: "#78a0dc", AX: "#5c86cc", AY: "#94b8e8", AW: "#4470b8",
+  OY: "#34589e", UR: "#264280", OH: "#162850", OO: "#0e1838", YUW: "#0a1020"
 };
 
 const PSYCHIC_LIGHT_COLORS = {
-  IY: "#78a0dc",
-  UW: "#5c86cc",
-  EY: "#4470b8",
-  OW: "#34589e",
-  IH: "#264280",
-  AO: "#1e346a",
-  AE: "#182858",
-  A:  "#0e1838",
+  IY: "#78a0dc", IH: "#5c86cc", EY: "#4470b8", EH: "#34589e", AE: "#264280",
+  AA: "#1e346a", AH: "#182858", AO: "#0e1838", OW: "#0a1020", UH: "#080c18",
+  UW: "#94b8e8", ER: "#4470b8", AX: "#34589e", AY: "#5c86cc", AW: "#264280",
+  OY: "#1e346a", UR: "#182858", OH: "#0e1838", OO: "#0a1020", YUW: "#080c18"
 };
 
-// ─── VOID — Obsidian (H:171, Low Saturation S:12-22%) ──────────────────────
-// Perfect AX (Schwa) Resonance. Entropy and muted vibration.
+// ─── VOID — Obsidian (H:171, Low Saturation) ──────────────────────────────
 const VOID_COLORS = {
-  IY: "#c4d4d2",   // hsl(171, 12%, 80%)
-  UW: "#a8beba",   // hsl(171, 14%, 70%)
-  EY: "#8ca6a2",   // hsl(171, 12%, 60%)
-  OW: "#72908c",   // hsl(171, 13%, 51%)
-  IH: "#6a5a78",   // Keep Obsidian Anchor for aesthetic stability
-  AO: "#44605d",   // hsl(171, 17%, 32%)
-  AE: "#304846",   // hsl(171, 18%, 24%)
-  A:  "#1a2c2b",   // hsl(171, 22%, 14%)
+  IY: "#c4d4d2", IH: "#a8beba", EY: "#8ca6a2", EH: "#72908c", AE: "#6a5a78",
+  AA: "#44605d", AH: "#304846", AO: "#1a2c2b", OW: "#121818", UH: "#0a0c0c",
+  UW: "#d0e0de", ER: "#8ca6a2", AX: "#72908c", AY: "#a8beba", AW: "#6a5a78",
+  OY: "#44605d", UR: "#304846", OH: "#1a2c2b", OO: "#121818", YUW: "#0a0c0c"
 };
 
 const VOID_LIGHT_COLORS = {
-  IY: "#8ca6a2",
-  UW: "#72908c",
-  EY: "#6a5a78",
-  OW: "#44605d",
-  IH: "#304846",
-  AO: "#283837",
-  AE: "#1e302f",
-  A:  "#12201f",
+  IY: "#8ca6a2", IH: "#72908c", EY: "#6a5a78", EH: "#44605d", AE: "#304846",
+  AA: "#283837", AH: "#1e302f", AO: "#12201f", OW: "#0a0c0c", UH: "#080808",
+  UW: "#a8beba", ER: "#6a5a78", AX: "#44605d", AY: "#72908c", AW: "#304846",
+  OY: "#283837", UR: "#1e302f", OH: "#12201f", OO: "#0a0c0c", YUW: "#080808"
 };
 
 // ─── ALCHEMY — Ethereal Teal (H:185) ─────────────────────────────────────
-// Perfect EY Resonance. Transmutation energy.
 const ALCHEMY_COLORS = {
-  IY: "#b8ecef",   // hsl(185, 64%, 83%)
-  UW: "#9ee4e8",   // hsl(185, 66%, 76%)
-  EY: "#80d4dc",   // hsl(185, 60%, 68%)
-  OW: "#60c4cc",   // hsl(185, 55%, 59%)
-  IH: "#5c9aac",   // hsl(185, 45%, 58%) — ANCHOR
-  AO: "#3496a0",   // hsl(185, 52%, 42%)
-  AE: "#267880",   // hsl(185, 54%, 33%)
-  A:  "#184a50",   // hsl(185, 56%, 20%)
+  IY: "#b8ecef", IH: "#9ee4e8", EY: "#80d4dc", EH: "#60c4cc", AE: "#5c9aac",
+  AA: "#3496a0", AH: "#267880", AO: "#184a50", OW: "#103238", UH: "#0a2024",
+  UW: "#d0f4f8", ER: "#80d4dc", AX: "#60c4cc", AY: "#9ee4e8", AW: "#5c9aac",
+  OY: "#3496a0", UR: "#267880", OH: "#184a50", OO: "#103238", YUW: "#0a2024"
 };
 
 const ALCHEMY_LIGHT_COLORS = {
-  IY: "#80d4dc",
-  UW: "#60c4cc",
-  EY: "#5c9aac",
-  OW: "#3496a0",
-  IH: "#267880",
-  AO: "#1e626c",
-  AE: "#185058",
-  A:  "#0e3238",
+  IY: "#80d4dc", IH: "#60c4cc", EY: "#5c9aac", EH: "#3496a0", AE: "#267880",
+  AA: "#1e626c", AH: "#185058", AO: "#0e3238", OW: "#0a2024", UH: "#081418",
+  UW: "#9ee4e8", ER: "#5c9aac", AX: "#3496a0", AY: "#60c4cc", AW: "#267880",
+  OY: "#1e626c", UR: "#185058", OH: "#0e3238", OO: "#0a2024", YUW: "#081418"
 };
 
-// ─── WILL — Malachite-Red (H:156) ────────────────────────────────────────────────
-// Perfect AH Resonance. Stone of courage and biological force.
+// ─── WILL — Malachite (H:156) ─────────────────────────────────────────────
 const WILL_COLORS = {
-  IY: "#b0f0cc",   // hsl(156, 62%, 82%)
-  UW: "#94e8bc",   // hsl(156, 64%, 75%)
-  EY: "#78dc9e",   // hsl(156, 58%, 67%)
-  OW: "#60cc88",   // hsl(156, 52%, 59%)
-  IH: "#3c8c64",   // hsl(156, 45%, 53%) — ANCHOR
-  AO: "#34a060",   // hsl(156, 52%, 42%)
-  AE: "#26804a",   // hsl(156, 54%, 33%)
-  A:  "#18502e",   // hsl(156, 56%, 20%)
+  IY: "#b0f0cc", IH: "#94e8bc", EY: "#78dc9e", EH: "#60cc88", AE: "#3c8c64",
+  AA: "#34a060", AH: "#26804a", AO: "#18502e", OW: "#10381e", UH: "#0a2412",
+  UW: "#ccf8e0", ER: "#78dc9e", AX: "#60cc88", AY: "#94e8bc", AW: "#3c8c64",
+  OY: "#34a060", UR: "#26804a", OH: "#18502e", OO: "#10381e", YUW: "#0a2412"
 };
 
 const WILL_LIGHT_COLORS = {
-  IY: "#78dc9e",
-  UW: "#60cc88",
-  EY: "#3c8c64",
-  OW: "#34a060",
-  IH: "#26804a",
-  AO: "#1e6c3e",
-  AE: "#185832",
-  A:  "#0e381e",
-};
-
-// ─── DIVINATION — Topaz-Green (H:134) ─────────────────────────────────────
-// Perfect AO Resonance. Prophetic clarity through the verdant lens.
-const DIVINATION_COLORS = {
-  IY: "#b8f0a8",   // hsl(134, 64%, 80%)
-  UW: "#a0e68c",   // hsl(134, 62%, 72%)
-  EY: "#88d470",   // hsl(134, 55%, 64%)
-  OW: "#70c056",   // hsl(134, 50%, 55%)
-  IH: "#748c5c",   // hsl(134, 45%, 56%) — ANCHOR
-  AO: "#5ca030",   // hsl(134, 50%, 37%)
-  AE: "#4a6e24",   // hsl(134, 52%, 29%)
-  A:  "#2e4416",   // hsl(134, 52%, 18%)
-};
-
-const DIVINATION_LIGHT_COLORS = {
-  IY: "#88d470",
-  UW: "#70c056",
-  EY: "#748c5c",
-  OW: "#5ca030",
-  IH: "#4a6e24",
-  AO: "#3e5c1e",
-  AE: "#324a16",
-  A:  "#203010",
+  IY: "#78dc9e", IH: "#60cc88", EY: "#3c8c64", EH: "#34a060", AE: "#26804a",
+  AA: "#1e6c3e", AH: "#185832", AO: "#0e381e", OW: "#0a2412", UH: "#08180c",
+  UW: "#94e8bc", ER: "#3c8c64", AX: "#34a060", AY: "#60cc88", AW: "#26804a",
+  OY: "#1e6c3e", UR: "#185832", OH: "#0e381e", OO: "#0a2412", YUW: "#08180c"
 };
 
 // ─── NECROMANCY — Emerald (H:150) ─────────────────────────────────────────
-// Perfect AA Resonance. Life force manipulation through deep green.
 const NECROMANCY_COLORS = {
-  IY: "#a8e0b0",   // hsl(150, 46%, 77%)
-  UW: "#88d094",   // hsl(150, 44%, 67%)
-  EY: "#68bc78",   // hsl(150, 40%, 57%)
-  OW: "#4ca860",   // hsl(150, 40%, 48%)
-  IH: "#3c8c52",   // hsl(150, 65%, 48%) — ANCHOR
-  AO: "#2a7c3e",   // hsl(150, 48%, 33%)
-  AE: "#1e622e",   // hsl(150, 52%, 25%)
-  A:  "#123c1c",   // hsl(150, 54%, 15%)
+  IY: "#a8e0b0", IH: "#88d094", EY: "#68bc78", EH: "#4ca860", AE: "#3c8c52",
+  AA: "#2a7c3e", AH: "#1e622e", AO: "#123c1c", OW: "#0c2812", UH: "#081c0c",
+  UW: "#c8f8d0", ER: "#68bc78", AX: "#4ca860", AY: "#88d094", AW: "#3c8c52",
+  OY: "#2a7c3e", UR: "#1e622e", OH: "#123c1c", OO: "#0c2812", YUW: "#081c0c"
 };
 
 const NECROMANCY_LIGHT_COLORS = {
-  IY: "#68bc78",
-  UW: "#4ca860",
-  EY: "#3c8c52",
-  OW: "#2a7c3e",
-  IH: "#1e622e",
-  AO: "#185226",
-  AE: "#12421e",
-  A:  "#0c2c14",
+  IY: "#68bc78", IH: "#4ca860", EY: "#3c8c52", EH: "#2a7c3e", AE: "#1e622e",
+  AA: "#185226", AH: "#12421e", AO: "#0c2c14", OW: "#081c0c", UH: "#061208",
+  UW: "#88d094", ER: "#3c8c52", AX: "#2a7c3e", AY: "#4ca860", AW: "#1e622e",
+  OY: "#185226", UR: "#12421e", OH: "#0c2c14", OO: "#081c0c", YUW: "#061208"
 };
 
 // ─── ABJURATION — Aquamarine (H:136) ────────────────────────────────────────
-// Perfect UW Resonance. Protective ward shimmer.
 const ABJURATION_COLORS = {
-  IY: "#b0f0cc",   // hsl(136, 42%, 82%)
-  UW: "#94e8bc",   // hsl(136, 40%, 75%)
-  EY: "#78dc9e",   // hsl(136, 38%, 67%)
-  OW: "#60cc88",   // hsl(136, 40%, 59%)
-  IH: "#5c8c64",   // hsl(136, 65%, 70%) — ANCHOR
-  AO: "#34a060",   // hsl(136, 52%, 42%)
-  AE: "#26804a",   // hsl(136, 56%, 33%)
-  A:  "#18502e",   // hsl(136, 56%, 20%)
+  IY: "#b0f0cc", IH: "#94e8bc", EY: "#78dc9e", EH: "#60cc88", AE: "#5c8c64",
+  AA: "#34a060", AH: "#26804a", AO: "#18502e", OW: "#10381e", UH: "#0a2412",
+  UW: "#ccf8e0", ER: "#78dc9e", AX: "#60cc88", AY: "#94e8bc", AW: "#5c8c64",
+  OY: "#34a060", UR: "#26804a", OH: "#18502e", OO: "#10381e", YUW: "#0a2412"
 };
 
 const ABJURATION_LIGHT_COLORS = {
-  IY: "#78dc9e",
-  UW: "#60cc88",
-  EY: "#5c8c64",
-  OW: "#34a060",
-  IH: "#26804a",
-  AO: "#1e6c3e",
-  AE: "#185832",
-  A:  "#0e381e",
+  IY: "#78dc9e", IH: "#60cc88", EY: "#5c8c64", EH: "#34a060", AE: "#26804a",
+  AA: "#1e6c3e", AH: "#185832", AO: "#0e381e", OW: "#0a2412", UH: "#08180c",
+  UW: "#94e8bc", ER: "#5c8c64", AX: "#34a060", AY: "#60cc88", AW: "#26804a",
+  OY: "#1e6c3e", UR: "#185832", OH: "#0e381e", OO: "#0a2412", YUW: "#08180c"
+};
+
+// ─── DIVINATION — Topaz-Green (H:134) ─────────────────────────────────────
+const DIVINATION_COLORS = {
+  IY: "#b8f0a8", IH: "#a0e68c", EY: "#88d470", EH: "#70c056", AE: "#748c5c",
+  AA: "#5ca030", AH: "#4a6e24", AO: "#2e4416", OW: "#1e2c0e", UH: "#141c0a",
+  UW: "#ccf8c0", ER: "#88d470", AX: "#70c056", AY: "#a0e68c", AW: "#748c5c",
+  OY: "#5ca030", UR: "#4a6e24", OH: "#2e4416", OO: "#1e2c0e", YUW: "#141c0a"
+};
+
+const DIVINATION_LIGHT_COLORS = {
+  IY: "#88d470", IH: "#70c056", EY: "#748c5c", EH: "#5ca030", AE: "#4a6e24",
+  AA: "#3e5c1e", AH: "#324a16", AO: "#203010", OW: "#141c0a", UH: "#0c1206",
+  UW: "#a0e68c", ER: "#748c5c", AX: "#5ca030", AY: "#70c056", AW: "#4a6e24",
+  OY: "#3e5c1e", UR: "#324a16", OH: "#203010", OO: "#141c0a", YUW: "#0c1206"
 };
 
 // ─── Skin Maps ────────────────────────────────────────────────────────────────
@@ -268,5 +198,11 @@ export const SCHOOL_SKINS_LIGHT = {
  */
 export function getVowelColorsForSchool(school, theme = 'dark') {
   const skins = theme === 'light' ? SCHOOL_SKINS_LIGHT : SCHOOL_SKINS;
-  return skins[school?.toUpperCase()] || (theme === 'light' ? DEFAULT_LIGHT_COLORS : DEFAULT_VOWEL_COLORS);
+  const defaults = theme === 'light' ? DEFAULT_LIGHT_COLORS : DEFAULT_VOWEL_COLORS;
+  const skin = skins[school?.toUpperCase()];
+  
+  if (!skin) return defaults;
+  
+  // Merge to ensure all 20 vowels have a mapping even if the skin is partial
+  return { ...defaults, ...skin };
 }

@@ -1200,8 +1200,9 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         }
 
                         const isStopWord = STOP_WORDS.has(clean);
+                        const rawVowelFamily = analysis?.vowelFamily;
                         const wordVowelFamily = analysis
-                          ? normalizeVowelFamily(analysis.vowelFamily)
+                          ? normalizeVowelFamily(rawVowelFamily)
                           : null;
                         const shouldColorWord = analysis
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily)
@@ -1229,7 +1230,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         // OR authoritative bytecode that isn't inert.
                         const hasScoredEntry = (shouldColorWord && codexEntry !== null) || (bytecode !== null && bytecode.effectClass !== 'INERT');
                         const color = hasScoredEntry
-                          ? (decoded?.color || codexEntry?.color || activeColors[wordVowelFamily] || fallbackColor)
+                          ? (decoded?.color || codexEntry?.color || (rawVowelFamily && activeColors[rawVowelFamily]) || activeColors[wordVowelFamily] || fallbackColor)
                           : undefined;
                         const wordOpacity = hasScoredEntry ? (codexEntry?.opacity ?? undefined) : undefined;
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
@@ -1323,7 +1324,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const analysis = analyzedWordsByIdentity.get(identityKey)
                           || derivedAnalyzedWordsByCharStart.get(charStart)
                           || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
-                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis.vowelFamily) : null;   
+                        const rawVowelFamily = analysis?.vowelFamily;
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(rawVowelFamily) : null;   
                         const shouldColor = analysis ? shouldColorWordHook(charStart, clean, wordVowelFamily) : false;
                         const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
                         const codexEntry = shouldColor ? (activeColorMap?.get(charStart) ?? null) : null;       
@@ -1339,7 +1341,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           : null;
 
                         const color = decoded?.color || (shouldColor
-                          ? (codexEntry?.color || activeColors[wordVowelFamily] || undefined)
+                          ? (codexEntry?.color || (rawVowelFamily && activeColors[rawVowelFamily]) || activeColors[wordVowelFamily] || undefined)
                           : undefined);
 
                         const isMultiSyllable = shouldColor && (codexEntry?.isMultiSyllable || decoded?.syllableDepth >= 2);

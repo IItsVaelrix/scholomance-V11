@@ -363,12 +363,17 @@ const WordTooltip = ({
       ? [...new Set(definitions)].slice(0, 5)
       : (definition?.text ? [definition.text] : ["No arcane inscriptions found."]);
 
-    const vowelFamily   = normalizeVowelFamily(localCore?.vowelFamily || wordData?.vowelFamily);
+    const rawVowelFamily = localCore?.vowelFamily || wordData?.vowelFamily;
+    const vowelFamily   = normalizeVowelFamily(rawVowelFamily);
     const schoolId      = VOWEL_FAMILY_TO_SCHOOL[vowelFamily] || "DEFAULT";
     const schoolName    = localCore?.schoolName || SCHOOLS[schoolId]?.name;
     const schoolIcon    = localCore?.schoolGlyph || SCHOOLS[schoolId]?.glyph || "✦";
     const fallbackColor = theme === "light" ? "#1a1a2e" : "#f8f9ff";
-    const vowelColor    = vowelFamily ? (vowelPalette[vowelFamily] || fallbackColor) : fallbackColor;
+    
+    // 20-vowel lookup: try raw first for granular variation, fallback to normalized family
+    const vowelColor    = rawVowelFamily && vowelPalette[rawVowelFamily] 
+      ? vowelPalette[rawVowelFamily] 
+      : (vowelPalette[vowelFamily] || fallbackColor);
     const rarity        = getRarity(word);
     const syllables     = wordData?.syllableCount || localCore?.syllableCount || 1;
 
