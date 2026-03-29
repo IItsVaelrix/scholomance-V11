@@ -1,243 +1,237 @@
 /**
- * School Color Skins for Truesight
+ * School Color Skins for Truesight — Jewel-Tone Edition
  *
  * Each school has 1 anchor hue mapped to 8 shades across phonetic height:
- *   IY (high front) → lightest
+ *   IY (high front) → lightest jewel facet
  *   UW (high back)  → 2nd lightest
- *   EY (mid-high front) → 3rd
- *   OW (mid-high back)  → 4th
- *   IH (mid front)  → 5th
- *   AO (mid back)   → 6th
- *   AE (low front)  → 7th
- *   A  (lowest)     → darkest
+ *   EY (mid-high front) → core glow
+ *   OW (mid-high back)  → anchor territory
+ *   IH (mid front)  → ANCHOR (school identity color)
+ *   AO (mid back)   → deep body
+ *   AE (low front)  → shadow
+ *   A  (lowest)     → abyss (still hue-shifted, never pure black)
+ *
+ * Design principle: Jewel tones maintain colored extremes —
+ * IY stops at L:77-85% (not white), A stops at L:14-20% (not black).
+ * Saturation is controlled across the ramp to prevent wash-out.
  *
  * Light mode: same hue ramp shifted 2 stops darker for readability on white.
  */
 
-// 8 Core Vowel Families:
-// IY - High front (machine, blue)        → school: PSYCHIC
-// IH - Near-high front (obelisk) + ER    → school: SONIC
-// EY - Mid front (bait, day) + AY        → school: ALCHEMY / PSYCHIC
-// AE - Low front (bat, dragon) + EH      → school: WILL
-// A  - Low back (obvious) + AA, AH, AX   → school: WILL
-// AO - Mid back rounded (water)          → school: SONIC
-// OW - Mid-high back (soul, cold)        → school: ALCHEMY
-// UW - High back (boot) + OO, YUW, UH   → school: VOID
-
 // ─── DEFAULT ────────────────────────────────────────────────────────────────
-// Rainbow fallback — used when no school is selected.
+// Rainbow fallback — one mid-stop from each school to showcase the full jewel vocabulary.
 export const DEFAULT_VOWEL_COLORS = {
-  IY: "#3b82f6",   // bright blue (FLEECE)
-  IH: "#06b6d4",   // cyan (KIT)
-  EY: "#a78bfa",   // violet (FACE)
-  AE: "#f472b6",   // pink (TRAP)
-  A:  "#fb7185",   // rose (LOT)
-  AO: "#fbbf24",   // amber (THOUGHT)
-  OW: "#facc15",   // yellow (GOAT)
-  UW: "#4ade80",   // green (GOOSE)
+  IY: "#4470b8",   // Sapphire (Psychic)
+  IH: "#6548b8",   // Tanzanite (Sonic)
+  EY: "#b84882",   // Rhodolite (Alchemy)
+  AE: "#b85c48",   // Carnelian (Will)
+  A:  "#389468",   // Malachite (Necromancy)
+  AO: "#a88440",   // Topaz (Divination)
+  OW: "#38849c",   // Aquamarine (Abjuration)
+  UW: "#6a5a78",   // Obsidian (Void)
 };
 
 const DEFAULT_LIGHT_COLORS = {
-  IY: "#1d4ed8",
-  IH: "#0891b2",
-  EY: "#7c3aed",
-  AE: "#db2777",
-  A:  "#e11d48",
-  AO: "#d97706",
-  OW: "#ca8a04",
-  UW: "#16a34a",
+  IY: "#264280",
+  IH: "#3e2580",
+  EY: "#802654",
+  AE: "#803626",
+  A:  "#1e6240",
+  AO: "#6e5424",
+  OW: "#1e5668",
+  UW: "#3c3048",
 };
 
-// ─── SONIC ──────────────────────────────────────────────────────────────────
-// Anchor: violet-purple. Phonetic-height ramp light → dark.
+// ─── SONIC — Tanzanite (H:265) ─────────────────────────────────────────────
+// Blue-violet trichroic crystal. Resonance and harmonic vibration.
 const SONIC_COLORS = {
-  IY: "#f5f3ff",   // near-white violet
-  UW: "#ddd6fe",   // pale lavender
-  EY: "#c4b5fd",   // medium lavender
-  OW: "#a78bfa",   // medium violet
-  IH: "#8b5cf6",   // mid violet
-  AO: "#7c3aed",   // anchor
-  AE: "#6d28d9",   // dark violet
-  A:  "#4c1d95",   // deep violet
+  IY: "#c8b8f0",   // hsl(265, 62%, 83%) — Crystalline chime
+  UW: "#b09ee6",   // hsl(265, 64%, 76%) — Overtone shimmer
+  EY: "#9580d9",   // hsl(265, 56%, 68%) — Harmonic body
+  OW: "#7b63cc",   // hsl(265, 52%, 59%) — Resonance core
+  IH: "#6548b8",   // hsl(265, 48%, 50%) — ANCHOR
+  AO: "#5236a0",   // hsl(265, 52%, 42%) — Deep vibration
+  AE: "#3e2580",   // hsl(265, 54%, 32%) — Subharmonic
+  A:  "#221450",   // hsl(265, 60%, 20%) — Infrasonic void
 };
 
 const SONIC_LIGHT_COLORS = {
-  IY: "#ddd6fe",
-  UW: "#c4b5fd",
-  EY: "#a78bfa",
-  OW: "#8b5cf6",
-  IH: "#7c3aed",
-  AO: "#6d28d9",
-  AE: "#5b21b6",
-  A:  "#3b0764",
+  IY: "#9580d9",
+  UW: "#7b63cc",
+  EY: "#6548b8",
+  OW: "#5236a0",
+  IH: "#3e2580",
+  AO: "#321e6c",
+  AE: "#261858",
+  A:  "#160e38",
 };
 
-// ─── PSYCHIC ─────────────────────────────────────────────────────────────────
-// Anchor: cyan. Phonetic-height ramp light → dark.
+// ─── PSYCHIC — Sapphire (H:220) ────────────────────────────────────────────
+// Deep blue mental clarity. Cool contemplation and third-eye focus.
 const PSYCHIC_COLORS = {
-  IY: "#ecfeff",
-  UW: "#cffafe",
-  EY: "#a5f3fc",
-  OW: "#67e8f9",
-  IH: "#22d3ee",
-  AO: "#06b6d4",   // anchor
-  AE: "#0891b2",
-  A:  "#164e63",
+  IY: "#b0cef0",   // hsl(220, 62%, 82%) — Thought-flash
+  UW: "#94b8e8",   // hsl(220, 65%, 75%) — Clarity pulse
+  EY: "#78a0dc",   // hsl(220, 58%, 67%) — Synapse arc
+  OW: "#5c86cc",   // hsl(220, 52%, 58%) — Mind's eye
+  IH: "#4470b8",   // hsl(220, 48%, 49%) — ANCHOR
+  AO: "#34589e",   // hsl(220, 52%, 41%) — Deep cognition
+  AE: "#264280",   // hsl(220, 54%, 33%) — Subconscious
+  A:  "#162850",   // hsl(220, 56%, 20%) — Psychic void
 };
 
 const PSYCHIC_LIGHT_COLORS = {
-  IY: "#cffafe",
-  UW: "#a5f3fc",
-  EY: "#67e8f9",
-  OW: "#22d3ee",
-  IH: "#06b6d4",
-  AO: "#0891b2",
-  AE: "#0e7490",
-  A:  "#083344",
+  IY: "#78a0dc",
+  UW: "#5c86cc",
+  EY: "#4470b8",
+  OW: "#34589e",
+  IH: "#264280",
+  AO: "#1e346a",
+  AE: "#182858",
+  A:  "#0e1838",
 };
 
-// ─── VOID ────────────────────────────────────────────────────────────────────
-// Anchor: zinc-gray. Neutral ramp near-white → near-black.
+// ─── VOID — Obsidian (H:310, Low Saturation S:12-22%) ──────────────────────
+// Purple-smoke glass formed from destruction. Color draining into entropy.
 const VOID_COLORS = {
-  IY: "#fafafa",
-  UW: "#e4e4e7",
-  EY: "#d4d4d8",
-  OW: "#a1a1aa",
-  IH: "#71717a",   // anchor
-  AO: "#52525b",
-  AE: "#3f3f46",
-  A:  "#18181b",
+  IY: "#d0c4d4",   // hsl(310, 12%, 80%) — Residual light
+  UW: "#b8a8be",   // hsl(310, 14%, 70%) — Fading echo
+  EY: "#9e8ca6",   // hsl(310, 12%, 60%) — Smoke veil
+  OW: "#847290",   // hsl(310, 13%, 51%) — Entropy membrane
+  IH: "#6a5a78",   // hsl(310, 15%, 41%) — ANCHOR
+  AO: "#524460",   // hsl(310, 17%, 32%) — Deep absence
+  AE: "#3c3048",   // hsl(310, 18%, 24%) — Near-void
+  A:  "#221a2c",   // hsl(310, 22%, 14%) — True void
 };
 
 const VOID_LIGHT_COLORS = {
-  IY: "#d4d4d8",
-  UW: "#a1a1aa",
-  EY: "#71717a",
-  OW: "#52525b",
-  IH: "#3f3f46",
-  AO: "#27272a",
-  AE: "#18181b",
-  A:  "#09090b",
+  IY: "#9e8ca6",
+  UW: "#847290",
+  EY: "#6a5a78",
+  OW: "#524460",
+  IH: "#3c3048",
+  AO: "#302838",
+  AE: "#261e30",
+  A:  "#181220",
 };
 
-// ─── ALCHEMY ──────────────────────────────────────────────────────────────────
-// Anchor: magenta. Phonetic-height ramp light → dark.
+// ─── ALCHEMY — Rhodolite Garnet (H:330) ─────────────────────────────────────
+// Color-change garnet. Rose-magenta transmutation energy.
 const ALCHEMY_COLORS = {
-  IY: "#fdf4ff",
-  UW: "#fae8ff",
-  EY: "#f5d0fe",
-  OW: "#e879f9",
-  IH: "#d946ef",
-  AO: "#c026d3",   // anchor
-  AE: "#a21caf",
-  A:  "#701a75",
+  IY: "#f0b8d4",   // hsl(330, 64%, 83%) — Philosopher's flash
+  UW: "#e89ec2",   // hsl(330, 66%, 76%) — Transmutation glow
+  EY: "#dc80ae",   // hsl(330, 60%, 68%) — Mercury bloom
+  OW: "#cc6098",   // hsl(330, 55%, 59%) — Elixir heart
+  IH: "#b84882",   // hsl(330, 48%, 50%) — ANCHOR
+  AO: "#a03468",   // hsl(330, 52%, 42%) — Crucible depth
+  AE: "#802654",   // hsl(330, 54%, 33%) — Nigredo shadow
+  A:  "#501838",   // hsl(330, 56%, 20%) — Prima materia
 };
 
 const ALCHEMY_LIGHT_COLORS = {
-  IY: "#fae8ff",
-  UW: "#f5d0fe",
-  EY: "#e879f9",
-  OW: "#d946ef",
-  IH: "#c026d3",
-  AO: "#a21caf",
-  AE: "#86198f",
-  A:  "#4a044e",
+  IY: "#dc80ae",
+  UW: "#cc6098",
+  EY: "#b84882",
+  OW: "#a03468",
+  IH: "#802654",
+  AO: "#6c1e46",
+  AE: "#58183a",
+  A:  "#380e24",
 };
 
-// ─── WILL ─────────────────────────────────────────────────────────────────────
-// Anchor: orange-amber. Phonetic-height ramp light → dark.
+// ─── WILL — Carnelian (H:15) ────────────────────────────────────────────────
+// Deep amber-red. Stone of courage, fierce determination, volcanic fire.
 const WILL_COLORS = {
-  IY: "#fff7ed",
-  UW: "#ffedd5",
-  EY: "#fed7aa",
-  OW: "#fdba74",
-  IH: "#fb923c",
-  AO: "#f97316",   // anchor
-  AE: "#ea580c",
-  A:  "#7c2d12",
+  IY: "#f0c4b0",   // hsl(15, 62%, 82%) — Ignition flash
+  UW: "#e8ac94",   // hsl(15, 64%, 75%) — Ember glow
+  EY: "#dc9078",   // hsl(15, 58%, 67%) — Forge heat
+  OW: "#cc7460",   // hsl(15, 52%, 59%) — Molten core
+  IH: "#b85c48",   // hsl(15, 48%, 50%) — ANCHOR
+  AO: "#a04834",   // hsl(15, 52%, 42%) — Deep flame
+  AE: "#803626",   // hsl(15, 54%, 33%) — Cooling iron
+  A:  "#502018",   // hsl(15, 56%, 20%) — Volcanic stone
 };
 
 const WILL_LIGHT_COLORS = {
-  IY: "#ffedd5",
-  UW: "#fed7aa",
-  EY: "#fdba74",
-  OW: "#fb923c",
-  IH: "#f97316",
-  AO: "#ea580c",
-  AE: "#c2410c",
-  A:  "#431407",
+  IY: "#dc9078",
+  UW: "#cc7460",
+  EY: "#b85c48",
+  OW: "#a04834",
+  IH: "#803626",
+  AO: "#6c2c1e",
+  AE: "#582418",
+  A:  "#38140e",
 };
 
-// ─── DIVINATION ───────────────────────────────────────────────────────────────
-// Anchor: gold/amber (oracle, prophetic sight). Glyph: ◉
+// ─── DIVINATION — Imperial Topaz (H:50) ─────────────────────────────────────
+// Golden-amber oracular fire. Prophetic clarity and liquid gold sight.
 const DIVINATION_COLORS = {
-  IY: "#fffbeb",   // Starlight
-  UW: "#fef3c7",   // Luminous Gold
-  EY: "#fde68a",   // Solar Flare
-  OW: "#fcd34d",   // Amber Vision
-  IH: "#fbbf24",   // Oracle Anchor
-  AO: "#f59e0b",   // Deep Prophecy
-  AE: "#d97706",   // Bronze Secret
-  A:  "#78350f",   // Ancient Earth
+  IY: "#f0dca8",   // hsl(50, 64%, 80%) — Prophecy flash
+  UW: "#e6cc8c",   // hsl(50, 62%, 72%) — Oracle light
+  EY: "#d4b470",   // hsl(50, 55%, 64%) — Vision amber
+  OW: "#c09c56",   // hsl(50, 50%, 55%) — Scrying flame
+  IH: "#a88440",   // hsl(50, 46%, 46%) — ANCHOR
+  AO: "#8c6c30",   // hsl(50, 50%, 37%) — Deep augury
+  AE: "#6e5424",   // hsl(50, 52%, 29%) — Sealed prophecy
+  A:  "#443416",   // hsl(50, 52%, 18%) — Buried oracle
 };
 
 const DIVINATION_LIGHT_COLORS = {
-  IY: "#fde68a",
-  UW: "#fcd34d",
-  EY: "#fbbf24",
-  OW: "#f59e0b",
-  IH: "#d97706",
-  AO: "#b45309",
-  AE: "#92400e",
-  A:  "#451a03",
+  IY: "#d4b470",
+  UW: "#c09c56",
+  EY: "#a88440",
+  OW: "#8c6c30",
+  IH: "#6e5424",
+  AO: "#5c461e",
+  AE: "#4a3816",
+  A:  "#302410",
 };
 
-// ─── NECROMANCY ───────────────────────────────────────────────────────────────
-// Anchor: sickly green/teal (decay, undeath). Glyph: ☽
+// ─── NECROMANCY — Malachite (H:155) ─────────────────────────────────────────
+// Deep green toxic beauty with layered bands. Dangerous in raw form.
 const NECROMANCY_COLORS = {
-  IY: "#f0fdf4",   // Ectoplasm
-  UW: "#dcfce7",   // Ghostly Mist
-  EY: "#bbf7d0",   // Lichen
-  OW: "#86efac",   // Toxic Fume
-  IH: "#4ade80",   // Anchor (Vitality Drain)
-  AO: "#22c55e",   // Decay
-  AE: "#16a34a",   // Mossy Grave
-  A:  "#064e3b",   // Obsidian Soil
+  IY: "#a8e0c4",   // hsl(155, 46%, 77%) — Ectoplasmic sheen
+  UW: "#88d0ac",   // hsl(155, 44%, 67%) — Spectral mist
+  EY: "#68bc94",   // hsl(155, 40%, 57%) — Lichen glow
+  OW: "#4ca87c",   // hsl(155, 40%, 48%) — Toxic verdure
+  IH: "#389468",   // hsl(155, 44%, 40%) — ANCHOR
+  AO: "#2a7c54",   // hsl(155, 48%, 33%) — Grave moss
+  AE: "#1e6240",   // hsl(155, 52%, 25%) — Crypt darkness
+  A:  "#123c28",   // hsl(155, 54%, 15%) — Beneath the earth
 };
 
 const NECROMANCY_LIGHT_COLORS = {
-  IY: "#bbf7d0",
-  UW: "#86efac",
-  EY: "#4ade80",
-  OW: "#22c55e",
-  IH: "#16a34a",
-  AO: "#15803d",
-  AE: "#166534",
-  A:  "#064e3b",
+  IY: "#68bc94",
+  UW: "#4ca87c",
+  EY: "#389468",
+  OW: "#2a7c54",
+  IH: "#1e6240",
+  AO: "#185234",
+  AE: "#12422a",
+  A:  "#0c2c1c",
 };
 
-// ─── ABJURATION ───────────────────────────────────────────────────────────────
-// Anchor: crystalline/ice blue (wards, barriers). Glyph: ⬡
+// ─── ABJURATION — Aquamarine (H:195) ────────────────────────────────────────
+// Cool protective teal-blue. Crystallized water barriers and ward shimmer.
 const ABJURATION_COLORS = {
-  IY: "#f0f9ff",   // Diamond White
-  UW: "#e0f2fe",   // Prism Blue
-  EY: "#bae6fd",   // Glacial
-  OW: "#7dd3fc",   // Sapphire
-  IH: "#38bdf8",   // Anchor (Shield)
-  AO: "#0ea5e9",   // Deep Ward
-  AE: "#0284c7",   // Cobalt Guard
-  A:  "#0c4a6e",   // Midnight Obsidian
+  IY: "#a8d4e0",   // hsl(195, 42%, 77%) — Ward shimmer
+  UW: "#88c2d2",   // hsl(195, 40%, 68%) — Shield refraction
+  EY: "#68aec2",   // hsl(195, 38%, 58%) — Barrier core
+  OW: "#4c98b0",   // hsl(195, 40%, 49%) — Aegis depth
+  IH: "#38849c",   // hsl(195, 46%, 42%) — ANCHOR
+  AO: "#286e84",   // hsl(195, 52%, 34%) — Deep ward
+  AE: "#1e5668",   // hsl(195, 56%, 26%) — Sealed barrier
+  A:  "#123642",   // hsl(195, 56%, 17%) — Fortress stone
 };
 
 const ABJURATION_LIGHT_COLORS = {
-  IY: "#bae6fd",
-  UW: "#7dd3fc",
-  EY: "#38bdf8",
-  OW: "#0ea5e9",
-  IH: "#0284c7",
-  AO: "#0369a1",
-  AE: "#075985",
-  A:  "#0c4a6e",
+  IY: "#68aec2",
+  UW: "#4c98b0",
+  EY: "#38849c",
+  OW: "#286e84",
+  IH: "#1e5668",
+  AO: "#184856",
+  AE: "#123a46",
+  A:  "#0c262e",
 };
 
 // ─── Skin Maps ────────────────────────────────────────────────────────────────

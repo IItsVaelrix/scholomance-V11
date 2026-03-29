@@ -9,7 +9,7 @@
   height: 100%;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(201, 168, 64, 0.2) transparent;
+  scrollbar-color: hsla(43, 48%, 48%, 0.2) transparent;
 }
 
 .infobeam-panel::-webkit-scrollbar {
@@ -19,7 +19,7 @@
   background: transparent;
 }
 .infobeam-panel::-webkit-scrollbar-thumb {
-  background: rgba(201, 168, 64, 0.2);
+  background: hsla(43, 48%, 48%, 0.2);
   border-radius: 2px;
 }
 
@@ -38,9 +38,9 @@
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
-  background: rgba(201, 168, 64, 0.1);
-  border: 1px solid rgba(201, 168, 64, 0.22);
-  color: rgba(201, 168, 64, 0.7);
+  background: hsla(43, 48%, 48%, 0.1);
+  border: 1px solid hsla(43, 48%, 48%, 0.22);
+  color: hsla(43, 48%, 48%, 0.7);
   white-space: nowrap;
   flex-shrink: 0;
   margin-top: 2px;
@@ -82,7 +82,7 @@
 
 .infobeam-spacer {
   height: 1px;
-  background: rgba(201, 168, 64, 0.12);
+  background: hsla(43, 48%, 48%, 0.12);
   margin: 4px 0;
   border: none;
   flex-shrink: 0;
@@ -125,19 +125,19 @@
 }
 
 .infobeam-toggle:hover {
-  color: rgba(201, 168, 64, 0.75);
-  border-color: rgba(201, 168, 64, 0.3);
-  background: rgba(201, 168, 64, 0.07);
+  color: hsla(43, 48%, 48%, 0.75);
+  border-color: hsla(43, 48%, 48%, 0.3);
+  background: hsla(43, 48%, 48%, 0.07);
 }
 
 .infobeam-toggle:focus-visible {
-  outline: 1px solid rgba(201, 168, 64, 0.4);
+  outline: 1px solid hsla(43, 48%, 48%, 0.4);
 }
 
 .infobeam-toggle.active {
   color: var(--accent-gold, #c9a840);
-  border-color: rgba(201, 168, 64, 0.45);
-  background: rgba(201, 168, 64, 0.1);
+  border-color: hsla(43, 48%, 48%, 0.45);
+  background: hsla(43, 48%, 48%, 0.1);
 }
 
 /* ── Group button beam mode ── */

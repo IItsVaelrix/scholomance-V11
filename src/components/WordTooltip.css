@@ -50,12 +50,15 @@
   user-select: none;
 }
 
-/* School frame overrides */
-.word-card[data-school="SONIC"]   { --school-frame-color: #651fff; --school-bg-color: #0a051a; --school-accent-color: rgba(101, 31, 255, 0.3); }
-.word-card[data-school="VOID"]    { --school-frame-color: #ff1744; --school-bg-color: #0a0205; --school-accent-color: rgba(255, 23, 68, 0.3); }
-.word-card[data-school="KINETIC"] { --school-frame-color: #00e5ff; --school-bg-color: #020a0c; --school-accent-color: rgba(0, 229, 255, 0.3); }
-.word-card[data-school="PSYCHIC"] { --school-frame-color: #d500f9; --school-bg-color: #0a020c; --school-accent-color: rgba(213, 0, 249, 0.3); }
-.word-card[data-school="ANCIENT"] { --school-frame-color: #c9a227; --school-bg-color: #0a0802; --school-accent-color: rgba(201, 162, 39, 0.3); }
+/* School frame overrides — jewel-tone anchors */
+.word-card[data-school="SONIC"]      { --school-frame-color: #6548b8; --school-bg-color: #0e0820; --school-accent-color: hsla(265, 48%, 50%, 0.3); }
+.word-card[data-school="PSYCHIC"]    { --school-frame-color: #4470b8; --school-bg-color: #080e20; --school-accent-color: hsla(220, 48%, 49%, 0.3); }
+.word-card[data-school="VOID"]       { --school-frame-color: #6a5a78; --school-bg-color: #0e0a14; --school-accent-color: hsla(310, 15%, 41%, 0.3); }
+.word-card[data-school="ALCHEMY"]    { --school-frame-color: #b84882; --school-bg-color: #140818; --school-accent-color: hsla(330, 48%, 50%, 0.3); }
+.word-card[data-school="WILL"]       { --school-frame-color: #b85c48; --school-bg-color: #180c08; --school-accent-color: hsla(15, 48%, 50%, 0.3); }
+.word-card[data-school="DIVINATION"] { --school-frame-color: #a88440; --school-bg-color: #181208; --school-accent-color: hsla(50, 46%, 46%, 0.3); }
+.word-card[data-school="NECROMANCY"] { --school-frame-color: #389468; --school-bg-color: #081810; --school-accent-color: hsla(155, 44%, 40%, 0.3); }
+.word-card[data-school="ABJURATION"] { --school-frame-color: #38849c; --school-bg-color: #081418; --school-accent-color: hsla(195, 46%, 42%, 0.3); }
 
 .card-frame {
   position: relative;

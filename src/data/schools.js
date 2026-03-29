@@ -13,29 +13,29 @@
  * This is the single source of truth — all consumers should import from here.
  */
 export const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
-  // Core 8 mappings
-  IY: 'PSYCHIC',
-  IH: 'SONIC',
-  EY: 'ALCHEMY',
-  AE: 'WILL',
-  A:  'WILL',
-  AO: 'SONIC',
-  OW: 'ALCHEMY',
-  UW: 'VOID',
+  // Core 8 mappings — balanced across all 8 schools
+  IY: 'PSYCHIC',      // High-front clarity
+  IH: 'SONIC',        // Mid-front resonance
+  EY: 'ALCHEMY',      // Diphthong transmutation
+  AE: 'WILL',         // Low-front force
+  A:  'NECROMANCY',   // Low-back death register
+  AO: 'NECROMANCY',   // Mid-back dark vowels
+  OW: 'ABJURATION',   // Rounded-back protective
+  UW: 'ABJURATION',   // High-back closed/warding
 
-  // ARPAbet Aliases
-  AA: 'WILL',    // -> A
-  AH: 'WILL',    // -> A
-  AX: 'WILL',    // -> A
-  AW: 'WILL',    // -> A
-  EH: 'WILL',    // -> AE
-  AY: 'PSYCHIC', // -> EY (Psychic affinity)
-  OY: 'ALCHEMY', // -> OW
-  OH: 'ALCHEMY', // -> OW
-  UH: 'VOID',    // -> UW
-  OO: 'VOID',    // -> UW
-  ER: 'SONIC',   // -> IH
-  UR: 'SONIC',   // -> IH
+  // ARPAbet Aliases — redistributed to 8 schools
+  AA: 'DIVINATION',   // Open-back oracle vowel
+  AH: 'WILL',        // Low force vowel
+  AX: 'VOID',        // Schwa → entropy (most common, muted by VOID's low saturation)
+  AW: 'DIVINATION',  // Open-back oracle diphthong
+  EH: 'WILL',        // Low-front force
+  AY: 'PSYCHIC',     // Bright diphthong → mental clarity
+  OY: 'ALCHEMY',     // Diphthong transmutation
+  OH: 'ABJURATION',  // Rounded-back → protective
+  UH: 'VOID',        // Reduced vowel → entropy
+  OO: 'ABJURATION',  // Rounded-back → protective
+  ER: 'SONIC',       // Rhotacized → resonance
+  UR: 'SONIC',       // Rhotacized → resonance
 });
 
 export const SCHOOLS = {
@@ -43,146 +43,145 @@ export const SCHOOLS = {
   SONIC: {
     id: "SONIC",
     name: "Sonic Thaumaturgy",
-    color: "#651fff",
-    colorHsl: { h: 251, s: 100, l: 50 },
-    angle: 288,       // Position on the wheel
-    unlockXP: 0,      // Available immediately (Level 1)
+    color: "#6548b8",
+    colorHsl: { h: 265, s: 48, l: 50 },
+    angle: 288,
+    unlockXP: 0,
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
-    vowelAffinities: ["AO", "IH"],
+    vowelAffinities: ["IH", "ER"],
     glyph: "♩",
     atmosphere: {
-      auroraIntensity: 1.0,
-      saturation: 100,
-      vignetteStrength: 0.7,
+      auroraIntensity: 0.9,
+      saturation: 90,
+      vignetteStrength: 0.70,
       scanlineOpacity: 0,
     },
   },
   PSYCHIC: {
-    id: "PSYCHIC", 
+    id: "PSYCHIC",
     name: "Psychic Schism",
-    color: "#00E5FF",
-    colorHsl: { h: 185, s: 100, l: 50 },
+    color: "#4470b8",
+    colorHsl: { h: 220, s: 48, l: 49 },
     angle: 72,
-    unlockXP: 250, // Level ~3
+    unlockXP: 250,
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
-    vowelAffinities: ["EY", "IY"],
+    vowelAffinities: ["IY", "AY"],
     glyph: "◬",
     atmosphere: {
-      auroraIntensity: 1.0,
-      saturation: 100,
-      vignetteStrength: 0.6,
+      auroraIntensity: 0.8,
+      saturation: 85,
+      vignetteStrength: 0.65,
       scanlineOpacity: 0,
     },
   },
   VOID: {
     id: "VOID",
     name: "The Void",
-    color: "#a1a1aa",
-    colorHsl: { h: 240, s: 5, l: 63 },
+    color: "#6a5a78",
+    colorHsl: { h: 310, s: 15, l: 41 },
     angle: 0,
-    unlockXP: 1500, // Level ~10
+    unlockXP: 1500,
     description: "The space between spaces, where entropy reigns",
     tracks: ["void"],
-    vowelAffinities: ["UW"],
+    vowelAffinities: ["AX", "UH"],
     glyph: "∅",
     atmosphere: {
-      auroraIntensity: 0.2,
-      saturation: 10,
-      vignetteStrength: 0.9,
-      scanlineOpacity: 0,
+      auroraIntensity: 0.15,
+      saturation: 15,
+      vignetteStrength: 0.92,
+      scanlineOpacity: 0.02,
     },
   },
   ALCHEMY: {
     id: "ALCHEMY",
     name: "Verbal Alchemy",
-    color: "#D500F9",
-    colorHsl: { h: 286, s: 100, l: 52 },
+    color: "#b84882",
+    colorHsl: { h: 330, s: 48, l: 50 },
     angle: 144,
-    unlockXP: 8000, // Level ~20 (End of Neophyte)
+    unlockXP: 8000,
     description: "The transmutation of meaning through spoken word",
     tracks: ["alchemy"],
-    vowelAffinities: ["EY", "A", "OW"],
+    vowelAffinities: ["EY", "OY"],
     glyph: "⚗",
     atmosphere: {
-      auroraIntensity: 1.2,
-      saturation: 110,
-      vignetteStrength: 0.65,
+      auroraIntensity: 1.1,
+      saturation: 105,
+      vignetteStrength: 0.60,
       scanlineOpacity: 0,
     },
   },
   WILL: {
     id: "WILL",
-    name: "Willpower Surge", 
-    color: "#FF8A00",
-    colorHsl: { h: 33, s: 100, l: 50 },
+    name: "Willpower Surge",
+    color: "#b85c48",
+    colorHsl: { h: 15, s: 48, l: 50 },
     angle: 216,
-    unlockXP: 25000, // Level ~30 (Early Adept)
+    unlockXP: 25000,
     description: "Focusing raw will into reality-altering force",
     tracks: ["will"],
-    vowelAffinities: ["AE", "A"],
+    vowelAffinities: ["AE", "AH"],
     glyph: "⚡",
     atmosphere: {
-      auroraIntensity: 1.1,
-      saturation: 100,
-      vignetteStrength: 0.6,
+      auroraIntensity: 1.0,
+      saturation: 95,
+      vignetteStrength: 0.62,
       scanlineOpacity: 0,
     },
   },
-  
-  // === FUTURE UNLOCKABLE SCHOOLS (examples) ===
-  // These can be added without code changes
+
+  // === UNLOCKABLE SCHOOLS ===
   NECROMANCY: {
     id: "NECROMANCY",
     name: "Necromancy",
-    color: null, // Will be computed if null
-    colorHsl: { h: 120, s: 60, l: 30 }, // Dark green
+    color: "#389468",
+    colorHsl: { h: 155, s: 44, l: 40 },
     angle: 36,
-    unlockXP: 100000, // Level ~45 (Expert)
+    unlockXP: 100000,
     description: "Communication with and manipulation of life force",
     tracks: [],
-    vowelAffinities: ["OW"],
+    vowelAffinities: ["AO", "A"],
     glyph: "☠",
     atmosphere: {
-      auroraIntensity: 0.8,
-      saturation: 80,
-      vignetteStrength: 0.8,
-      scanlineOpacity: 0,
+      auroraIntensity: 0.6,
+      saturation: 55,
+      vignetteStrength: 0.82,
+      scanlineOpacity: 0.01,
     },
   },
   ABJURATION: {
     id: "ABJURATION",
     name: "Abjuration",
-    color: null,
-    colorHsl: { h: 0, s: 0, l: 90 }, // White/silver
+    color: "#38849c",
+    colorHsl: { h: 195, s: 46, l: 42 },
     angle: 108,
-    unlockXP: 500000, // Level ~60 (Master)
+    unlockXP: 500000,
     description: "Protective magic and negation of effects",
     tracks: [],
-    vowelAffinities: ["IY", "UW"],
+    vowelAffinities: ["UW", "OW"],
     glyph: "◇",
     atmosphere: {
-      auroraIntensity: 0.6,
-      saturation: 30,
-      vignetteStrength: 0.5,
+      auroraIntensity: 0.5,
+      saturation: 50,
+      vignetteStrength: 0.50,
       scanlineOpacity: 0,
     },
   },
   DIVINATION: {
     id: "DIVINATION",
     name: "Divination",
-    color: null,
-    colorHsl: { h: 50, s: 90, l: 60 }, // Gold
+    color: "#a88440",
+    colorHsl: { h: 50, s: 46, l: 46 },
     angle: 180,
-    unlockXP: 2000000, // Level ~80 (Godlike)
+    unlockXP: 2000000,
     description: "Seeing across time and space",
     tracks: [],
-    vowelAffinities: ["EY", "IH"],
+    vowelAffinities: ["AA", "AW"],
     glyph: "◉",
     atmosphere: {
-      auroraIntensity: 0.9,
-      saturation: 90,
+      auroraIntensity: 0.85,
+      saturation: 88,
       vignetteStrength: 0.55,
       scanlineOpacity: 0,
     },

@@ -26,7 +26,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.13em;
-  color: rgba(201, 168, 64, 0.65);
+  color: hsla(43, 48%, 48%, 0.65);
 }
 
 .vfp-meta {
@@ -120,7 +120,7 @@
 
 .vfp-empty-glyph {
   font-size: 1.3rem;
-  color: rgba(201, 168, 64, 0.18);
+  color: hsla(43, 48%, 48%, 0.18);
   display: block;
 }
 
