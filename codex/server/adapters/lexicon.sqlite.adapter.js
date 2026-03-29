@@ -145,8 +145,9 @@ export function createLexiconAdapter(dbPath, options = {}) {
   `);
 
   const lookupRhymeFamilyStmt = db.prepare(`
-    SELECT rhyme_family
+    SELECT rhyme_family, ipa
     FROM rhyme_index
+    LEFT JOIN entry ON entry.headword_lower = rhyme_index.word_lower
     WHERE word_lower = ?
   `);
 
@@ -241,8 +242,9 @@ export function createLexiconAdapter(dbPath, options = {}) {
     if (!statement) {
       const placeholders = normalized.map(() => '?').join(', ');
       statement = db.prepare(`
-        SELECT word_lower, rhyme_family
+        SELECT word_lower, rhyme_family, ipa
         FROM rhyme_index
+        LEFT JOIN entry ON entry.headword_lower = rhyme_index.word_lower
         WHERE word_lower IN (${placeholders})
       `);
       familyBatchStmtCache.set(placeholderCount, statement);
@@ -251,7 +253,10 @@ export function createLexiconAdapter(dbPath, options = {}) {
     const out = {};
     for (const row of rows) {
       if (!row?.word_lower || !row?.rhyme_family) continue;
-      out[row.word_lower.toUpperCase()] = row.rhyme_family;
+      out[row.word_lower.toUpperCase()] = {
+        family: row.rhyme_family,
+        phonemes: row.ipa ? row.ipa.split(' ') : null,
+      };
     }
     return out;
   }
