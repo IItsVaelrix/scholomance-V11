@@ -307,6 +307,13 @@ export default function ReadPage() {
     return truesightContent.split("\n").length;
   }, [truesightContent]);
 
+  const currentLineText = useMemo(() => {
+    const lines = String(editorContent || "").split("\n");
+    // If no cursor, default to the last line being typed
+    const currentLineIdx = Number.isInteger(cursorPos?.lineNumber) ? cursorPos.lineNumber - 1 : lines.length - 1;
+    return lines[currentLineIdx] || "";
+  }, [editorContent, cursorPos]);
+
   const activeVowelColors = useMemo(
     () => getVowelColorsForSchool(selectedSchool, theme),
     [selectedSchool, theme]
@@ -1227,6 +1234,7 @@ export default function ReadPage() {
             onGroupClick={handleInfoBeamClick}
             activeInfoBeamFamily={infoBeamFamily}
             surfaceMode="astrology"
+            currentLineText={currentLineText}
           />
         </div>
       )}
@@ -1672,8 +1680,8 @@ export default function ReadPage() {
                           onGroupClick={handleInfoBeamClick}
                           activeInfoBeamFamily={infoBeamFamily}
                           surfaceMode={isAstrologyMode ? "astrology" : "full"}
-                        />
-                      </div>
+                          currentLineText={currentLineText}
+                          />                      </div>
                     )}
 
                     {infoBeamEnabled && infoBeamFamily && (
@@ -1850,6 +1858,7 @@ export default function ReadPage() {
             onGroupClick={handleInfoBeamClick}
             activeInfoBeamFamily={infoBeamFamily}
             surfaceMode={isAstrologyMode ? "astrology" : "full"}
+            currentLineText={currentLineText}
           />
         </FloatingPanel>
       )}

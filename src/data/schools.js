@@ -19,12 +19,12 @@ export const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
   EY: 'ALCHEMY',      // Diphthong transmutation
   AE: 'WILL',         // Low-front force
   A:  'NECROMANCY',   // Low-back death register
-  AO: 'NECROMANCY',   // Mid-back dark vowels
+  AO: 'DIVINATION',   // Mid-back oracle vowel
   OW: 'ABJURATION',   // Rounded-back protective
   UW: 'ABJURATION',   // High-back closed/warding
 
   // ARPAbet Aliases — redistributed to 8 schools
-  AA: 'DIVINATION',   // Open-back oracle vowel
+  AA: 'NECROMANCY',   // Open-back death register
   AH: 'WILL',        // Low force vowel
   AX: 'VOID',        // Schwa → entropy (most common, muted by VOID's low saturation)
   AW: 'DIVINATION',  // Open-back oracle diphthong
@@ -121,7 +121,7 @@ export const SCHOOLS = {
     unlockXP: 25000,
     description: "Focusing raw will into reality-altering force",
     tracks: ["will"],
-    vowelAffinities: ["AA", "AH"],
+    vowelAffinities: ["AH"],
     glyph: "⚡",
     atmosphere: {
       auroraIntensity: 1.0,
@@ -141,7 +141,7 @@ export const SCHOOLS = {
     unlockXP: 100000,
     description: "Communication with and manipulation of life force",
     tracks: [],
-    vowelAffinities: ["AO", "A"],
+    vowelAffinities: ["AA", "A"],
     glyph: "☠",
     atmosphere: {
       auroraIntensity: 0.6,
@@ -177,7 +177,7 @@ export const SCHOOLS = {
     unlockXP: 2000000,
     description: "Seeing across time and space",
     tracks: [],
-    vowelAffinities: ["AA", "AW"],
+    vowelAffinities: ["AO", "AW"],
     glyph: "◉",
     atmosphere: {
       auroraIntensity: 0.85,

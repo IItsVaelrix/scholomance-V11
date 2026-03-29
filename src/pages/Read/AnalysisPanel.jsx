@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import PropTypes from "prop-types";
 import { patternColor } from "../../lib/patternColor.js";
+import ChroniclePanel from "./ChroniclePanel.jsx";
 import "./AnalysisPanel.css";
 import "../../components/InfoBeamPanel.css";
 
@@ -201,6 +202,7 @@ export default function AnalysisPanel({
   onGroupClick = null,
   activeInfoBeamFamily = null,
   surfaceMode = "full",
+  currentLineText = "",
 }) {
   const [groupsExpanded, setGroupsExpanded] = useState(false);
   const groupEntries = scheme?.groups ? Array.from(scheme.groups.entries()) : [];
@@ -662,6 +664,11 @@ export default function AnalysisPanel({
         </section>
       )}
 
+      {/* Literary Chronicles — Historical echoes */}
+      {!isAstrologySurface && (
+        <ChroniclePanel currentLineText={currentLineText} />
+      )}
+
       {/* Rhyme Groups */}
       {!isAstrologySurface && groupEntries.length > 0 && (
         <section className="analyze-section">
@@ -824,4 +831,5 @@ AnalysisPanel.propTypes = {
   onGroupClick: PropTypes.func,
   activeInfoBeamFamily: PropTypes.string,
   surfaceMode: PropTypes.oneOf(["full", "astrology"]),
+  currentLineText: PropTypes.string,
 };

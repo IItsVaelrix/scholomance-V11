@@ -173,7 +173,6 @@ function buildTokenProfile(token) {
     }];
 
   const energies = CHANNELS.map(() => 0);
-  const positions = [];
   const onsetScores = [];
   const codaScores = [];
   let baseVowel = '';

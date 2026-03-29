@@ -1,0 +1,322 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   ThaumaturgyConsole.css — Scholomance Signal Chamber Redesign
+   Aesthetic: Occult-Industrial Ritual Console. Inspired by asset1.png.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.thaumaturgy-console {
+  --brass: #c9a227;
+  --brass-dim: rgba(201, 162, 39, 0.25);
+  --brass-glow: rgba(201, 162, 39, 0.4);
+  --terminal-green: #00ffcc;
+  --terminal-bg: #05080a;
+  --console-bg: #080a0c;
+  --border-panel: rgba(201, 162, 39, 0.15);
+  
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 3rem;
+  background: 
+    linear-gradient(180deg, #0a0c0e 0%, #040507 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  background-blend-mode: overlay;
+  border: 2px solid #1a1a1a;
+  border-radius: 20px;
+  box-shadow: 
+    0 50px 100px rgba(0,0,0,0.9),
+    inset 0 0 60px rgba(0,0,0,0.8),
+    0 0 0 1px rgba(255,255,255,0.03);
+  overflow: hidden;
+  color: var(--text-primary);
+}
+
+/* ── Console Layout ── */
+.console-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr 320px;
+  grid-template-rows: auto 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+.console-wing--left, .console-wing--right {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+}
+
+.console-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  perspective: 1000px;
+}
+
+/* ── Ritual Terminal ── */
+.ritual-terminal {
+  position: relative;
+  background: var(--terminal-bg);
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  padding: 1.25rem;
+  height: 260px;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', monospace;
+  box-shadow: 
+    inset 0 0 40px rgba(0,0,0,1),
+    0 0 15px rgba(0, 255, 204, 0.05);
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: var(--brass);
+  border-bottom: 1px solid var(--brass-dim);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+  letter-spacing: 0.2em;
+}
+
+.terminal-main-readout {
+  margin-bottom: 1.25rem;
+}
+
+.terminal-label {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.terminal-value {
+  font-size: 1.1rem;
+  color: var(--terminal-green);
+  text-shadow: 0 0 8px var(--terminal-green);
+  font-weight: bold;
+}
+
+.terminal-status-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.terminal-logs {
+  font-size: 0.7rem;
+  color: var(--terminal-green);
+  opacity: 0.6;
+  line-height: 1.4;
+}
+
+.terminal-scanlines {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.1) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.3;
+}
+
+.terminal-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(0, 255, 204, 0.03) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Alchemical Vial Rack ── */
+.alchemical-vial-rack {
+  background: rgba(10, 12, 15, 0.6);
+  border: 1px solid var(--border-panel);
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.4);
+}
+
+.rack-header {
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  text-align: center;
+  color: var(--brass);
+  margin-bottom: 1.5rem;
+  letter-spacing: 0.2em;
+}
+
+.vials-container {
+  display: flex;
+  justify-content: space-between;
+  height: 200px;
+  gap: 0.5rem;
+}
+
+.alchemical-vial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  flex: 1;
+  transition: transform 0.2s ease;
+}
+
+.alchemical-vial:hover {
+  transform: translateY(-4px);
+}
+
+.vial-glass {
+  position: relative;
+  width: 22px;
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid rgba(255,255,255,0.1);
+  border-radius: 12px 12px 6px 6px;
+  overflow: hidden;
+  box-shadow: 
+    inset 0 0 15px rgba(0,0,0,0.8),
+    0 0 5px rgba(0,0,0,0.5);
+}
+
+.vial-fluid {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  filter: blur(1px);
+  opacity: 0.8;
+}
+
+.vial-reflection {
+  position: absolute;
+  top: 10%;
+  left: 20%;
+  width: 30%;
+  height: 80%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+  border-radius: 20px;
+}
+
+.vial-label {
+  font-size: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: rgba(255,255,255,0.4);
+  font-weight: bold;
+}
+
+/* ── Analogue Gauge ── */
+.analogue-gauge {
+  background: radial-gradient(circle at center, #1a1a1a 0%, #0a0a0a 100%);
+  border-radius: 50%;
+  padding: 5px;
+  border: 3px solid #222;
+  box-shadow: 
+    0 10px 20px rgba(0,0,0,0.5),
+    inset 0 0 15px rgba(0,0,0,0.8);
+  margin: 0 auto;
+}
+
+/* ── Radar ── */
+.thaumaturgy-radar-container {
+  position: relative;
+  padding: 30px;
+  background: radial-gradient(circle, #0d1216 0%, #05080a 100%);
+  border-radius: 50%;
+  box-shadow: 
+    0 0 60px rgba(0,0,0,1),
+    inset 0 0 30px rgba(201, 162, 39, 0.05);
+  transform: rotateX(10deg);
+}
+
+.radar-frame {
+  position: absolute;
+  inset: 0;
+  border: 16px solid #1a1a1a;
+  border-radius: 50%;
+  pointer-events: none;
+  background: 
+    linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 50%, rgba(0,0,0,0.3) 100%),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.1'/%3E%3C/svg%3E");
+  box-shadow: 
+    0 0 0 2px rgba(201, 162, 39, 0.2),
+    inset 0 0 0 2px rgba(0,0,0,0.5);
+}
+
+/* ── Controls ── */
+.console-controls {
+  grid-column: 1 / span 3;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4rem;
+  padding-top: 3rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(201, 162, 39, 0.1);
+}
+
+.arcane-t-btn--lg {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #2a2a2a 0%, #0a0a0a 100%);
+  border: 2px solid #333;
+  color: var(--brass);
+  cursor: pointer;
+  box-shadow: 
+    0 10px 20px rgba(0,0,0,0.6),
+    inset 0 2px 5px rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.arcane-t-btn--lg:hover {
+  border-color: var(--brass);
+  box-shadow: 0 0 20px var(--brass-glow);
+  transform: translateY(-2px);
+}
+
+.arcane-t-btn--lg.is-playing {
+  color: var(--terminal-green);
+  border-color: var(--terminal-green);
+  box-shadow: 0 0 30px rgba(0, 255, 204, 0.2);
+}
+
+.arcane-t-btn--lg svg {
+  width: 32px;
+  height: 32px;
+}
+
+/* ── Ambient Effects ── */
+.console-ambient-glow {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at 15% 15%, rgba(201, 162, 39, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 85% 85%, var(--school-glow) 0%, transparent 40%);
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .console-grid {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .console-wing--left, .console-wing--right {
+    max-width: 500px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
