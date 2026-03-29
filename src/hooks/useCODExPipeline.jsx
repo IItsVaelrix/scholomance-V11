@@ -73,7 +73,7 @@ export function CODExProvider({ children }) {
       adapters.push(localAdapter);
       console.log(`[CODEx] Local dictionary adapter enabled (${localDictionaryUrl})`);
     } else {
-      console.log('[CODEx] Local dictionary not configured, skipping (set VITE_SCHOLOMANCE_DICT_API_URL or SCHOLOMANCE_DICT_API_URL)');
+      console.log('[CODEx] Local dictionary not configured in the frontend bundle, skipping (set VITE_SCHOLOMANCE_DICT_API_URL or SCHOLOMANCE_DICT_API_URL, then restart Vite or rebuild the app)');
     }
 
     // 2. Free Dictionary API (definitions, synonyms, antonyms, IPA)

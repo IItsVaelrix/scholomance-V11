@@ -4,6 +4,8 @@
 
 import { z } from "zod";
 
+const LEXICON_BASE_PATH = "/api/lexicon";
+
 function readEnvVar(name) {
   const viteEnv = (typeof import.meta !== "undefined" && import.meta.env)
     ? import.meta.env[name]
@@ -25,7 +27,24 @@ function readEnvVar(name) {
 function resolveBaseUrl() {
   const raw = readEnvVar("VITE_SCHOLOMANCE_DICT_API_URL") || readEnvVar("SCHOLOMANCE_DICT_API_URL");
   const trimmed = String(raw || "").trim();
-  return trimmed ? trimmed.replace(/\/$/, "") : "";
+  if (!trimmed) return "";
+
+  const normalized = trimmed.replace(/\/+$/, "");
+  if (!normalized || normalized === "/") {
+    return LEXICON_BASE_PATH;
+  }
+
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(normalized)) {
+    const url = new URL(normalized);
+    if (!url.pathname || url.pathname === "/") {
+      url.pathname = LEXICON_BASE_PATH;
+      url.search = "";
+      url.hash = "";
+      return url.toString().replace(/\/+$/, "");
+    }
+  }
+
+  return normalized;
 }
 
 const DEFAULT_TIMEOUT_MS = 5000;
