@@ -7,9 +7,9 @@
  *      Moves color logic from "Heuristic Guessing" to "Immutable Bytecode".
  */
 
-import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js';
-import { VOWEL_FAMILY_TO_SCHOOL } from '../../../src/data/schools.js';
-import { SCHOOL_SKINS } from '../../../src/data/schoolPalettes.js';
+import { normalizeVowelFamily } from '../../../../src/lib/phonology/vowelFamily.js';
+import { VOWEL_FAMILY_TO_SCHOOL } from '../../../../src/data/schools.js';
+import { SCHOOL_SKINS } from '../../../../src/data/schoolPalettes.js';
 import { clamp01, roundTo, createAmplifierResult } from '../shared.js';
 
 const DEFAULT_SCHOOL = 'DEFAULT';
