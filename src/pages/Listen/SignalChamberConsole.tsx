@@ -13,11 +13,12 @@
  * interactive affordances. That layer can be synced from the same hook.
  */
 
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { SCHOOLS, generateSchoolColor } from '../../data/schools';
 import { useAmbientPlayer } from '../../hooks/useAmbientPlayer';
 import { getSchoolAudioConfig } from '../../lib/ambient/schoolAudio.config';
 import type { SignalChamberScene as SignalChamberSceneType } from './scenes/SignalChamberScene';
+import HolographicEmbed from './HolographicEmbed.jsx';
 
 // Canvas dimensions — 16:9 at safe display width
 const CANVAS_W = 1280;
@@ -37,6 +38,7 @@ export const SignalChamberConsole: React.FC = () => {
     isTuning,
     signalLevel,
     volume,
+    seek,
     setVolume,
     tuneToSchool,
     togglePlayPause,
@@ -58,6 +60,10 @@ export const SignalChamberConsole: React.FC = () => {
     () => stations.find(s => s.id === currentSchoolId) ?? stations[0],
     [stations, currentSchoolId]
   );
+  const currentTrackUrl = useMemo(() => {
+    const schoolId = currentSchoolId ?? currentStation?.id ?? null;
+    return schoolId ? getSchoolAudioConfig(schoolId)?.trackUrl ?? null : null;
+  }, [currentSchoolId, currentStation]);
 
   const statusLabel = isTuning
     ? 'SYNCING'
@@ -66,6 +72,27 @@ export const SignalChamberConsole: React.FC = () => {
     : status === 'ERROR'
     ? 'ERROR'
     : 'STANDBY';
+  const playTransmission = useCallback(() => {
+    if (!isPlaying) {
+      void togglePlayPause();
+    }
+  }, [isPlaying, togglePlayPause]);
+  const pauseTransmission = useCallback(() => {
+    if (isPlaying || isTuning) {
+      void togglePlayPause();
+    }
+  }, [isPlaying, isTuning, togglePlayPause]);
+  const rewindTransmission = useCallback(() => {
+    seek(-10);
+  }, [seek]);
+  const fastForwardTransmission = useCallback(() => {
+    seek(10);
+  }, [seek]);
+  const stepVolume = useCallback((delta: number) => {
+    const currentStep = Math.round(volume * 20);
+    const nextStep = Math.max(0, Math.min(20, currentStep + Math.round(delta * 20)));
+    setVolume(nextStep / 20);
+  }, [setVolume, volume]);
 
   // ── Mount Phaser once ──────────────────────────────────────────────────
 
@@ -150,13 +177,30 @@ export const SignalChamberConsole: React.FC = () => {
   // Screen readers and keyboard users interact with this layer exclusively.
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: CANVAS_W }}>
+    <div className="signal-chamber-shell">
       {/* Phaser canvas mount */}
       <div
         ref={containerRef}
-        style={{ width: '100%', aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}
+        className="signal-chamber-canvas"
         aria-hidden="true"
       />
+
+      <div className="signal-chamber-player-overlay">
+        <HolographicEmbed
+          trackUrl={currentTrackUrl}
+          title={currentStation?.name ?? 'No signal'}
+          glyph={currentStation?.glyph ?? '✦'}
+          isPlaying={isPlaying}
+          isTuning={isTuning}
+          volumePercent={Math.round(volume * 100)}
+          onPlay={playTransmission}
+          onPause={pauseTransmission}
+          onRewind={rewindTransmission}
+          onFastForward={fastForwardTransmission}
+          onVolumeDown={() => stepVolume(-0.05)}
+          onVolumeUp={() => stepVolume(0.05)}
+        />
+      </div>
 
       {/* Visually-hidden accessible control layer */}
       <div
@@ -169,25 +213,6 @@ export const SignalChamberConsole: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', gap: '1rem', pointerEvents: 'auto' }}>
-          <button
-            onClick={togglePlayPause}
-            aria-label={isPlaying ? 'Pause transmission' : 'Play transmission'}
-            className="sr-only-control"
-            style={srOnly}
-          >
-            {isPlaying ? 'Pause' : 'Play'}
-          </button>
-
-          <label style={srOnly}>
-            Volume
-            <input
-              type="range" min="0" max="1" step="0.01"
-              value={volume}
-              onChange={e => setVolume(parseFloat(e.target.value))}
-              aria-label="Volume control"
-            />
-          </label>
-
           <fieldset style={srOnly}>
             <legend>Select station</legend>
             {stations.map(sta => (
