@@ -308,10 +308,29 @@
 }
 
 .param-track {
-  height: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
   position: relative;
   cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s ease;
+}
+
+.param-track:hover {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 0 12px rgba(0, 207, 200, 0.3);
+}
+
+.param-track:active {
+  height: 6px;
+  background: rgba(0, 207, 200, 0.3);
+}
+
+.param-track:focus-visible {
+  outline: 2px solid var(--hud-accent);
+  outline-offset: 4px;
+  box-shadow: 0 0 16px rgba(0, 207, 200, 0.5);
 }
 
 .param-fill {
@@ -319,16 +338,28 @@
   height: 100%;
   background: var(--hud-accent);
   box-shadow: 0 0 10px var(--hud-accent);
+  border-radius: 2px;
+  transition: width 0.2s ease;
 }
 
 .param-handle {
   position: absolute;
   top: 50%;
   transform: translate(-50%, -50%);
-  width: 12px;
-  height: 12px;
-  background: var(--text-secondary);
-  border: 3px solid var(--bg-void);
+  width: 16px;
+  height: 16px;
+  background: var(--hud-accent);
+  border: 2px solid var(--bg-void);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--hud-accent);
+  opacity: 0;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.param-track:hover .param-handle {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.2);
 }
 
 /* -- Analytics --------------------------------------------------- */
