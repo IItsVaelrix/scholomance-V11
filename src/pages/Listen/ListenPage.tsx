@@ -164,53 +164,100 @@ export default function ListenPage() {
         </div>
 
         <div className="parameter-grid">
-          <div className="param-node">
+          {/* Spectrum Analyzer — replaces static frequency bar */}
+          <div className="param-node param-node--spectrum">
             <div className="param-label">
-              <span>FREQUENCY</span>
-              <span className="val">{Math.round(signalLevel * 100)}%</span>
+              <span>WAVEFORM_ANALYSIS</span>
+              <span className="val">{isPlaying ? 'ACTIVE' : 'STANDBY'}</span>
             </div>
-            <div className="param-track">
-              <motion.div className="param-fill" animate={{ width: `${60 + signalLevel * 40}%` }} />
+            <div className="spectrum-canvas">
+              <div className="spectrum-bars">
+                {Array.from({ length: 32 }).map((_, i) => {
+                  const height = isPlaying ? 20 + Math.random() * 80 : 5;
+                  return (
+                    <div
+                      key={i}
+                      className="spectrum-bar"
+                      style={{
+                        height: `${height}%`,
+                        backgroundColor: `var(--hud-accent)`,
+                        opacity: 0.3 + (i / 32) * 0.7,
+                      }}
+                    />
+                  );
+                })}
+              </div>
             </div>
           </div>
 
-          <div className="param-node">
-            <div className="param-label">
-              <span>VIBRATION</span>
-              <span className="val">{Math.round(volume * 100)}%</span>
+          {/* Parameter sliders — moved below spectrum */}
+          <div className="param-section">
+            <div className="param-node">
+              <div className="param-label">
+                <span>VIBRATION</span>
+                <span className="val">{Math.round(volume * 100)}%</span>
+              </div>
+              <div
+                className="param-track"
+                role="slider"
+                aria-label="Volume control"
+                aria-valuenow={Math.round(volume * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                tabIndex={0}
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setVolume((e.clientX - rect.left) / rect.width);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                    setVolume(Math.min(1, volume + 0.05));
+                  } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                    setVolume(Math.max(0, volume - 0.05));
+                  }
+                }}
+                onMouseDown={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const handleDrag = (moveEvent: MouseEvent) => {
+                    const newValue = (moveEvent.clientX - rect.left) / rect.width;
+                    setVolume(Math.max(0, Math.min(1, newValue)));
+                  };
+                  const stopDrag = () => {
+                    document.removeEventListener('mousemove', handleDrag);
+                    document.removeEventListener('mouseup', stopDrag);
+                  };
+                  document.addEventListener('mousemove', handleDrag);
+                  document.addEventListener('mouseup', stopDrag);
+                  handleDrag(e);
+                }}
+                onTouchStart={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const handleTouch = (moveEvent: TouchEvent) => {
+                    const newValue = (moveEvent.touches[0].clientX - rect.left) / rect.width;
+                    setVolume(Math.max(0, Math.min(1, newValue)));
+                  };
+                  const stopTouch = () => {
+                    document.removeEventListener('touchmove', handleTouch);
+                    document.removeEventListener('touchend', stopTouch);
+                  };
+                  document.addEventListener('touchmove', handleTouch, { passive: false });
+                  document.addEventListener('touchend', stopTouch);
+                  handleTouch(e);
+                }}
+              >
+                <div className="param-fill" style={{ width: `${volume * 100}%`, backgroundColor: 'var(--text-secondary)' }} />
+                <div className="param-handle" style={{ left: `${volume * 100}%` }} />
+              </div>
             </div>
-            <div 
-              className="param-track" 
-              role="slider"
-              aria-label="Volume control"
-              aria-valuenow={Math.round(volume * 100)}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              tabIndex={0}
-              onClick={(e) => {
-                const rect = e.currentTarget.getBoundingClientRect();
-                setVolume((e.clientX - rect.left) / rect.width);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-                  setVolume(Math.min(1, volume + 0.05));
-                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-                  setVolume(Math.max(0, volume - 0.05));
-                }
-              }}
-            >
-              <div className="param-fill" style={{ width: `${volume * 100}%`, backgroundColor: 'var(--text-secondary)' }} />
-              <div className="param-handle" style={{ left: `${volume * 100}%` }} />
-            </div>
-          </div>
 
-          <div className="param-node">
-            <div className="param-label">
-              <span>AURA_NODE</span>
-              <span className="val">{currentStation.id.toUpperCase()}</span>
-            </div>
-            <div className="param-track">
-              <div className="param-fill" style={{ width: '100%', opacity: 0.3 }} />
+            <div className="param-node">
+              <div className="param-label">
+                <span>AURA_NODE</span>
+                <span className="val">{currentStation.id.toUpperCase()}</span>
+              </div>
+              <div className="param-track">
+                <div className="param-fill" style={{ width: '100%', opacity: 0.3 }} />
+              </div>
             </div>
           </div>
 
