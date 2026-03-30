@@ -455,9 +455,11 @@ async function createTrackController({
       try {
         mediaSource = audioContext.createMediaElementSource(audio);
         analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        analyser.smoothingTimeConstant = 0.82;
-        analyserData = new Uint8Array(analyser.fftSize);
+        analyser.fftSize = 2048; // High resolution for spectral analysis
+        analyser.smoothingTimeConstant = 0.8;
+        analyser.minDecibels = -90;
+        analyser.maxDecibels = -10;
+        analyserData = new Uint8Array(analyser.frequencyBinCount);
         outputGain = audioContext.createGain();
         outputGain.gain.value = currentVolume;
         mediaSource.connect(analyser);
@@ -522,9 +524,15 @@ async function createTrackController({
     return {
       provider: embed.provider,
       capabilities,
+      analyser,
       schoolId: null,
       loadPromise,
       getVolume: () => currentVolume,
+      getByteFrequencyData: (array) => {
+        if (analyser) {
+          analyser.getByteFrequencyData(array);
+        }
+      },
       setVolume: (value) => {
         currentVolume = clamp01(value);
         if (destroyed) return;
@@ -1380,6 +1388,18 @@ function createAmbientPlayerService(options = {}) {
     return computeSignalLevel();
   }
 
+  function getAnalyser() {
+    return currentController?.analyser || null;
+  }
+
+  function getByteFrequencyData(array) {
+    if (currentController && currentController.getByteFrequencyData) {
+      currentController.getByteFrequencyData(array);
+    } else if (currentController?.analyser) {
+      currentController.analyser.getByteFrequencyData(array);
+    }
+  }
+
   function setDynamicSchools(schools = []) {
     dynamicSchools = Array.isArray(schools) ? schools : [];
     emitState();
@@ -1671,6 +1691,8 @@ function createAmbientPlayerService(options = {}) {
     toggleCyclingEnabled,
     destroy,
     ensureContextRunning,
+    getAnalyser,
+    getByteFrequencyData,
   };
 }
 

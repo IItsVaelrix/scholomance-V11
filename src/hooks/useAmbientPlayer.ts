@@ -223,6 +223,14 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     service.seek(offset);
   }, [service]);
 
+  const getAnalyser = useCallback(() => {
+    return service.getAnalyser();
+  }, [service]);
+
+  const getByteFrequencyData = useCallback((array: Uint8Array) => {
+    service.getByteFrequencyData(array);
+  }, [service]);
+
   return {
     ...state,
     currentSchoolId,
@@ -254,5 +262,7 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     toggleOrbVisibility,
     unlockAudio,
     seek,
+    getAnalyser,
+    getByteFrequencyData,
   };
 }

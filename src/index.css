@@ -49,6 +49,11 @@ html:focus-within {
   scroll-behavior: auto;
 }
 
+html,
+body {
+  overflow: hidden;
+}
+
 body {
   min-height: 100vh;
   min-height: 100dvh;

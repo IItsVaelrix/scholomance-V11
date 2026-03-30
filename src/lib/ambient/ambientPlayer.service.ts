@@ -25,8 +25,9 @@ class AmbientPlayerService {
   };
   private audio = new Audio();
   private subscribers = new Set<(state: AmbientState) => void>();
+  private audioContext?: AudioContext;
+  private source?: MediaElementAudioSourceNode;
   private analyser?: AnalyserNode;
-  private rafId: number | null = null;
   private container: HTMLElement | null = null;
 
   constructor() {
@@ -37,6 +38,34 @@ class AmbientPlayerService {
       this.state.status = AMBIENT_PLAYER_STATES.STANDBY;
       this.notify();
     };
+  }
+
+  private initAudioGraph() {
+    if (this.audioContext) return;
+    
+    try {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.analyser = this.audioContext.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.analyser.smoothingTimeConstant = 0.8;
+      
+      this.source = this.audioContext.createMediaElementSource(this.audio);
+      this.source.connect(this.analyser);
+      this.analyser.connect(this.audioContext.destination);
+    } catch (e) {
+      console.error('Failed to initialize WebAudio graph:', e);
+    }
+  }
+
+  getAnalyser(): AnalyserNode | undefined {
+    this.initAudioGraph();
+    return this.analyser;
+  }
+
+  getByteFrequencyData(array: Uint8Array) {
+    if (this.analyser) {
+      this.analyser.getByteFrequencyData(array);
+    }
   }
 
   setContainer(container: HTMLElement) {

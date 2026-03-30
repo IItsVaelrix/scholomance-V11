@@ -5,6 +5,7 @@ import { SignalChamberConsole } from "./SignalChamberConsole";
 import { useAmbientPlayer } from "../../hooks/useAmbientPlayer";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
 import { useMemo, useState, useRef, useEffect } from "react";
+import { SpectrumCanvas } from "../../components/ParaEQ/SpectrumCanvas";
 import "./ListenPage.css";
 
 /**
@@ -23,6 +24,7 @@ export default function ListenPage() {
     volume,
     setVolume,
     togglePlayPause,
+    getByteFrequencyData,
   } = useAmbientPlayer(allSchoolIds);
 
   // ── Entropy tracking — UI-only: punishes looping the same school ──────────
@@ -175,18 +177,12 @@ export default function ListenPage() {
               <span className="val">{isPlaying ? 'ACTIVE' : 'STANDBY'}</span>
             </div>
             <div className="spectrum-canvas">
-              <div className="spectrum-bars">
-                {Array.from({ length: 32 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="spectrum-bar"
-                    style={{
-                      '--bar-delay': `${i * 0.05}s`,
-                      '--bar-index': i,
-                    } as React.CSSProperties}
-                  />
-                ))}
-              </div>
+              <SpectrumCanvas 
+                isPlaying={isPlaying} 
+                getByteFrequencyData={getByteFrequencyData}
+                currentSchoolId={currentSchoolId}
+                signalLevel={signalLevel}
+              />
             </div>
           </div>
 

@@ -623,32 +623,33 @@
 .arch-ring--bezel {
   width: 280px;
   height: 280px;
-  border: 10px solid #2a2214;
+  border: 32px solid #1a160a; /* Massive 32px plate */
   box-shadow: 
-    inset 0 0 5px rgba(0, 0, 0, 0.8),
-    0 2px 4px rgba(90, 74, 42, 0.4);
-  background: radial-gradient(circle, transparent 65%, rgba(0, 0, 0, 0.2) 100%);
+    inset 0 0 10px rgba(0, 0, 0, 0.95), /* Inner shadow depth */
+    0 0 0 2px rgba(138, 114, 58, 0.4),  /* Brass highlight edge */
+    0 4px 15px rgba(0, 0, 0, 0.8);      /* Cast shadow against stone */
+  background: radial-gradient(circle, transparent 65%, rgba(0, 0, 0, 0.3) 100%);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* PHONEMIC PIPS: 8 Mounted Lights */
+/* PHONEMIC PIPS: 8 Deep-Set Lights */
 .arch-pip-mount {
   position: absolute;
-  inset: -10px;
+  inset: -32px; /* Set deep into the 32px plate */
   border-radius: 50%;
-  /* 8 lights around the bezel */
+  /* 8 lights centered in the bezel plate */
   background: 
-    radial-gradient(circle at 50% 0%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 100% 50%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 50% 100%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 0% 50%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 85% 15%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 85% 85%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 15% 85%, #ffcc44 4px, transparent 10px),
-    radial-gradient(circle at 15% 15%, #ffcc44 4px, transparent 10px);
-  filter: drop-shadow(0 0 5px #ffaa00);
+    radial-gradient(circle at 50% 0%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 100% 50%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 50% 100%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 0% 50%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 85% 15%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 85% 85%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 15% 85%, #ffcc44 6px, transparent 15px),
+    radial-gradient(circle at 15% 15%, #ffcc44 6px, transparent 15px);
+  filter: drop-shadow(0 0 8px #ffaa00);
   /* Sync with 15s ritual: 3.5s draw + 10s pulses + 1.5s strobe */
   animation: hexagram-pulse-triple 10s ease-in-out 3.5s forwards,
              hexagram-strobe 1.5s steps(1) 13.5s forwards,
@@ -2891,100 +2892,98 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   GALAXY INDIGO GLOW — transport buttons
-   Inspired by the nebula cloud in asset2.png, shifted to indigo/violet.
+   CYAN NEBULA GLOW — transport buttons
+   Shifted from indigo/violet to resonant cyan and deep void.
    Applied as a layered background + glow on the transport console buttons.
    ─────────────────────────────────────────────────────────────────────────── */
 
-/* --galaxy-* custom props injected here so they flow into button rules */
 .transport-console {
-  --galaxy-indigo-a:  rgba(63, 28, 180, 0.18);   /* core indigo nebula */
-  --galaxy-indigo-b:  rgba(90, 40, 220, 0.10);   /* violet drift       */
-  --galaxy-indigo-c:  rgba(40, 16, 120, 0.28);   /* deep void          */
-  --galaxy-star-a:    rgba(180, 148, 255, 0.55);
-  --galaxy-star-b:    rgba(220, 200, 255, 0.35);
+  --nebula-cyan-a:  rgba(26, 180, 168, 0.18);   /* core teal nebula */
+  --nebula-cyan-b:  rgba(45, 219, 222, 0.10);   /* cyan drift       */
+  --nebula-cyan-c:  rgba(10, 24, 28, 0.28);     /* deep void          */
+  --nebula-star-a:  rgba(180, 255, 250, 0.55);
+  --nebula-star-b:  rgba(200, 255, 255, 0.35);
 }
 
-/* Replace button background with galaxy nebula texture */
+/* Replace button background with cyan nebula texture */
 .transport-console__btn,
 .transport-console__volume-readout {
   background:
-    /* Nebula clouds — two overlapping elliptical blobs */
-    radial-gradient(ellipse 60% 55% at 28% 38%, var(--galaxy-indigo-a) 0%, transparent 80%),
-    radial-gradient(ellipse 50% 60% at 74% 62%, var(--galaxy-indigo-b) 0%, transparent 75%),
-    /* Star scatter — tiny bright specks via repeating conic */
-    radial-gradient(circle at 18% 22%, var(--galaxy-star-b) 0px, transparent 1px),
-    radial-gradient(circle at 82% 18%, var(--galaxy-star-a) 0px, transparent 1px),
-    radial-gradient(circle at 46% 72%, var(--galaxy-star-b) 0px, transparent 1px),
-    radial-gradient(circle at 66% 44%, var(--galaxy-star-a) 0px, transparent 1px),
+    /* Nebula clouds */
+    radial-gradient(ellipse 60% 55% at 28% 38%, var(--nebula-cyan-a) 0%, transparent 80%),
+    radial-gradient(ellipse 50% 60% at 74% 62%, var(--nebula-cyan-b) 0%, transparent 75%),
+    /* Star scatter */
+    radial-gradient(circle at 18% 22%, var(--nebula-star-b) 0px, transparent 1px),
+    radial-gradient(circle at 82% 18%, var(--nebula-star-a) 0px, transparent 1px),
+    radial-gradient(circle at 46% 72%, var(--nebula-star-b) 0px, transparent 1px),
+    radial-gradient(circle at 66% 44%, var(--nebula-star-a) 0px, transparent 1px),
     /* Deep void base */
-    linear-gradient(160deg, rgba(18, 10, 40, 0.98) 0%, rgba(8, 6, 22, 0.99) 100%);
-  border-color: rgba(100, 68, 220, 0.28);
+    linear-gradient(160deg, rgba(4, 16, 24, 0.98) 0%, rgba(2, 8, 12, 0.99) 100%);
+  border-color: rgba(26, 180, 168, 0.28);
 }
 
-/* Hover: galaxy blazes indigo */
+/* Hover: nebula blazes cyan */
 .transport-console__btn:hover:not(:disabled) {
   background:
-    radial-gradient(ellipse 70% 60% at 32% 40%, rgba(80, 38, 220, 0.26) 0%, transparent 78%),
-    radial-gradient(ellipse 55% 65% at 70% 60%, rgba(110, 55, 255, 0.16) 0%, transparent 72%),
-    radial-gradient(circle at 18% 22%, var(--galaxy-star-b) 0px, transparent 1px),
-    radial-gradient(circle at 82% 18%, var(--galaxy-star-a) 0px, transparent 1px),
-    radial-gradient(circle at 46% 72%, var(--galaxy-star-b) 0px, transparent 1px),
-    linear-gradient(160deg, rgba(24, 12, 52, 0.98) 0%, rgba(10, 6, 28, 0.99) 100%);
-  border-color: rgba(130, 90, 255, 0.55);
+    radial-gradient(ellipse 70% 60% at 32% 40%, rgba(45, 219, 222, 0.26) 0%, transparent 78%),
+    radial-gradient(ellipse 55% 65% at 70% 60%, rgba(26, 180, 168, 0.16) 0%, transparent 72%),
+    radial-gradient(circle at 18% 22%, var(--nebula-star-b) 0px, transparent 1px),
+    radial-gradient(circle at 82% 18%, var(--nebula-star-a) 0px, transparent 1px),
+    radial-gradient(circle at 46% 72%, var(--nebula-star-b) 0px, transparent 1px),
+    linear-gradient(160deg, rgba(6, 24, 32, 0.98) 0%, rgba(2, 10, 14, 0.99) 100%);
+  border-color: rgba(45, 219, 222, 0.55);
   box-shadow:
-    0 0 14px rgba(80, 38, 220, 0.30),
-    0 0 28px rgba(80, 38, 220, 0.14),
-    inset 0 0 14px rgba(63, 28, 180, 0.12),
+    0 0 14px rgba(45, 219, 222, 0.30),
+    0 0 28px rgba(45, 219, 222, 0.14),
+    inset 0 0 14px rgba(26, 180, 168, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.05),
     0 4px 12px rgba(0, 0, 0, 0.35);
-  animation: galaxy-btn-pulse 2.2s ease-in-out infinite;
+  animation: nebula-btn-pulse 2.2s ease-in-out infinite;
 }
 
-@keyframes galaxy-btn-pulse {
+@keyframes nebula-btn-pulse {
   0%, 100% { filter: brightness(1); }
   50%       { filter: brightness(1.18); }
 }
 
-/* Play button — stronger indigo core */
+/* Play button — stronger cyan core */
 .transport-console__btn--play {
   background:
-    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(80, 38, 220, 0.30) 0%, transparent 70%),
-    radial-gradient(circle at 18% 22%, var(--galaxy-star-b) 0px, transparent 1px),
-    radial-gradient(circle at 78% 78%, var(--galaxy-star-a) 0px, transparent 1px),
-    linear-gradient(160deg, rgba(22, 10, 50, 0.98) 0%, rgba(8, 4, 22, 0.99) 100%);
-  border-color: rgba(130, 90, 255, 0.50);
-  color: rgba(220, 200, 255, 0.98);
+    radial-gradient(ellipse 80% 70% at 50% 50%, rgba(45, 219, 222, 0.30) 0%, transparent 70%),
+    radial-gradient(circle at 18% 22%, var(--nebula-star-b) 0px, transparent 1px),
+    radial-gradient(circle at 78% 78%, var(--nebula-star-a) 0px, transparent 1px),
+    linear-gradient(160deg, rgba(8, 28, 34, 0.98) 0%, rgba(2, 8, 12, 0.99) 100%);
+  border-color: rgba(45, 219, 222, 0.50);
+  color: rgba(200, 255, 255, 0.98);
   box-shadow:
-    0 0 22px rgba(80, 38, 220, 0.22),
-    inset 0 0 18px rgba(63, 28, 180, 0.14),
+    0 0 22px rgba(45, 219, 222, 0.22),
+    inset 0 0 18px rgba(26, 180, 168, 0.14),
     0 6px 14px rgba(0, 0, 0, 0.30);
 }
 
-/* Volume readout — same galaxy base but no hover state */
+/* Volume readout — same nebula base but no hover state */
 .transport-console__volume-readout {
-  border-color: rgba(80, 50, 180, 0.22);
-  color: rgba(200, 180, 255, 0.80);
+  border-color: rgba(26, 180, 168, 0.22);
+  color: rgba(180, 255, 255, 0.80);
 }
 
 /* ── 3D engraved text on button prompts ─────────────────────────────────────
-   Inspired by gold-letter grimoire spines in asset2.png.
-   Top-lit emboss via layered text-shadow: dark below, light above, indigo glow.
+   Top-lit emboss via layered text-shadow: dark below, light above, cyan glow.
    ─────────────────────────────────────────────────────────────────────────── */
 .transport-console__btn {
   text-shadow:
-    0  1px 0   rgba(0,   0,   0,   0.85),   /* depth undercut  */
-    0 -1px 0   rgba(255, 255, 255, 0.07),   /* top highlight   */
-    0  0   6px rgba(130, 90,  255, 0.45);   /* indigo glow     */
+    0  1px 0   rgba(0,   0,   0,   0.85),
+    0 -1px 0   rgba(255, 255, 255, 0.07),
+    0  0   6px rgba(45, 219, 222, 0.45);
   letter-spacing: 0.10em;
 }
 
-/* Station nav buttons — slightly wider glow for the label weight */
+/* Station nav buttons */
 .transport-console__btn--station {
   text-shadow:
     0  1px 0   rgba(0,   0,   0,   0.9),
     0 -1px 0   rgba(255, 255, 255, 0.08),
-    0  0   8px rgba(110, 70,  240, 0.55);
+    0  0   8px rgba(26, 180, 168, 0.55);
 }
 
 /* Play button — brightest 3D engraving */
@@ -2992,8 +2991,8 @@
   text-shadow:
     0  1px 0   rgba(0,   0,   0,   0.85),
     0 -1px 0   rgba(255, 255, 255, 0.12),
-    0  0  10px rgba(150, 110, 255, 0.65),
-    0  0  20px rgba(80,  38,  220, 0.35);
+    0  0  10px rgba(45, 219, 222, 0.65),
+    0  0  20px rgba(26, 180, 168, 0.35);
 }
 
 /* Focus ring — indigo outline */
