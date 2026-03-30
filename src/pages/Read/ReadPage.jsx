@@ -164,9 +164,6 @@ export default function ReadPage() {
     if (el) el.setAttribute('data-panel-size', combinedPct.toFixed(1));
   }, [settings?.ideLayout]);
 
-  const handleLayoutChange = useCallback((sizes) => {
-    updateSettings({ ideLayout: sizes });
-  }, [updateSettings]);
   const [editorContent, setEditorContent] = useState("");
   const [editorTitle, setEditorTitle] = useState("");
   const [highlightedLines, setHighlightedLines] = useState([]);
@@ -1692,7 +1689,7 @@ export default function ReadPage() {
           <PanelResizeHandle className="sidebar-resize-handle" />
           <Panel defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[3] : (settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60))} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
-              <KeystrokeSparksCanvas schoolColor={schoolColorHex} isTruesight={isTruesight} />
+              <KeystrokeSparksCanvas schoolColor={schoolColorHex} />
               <div className="document-container">
                 {activeScrollId || isEditable ? (
                   <ScrollEditor

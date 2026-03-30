@@ -1,4 +1,5 @@
 import { getSchoolAudioConfig } from "../../lib/ambient/schoolAudio.config";
+import { getSonicStationTrackPool } from '../../data/sonicStationBuckets.js';
 
 export const AMBIENT_PLAYER_STATES = {
   STANDBY: 'STANDBY' as const,
@@ -64,7 +65,9 @@ class AmbientPlayerService {
     try {
       this.audio.play().catch(() => {});
       this.audio.pause();
-    } catch {}
+    } catch {
+      // Intentionally silent - unlock is best-effort
+    }
   }
 
   async setSchool(schoolId: string): Promise<boolean> {
@@ -118,9 +121,9 @@ class AmbientPlayerService {
     this.audio.volume = Math.max(0, Math.min(1, value));
   }
 
-  cycleSchool(delta: number) {
+  cycleSchool() {
     // Cycle SONIC stations
-    const pool = require('../../data/sonicStationBuckets').getSonicStationTrackPool();
+    const pool = getSonicStationTrackPool();
     const idx = Math.floor(Math.random() * pool.length);
     this.setSchool(pool[idx]?.schoolId || 'SONIC');
   }

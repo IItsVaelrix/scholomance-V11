@@ -63,15 +63,17 @@ function isValidExternalApiResponse(data, source) {
       return data.every(item => 
         item && typeof item === 'object' && typeof item.word === 'string'
       );
-    
+
     case 'freedictionary':
       // Free Dictionary returns array of entries
       if (!Array.isArray(data)) return false;
       if (data.length === 0) return true; // Empty but valid
-      const first = data[0];
-      return first && typeof first === 'object' && 
-        (typeof first.word === 'string' || typeof first.title === 'string');
-    
+      {
+        const first = data[0];
+        return first && typeof first === 'object' &&
+          (typeof first.word === 'string' || typeof first.title === 'string');
+      }
+
     case 'scholomance':
       // Scholomance dict returns { definition?, entries?, synonyms?, etc }
       return true; // Already validated downstream with type checks

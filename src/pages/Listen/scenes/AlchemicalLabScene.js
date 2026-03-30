@@ -18,6 +18,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._rightCols     = [];
     this._archAngle     = 0;
     this._sig           = 0;
+    this._archRotSprite = null; // GPU-accelerated rotating hexagram sprite
   }
 
   updateState(data) {
@@ -33,6 +34,9 @@ export class AlchemicalLabScene extends Phaser.Scene {
   create() {
     const { width: W, height: H } = this.scale;
 
+    // Set scene zIndex for proper layering in multi-scene game
+    this.scene.settings.zIndex = 0; // Background layer
+
     // ── Existing 2D Logic ────────────────────────────────────────
     // Generate soft-circle particle texture
     this._makeParticleTex();
@@ -40,7 +44,6 @@ export class AlchemicalLabScene extends Phaser.Scene {
     // ── Static layers (drawn once) ───────────────────────────────
     this._bgGfx       = this.add.graphics();
     this._archStatGfx = this.add.graphics();
-    this._archRotGfx  = this.add.graphics();
     this._leftGfx     = this.add.graphics();
     this._rightGfx    = this.add.graphics();
     this._bottleGfx   = this.add.graphics();
@@ -56,9 +59,60 @@ export class AlchemicalLabScene extends Phaser.Scene {
     // Build 2D elements
     this._drawBackground(W, H);
     this._drawArchStatic(W, H);
-    this._drawArchRotating(W, H);
+    this._createArchTexture(W, H); // ✅ GPU-accelerated rotating hexagram
     this._buildParticles(W, H);
     this._drawVignette(W, H);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // ARCH PORTAL (Texture + Sprite Optimization)
+  // ─────────────────────────────────────────────────────────────────
+
+  _createArchTexture(W, H) {
+    const cx = W * 0.5;   // Center horizontally
+    const cy = H * 0.50;  // Center vertically (aligned with music player orb)
+    // Portal radius spans the full page - music player is the central orb
+    const hexR = (Math.max(W, H) * 0.45) * 0.53;
+    const texSize = Math.ceil(hexR * 2.2);
+
+    // 1. Create temporary graphics for drawing the source
+    const g = this.make.graphics({ x: 0, y: 0, add: false });
+    
+    // Two overlapping triangles (star of David / hexagram)
+    for (let tri = 0; tri < 2; tri++) {
+      const base = tri === 0 ? -90 : 90;
+      g.lineStyle(1.5, 0x0f2c1e, 0.6);
+      g.beginPath();
+      for (let i = 0; i <= 3; i++) {
+        const ang = Phaser.Math.DegToRad(base + i * 120);
+        const px = texSize / 2 + Math.cos(ang) * hexR;
+        const py = texSize / 2 + Math.sin(ang) * hexR;
+        if (i === 0) g.moveTo(px, py);
+        else g.lineTo(px, py);
+      }
+      g.strokePath();
+    }
+
+    // Radial spokes
+    g.lineStyle(1, 0x0a1810, 0.22);
+    for (let deg = 0; deg < 360; deg += 30) {
+      const rad = Phaser.Math.DegToRad(deg);
+      g.lineBetween(
+        texSize / 2, texSize / 2, 
+        texSize / 2 + Math.cos(rad) * hexR * 0.88, 
+        texSize / 2 + Math.sin(rad) * hexR * 0.88
+      );
+    }
+
+    // 2. Render graphics once to texture
+    g.generateTexture('archRotTex', texSize, texSize);
+    g.destroy();
+
+    // 3. Create sprite from texture
+    this._archRotSprite = this.add.sprite(cx, cy, 'archRotTex');
+    this._archRotSprite.setOrigin(0.5);
+    this._archRotSprite.setBlendMode(Phaser.BlendModes.SCREEN);
+    this._archRotSprite.setAlpha(0.8);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -127,20 +181,21 @@ export class AlchemicalLabScene extends Phaser.Scene {
   }
 
   // ─────────────────────────────────────────────────────────────────
-  // ARCH PORTAL  (top centre)
+  // ARCH PORTAL  (centered halo around music player - full page circumference)
   // ─────────────────────────────────────────────────────────────────
 
   _drawArchStatic(W, H) {
     const g = this._archStatGfx;
-    const cx = W * 0.5;
-    const cy = H * 0.04;   // partially above viewport
-    const outerR = Math.min(W * 0.32, 285);
+    const cx = W * 0.5;   // Center horizontally
+    const cy = H * 0.50;  // Center vertically (aligned with music player orb)
+    // Portal radius spans the full page - music player is the central orb
+    const outerR = Math.max(W, H) * 0.45;
 
-    // Soft outer glow halos
+    // Soft outer glow halos — subtle aura around the player
     const halos = [
-      { r: outerR + 45, w: 10, a: 0.025 },
-      { r: outerR + 28, w: 7,  a: 0.045 },
-      { r: outerR + 14, w: 4,  a: 0.07  },
+      { r: outerR + 80, w: 12, a: 0.02 },
+      { r: outerR + 45, w: 8, a: 0.035 },
+      { r: outerR + 20, w: 5, a: 0.06 },
     ];
     halos.forEach(({ r, w, a }) => {
       g.lineStyle(w, 0x004422, a);
@@ -169,66 +224,32 @@ export class AlchemicalLabScene extends Phaser.Scene {
       );
     }
 
-    // Interior fill
-    g.fillStyle(0x010406, 0.55);
+    // Interior fill — transparent center for music player orb
+    g.fillStyle(0x010406, 0.15);
     g.fillCircle(cx, cy, outerR - 10);
 
-    // Concentric inner rings
-    [outerR * 0.77, outerR * 0.56, outerR * 0.36].forEach(r => {
-      g.lineStyle(1, 0x0d2018, 0.45);
+    // Concentric inner rings — spaced to frame the player
+    [outerR * 0.85, outerR * 0.70, outerR * 0.55, outerR * 0.40].forEach(r => {
+      g.lineStyle(1, 0x0d2018, 0.35);
       g.strokeCircle(cx, cy, r);
     });
 
-    // Cardinal cross
+    // Cardinal cross — subtle alignment guides
     const hexR = outerR * 0.53;
-    g.lineStyle(1, 0x0e2218, 0.35);
+    g.lineStyle(1, 0x0e2218, 0.20);
     g.lineBetween(cx - hexR, cy, cx + hexR, cy);
     g.lineBetween(cx, cy - hexR, cx, cy + hexR);
 
-    // Center node
-    g.fillStyle(0x1a3828, 0.7);
-    g.fillCircle(cx, cy, 4);
-    g.lineStyle(1, 0x00aa66, 0.3);
-    g.strokeCircle(cx, cy, 4);
+    // Center node — small marker behind player
+    g.fillStyle(0x1a3828, 0.4);
+    g.fillCircle(cx, cy, 6);
+    g.lineStyle(1, 0x00aa66, 0.2);
+    g.strokeCircle(cx, cy, 6);
 
     // Store for update()
     this._archCx = cx;
     this._archCy = cy;
     this._archHexR = hexR;
-  }
-
-  _drawArchRotating(_W, _H) {
-    // Hexagram drawn into _archRotGfx, centered on origin.
-    // Container is positioned at arch center. Rotation applied in update().
-    const g = this._archRotGfx;
-    g.clear();
-
-    const hexR = this._archHexR ?? Math.min(_W * 0.32, 285) * 0.53;
-
-    // Two overlapping triangles (star of David / hexagram)
-    for (let tri = 0; tri < 2; tri++) {
-      const base = tri === 0 ? -90 : 90;
-      g.lineStyle(1.5, 0x0f2c1e, 0.6);
-      g.beginPath();
-      for (let i = 0; i <= 3; i++) {
-        const ang = Phaser.Math.DegToRad(base + i * 120);
-        const px = Math.cos(ang) * hexR;
-        const py = Math.sin(ang) * hexR;
-        if (i === 0) g.moveTo(px, py);
-        else g.lineTo(px, py);
-      }
-      g.strokePath();
-    }
-
-    // Radial spokes
-    g.lineStyle(1, 0x0a1810, 0.22);
-    for (let deg = 0; deg < 360; deg += 30) {
-      const rad = Phaser.Math.DegToRad(deg);
-      g.lineBetween(0, 0, Math.cos(rad) * hexR * 0.88, Math.sin(rad) * hexR * 0.88);
-    }
-
-    // Position at arch centre
-    this._archRotGfx.setPosition(this._archCx, this._archCy);
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -635,10 +656,12 @@ export class AlchemicalLabScene extends Phaser.Scene {
 
   update(time) {
     const t = time * 0.001;  // seconds
-    const sig = this._sig || 0;
+    // const sig = this._sig || 0; // Reserved for future signal-reactive animation
 
-    // 1. Slow portal rotation (2 RPM = 30s/revolution)
-    this._archRotGfx.setRotation(t * (Math.PI * 2 / 30));
+    // 1. Portal rotation (2 RPM = 30s/revolution) - full page circumference
+    if (this._archRotSprite) {
+      this._archRotSprite.rotation = t * (Math.PI * 2 / 30);
+    }
 
     // 2. LED indicator columns (if enabled)
     // this._updateLEDs(t);

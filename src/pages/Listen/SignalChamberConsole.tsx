@@ -1,12 +1,14 @@
 /**
  * SignalChamberConsole.tsx — React mount for SignalChamberScene
  * ─────────────────────────────────────────────────────────────
- * Mounts a single Phaser game (SignalChamberScene) and bridges all
- * reactive state from useAmbientPlayer into the scene via updateState().
- *
- * This replaces ThaumaturgyConsole + ThaumaturgyRadar as the primary
- * full-canvas visualization. Text, controls, and interaction all live
- * inside Phaser — the DOM wrapper is intentionally minimal.
+ * Attaches to the shared Phaser game created by AlchemicalLabBackground.
+ * Does NOT create its own game — uses the unified game instance.
+ * 
+ * This component:
+ * - Gets SignalChamberScene from shared game
+ * - Wires interaction callbacks (play/pause, volume, station select)
+ * - Syncs React state to scene via updateState()
+ * - Renders HolographicEmbed overlay for music player UI
  *
  * Accessibility note: for ARIA labels and keyboard-accessible controls,
  * add a visually-hidden <div> overlay above the canvas with the same
@@ -16,17 +18,13 @@
 import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { SCHOOLS, generateSchoolColor } from '../../data/schools';
 import { useAmbientPlayer } from '../../hooks/useAmbientPlayer';
+import { getSharedPhaserGame } from './AlchemicalLabBackground';
 import { getSchoolAudioConfig } from '../../lib/ambient/schoolAudio.config';
 import type { SignalChamberScene as SignalChamberSceneType } from './scenes/SignalChamberScene';
 import HolographicEmbed from './HolographicEmbed.jsx';
 
-// Canvas dimensions — 16:9 at safe display width
-const CANVAS_W = 1280;
-const CANVAS_H = 720;
-
 export const SignalChamberConsole: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const gameRef      = useRef<import('phaser').Game | null>(null);
   const sceneRef     = useRef<SignalChamberSceneType | null>(null);
 
   const allSchoolIds = useMemo(() => Object.keys(SCHOOLS), []);
@@ -102,59 +100,38 @@ export const SignalChamberConsole: React.FC = () => {
     setVolume(nextStep / 20);
   }, [setVolume, volume]);
 
-  // ── Mount Phaser once ──────────────────────────────────────────────────
+  // ── Attach to Shared Phaser Game ───────────────────────────────────────
 
   useEffect(() => {
-    let game: import('phaser').Game | null = null;
-
-    const mount = async () => {
+    const attachToSharedGame = async () => {
       if (!containerRef.current) return;
-      const [{ default: PhaserLib }, { SignalChamberScene }] = await Promise.all([
-        import('phaser'),
-        import('./scenes/SignalChamberScene')
-      ]);
-      const resolution = Math.min(window.devicePixelRatio || 1, 1.25);
 
-      game = new PhaserLib.Game({
-        type:   PhaserLib.AUTO,
-        width:  CANVAS_W,
-        height: CANVAS_H,
-        parent: containerRef.current,
-        transparent: true,
-        antialias:   true,
-        powerPreference: 'high-performance',
-        resolution,
-        scene: [SignalChamberScene],
-        scale: {
-          mode:            PhaserLib.Scale.FIT,
-          autoCenter:      PhaserLib.Scale.CENTER_BOTH,
-          width:           CANVAS_W,
-          height:          CANVAS_H,
-        },
-        fps: { target: 60, forceSetTimeOut: false },
-      });
+      // Wait for shared game to be ready
+      const waitForGame = setInterval(() => {
+        const sharedGame = getSharedPhaserGame();
+        if (sharedGame && sharedGame.scene.isActive('SignalChamberScene')) {
+          clearInterval(waitForGame);
+          
+          const scene = sharedGame.scene.getScene('SignalChamberScene') as SignalChamberSceneType;
+          if (!scene) return;
+          
+          sceneRef.current = scene;
+          
+          // Wire interaction callbacks back to React state
+          scene.onPlayPause     = togglePlayPause;
+          scene.onVolumeChange  = setVolume;
+          scene.onStationSelect = tuneToSchool;
+        }
+      }, 50);
 
-      game.events.once('ready', () => {
-        const scene = game?.scene.getScene('SignalChamberScene') as SignalChamberSceneType;
-        if (!scene) return;
-        sceneRef.current = scene;
-
-        // Wire interaction callbacks back to React state
-        scene.onPlayPause     = togglePlayPause;
-        scene.onVolumeChange  = setVolume;
-        scene.onStationSelect = tuneToSchool;
-      });
-
-      gameRef.current = game;
+      return () => {
+        clearInterval(waitForGame);
+        sceneRef.current = null;
+      };
     };
 
-    void mount();
-
-    return () => {
-      game?.destroy(true);
-      gameRef.current = null;
-      sceneRef.current = null;
-    };
+    const cleanup = attachToSharedGame();
+    return () => { void cleanup; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

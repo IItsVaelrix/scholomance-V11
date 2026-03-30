@@ -41,8 +41,8 @@ import Phaser from 'phaser';
 
 const REF      = { W: 1920, H: 1080 };
 const CONSOLE  = { x: 960,  y: 560, w: 1160, h: 640, cr: 16 };
-const COL_L    = { x: 110,  y: 540, w: 280,  h: 860 };
-const COL_R    = { x: 1810, y: 540, w: 280,  h: 860 };
+// const COL_L    = { x: 110,  y: 540, w: 280,  h: 860 }; // Reserved for future column layout
+// const COL_R    = { x: 1810, y: 540, w: 280,  h: 860 }; // Reserved for future column layout
 const PANEL_L  = { x: 510,  y: 455, w: 260,  h: 280 };
 const RADAR    = { x: 960,  y: 515, r: 210 };
 const PANEL_R  = { x: 1410, y: 455, w: 260,  h: 300 };
@@ -136,6 +136,9 @@ export class SignalChamberScene extends Phaser.Scene {
     this._sx = W / REF.W;
     this._sy = H / REF.H;
     this._ms = Math.min(this._sx, this._sy);
+
+    // Set scene zIndex for proper layering in multi-scene game
+    this.scene.settings.zIndex = 10; // Above AlchemicalLabScene (zIndex: 0)
 
     // ── Baked RenderTextures (zero runtime cost after create) ──
     this._rtBg   = this.add.renderTexture(0, 0, W, H).setDepth(0).setOrigin(0, 0);
@@ -369,28 +372,28 @@ export class SignalChamberScene extends Phaser.Scene {
 
     // ── Elven Filigree (Decorative curves) ──────────────────────────
     this._consSurf.lineStyle(1.5, PAL.brass, 0.12);
-    // Top-left filigree
+    // Top-left filigree (approximated with quadratic curve via arc)
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx - cw / 2 + 60 * sx, cy - ch / 2 + 40 * sy);
-    this._consSurf.curveTo(cx - cw / 2 + 120 * sx, cy - ch / 2 + 20 * sy, cx - cw / 2 + 180 * sx, cy - ch / 2 + 45 * sy);
+    this._consSurf.arc(cx - cw / 2 + 120 * sx, cy - ch / 2 + 20 * sy, 60 * sx, Math.PI, Math.PI / 2);
     this._consSurf.strokePath();
 
     // Top-right filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx + cw / 2 - 60 * sx, cy - ch / 2 + 40 * sy);
-    this._consSurf.curveTo(cx + cw / 2 - 120 * sx, cy - ch / 2 + 20 * sy, cx + cw / 2 - 180 * sx, cy - ch / 2 + 45 * sy);
+    this._consSurf.arc(cx + cw / 2 - 120 * sx, cy - ch / 2 + 20 * sy, 60 * sx, 0, Math.PI / 2, true);
     this._consSurf.strokePath();
 
     // Bottom-left filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx - cw / 2 + 40 * sx, cy + ch / 2 - 100 * sy);
-    this._consSurf.curveTo(cx - cw / 2 + 20 * sx, cy + ch / 2 - 60 * sy, cx - cw / 2 + 60 * sx, cy + ch / 2 - 30 * sy);
+    this._consSurf.arc(cx - cw / 2 + 20 * sx, cy + ch / 2 - 60 * sy, 40 * sx, -Math.PI / 2, 0);
     this._consSurf.strokePath();
 
     // Bottom-right filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx + cw / 2 - 40 * sx, cy + ch / 2 - 100 * sy);
-    this._consSurf.curveTo(cx + cw / 2 - 20 * sx, cy + ch / 2 - 60 * sy, cx + cw / 2 - 60 * sx, cy + ch / 2 - 30 * sy);
+    this._consSurf.arc(cx + cw / 2 - 20 * sx, cy + ch / 2 - 60 * sy, 40 * sx, -Math.PI / 2, 0, true);
     this._consSurf.strokePath();
 
     // ── Mana-pulse lines (Cyber-elven tech) ─────────────────────────

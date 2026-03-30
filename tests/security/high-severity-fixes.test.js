@@ -84,9 +84,9 @@ describe('HIGH-01: Rhyme Astrology SQL Injection Prevention', () => {
             'hot_edge',
         ];
 
-        for (const tableName of validTables) {
+        for (const _tableName of validTables) {
             // Should not throw, should return boolean
-            const result = indexRepo.__unsafe.indexDbConnected 
+            const result = indexRepo.__unsafe.indexDbConnected
                 ? true // If connected, hasColumn will execute and return boolean
                 : false;
             expect(typeof result).toBe('boolean');
@@ -110,7 +110,7 @@ describe('HIGH-01: Rhyme Astrology SQL Injection Prevention', () => {
         // Import hasColumn via internal access or test the behavior
         // Since hasColumn is internal, we test by ensuring no errors are thrown
         // and invalid tables return false
-        for (const tableName of maliciousTableNames) {
+        for (const _tableName of maliciousTableNames) {
             // The function should safely return false for invalid table names
             // without executing any SQL injection
             expect(() => {

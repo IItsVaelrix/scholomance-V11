@@ -9,19 +9,16 @@
  *
  * Props:
  *   schoolColor {string}  — hex color for the active school
- *   isTruesight {boolean} — current Truesight state
  */
 import { useEffect, useRef } from 'react';
 
 export default function KeystrokeSparksCanvas({
   schoolColor = '#c8a84b',
-  isTruesight = false,
 }) {
   const elRef        = useRef(null);
   const gameRef      = useRef(null);
   const mouseRef     = useRef({ x: null, y: null });
   const colorRef     = useRef(schoolColor);
-  const truesightRef = useRef(isTruesight);
 
   useEffect(() => { colorRef.current = schoolColor; }, [schoolColor]);
 
@@ -116,27 +113,6 @@ export default function KeystrokeSparksCanvas({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, []);
-
-  // Truesight toggle → bloom / collapse
-  useEffect(() => {
-    const prev = truesightRef.current;
-    truesightRef.current = isTruesight;
-
-    const game = gameRef.current;
-    if (!game) return;
-    const scene = game.scene.getScene('KeystrokeSparksScene');
-    if (!scene) return;
-
-    const el = elRef.current;
-    const cx = el ? el.offsetWidth  / 2 : null;
-    const cy = el ? el.offsetHeight / 2 : null;
-
-    if (isTruesight && !prev) {
-      scene.triggerBloom(cx, cy, '#c8a84b');
-    } else if (!isTruesight && prev) {
-      scene.triggerCollapse(cx, cy, colorRef.current);
-    }
-  }, [isTruesight]);
 
   return (
     <div

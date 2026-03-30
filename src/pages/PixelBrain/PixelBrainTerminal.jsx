@@ -327,7 +327,7 @@ function AnalyzingState() {
   );
 }
 
-export default function PixelBrainTerminal({ mode, analysisResult, isAnalyzing }) {
+export default function PixelBrainTerminal({ mode, analysisResult }) {
   return (
     <div className="pixelbrain-terminal">
       {/* CRT Effects */}

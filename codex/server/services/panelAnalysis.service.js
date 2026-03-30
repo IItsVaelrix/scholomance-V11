@@ -22,7 +22,6 @@ import { createRhymeAstrologyLexiconRepo } from '../../services/rhyme-astrology/
 import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/indexRepo.js';
 import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
-import { createNarrativeAMPService } from './narrativeAMP.service.js';
 import { createPhonemicOracleService } from './phonemicOracle.service.js';
 import { resolveRhymeAstrologyArtifactPaths } from '../utils/rhymeAstrologyPaths.js';
 
@@ -792,11 +791,13 @@ export function createPanelAnalysisService(options = {}) {
     };
   }
 
-  async function analyzePanels(rawText) {
+  async function analyzePanels(rawText, options = {}) {
     const text = normalizeInputText(rawText);
     if (!text.trim()) {
       return createEmptyPanelPayload();
     }
+
+    const nluMode = options?.nluMode || 'generate';
 
     try {
       const uniqueWords = [...new Set(text.match(/[A-Za-z]+(?:['-][A-Za-z]+)*/g) || [])];
@@ -824,6 +825,7 @@ export function createPanelAnalysisService(options = {}) {
       }), {
         gutenbergPriors: gutenbergEmotionPriors,
         pixelBrainEnabled: true,
+        nluMode, // Use the passed nluMode instead of hardcoded value
         routing: { topK: 4 },
         wordNetEnabled: true,
       });

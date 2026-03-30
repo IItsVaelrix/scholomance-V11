@@ -70,11 +70,7 @@ export default function CombatPage() {
   const [phaserReady, setPhaserReady]   = useState(false);
   const [phaserError, setPhaserError]   = useState(null);
   const prefersReduced = usePrefersReducedMotion();
-  const { settings, updateSettings } = useUserSettings();
-
-  const handleLayoutChange = useCallback((sizes) => {
-    updateSettings({ combatLayout: sizes });
-  }, [updateSettings]);
+  const { settings } = useUserSettings();
 
   const {
     combatState,

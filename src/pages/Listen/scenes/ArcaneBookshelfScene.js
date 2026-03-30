@@ -200,7 +200,7 @@ export function createArcaneBookshelfScene(side) {
 
       // ── 3D side depth of the outer frame posts ────────────────────────────
       const sideDepth = DEPTH;
-      const slopeDY   = Math.round(sideDepth * SLOPE);
+      // const slopeDY = Math.round(sideDepth * SLOPE); // Reserved for future sloped frame design
 
       if (isLeft) {
         // Depth face on RIGHT side of left frame

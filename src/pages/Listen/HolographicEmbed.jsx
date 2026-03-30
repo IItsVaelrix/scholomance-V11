@@ -9,7 +9,7 @@
  * - Music-reactive signal core (is-live class drives glow animation in CSS)
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { getTrackEmbedConfig } from "../../lib/musicEmbeds";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -250,7 +250,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Previous station"
           >
-            ◀ PREV
+            ⟨ RETRACE
           </button>
           <button
             type="button"
@@ -259,7 +259,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Next station"
           >
-            NEXT ▶
+            ADVANCE ⟩
           </button>
         </div>
 
@@ -272,7 +272,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Rewind 10 seconds"
           >
-            RW
+            ↩ RETRACT
           </button>
           <button
             type="button"
@@ -281,7 +281,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Play transmission"
           >
-            PLAY
+            ⊳ FLOW
           </button>
           <button
             type="button"
@@ -290,7 +290,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Pause transmission"
           >
-            PAUSE
+            ⊟ STASIS
           </button>
           <button
             type="button"
@@ -299,7 +299,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Fast forward 10 seconds"
           >
-            FF
+            SURGE ↪
           </button>
         </div>
 
@@ -312,14 +312,14 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Decrease volume by 5 percent"
           >
-            VOL −5
+            VOL −
           </button>
           <div
             className="transport-console__volume-readout"
             aria-live="polite"
             aria-label={`Volume ${volumePercent} percent`}
           >
-            VOL {volumePercent}%
+            ◈ {volumePercent}%
           </div>
           <button
             type="button"
@@ -328,7 +328,7 @@ export default function HolographicEmbed({
             disabled={controlsDisabled}
             aria-label="Increase volume by 5 percent"
           >
-            VOL +5
+            VOL +
           </button>
         </div>
 

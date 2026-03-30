@@ -126,7 +126,6 @@ function getSessionSecret() {
     return secret;
 }
 
-const SESSION_SECRET = getSessionSecret();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..');
@@ -157,6 +156,8 @@ export const fastify = Fastify({
   logger: true,
   trustProxy: TRUST_PROXY
 });
+
+const SESSION_SECRET = getSessionSecret();
 fastify.decorate('opsMetrics', createOpsMetrics());
 fastify.decorate('featureFlags', Object.freeze({
   rhymeAstrology: ENABLE_RHYME_ASTROLOGY,
@@ -469,13 +470,13 @@ fastify.get('/health', async () => {
 // Requires authentication to prevent reconnaissance attacks
 fastify.get('/metrics', { 
     preHandler: [requireAuth],
-    config: { 
-        rateLimit: { 
-            max: 10, 
-            timeWindow: '1 minute' 
-        } 
+    config: {
+        rateLimit: {
+            max: 10,
+            timeWindow: '1 minute'
+        }
     }
-}, async (request) => {
+}, async (_request) => {
   const readiness = getReadinessReport();
   return {
     timestamp: new Date().toISOString(),

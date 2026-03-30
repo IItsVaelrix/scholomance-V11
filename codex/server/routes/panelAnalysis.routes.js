@@ -23,6 +23,7 @@ const REDIS_CACHE_PREFIX = 'panel-analysis:';
 
 const panelAnalysisBodySchema = z.object({
   text: z.string().max(MAX_TEXT_LENGTH),
+  nluMode: z.enum(['direct', 'generate']).optional(),
 });
 
 function getCacheKey(text) {
@@ -142,7 +143,9 @@ export async function panelAnalysisRoutes(fastify, opts = {}) {
         });
         
         const data = await Promise.race([
-          panelAnalysisService.analyzePanels(parsed.data.text),
+          panelAnalysisService.analyzePanels(parsed.data.text, {
+            nluMode: parsed.data.nluMode,
+          }),
           timeoutPromise,
         ]);
         const responsePayload = {

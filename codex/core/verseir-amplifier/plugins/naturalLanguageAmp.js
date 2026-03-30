@@ -316,7 +316,7 @@ function extractEntities(tokens, fullText) {
 /**
  * Convert extracted entities to SemanticParameters
  */
-function entitiesToSemanticParameters(entities, intent) {
+function entitiesToSemanticParameters(entities, _intent) {
   const params = {
     surface: {
       material: 'stone',
@@ -523,14 +523,12 @@ function generateVerseFromIntent(entities, _params) {
   const moods = entities[ENTITY_TYPES.MOOD];
   const effects = entities[ENTITY_TYPES.EFFECT];
   const colors = entities[ENTITY_TYPES.COLOR];
-  const materials = entities[ENTITY_TYPES.MATERIAL];
-  
+
   // Build rich verse with strong phonetic patterns
   const subject = subjects[0] || 'vision';
   const mood = moods[0] || 'mysterious';
   const effect = effects[0];
   const color = colors[0];
-  const material = materials[0];
   
   // Pre-built verses with strong rhyme schemes (AABB or ABAB)
   const subjectVerses = {
@@ -713,6 +711,9 @@ export const naturalLanguageAmp = {
     const { verseIR, options = {} } = context;
     const rawText = String(verseIR?.rawText || '').trim();
     
+    console.log('[NLU-AMP] Analyzing:', rawText.substring(0, 50));
+    console.log('[NLU-AMP] Is natural language?', this.isNaturalLanguagePrompt(rawText));
+    
     if (!rawText) {
       return createAmplifierResult({
         id: ID,
@@ -728,10 +729,15 @@ export const naturalLanguageAmp = {
     // has enough coordinate mass (tokens) to render a dense, visible structure.
     const tokenCount = tokenize(rawText).length;
     const mode = (tokenCount < 10) ? 'generate' : (options.nluMode || 'direct');
+    
+    console.log('[NLU-AMP] Token count:', tokenCount, '| Mode:', mode);
     // -------------------------------------
     
     // Parse the prompt
     const parsed = parseNaturalLanguagePrompt(rawText);
+    
+    console.log('[NLU-AMP] Parsed entities:', parsed.entities);
+    console.log('[NLU-AMP] Generated verse:', parsed.generatedVerse?.substring(0, 60));
     
     // Convert entities to mathematical constraints (THE BRIDGE)
     const mathConstraints = nluToPixelBrainParams(parsed.entities, parsed.semanticParams);
@@ -800,6 +806,8 @@ export const naturalLanguageAmp = {
     });
   },
 };
+
+console.log('[NLU-AMP] Plugin loaded');
 
 /**
  * Export helper functions for direct use

@@ -1,12 +1,11 @@
 /**
  * LAYER 3: STYLE EXTENSIONS
- * 
+ *
  * Visual style overrides for different aesthetic targets.
  * Includes GameBoy, 8-bit, and other retro style filters.
  */
 
-// Note: roundTo imported for potential future use
-import { clamp01, roundTo } from '../shared.js';
+import { clamp01 } from '../shared.js';
 
 /**
  * Ordered dithering pattern (4x4 Bayer matrix)
@@ -73,8 +72,6 @@ export const styleGameBoy = {
      * Constrain to GameBoy resolution
      */
     onCoordinateMap(coords, _context) {
-      const { width, height } = this.config.resolution;
-      
       return coords.map(coord => ({
         ...coord,
         x: Math.round((coord.x || 0) / 2),

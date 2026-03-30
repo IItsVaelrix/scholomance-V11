@@ -1,5 +1,5 @@
 /**
- * KeystrokeSparksScene — typing spark particles + Truesight ring effects
+ * KeystrokeSparksScene — typing spark particles only
  *
  * Performance: the particle emitter is pre-created in create() and reused for
  * every keystroke. It is only rebuilt when the school color changes (infrequent).
@@ -7,8 +7,6 @@
  *
  * Public API:
  *   triggerSparks(x, y, colorHex)   — burst of sparks at (x, y) on keypress
- *   triggerBloom(x, y, colorHex)    — expanding ring pulse when Truesight activates
- *   triggerCollapse(x, y, colorHex) — contracting ring when Truesight deactivates
  */
 
 function hexToNum(hex) {
@@ -81,75 +79,6 @@ export function buildSparksScene(Phaser) {
 
       this._emitter.setPosition(cx, cy);
       this._emitter.explode(5);
-    }
-
-    /**
-     * Expanding golden ring pulse — fired when Truesight activates.
-     */
-    triggerBloom(x, y, colorHex) {
-      const color = hexToNum(colorHex || '#c8a84b');
-      const cx = Number.isFinite(x) ? x : this._W / 2;
-      const cy = Number.isFinite(y) ? y : this._H / 2;
-      const maxR = Math.min(this._W, this._H) * 0.48;
-
-      const g = this.add.graphics().setDepth(10);
-
-      this.tweens.addCounter({
-        from: 8,
-        to: maxR,
-        duration: 680,
-        ease: 'Quad.easeOut',
-        onUpdate: (tween) => {
-          const r = tween.getValue();
-          const progress = (r - 8) / (maxR - 8);
-          g.clear();
-          g.lineStyle(1.8, color, 0.85 * (1 - progress));
-          g.strokeCircle(cx, cy, r);
-          if (progress < 0.6) {
-            g.lineStyle(0.8, color, 0.35 * (1 - progress / 0.6));
-            g.strokeCircle(cx, cy, r * 0.72);
-          }
-        },
-        onComplete: () => g.destroy(),
-      });
-
-      const flash = this.add.graphics().setDepth(9);
-      flash.fillStyle(color, 0.07);
-      flash.fillCircle(cx, cy, maxR * 0.5);
-      this.tweens.add({
-        targets: flash,
-        alpha: 0,
-        duration: 500,
-        ease: 'Quad.easeOut',
-        onComplete: () => flash.destroy(),
-      });
-    }
-
-    /**
-     * Contracting ring ripple — fired when Truesight deactivates.
-     */
-    triggerCollapse(x, y, colorHex) {
-      const color = hexToNum(colorHex);
-      const cx = Number.isFinite(x) ? x : this._W / 2;
-      const cy = Number.isFinite(y) ? y : this._H / 2;
-      const startR = Math.min(this._W, this._H) * 0.35;
-
-      const g = this.add.graphics().setDepth(10);
-
-      this.tweens.addCounter({
-        from: startR,
-        to: 4,
-        duration: 380,
-        ease: 'Quad.easeIn',
-        onUpdate: (tween) => {
-          const r = tween.getValue();
-          const progress = 1 - (r - 4) / (startR - 4);
-          g.clear();
-          g.lineStyle(1.2, color, 0.55 * (1 - progress));
-          g.strokeCircle(cx, cy, r);
-        },
-        onComplete: () => g.destroy(),
-      });
     }
   };
 }

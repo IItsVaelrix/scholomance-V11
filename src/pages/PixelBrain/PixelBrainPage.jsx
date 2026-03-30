@@ -73,12 +73,16 @@ export default function PixelBrainPage() {
     try {
       // Determine if we need to use NLU or direct verse analysis
       const useNLU = inputMode === 'nlu-direct' || inputMode === 'nlu-generate';
-      
+      const nluMode = inputMode === 'nlu-direct' ? 'direct' : 'generate';
+
       // Call the panel analysis API
       const response = await fetch("/api/analysis/panels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: inputText }),
+        body: JSON.stringify({ 
+          text: inputText,
+          nluMode: useNLU ? nluMode : undefined,
+        }),
       });
 
       if (!response.ok) {
@@ -110,7 +114,10 @@ export default function PixelBrainPage() {
           const retryResponse = await fetch("/api/analysis/panels", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: nluPayload.generatedVerse }),
+            body: JSON.stringify({ 
+              text: nluPayload.generatedVerse,
+              nluMode: 'generate', // Retry with generate mode for the generated verse
+            }),
           });
           
           if (retryResponse.ok) {

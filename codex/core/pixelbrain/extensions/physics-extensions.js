@@ -1,12 +1,9 @@
 /**
  * LAYER 3: PHYSICS EXTENSION - Stretch & Squash
- * 
+ *
  * Applies cartoon physics principles to pixel art coordinates.
  * Simulates elastic deformation for dynamic visual effects.
  */
-
-// Note: clamp01 imported for potential future use
-import { clamp01 } from '../shared.js';
 
 /**
  * Physics extension configuration

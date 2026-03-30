@@ -4,7 +4,7 @@ import { AlchemicalLabBackground } from "./AlchemicalLabBackground";
 import { SignalChamberConsole } from "./SignalChamberConsole";
 import { useAmbientPlayer } from "../../hooks/useAmbientPlayer";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import "./ListenPage.css";
 
 /**
@@ -22,10 +22,44 @@ export default function ListenPage() {
     signalLevel,
     volume,
     setVolume,
-    tuneNextSchool,
-    tunePreviousSchool,
     togglePlayPause,
   } = useAmbientPlayer(allSchoolIds);
+
+  // ── Entropy tracking — UI-only: punishes looping the same school ──────────
+  const [entropyLevel, setEntropyLevel] = useState(0);
+  const playCountRef = useRef<Record<string, number>>({});
+  const prevIsPlayingRef = useRef(false);
+
+  useEffect(() => {
+    const wasPlaying = prevIsPlayingRef.current;
+    prevIsPlayingRef.current = isPlaying;
+    if (isPlaying && !wasPlaying && currentSchoolId) {
+      playCountRef.current[currentSchoolId] =
+        (playCountRef.current[currentSchoolId] ?? 0) + 1;
+      const count = playCountRef.current[currentSchoolId];
+      // Grace: 2 free plays. Entropy accumulates over the next 8 loops.
+      const raw = Math.max(0, (count - 2) / 8);
+      setEntropyLevel(Math.min(100, Math.round(raw * 100)));
+    }
+  }, [isPlaying, currentSchoolId]);
+
+  // Recalculate entropy when switching stations
+  useEffect(() => {
+    if (currentSchoolId) {
+      const count = playCountRef.current[currentSchoolId] ?? 0;
+      const raw = Math.max(0, (count - 2) / 8);
+      setEntropyLevel(Math.min(100, Math.round(raw * 100)));
+    }
+  }, [currentSchoolId]);
+
+  const entropyClass = entropyLevel >= 80
+    ? 'entropy-critical'
+    : entropyLevel >= 40
+    ? 'entropy-high'
+    : '';
+
+  // Phoneme density warning — fires when signal is saturated (anti-exploit threshold)
+  const phonemeWarning = signalLevel > 0.72;
 
   const currentStation = useMemo(
     () => {
@@ -37,7 +71,10 @@ export default function ListenPage() {
   );
 
   return (
-    <section className={`listen-chamber ${prefersReducedMotion ? "is-reduced-motion" : ""}`}>
+    <section
+      className={`listen-chamber ${prefersReducedMotion ? "is-reduced-motion" : ""} ${entropyClass}`}
+      style={{ '--entropy': entropyLevel / 100 } as React.CSSProperties}
+    >
       {/* ── Layer 0: 3D Environment (Phaser + Three.js) ────────────────── */}
       <AlchemicalLabBackground signalLevel={signalLevel} />
       <div className="chamber-scanlines" />
@@ -142,10 +179,26 @@ export default function ListenPage() {
               <span>VIBRATION</span>
               <span className="val">{Math.round(volume * 100)}%</span>
             </div>
-            <div className="param-track" onClick={(e) => {
-              const rect = e.currentTarget.getBoundingClientRect();
-              setVolume((e.clientX - rect.left) / rect.width);
-            }}>
+            <div 
+              className="param-track" 
+              role="slider"
+              aria-label="Volume control"
+              aria-valuenow={Math.round(volume * 100)}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              tabIndex={0}
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setVolume((e.clientX - rect.left) / rect.width);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                  setVolume(Math.min(1, volume + 0.05));
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                  setVolume(Math.max(0, volume - 0.05));
+                }
+              }}
+            >
               <div className="param-fill" style={{ width: `${volume * 100}%`, backgroundColor: 'var(--text-secondary)' }} />
               <div className="param-handle" style={{ left: `${volume * 100}%` }} />
             </div>
@@ -160,26 +213,61 @@ export default function ListenPage() {
               <div className="param-fill" style={{ width: '100%', opacity: 0.3 }} />
             </div>
           </div>
+
+          {/* Entropy meter — fills as the player loops the same school */}
+          <div className="param-node">
+            <div className="param-label">
+              <span>ENTROPY</span>
+              <span className={`val ${entropyLevel >= 80 ? 'val--critical' : entropyLevel >= 40 ? 'val--warn' : ''}`}>
+                {entropyLevel}%
+              </span>
+            </div>
+            <div className="param-track param-track--entropy">
+              <motion.div
+                className={`param-fill param-fill--entropy ${entropyLevel >= 80 ? 'is-critical' : entropyLevel >= 40 ? 'is-warn' : ''}`}
+                animate={{ width: `${entropyLevel}%` }}
+                transition={{ duration: 1.8, ease: 'easeOut' }}
+              />
+            </div>
+            {entropyLevel >= 40 && (
+              <div className="entropy-warning-label" aria-live="polite">
+                {entropyLevel >= 80 ? '⚠ DIMINISHING RETURNS' : '↑ PATTERN DETECTED'}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="analytics-block">
-          <div className="vfa-header">VECTOR FIELD ANALYSIS</div>
-          <div className="vfa-viz">
+          <div className={`vfa-header ${phonemeWarning ? 'vfa-header--warn' : ''}`}>
+            PHONEME_DENSITY
+            {phonemeWarning && (
+              <span className="vfa-warn-badge" aria-label="Anti-exploit threshold reached">⚠</span>
+            )}
+          </div>
+          <div className={`vfa-viz ${phonemeWarning ? 'vfa-viz--warn' : ''}`}>
             {[...Array(16)].map((_, i) => (
-              <motion.div 
+              <motion.div
                 key={i}
-                className="vfa-bar"
+                className={`vfa-bar ${phonemeWarning && i >= 11 ? 'vfa-bar--warn' : ''}`}
                 animate={{ height: isPlaying ? [
-                  `${20 + Math.random() * 80}%`, 
-                  `${20 + Math.random() * 80}%`
-                ] : '10%' }}
-                transition={{ repeat: Infinity, duration: 0.4 + Math.random() * 0.4 }}
+                  `${15 + signalLevel * 55 + Math.sin(i * 0.9) * 20}%`,
+                  `${10 + signalLevel * 65 + Math.cos(i * 0.7) * 22}%`,
+                ] : '8%' }}
+                transition={{ repeat: Infinity, duration: 0.38 + i * 0.025 }}
               />
             ))}
+            {phonemeWarning && (
+              <div className="phoneme-threshold-line" aria-hidden="true" />
+            )}
           </div>
+          {phonemeWarning && (
+            <div className="phoneme-exploit-label" aria-live="assertive">
+              HEURISTIC LIMIT — RETURNS DECAY
+            </div>
+          )}
           <div className="phase-controls">
-            <button className="phase-btn">PHASE_X</button>
-            <button className="phase-btn">PHASE_Y</button>
+            <button className="phase-btn">CONSONANT</button>
+            <button className="phase-btn">VOWEL</button>
           </div>
         </div>
       </aside>
