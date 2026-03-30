@@ -103,35 +103,43 @@ export const SignalChamberConsole: React.FC = () => {
   // ── Attach to Shared Phaser Game ───────────────────────────────────────
 
   useEffect(() => {
-    const attachToSharedGame = async () => {
+    const attachToSharedGame = () => {
       if (!containerRef.current) return;
 
-      // Wait for shared game to be ready
-      const waitForGame = setInterval(() => {
-        const sharedGame = getSharedPhaserGame();
-        if (sharedGame && sharedGame.scene.isActive('SignalChamberScene')) {
-          clearInterval(waitForGame);
-          
-          const scene = sharedGame.scene.getScene('SignalChamberScene') as SignalChamberSceneType;
-          if (!scene) return;
-          
-          sceneRef.current = scene;
-          
-          // Wire interaction callbacks back to React state
-          scene.onPlayPause     = togglePlayPause;
-          scene.onVolumeChange  = setVolume;
-          scene.onStationSelect = tuneToSchool;
-        }
-      }, 50);
+      const sharedGame = getSharedPhaserGame();
+      if (!sharedGame) {
+        // Game not ready yet — use RAF for instant check on next frame
+        let rafId = requestAnimationFrame(function checkGame() {
+          const game = getSharedPhaserGame();
+          if (game && game.scene.isActive('SignalChamberScene')) {
+            onGameReady(game);
+          } else {
+            rafId = requestAnimationFrame(checkGame);
+          }
+        });
+        return () => cancelAnimationFrame(rafId);
+      }
 
-      return () => {
-        clearInterval(waitForGame);
-        sceneRef.current = null;
-      };
+      onGameReady(sharedGame);
     };
 
-    const cleanup = attachToSharedGame();
-    return () => { void cleanup; };
+    const onGameReady = (game: Phaser.Game) => {
+      const scene = game.scene.getScene('SignalChamberScene') as SignalChamberSceneType;
+      if (!scene) return;
+
+      sceneRef.current = scene;
+
+      // Wire interaction callbacks back to React state
+      scene.onPlayPause     = togglePlayPause;
+      scene.onVolumeChange  = setVolume;
+      scene.onStationSelect = tuneToSchool;
+    };
+
+    attachToSharedGame();
+
+    return () => {
+      sceneRef.current = null;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
