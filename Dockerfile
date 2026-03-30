@@ -34,6 +34,7 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/docs ./docs
 COPY --from=build /app/mailer.adapter.js ./mailer.adapter.js
+COPY --from=build /app/verseir_palette_payload.json ./verseir_palette_payload.json
 
 EXPOSE 3000
 
