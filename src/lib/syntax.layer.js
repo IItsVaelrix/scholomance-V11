@@ -15,7 +15,7 @@ const FUNCTION_WORDS = new Set([
   "to", "of", "in", "on", "at", "for", "from", "with", "by", "as",
   "not", "no", "so", "too", "very", "just", "can", "could", "would", "should",
   "will", "shall", "might", "may", "must", "across", "against", "among", "around",
-  "before", "behind", "below", "beside", "between", "beyond", "during", "under", "until"
+  "before", "behind", "below", "beside", "between", "beyond", "during", "over", "under", "until"
 ]);
 
 /**

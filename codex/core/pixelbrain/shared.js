@@ -24,6 +24,18 @@ export function roundTo(value, digits = 3) {
   return Number(numeric.toFixed(digits));
 }
 
+export function hashString(value) {
+  const input = String(value ?? '');
+  let hash = 2166136261;
+
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
 export function normalizeDegrees(value) {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) return 0;

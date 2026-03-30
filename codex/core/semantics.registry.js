@@ -1,8 +1,10 @@
 /**
- * Semantics Registry - The Grammar of Living Syntax
- * 
- * Maps keywords to deterministic Schools and Spell Intents.
- * This is the foundational "dictionary" for Spellweaving.
+ * Authoritative semantic law for spellweave and combat only.
+ *
+ * This registry stays intentionally narrow: deterministic predicates, objects,
+ * and status-chain helpers that the engine resolves authoritatively. Higher-
+ * order interpretation such as metaphor, semantic fields, archetypes, and
+ * register tension now belongs on the VerseIR amplifier substrate.
  */
 
 export const INTENTS = {

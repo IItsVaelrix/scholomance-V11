@@ -5,6 +5,7 @@ import {
   GOLDEN_RATIO,
   roundTo,
 } from './shared.js';
+import { snapToPixelGrid } from './anti-alias-control.js';
 
 function toCanvasSize(canvasSize = {}) {
   const width = Math.max(16, Math.round(Number(canvasSize?.width) || DEFAULT_PIXELBRAIN_CANVAS.width));
@@ -168,14 +169,7 @@ export function applySymmetry(coordinates, symmetry, canvasSize) {
   });
 }
 
-export function snapToPixelGrid(coordinates, gridSize = 1) {
-  const safeGridSize = Math.max(1, Math.round(Number(gridSize) || 1));
-  return (Array.isArray(coordinates) ? coordinates : []).map((coordinate) => Object.freeze({
-    ...coordinate,
-    snappedX: Math.round(Number(coordinate?.x || 0) / safeGridSize) * safeGridSize,
-    snappedY: Math.round(Number(coordinate?.y || 0) / safeGridSize) * safeGridSize,
-  }));
-}
+export { snapToPixelGrid } from './anti-alias-control.js';
 
 export function mapToCoordinates(entries, verseIR, canvasSize = DEFAULT_PIXELBRAIN_CANVAS) {
   const safeEntries = Array.isArray(entries) ? entries : [];

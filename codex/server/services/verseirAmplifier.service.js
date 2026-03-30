@@ -56,6 +56,10 @@ function buildCacheKey(verseIR, options) {
     domainExtensions: options?.domainExtensions ?? null,
     pixelBrainEnabled: options?.pixelBrainEnabled ?? null,
     pixelBrainCanvas: options?.pixelBrainCanvas ?? null,
+    pixelBrainNoise: options?.pixelBrainNoise ?? null,
+    pixelBrainExtensionIds: Array.isArray(options?.pixelBrainExtensions)
+      ? options.pixelBrainExtensions.map((extension, index) => String(extension?.id || extension?.label || `pixelbrain_extension_${index + 1}`))
+      : null,
   });
 }
 
