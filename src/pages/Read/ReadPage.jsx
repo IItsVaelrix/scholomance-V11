@@ -1180,6 +1180,16 @@ export default function ReadPage() {
     />
   );
 
+  const searchBlock = (
+    <SearchPanel
+      content={documentContent}
+      onJumpToLine={(line) => {
+        editorRef.current?.jumpToLine?.(line);
+        if (isMobileViewport) setMobileActiveTab("EDITOR");
+      }}
+    />
+  );
+
   const toolsBlock = (
     <div className="sidebar-tools">
       <ToolsSidebar
@@ -1266,40 +1276,127 @@ export default function ReadPage() {
     </div>
   );
 
-  /* ── Mobile bottom tab bar icons (inline SVG) ── */
-  const MobileTabBar = () => (
-    <div className="mobile-tab-bar">
-      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "EDITOR" ? " active" : ""}`} onClick={() => setMobileActiveTab("EDITOR")}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        <span className="mobile-tab-bar-label">Edit</span>
-      </button>
-      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "FILES" ? " active" : ""}`} onClick={() => setMobileActiveTab("FILES")}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-        <span className="mobile-tab-bar-label">Files</span>
-      </button>
-      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "TOOLS" ? " active" : ""}`} onClick={() => setMobileActiveTab("TOOLS")}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-        <span className="mobile-tab-bar-label">Tools</span>
-      </button>
-      <button type="button" className={`mobile-tab-bar-btn${mobileActiveTab === "SCORE" ? " active" : ""}`} onClick={() => setMobileActiveTab("SCORE")}>
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
-        <span className="mobile-tab-bar-label">Score</span>
-      </button>
-    </div>
-  );
-
   const ritualPalette = useMemo(
     () => getRitualPalette(selectedSchool, theme),
     [selectedSchool, theme]
   );
+
+  const activeSchoolLabel = useMemo(
+    () => schoolList.find((school) => school.id === selectedSchool)?.name || "Truesight",
+    [schoolList, selectedSchool]
+  );
+
+  const mobileVisionLabel = isAstrologyMode
+    ? "Astrology"
+    : isAnalyzeMode
+      ? "Analyze"
+      : isTruesight
+        ? "Truesight"
+        : "Draft";
+
+  const mobileSurfaceTitle = activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE");
+  const mobileTabs = [
+    {
+      id: "EDITOR",
+      label: "Editor",
+      hint: isEditable ? "Write" : "Read",
+      eyebrow: "Writing chamber",
+      description: "Compose and revise within the grimoire surface without leaving the live ritual.",
+      badge: isEditable ? "Live edit" : "Read only",
+    },
+    {
+      id: "FILES",
+      label: "Files",
+      hint: "Library",
+      eyebrow: "Archive stacks",
+      description: "Open drafts, revisit scrolls, or begin a new working from the library ledger.",
+      badge: `${scrolls.length} scrolls`,
+    },
+    {
+      id: "SEARCH",
+      label: "Search",
+      hint: "Find",
+      eyebrow: "Needle path",
+      description: "Trace words through the active scroll, then jump back into the exact line.",
+      badge: `${lineCount} lines`,
+    },
+    {
+      id: "TOOLS",
+      label: "Tools",
+      hint: "Tune",
+      eyebrow: "School controls",
+      description: "Adjust Truesight, predictive guidance, and school attunement from one control rail.",
+      badge: activeSchoolLabel,
+    },
+    {
+      id: "SCORE",
+      label: "Score",
+      hint: "Metrics",
+      eyebrow: "Combat trace",
+      description: scoreData
+        ? "Inspect total power and the heuristic trail behind every point of damage."
+        : "Metrics appear here as soon as the scroll has enough language to score.",
+      badge: scoreData ? `${scoreData.traces?.length ?? 0} traces` : "Awaiting data",
+    },
+  ];
+
+  const currentMobileTab = mobileTabs.find((tab) => tab.id === mobileActiveTab) || mobileTabs[0];
+
+  const MobileTabIcon = ({ tabId }) => {
+    switch (tabId) {
+      case "EDITOR":
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
+        );
+      case "FILES":
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          </svg>
+        );
+      case "SEARCH":
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+        );
+      case "TOOLS":
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          </svg>
+        );
+      case "SCORE":
+        return (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 20V10" />
+            <path d="M12 20V4" />
+            <path d="M6 20v-6" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const activeMobilePanel =
+    mobileActiveTab === "EDITOR" ? editorBlock :
+    mobileActiveTab === "FILES" ? <div className="ide-mobile-panel">{filesBlock}</div> :
+    mobileActiveTab === "SEARCH" ? <div className="ide-mobile-panel">{searchBlock}</div> :
+    mobileActiveTab === "TOOLS" ? <div className="ide-mobile-panel">{toolsBlock}</div> :
+    <div className="ide-mobile-panel">{scoreBlock}</div>;
 
   /* ── MOBILE RENDER ── */
   if (isMobileViewport) {
     return (
       <div className="ide-layout-wrapper ide-layout-wrapper--mobile">
         <TopBar
-          title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")}
-          onOpenSearch={() => { setMobileActiveTab("FILES"); }}
+          title={mobileSurfaceTitle}
+          onOpenSearch={() => { setMobileActiveTab("SEARCH"); }}
           showMinimap={false}
           onToggleMinimap={() => {}}
           isEditable={isEditable}
@@ -1308,27 +1405,86 @@ export default function ReadPage() {
           progression={progression}
           auroraLevel={auroraLevel}
           onCycleAuroraLevel={cycleAuroraLevel}
+          showMinimapControl={false}
+          showSettingsControl={false}
         />
         <main className="ide-mobile-content">
-          {mobileActiveTab === "EDITOR" && editorBlock}
-          {mobileActiveTab === "FILES" && (
-            <div className="ide-mobile-panel">{filesBlock}</div>
-          )}
-          {mobileActiveTab === "TOOLS" && (
-            <div className="ide-mobile-panel">{toolsBlock}</div>
-          )}
-          {mobileActiveTab === "SCORE" && (
-            <div className="ide-mobile-panel">{scoreBlock}</div>
-          )}
+          <section className="ide-mobile-hero" aria-label="Scroll chamber overview">
+            <div className="ide-mobile-hero-copy">
+              <p className="ide-mobile-hero-eyebrow">Scribe chamber</p>
+              <h2 className="ide-mobile-hero-title">{mobileSurfaceTitle}</h2>
+              <p className="ide-mobile-hero-description">
+                Compose, inspect, and score within one continuous chamber built for touch instead of compromise.
+              </p>
+            </div>
+            <div className="ide-mobile-meta-grid" aria-label="Current ritual state">
+              <div className="ide-mobile-meta-chip">
+                <span className="ide-mobile-meta-label">School</span>
+                <span className="ide-mobile-meta-value">{activeSchoolLabel}</span>
+              </div>
+              <div className="ide-mobile-meta-chip">
+                <span className="ide-mobile-meta-label">Vision</span>
+                <span className="ide-mobile-meta-value">{mobileVisionLabel}</span>
+              </div>
+              <div className="ide-mobile-meta-chip">
+                <span className="ide-mobile-meta-label">Power</span>
+                <span className="ide-mobile-meta-value">{scoreData ? scoreData.totalScore : "Unscored"}</span>
+              </div>
+              <div className="ide-mobile-meta-chip">
+                <span className="ide-mobile-meta-label">Assist</span>
+                <span className="ide-mobile-meta-value">{isPredictive ? "Predictive on" : "Manual"}</span>
+              </div>
+            </div>
+          </section>
+
+          <nav className="ide-mobile-tab-bar" aria-label="Scribe workspace sections">
+            {mobileTabs.map((tab) => {
+              const isActive = mobileActiveTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`ide-mobile-tab-btn${isActive ? " active" : ""}`}
+                  onClick={() => setMobileActiveTab(tab.id)}
+                  aria-pressed={isActive}
+                  aria-label={`${tab.label} panel`}
+                >
+                  <span className="ide-mobile-tab-icon" aria-hidden="true">
+                    <MobileTabIcon tabId={tab.id} />
+                  </span>
+                  <span className="ide-mobile-tab-copy">
+                    <span className="ide-mobile-tab-label">{tab.label}</span>
+                    <span className="ide-mobile-tab-hint">{tab.hint}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </nav>
+
+          <section className={`ide-mobile-stage ide-mobile-stage--${String(currentMobileTab.id || "editor").toLowerCase()}`}>
+            <header className="ide-mobile-stage-header">
+              <div className="ide-mobile-stage-copy">
+                <p className="ide-mobile-stage-eyebrow">{currentMobileTab.eyebrow}</p>
+                <h3 className="ide-mobile-stage-title">{currentMobileTab.label}</h3>
+                <p className="ide-mobile-stage-description">{currentMobileTab.description}</p>
+              </div>
+              <span className="ide-mobile-stage-badge">{currentMobileTab.badge}</span>
+            </header>
+            <div className={`ide-mobile-stage-body${mobileActiveTab === "EDITOR" ? " ide-mobile-stage-body--editor" : ""}`}>
+              {activeMobilePanel}
+            </div>
+          </section>
+
+          <div className="ide-mobile-status-strip" role="status" aria-live="polite">
+            <span className={`ide-mobile-status-chip${analysisError ? " is-offline" : ""}`}>
+              <span className="status-ready-dot" aria-hidden="true" />
+              {analysisError ? "Analysis offline" : "Analysis ready"}
+            </span>
+            <span className="ide-mobile-status-chip">{`Ln ${cursorPos.line}, Col ${cursorPos.col}`}</span>
+            <span className="ide-mobile-status-chip">Syllables {totalSyllables}</span>
+            <span className="ide-mobile-status-chip">{mobileVisionLabel}</span>
+          </div>
         </main>
-        <StatusBar
-          line={cursorPos.line}
-          col={cursorPos.col}
-          language="Scroll Language"
-          syllableCount={totalSyllables}
-          analysisError={analysisError}
-        />
-        <MobileTabBar />
 
         <AnimatePresence>
           {tooltipState.token && (

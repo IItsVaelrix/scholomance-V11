@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useTransition } from "react";
 import { LINKS } from "../../data/library";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useAuth } from "../../hooks/useAuth.jsx";
+import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { preloadRoute } from "../../lib/routes.js";
 
 const SunIcon = () => (
@@ -47,6 +48,17 @@ function isAdminUser(user) {
   return adminAllowlist.includes(username) || adminAllowlist.includes(email);
 }
 
+const MOBILE_ROUTE_COPY = {
+  watch: "Witness the live arena and current ritual signal.",
+  listen: "Tune stations, broadcasts, and ambient transmission.",
+  read: "Compose scrolls and inspect their hidden anatomy.",
+  combat: "Cast verses into live conflict and scoring.",
+  nexus: "Survey unlocked paths, schools, and progression.",
+  collab: "Coordinate agent work and active pipelines.",
+  profile: "Review account standing and inner-sanctum access.",
+  auth: "Enter the portal and secure your chamber.",
+};
+
 export default function Navigation() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -57,6 +69,7 @@ export default function Navigation() {
   const navTimeoutRef = useRef(null);
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
+  const prefersReducedMotion = usePrefersReducedMotion();
   const canAccessCollab = isAdminUser(user);
   const nextThemeLabel = theme === "dark" ? "light" : "dark";
   const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
@@ -117,6 +130,10 @@ export default function Navigation() {
     if (navigatingPath) return; // already transitioning
     handleNav(linkPath);
   }, [navigatingPath, handleNav]);
+
+  const overlayTransition = prefersReducedMotion
+    ? { duration: 0 }
+    : { duration: 0.26, ease: "easeOut" };
 
   return (
     <>
@@ -195,65 +212,88 @@ export default function Navigation() {
           <motion.div
             id="nav-mobile-menu"
             className="nav-mobile-overlay"
-            initial={{ opacity: 0 }}
+            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 1.05, filter: "blur(8px)" }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0 }}
+            transition={overlayTransition}
           >
-            {/* Centered link list */}
-            <div className="nav-mobile-links">
-              {allLinks.map((l, i) => {
-                const isSelected = navigatingPath === l.path;
-                const isOther = navigatingPath && !isSelected;
-                return (
-                  <motion.div
-                    key={l.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{
-                      opacity: isOther ? 0.15 : 1,
-                      y: 0,
-                      scale: isSelected ? 1.15 : 1,
-                    }}
-                    transition={{
-                      delay: navigatingPath ? 0 : i * 0.06,
-                      duration: navigatingPath ? 0.4 : 0.3,
-                      ease: "easeOut",
-                    }}
-                  >
-                    <NavLink
-                      to={l.path}
-                      onClick={(e) => handleMobileNavClick(e, l.path)}
-                      onTouchStart={() => preloadRoute(l.path)}
-                      className={({ isActive }) =>
-                        `nav-mobile-link${isActive ? " active" : ""}${isSelected ? " nav-mobile-link--selected" : ""}`
-                      }
-                    >
-                      {l.label}
-                      {isSelected && (
-                        <motion.span
-                          className="nav-mobile-link__glow"
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 2.5 }}
-                          transition={{ duration: 0.5, ease: "easeOut" }}
-                          aria-hidden="true"
-                        />
-                      )}
-                    </NavLink>
-                  </motion.div>
-                );
-              })}
-            </div>
-
-            {/* Theme toggle at bottom */}
-            <button
-              type="button"
-              className="nav-mobile-theme-btn"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${nextThemeLabel} mode`}
+            <motion.div
+              className="nav-mobile-shell"
+              initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.98 }}
+              transition={overlayTransition}
             >
-              <ThemeIcon />
-              Switch to {nextThemeLabel}
-            </button>
+              <div className="nav-mobile-header">
+                <p className="nav-mobile-eyebrow">Wayfinding</p>
+                <h2 className="nav-mobile-title">Traverse the Scholomance</h2>
+                <p className="nav-mobile-copy">
+                  Move between chambers without dropping the ritual thread or losing your place.
+                </p>
+              </div>
+
+              <div className="nav-mobile-links">
+                {allLinks.map((l, i) => {
+                  const isSelected = navigatingPath === l.path;
+                  const isOther = navigatingPath && !isSelected;
+                  const isActive = location.pathname === l.path;
+                  return (
+                    <motion.div
+                      key={l.id}
+                      initial={prefersReducedMotion ? { opacity: 1 } : { opacity: 0, y: 12 }}
+                      animate={{
+                        opacity: isOther ? 0.35 : 1,
+                        y: 0,
+                        scale: isSelected && !prefersReducedMotion ? 1.02 : 1,
+                      }}
+                      transition={{
+                        delay: navigatingPath || prefersReducedMotion ? 0 : i * 0.04,
+                        duration: prefersReducedMotion ? 0 : 0.24,
+                        ease: "easeOut",
+                      }}
+                    >
+                      <NavLink
+                        to={l.path}
+                        onClick={(e) => handleMobileNavClick(e, l.path)}
+                        onTouchStart={() => preloadRoute(l.path)}
+                        className={`nav-mobile-link${isActive ? " active" : ""}${isSelected ? " nav-mobile-link--selected" : ""}`}
+                      >
+                        <span className="nav-mobile-link-copy">
+                          <span className="nav-mobile-link-label">{l.label}</span>
+                          <span className="nav-mobile-link-meta">
+                            {MOBILE_ROUTE_COPY[l.id] || "Open chamber."}
+                          </span>
+                        </span>
+                        <span className="nav-mobile-link-state">
+                          {isSelected ? "Opening" : isActive ? "Current" : "Open"}
+                        </span>
+                        {isSelected && (
+                          <motion.span
+                            className="nav-mobile-link__glow"
+                            initial={{ opacity: 0, scale: 0.75 }}
+                            animate={{ opacity: 1, scale: 1.2 }}
+                            transition={overlayTransition}
+                            aria-hidden="true"
+                          />
+                        )}
+                      </NavLink>
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              <div className="nav-mobile-footer">
+                <button
+                  type="button"
+                  className="nav-mobile-theme-btn"
+                  onClick={toggleTheme}
+                  aria-label={`Switch to ${nextThemeLabel} mode`}
+                >
+                  <ThemeIcon />
+                  Switch to {nextThemeLabel}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

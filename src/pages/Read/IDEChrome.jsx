@@ -87,6 +87,8 @@ export function TopBar({
   progression,
   auroraLevel = 2,
   onCycleAuroraLevel,
+  showMinimapControl = true,
+  showSettingsControl = true,
 }) {
   return (
     <div className="ide-topbar">
@@ -118,14 +120,16 @@ export function TopBar({
             <EditIcon />
           </button>
         )}
-        <button
-          className={`ide-icon-btn ${showMinimap ? 'active' : ''}`}
-          title="Toggle Minimap"
-          aria-label="Toggle Minimap"
-          onClick={onToggleMinimap}
-        >
-          <MapIcon />
-        </button>
+        {showMinimapControl && (
+          <button
+            className={`ide-icon-btn ${showMinimap ? 'active' : ''}`}
+            title="Toggle Minimap"
+            aria-label="Toggle Minimap"
+            onClick={onToggleMinimap}
+          >
+            <MapIcon />
+          </button>
+        )}
         <button
           className="ide-icon-btn"
           title="Search (Ctrl+F)"
@@ -145,9 +149,11 @@ export function TopBar({
             {AURORA_LABELS[auroraLevel]}
           </button>
         )}
-        <button className="ide-icon-btn" title="Settings" aria-label="Settings">
-          <GearIcon />
-        </button>
+        {showSettingsControl && (
+          <button className="ide-icon-btn" title="Settings" aria-label="Settings">
+            <GearIcon />
+          </button>
+        )}
       </div>
     </div>
   );
