@@ -41,6 +41,8 @@ export const SignalChamberConsole: React.FC = () => {
     seek,
     setVolume,
     tuneToSchool,
+    tuneNextSchool,
+    tunePreviousSchool,
     togglePlayPause,
   } = useAmbientPlayer(allSchoolIds);
 
@@ -88,6 +90,12 @@ export const SignalChamberConsole: React.FC = () => {
   const fastForwardTransmission = useCallback(() => {
     seek(10);
   }, [seek]);
+  const prevTrack = useCallback(() => {
+    void tunePreviousSchool();
+  }, [tunePreviousSchool]);
+  const nextTrack = useCallback(() => {
+    void tuneNextSchool();
+  }, [tuneNextSchool]);
   const stepVolume = useCallback((delta: number) => {
     const currentStep = Math.round(volume * 20);
     const nextStep = Math.max(0, Math.min(20, currentStep + Math.round(delta * 20)));
@@ -199,6 +207,8 @@ export const SignalChamberConsole: React.FC = () => {
           onFastForward={fastForwardTransmission}
           onVolumeDown={() => stepVolume(-0.05)}
           onVolumeUp={() => stepVolume(0.05)}
+          onPrevTrack={prevTrack}
+          onNextTrack={nextTrack}
         />
       </div>
 

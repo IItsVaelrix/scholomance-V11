@@ -14,6 +14,8 @@ export default function HolographicEmbed({
   onFastForward,
   onVolumeDown,
   onVolumeUp,
+  onPrevTrack,
+  onNextTrack,
 }) {
   const resolvedTrackUrl = trackUrl || trackId || "";
   const embed = getTrackEmbedConfig(resolvedTrackUrl);
@@ -118,6 +120,31 @@ export default function HolographicEmbed({
         role="group"
         aria-label={`${displayTitle} transport controls`}
       >
+        {/* Holographic screen surface */}
+        <div className="transport-console__screen" aria-hidden="true" />
+
+        {/* StationNavRow */}
+        <div className="transport-console__row transport-console__row--station">
+          <button
+            type="button"
+            className="transport-console__btn transport-console__btn--station"
+            onClick={onPrevTrack}
+            disabled={controlsDisabled}
+            aria-label="Previous station"
+          >
+            ◀ PREV
+          </button>
+          <button
+            type="button"
+            className="transport-console__btn transport-console__btn--station"
+            onClick={onNextTrack}
+            disabled={controlsDisabled}
+            aria-label="Next station"
+          >
+            NEXT ▶
+          </button>
+        </div>
+
         {/* PrimaryTransportRow */}
         <div className="transport-console__row transport-console__row--primary">
           <button

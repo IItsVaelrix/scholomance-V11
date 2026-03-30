@@ -1266,7 +1266,7 @@
   flex-shrink: 0;
 }
 
-/* ── TransportConsole — the forged control module ──────────────────────────── */
+/* ── TransportConsole — holographic screen module ──────────────────────────── */
 
 .transport-console {
   width: min(460px, 94vw);
@@ -1274,30 +1274,70 @@
   border-radius: 22px;
   background: linear-gradient(
     180deg,
-    rgba(14, 18, 32, 0.96) 0%,
-    rgba(8, 11, 22, 0.96) 100%
+    rgba(4, 16, 24, 0.97) 0%,
+    rgba(2, 10, 18, 0.98) 100%
   );
-  border: 1px solid rgba(201, 166, 92, 0.18);
+  border: 1px solid rgba(26, 180, 168, 0.28);
   box-shadow:
-    var(--console-shadow),
-    0 0 24px rgba(0, 0, 0, 0.35);
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(26, 180, 168, 0.08),
+    0 0 28px rgba(26, 180, 168, 0.09),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
   display: flex;
   flex-direction: column;
   gap: 10px;
   position: relative;
+  overflow: hidden;
   pointer-events: auto;
 }
 
-/* Inner bevel — gives the module depth */
+/* Holographic scanline surface */
+.transport-console__screen {
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 3px,
+    rgba(18, 157, 150, 0.028) 3px,
+    rgba(18, 157, 150, 0.028) 4px
+  );
+}
+
+/* Corner vignette — gives screen-panel depth */
+.transport-console__screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 22px;
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 58%,
+    rgba(0, 0, 0, 0.32) 100%
+  );
+}
+
+/* Inner bevel */
 .transport-console::before {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: 22px;
   pointer-events: none;
+  z-index: 2;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(26, 180, 168, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* All row content sits above the scanline layer */
+.transport-console__row,
+.transport-console__meta {
+  position: relative;
+  z-index: 1;
 }
 
 /* ── Rows ─────────────────────────────────────────────────────────────────── */
@@ -1306,6 +1346,14 @@
   display: grid;
   gap: var(--transport-gap);
   width: 100%;
+}
+
+/* Station navigation row — full-width split, sits above transport controls */
+.transport-console__row--station {
+  grid-template-columns: 1fr 1fr;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(26, 180, 168, 0.12);
+  margin-bottom: 2px;
 }
 
 .transport-console__row--primary {
@@ -1394,6 +1442,23 @@
   opacity: 0.38;
   cursor: not-allowed;
   box-shadow: none;
+}
+
+/* Station nav buttons — teal tint to differentiate from transport */
+.transport-console__btn--station {
+  border-color: rgba(26, 180, 168, 0.32);
+  color: rgba(160, 230, 224, 0.88);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+}
+
+.transport-console__btn--station:hover:not(:disabled) {
+  border-color: rgba(26, 180, 168, 0.58);
+  color: rgba(200, 248, 244, 0.98);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 0 14px rgba(26, 180, 168, 0.14),
+    0 4px 10px rgba(0, 0, 0, 0.28);
 }
 
 /* Volume readout — display only, not interactive */
