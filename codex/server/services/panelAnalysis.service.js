@@ -23,6 +23,7 @@ import { createRhymeAstrologyIndexRepo } from '../../services/rhyme-astrology/in
 import { attachVerseIRAmplifier } from '../../core/verseir-amplifier/index.js';
 import { enhanceVerseIRWithServerPolicy } from './verseirAmplifier.service.js';
 import { createNarrativeAMPService } from './narrativeAMP.service.js';
+import { createPhonemicOracleService } from './phonemicOracle.service.js';
 import { resolveRhymeAstrologyArtifactPaths } from '../utils/rhymeAstrologyPaths.js';
 
 const EMPTY_VOWEL_SUMMARY = Object.freeze({
@@ -631,10 +632,11 @@ export function createPanelAnalysisService(options = {}) {
 
   const hasInjectedRhymeAstrologyQueryEngine = Boolean(options.rhymeAstrologyQueryEngine);
   let rhymeAstrologyQueryEngine = options.rhymeAstrologyQueryEngine || null;
-  const narrativeAMPService = options.narrativeAMPService || options.phonemicOracleService || createNarrativeAMPService({
+  const narrativeAMPService = options.narrativeAMPService || options.phonemicOracleService || createPhonemicOracleService({
     log,
     lexiconAbyssService: options.lexiconAbyssService,
     wordLookupService: options.wordLookupService,
+    corpusService: options.corpusService,
   });
   const ownsNarrativeAMPService = !options.narrativeAMPService && !options.phonemicOracleService;
 
@@ -822,6 +824,7 @@ export function createPanelAnalysisService(options = {}) {
       }), {
         gutenbergPriors: gutenbergEmotionPriors,
         pixelBrainEnabled: true,
+        routing: { topK: 4 },
         wordNetEnabled: true,
       });
       const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);
