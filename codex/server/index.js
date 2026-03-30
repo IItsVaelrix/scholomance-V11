@@ -111,14 +111,17 @@ function getSessionSecret() {
         if (IS_PRODUCTION && !IS_TEST_RUNTIME) {
             throw new Error('SESSION_SECRET environment variable is required in production');
         }
-        console.warn('[SESSION] Using development secret - NOT FOR PRODUCTION');
+        // SECURITY: Use fastify.log for production-safe logging
+        fastify.log.warn('[SESSION] Using development secret - NOT FOR PRODUCTION');
         return crypto.randomBytes(32).toString('hex');
     }
-    if (IS_PRODUCTION && !IS_TEST_RUNTIME && secret.length < 32) {
-        throw new Error('SESSION_SECRET must be at least 32 characters in production');
-    }
+    // SECURITY: Enforce minimum secret length in all environments
     if (secret.length < 32) {
-        console.warn('[SESSION] SESSION_SECRET is shorter than 32 characters; consider using a longer secret.');
+        if (IS_PRODUCTION && !IS_TEST_RUNTIME) {
+            throw new Error('SESSION_SECRET must be at least 32 characters in production');
+        }
+        // SECURITY: Use fastify.log instead of console.warn
+        fastify.log.warn('[SESSION] SESSION_SECRET is shorter than 32 characters; consider using a longer secret.');
     }
     return secret;
 }
@@ -268,7 +271,17 @@ if (useRedisStore) {
     }
   });
   
-  redisClient.on('error', (err) => fastify.log.error(`[REDIS] Client Error: ${err.message}`, err));
+  redisClient.on('error', (err) => {
+    // SECURITY: Log error metadata without exposing stack traces or internals
+    fastify.log.error({
+      message: '[REDIS] Client Error',
+      code: err.code,
+      name: err.name,
+      syscall: err.syscall,
+      address: err.address,
+      port: err.port,
+    });
+  });
   redisClient.on('connect', () => fastify.log.info('[REDIS] Client Connected'));
   redisClient.on('ready', () => fastify.log.info('[REDIS] Client Ready'));
   
@@ -396,6 +409,17 @@ fastify.addContentTypeParser(
     fastify.getDefaultJsonParser('error', 'error'),
 );
 
+// SECURITY: PreHandler to enforce Content-Type on state-changing endpoints
+function requireJsonContentType(request, reply) {
+  const contentType = request.headers['content-type'];
+  if (!contentType || !contentType.includes('application/json')) {
+    return reply.status(415).send({
+      error: 'Unsupported Media Type',
+      message: 'Content-Type must be application/json',
+    });
+  }
+}
+
 // 3. Register global rate limiting (per-user when authenticated, per-IP otherwise)
 fastify.register(rateLimit, {
   global: true,
@@ -441,7 +465,17 @@ fastify.get('/health', async () => {
   };
 });
 
-fastify.get('/metrics', async () => {
+// SECURITY: /metrics exposes internal system information (PID, uptime, feature flags, counters)
+// Requires authentication to prevent reconnaissance attacks
+fastify.get('/metrics', { 
+    preHandler: [requireAuth],
+    config: { 
+        rateLimit: { 
+            max: 10, 
+            timeWindow: '1 minute' 
+        } 
+    }
+}, async (request) => {
   const readiness = getReadinessReport();
   return {
     timestamp: new Date().toISOString(),
@@ -463,7 +497,10 @@ fastify.get('/metrics', async () => {
 fastify.register(authRoutes, { prefix: '/auth' });
 
 // Reference API Proxy Routes
-fastify.get('/api/rhymes/:word', async (request, reply) => {
+// SECURITY: Rate limit external API proxy to prevent enumeration attacks
+fastify.get('/api/rhymes/:word', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } }
+}, async (request, reply) => {
     const { word } = request.params;
     try {
         const rhymeUrl = buildExternalApiUrl('https://api.datamuse.com/words', { rel_rhy: word, max: 20 });
@@ -534,13 +571,17 @@ fastify.delete('/api/scrolls/:id', {
 });
 
 // Settings
-fastify.get('/api/settings', { preHandler: [requireAuth] }, async (request) => {
+// SECURITY: Rate limit settings endpoint to prevent harvesting
+fastify.get('/api/settings', { 
+    preHandler: [requireAuth],
+    config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+}, async (request) => {
     return persistence.settings.get(request.session.user.id);
 });
 
 fastify.post('/api/settings', {
     preValidation: [csrfPreValidation],
-    preHandler: [requireAuth],
+    preHandler: [requireAuth, requireJsonContentType],
     handler: async (request) => {
         return persistence.settings.save(request.session.user.id, request.body);
     }

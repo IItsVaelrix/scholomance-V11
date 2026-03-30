@@ -178,7 +178,10 @@ export async function authRoutes(fastify, _opts) {
     });
     
     // CSRF Token
-    fastify.get('/csrf-token', async (request, reply) => {
+    // SECURITY: Rate limit to prevent session flooding attacks
+    fastify.get('/csrf-token', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+    }, async (request, reply) => {
         if (!request.session.user) {
             request.session[LEXICON_GUEST_SESSION_KEY] = true;
         }

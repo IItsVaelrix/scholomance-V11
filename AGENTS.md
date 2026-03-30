@@ -185,14 +185,18 @@ REGRESSION RETEST: [specific visual baseline files affected]
 
 | Agent | Domain | Writes To |
 |-------|--------|-----------|
-| **Codex (me)** | Visuals, UI, debugging, a11y | `src/pages/`, `src/components/`, `*.css` |
+| **Claude** | Visuals, UI, a11y | `src/pages/`, `src/components/`, `*.css`, `tests/visual/` |
 | **Gemini** | Game mechanics, balance, world-law specs | Mechanic specs and canonical rule definitions |
 | **Codex** | CODEx engine, backend, schemas, data implementation | `codex/`, `codex/server/`, `src/lib/`, `src/hooks/` (logic), `src/data/`, `scripts/` |
-| **Minimax** | Testing, QA, CI | `tests/`, CI config |
+| **Blackbox** | Testing, QA, CI, debug reports | `tests/`, `.github/workflows/` |
+| **Arbiter** | Advisory opinions, verdict reports | `opencode.md` only — reads everything, writes verdicts |
+| **Nexus** | Interactive debugging (Cursor sessions) | Debug narratives, NEXUS DATA reports |
+| **Unity** | Documentation synthesis, session coordination, cross-agent navigation | `UNITY.md`, `AGENTS.md`, `docs/team/`, `docs/navigation/`, `session-logs/` |
+| **Angel** | Final authority, repository owner | All files — ultimate arbitration |
 
-**Clarification**: Gemini defines mechanics and balance intent. Codex formalizes schemas, runtime contracts, backend behavior, and implementation-facing data shapes.
+**Clarification**: Gemini defines mechanics and balance intent. Codex formalizes schemas, runtime contracts, backend behavior, and implementation-facing data shapes. Claude consumes them in UI. Blackbox tests everything. Arbiter judges soundness. Nexus debugs interactively. Unity weaves understanding across all domains. Angel decides.
 
-**Handoff**: Gemini defines mechanics and balance intent -> Codex formalizes schemas/runtime/backend contracts -> I consume them in UI. Minimax tests everything -> blocks merge without coverage. If a bug spans domains, the debugger diagnoses, the owner fixes.
+**Handoff**: Gemini → Codex → Claude → Blackbox is the core pipeline. Arbiter/Nexus/Unity support all layers. Escalations flow to Angel.
 
 ---
 
@@ -237,3 +241,4 @@ python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --host 127
 - **Gemini context**: `GEMINI.md`
 - **PARAEQ plugin spec**: `PARAEQ_PLUGIN.md`
 - **Schema contract**: `SCHEMA_CONTRACT.md`
+- **Unity context**: `UNITY.md` — session synthesis, boundary maps, decision logs

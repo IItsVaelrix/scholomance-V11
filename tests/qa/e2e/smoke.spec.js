@@ -29,7 +29,7 @@ test.describe("Scholomance shell and scribe rite", () => {
     await page.getByRole("link", { name: "Listen" }).click();
     await expect(page).toHaveURL(/\/listen$/);
     await expect(page.getByRole("heading", { name: "Scholomance Signal Chamber" })).toBeVisible();
-    await expect(page.locator(".arcane-radio")).toBeVisible();
+    await expect(page.locator(".signal-chamber-shell")).toBeVisible();
   });
 
   test("saves a scroll, opens truesight lore, and reloads persisted content", async ({ page }) => {

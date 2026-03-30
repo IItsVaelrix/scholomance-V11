@@ -606,6 +606,7 @@ export function useCombatEngine() {
         spell: opponentSpell.spell,
         damage,
         school: opponentSpell.school,
+        signatureMove: opponentSpell.signatureMove,
       });
       emitStateUpdate(COMBAT_STATES.OPPONENT_CASTING, {
         playerHP: finalNewPlayerHP,

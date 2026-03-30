@@ -46,6 +46,41 @@ const MANUAL_LEXICAL_OVERRIDES = Object.freeze({
 const suggestionJudiciary = createJudiciaryEngine();
 const suggestionSemanticRepo = createTokenGraphSemanticRepo();
 
+/**
+ * SECURITY: Validate external API response structure
+ * Prevents malformed or malicious data from compromised APIs
+ * @param {unknown} data - Response data to validate
+ * @param {'datamuse' | 'freedictionary' | 'scholomance'} source - API source
+ * @returns {boolean} - True if valid
+ */
+function isValidExternalApiResponse(data, source) {
+  if (!data || typeof data !== 'object') return false;
+  
+  switch (source) {
+    case 'datamuse':
+      // Datamuse returns array of { word, score, tags }
+      if (!Array.isArray(data)) return false;
+      return data.every(item => 
+        item && typeof item === 'object' && typeof item.word === 'string'
+      );
+    
+    case 'freedictionary':
+      // Free Dictionary returns array of entries
+      if (!Array.isArray(data)) return false;
+      if (data.length === 0) return true; // Empty but valid
+      const first = data[0];
+      return first && typeof first === 'object' && 
+        (typeof first.word === 'string' || typeof first.title === 'string');
+    
+    case 'scholomance':
+      // Scholomance dict returns { definition?, entries?, synonyms?, etc }
+      return true; // Already validated downstream with type checks
+    
+    default:
+      return false;
+  }
+}
+
 function toNonEmptyString(value) {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -418,7 +453,8 @@ export function createWordLookupService(options = {}) {
       );
       if (!res.ok) return null;
       const data = await res.json();
-      if (!data || typeof data !== 'object') return null;
+      // SECURITY: Validate external API response structure
+      if (!isValidExternalApiResponse(data, 'scholomance')) return null;
 
       const entry = createEmptyLexicalEntry(word);
       const entries = Array.isArray(data.entries) ? data.entries : [];
@@ -483,7 +519,8 @@ export function createWordLookupService(options = {}) {
       );
       if (fdRes.ok) {
         const fdData = await fdRes.json();
-        if (Array.isArray(fdData) && fdData.length > 0) {
+        // SECURITY: Validate external API response structure
+        if (isValidExternalApiResponse(fdData, 'freedictionary') && fdData.length > 0) {
           const primary = fdData[0];
           const allDefs = [];
           const allPos = new Set();
@@ -555,34 +592,46 @@ export function createWordLookupService(options = {}) {
 
       if (synRes.ok) {
         const synData = await synRes.json();
-        const synonyms = normalizeStringArray((Array.isArray(synData) ? synData : []).map((row) => row?.word));
-        if (synonyms.length > 0) {
-          entry.synonyms = normalizeStringArray([...entry.synonyms, ...synonyms]);
-          foundData = true;
+        // SECURITY: Validate external API response structure
+        if (isValidExternalApiResponse(synData, 'datamuse')) {
+          const synonyms = normalizeStringArray(synData.map((row) => row?.word));
+          if (synonyms.length > 0) {
+            entry.synonyms = normalizeStringArray([...entry.synonyms, ...synonyms]);
+            foundData = true;
+          }
         }
       }
 
       if (antRes.ok) {
         const antData = await antRes.json();
-        const antonyms = normalizeStringArray((Array.isArray(antData) ? antData : []).map((row) => row?.word));
-        if (antonyms.length > 0) {
-          entry.antonyms = normalizeStringArray([...entry.antonyms, ...antonyms]);
-          foundData = true;
+        // SECURITY: Validate external API response structure
+        if (isValidExternalApiResponse(antData, 'datamuse')) {
+          const antonyms = normalizeStringArray(antData.map((row) => row?.word));
+          if (antonyms.length > 0) {
+            entry.antonyms = normalizeStringArray([...entry.antonyms, ...antonyms]);
+            foundData = true;
+          }
         }
       }
 
       if (rhymeRes.ok) {
         const rhymeData = await rhymeRes.json();
-        const rhymes = normalizeStringArray((Array.isArray(rhymeData) ? rhymeData : []).map((row) => row?.word));
-        entry.rhymes = normalizeStringArray([...entry.rhymes, ...rhymes]);
-        if (entry.rhymes.length > 0) foundData = true;
+        // SECURITY: Validate external API response structure
+        if (isValidExternalApiResponse(rhymeData, 'datamuse')) {
+          const rhymes = normalizeStringArray(rhymeData.map((row) => row?.word));
+          entry.rhymes = normalizeStringArray([...entry.rhymes, ...rhymes]);
+          if (entry.rhymes.length > 0) foundData = true;
+        }
       }
 
       if (slantRes.ok) {
         const slantData = await slantRes.json();
-        const slantRhymes = normalizeStringArray((Array.isArray(slantData) ? slantData : []).map((row) => row?.word));
-        entry.slantRhymes = normalizeStringArray([...entry.slantRhymes, ...slantRhymes]);
-        if (entry.slantRhymes.length > 0) foundData = true;
+        // SECURITY: Validate external API response structure
+        if (isValidExternalApiResponse(slantData, 'datamuse')) {
+          const slantRhymes = normalizeStringArray(slantData.map((row) => row?.word));
+          entry.slantRhymes = normalizeStringArray([...entry.slantRhymes, ...slantRhymes]);
+          if (entry.slantRhymes.length > 0) foundData = true;
+        }
       }
     } catch {
       // Datamuse failed as well.

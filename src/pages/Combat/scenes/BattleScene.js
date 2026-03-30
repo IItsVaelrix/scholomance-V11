@@ -712,6 +712,62 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  // ─── Signature Move VFX ─────────────────────────────────────────────────────
+
+  playSignatureMoveVFX(move, onDone) {
+    if (move.type === 'CADENCE_PUNISH' || move.id === 'VOID_PULSE') {
+      this.playVoidPulseVFX(onDone);
+    } else if (move.type === 'TOKEN_THEFT' || move.id === 'SYNTACTIC_ERASURE') {
+      this.playSyntacticErasureVFX(onDone);
+    } else {
+      if (onDone) onDone();
+    }
+  }
+
+  playVoidPulseVFX(onDone) {
+    // Screen shake + darkening + purple pulse from center
+    this.cameras.main.shake(400, 0.008);
+    
+    const pulse = this.add.circle(W / 2, PANEL_Y / 2, 10, SONIC_PURPLE, 0.8);
+    pulse.setBlendMode(Phaser.BlendModes.ADD);
+    
+    this.tweens.add({
+      targets: pulse,
+      radius: 600,
+      alpha: 0,
+      duration: 600,
+      ease: 'Power3.easeOut',
+      onComplete: () => {
+        pulse.destroy();
+        if (onDone) onDone();
+      }
+    });
+
+    // Flash the background sigil
+    this.cameras.main.flash(400, 101, 31, 255, false);
+  }
+
+  playSyntacticErasureVFX(onDone) {
+    // "Glitch" effect — random rectangles flashing
+    this.cameras.main.shake(300, 0.02);
+    
+    for (let i = 0; i < 15; i++) {
+      this.time.delayedCall(i * 20, () => {
+        const x = Phaser.Math.Between(0, W);
+        const y = Phaser.Math.Between(0, PANEL_Y);
+        const w = Phaser.Math.Between(50, 200);
+        const h = Phaser.Math.Between(2, 10);
+        const rect = this.add.rectangle(x, y, w, h, 0x00e5ff, 0.6);
+        
+        this.time.delayedCall(60, () => rect.destroy());
+      });
+    }
+
+    this.time.delayedCall(400, () => {
+      if (onDone) onDone();
+    });
+  }
+
   // ─── HP Bar Updates ────────────────────────────────────────────────────────
 
   updateOpponentHP(newHP) {
@@ -829,8 +885,14 @@ export class BattleScene extends Phaser.Scene {
     });
 
     // React: opponent cast — play animation
-    this._unsubOpponentCast = combatBridge.on('opponent:cast', ({ damage }) => {
-      this.playOpponentSpellAnim(damage);
+    this._unsubOpponentCast = combatBridge.on('opponent:cast', ({ damage, signatureMove }) => {
+      if (signatureMove) {
+        this.playSignatureMoveVFX(signatureMove, () => {
+          this.playOpponentSpellAnim(damage);
+        });
+      } else {
+        this.playOpponentSpellAnim(damage);
+      }
     });
 
     // React: state changed — update visuals

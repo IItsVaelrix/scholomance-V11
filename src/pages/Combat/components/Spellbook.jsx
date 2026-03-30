@@ -315,7 +315,10 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
             </div>
 
             {/* VERSE editor — textarea + shimmer overlay */}
-            <div className="spellbook-inline-editor">
+            <div 
+              className="spellbook-inline-editor"
+              style={{ '--spellbook-sonic-intensity': sonicAffinity }}
+            >
               <div className="spellbook-inline-editor-header">
                 <span className="spellbook-inline-label spellbook-inline-label--verse">VERSE</span>
                 <span className="spellbook-inline-label-sub">BODY · {charsLeft} chars</span>
@@ -498,7 +501,10 @@ export function Spellbook({ onCast, onCancel, isVisible, playerMP, mpCost = 10, 
             </div>
 
             {/* Editor area — textarea overlay pattern */}
-            <div className="spellbook-editor-host">
+            <div 
+              className="spellbook-editor-host"
+              style={{ '--spellbook-sonic-intensity': sonicAffinity }}
+            >
               <div className="spellbook-overlay" aria-hidden="true">
                 {text && (
                   <div

@@ -2,6 +2,7 @@ import { commonElementAmplifier } from './plugins/commonElements.js';
 import { rareElementAmplifier } from './plugins/rareElements.js';
 import { inexplicableElementAmplifier } from './plugins/inexplicableElements.js';
 import { phoneticColorAmplifier } from './plugins/phoneticColor.js';
+import { pixelBrainPhase1BridgeAmplifier } from './plugins/pixelBrainBridge.js';
 import { lexicalResonanceAmplifier } from './plugins/lexicalResonance.js';
 import { travellingWaveFilterBankAmplifier } from './plugins/travellingWaveFilterBank.js';
 import {
@@ -24,6 +25,7 @@ const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
   phoneticColorAmplifier,
+  pixelBrainPhase1BridgeAmplifier,
   travellingWaveFilterBankAmplifier,
   lexicalResonanceAmplifier,
   commonElementAmplifier,
@@ -741,6 +743,7 @@ export async function runVerseIRAmplifiers(verseIR, options = {}) {
   const matchesByTier = freezeMatchesByTier(results);
   const archetypeResonance = mergeArchetypes(results, precisionScalar);
   const dominantArchetype = archetypeResonance[0] || null;
+  const pixelBrain = results.find((result) => result?.id === 'pixelbrain_phase1_bridge')?.payload || null;
   const trueVision = results.find((result) => result?.id === 'travelling_wave_filter_bank')?.payload || null;
 
   return Object.freeze({
@@ -758,6 +761,7 @@ export async function runVerseIRAmplifiers(verseIR, options = {}) {
     dominantArchetype,
     archetypeResonance,
     elementMatches: matchesByTier,
+    ...(pixelBrain ? { pixelBrain } : {}),
     trueVision,
     diagnostics: collectDiagnostics(results),
     amplifiers: results,

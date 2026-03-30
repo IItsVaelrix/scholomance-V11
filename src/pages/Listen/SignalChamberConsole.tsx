@@ -111,8 +111,9 @@ export const SignalChamberConsole: React.FC = () => {
       if (!containerRef.current) return;
       const [{ default: PhaserLib }, { SignalChamberScene }] = await Promise.all([
         import('phaser'),
-        import('./scenes/SignalChamberScene'),
+        import('./scenes/SignalChamberScene')
       ]);
+      const resolution = Math.min(window.devicePixelRatio || 1, 1.25);
 
       game = new PhaserLib.Game({
         type:   PhaserLib.AUTO,
@@ -121,6 +122,8 @@ export const SignalChamberConsole: React.FC = () => {
         parent: containerRef.current,
         transparent: true,
         antialias:   true,
+        powerPreference: 'high-performance',
+        resolution,
         scene: [SignalChamberScene],
         scale: {
           mode:            PhaserLib.Scale.FIT,
@@ -128,7 +131,7 @@ export const SignalChamberConsole: React.FC = () => {
           width:           CANVAS_W,
           height:          CANVAS_H,
         },
-        fps: { target: 30 },
+        fps: { target: 60, forceSetTimeOut: false },
       });
 
       game.events.once('ready', () => {

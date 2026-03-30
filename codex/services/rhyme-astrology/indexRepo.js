@@ -40,6 +40,19 @@ function normalizeToken(value) {
 }
 
 /**
+ * Allowlist of valid table names for PRAGMA queries.
+ * Prevents SQL injection via table name interpolation.
+ */
+const ALLOWED_PRAGMA_TABLES = new Set([
+  'signature_bucket',
+  'constellation_cluster',
+  'rhyme_index',
+  'rhyme_lexicon',
+  'rhyme_edges',
+  'hot_edge',
+]);
+
+/**
  * @param {Database.Database | null | undefined} db
  * @param {string} tableName
  * @param {string} columnName
@@ -47,6 +60,13 @@ function normalizeToken(value) {
  */
 function hasColumn(db, tableName, columnName) {
   if (!db?.open) return false;
+  
+  // SECURITY: Validate table name against allowlist before interpolation
+  // PRAGMA statements cannot use parameterized queries in SQLite
+  if (!ALLOWED_PRAGMA_TABLES.has(tableName)) {
+    return false;
+  }
+  
   try {
     const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
     return rows.some((row) => String(row?.name || '').toLowerCase() === columnName.toLowerCase());

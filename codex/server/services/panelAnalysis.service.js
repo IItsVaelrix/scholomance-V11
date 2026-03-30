@@ -821,6 +821,7 @@ export function createPanelAnalysisService(options = {}) {
         mode: deepAnalysis?.compiler?.mode || 'balanced',
       }), {
         gutenbergPriors: gutenbergEmotionPriors,
+        pixelBrainEnabled: true,
         wordNetEnabled: true,
       });
       const amplifiedDoc = attachVerseIRAmplifier(analyzedDoc, verseIR?.verseIRAmplifier || null);

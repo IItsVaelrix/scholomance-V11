@@ -3,36 +3,43 @@ import {
   resolveVerseIrColor,
   VERSE_IR_PALETTE_FAMILIES,
 } from '../lib/truesight/color/pcaChroma.js';
-import palettePayload from '../../verseir_palette_payload.json';
+import { normalizeVowelFamily } from '../lib/phonology/vowelFamily.js';
+// Note: verseir_palette_payload.json no longer drives hues — canonical school.colorHsl.h is used directly.
 
 /**
  * Universal Biophysical Teaching Palette.
  * Maps every vowel family to its PERMANENT distinctive color derived from its native school.
  * Consistency is key for phonetic learning: "Red always means WILL family", etc.
+ *
+ * Uses the school's canonical hue directly — NOT the payload's per-family delta hues,
+ * which were school-relative variations (e.g., SONIC IH=276°, ER=272°, UR=271° — all
+ * purple variants indistinguishable from each other). The canonical school hue ensures
+ * 8 truly distinct colors across schools while families within the same school
+ * share the same hue by phonetic design.
  */
 function buildUniversalVowelPalette(theme = 'dark') {
   const result = {};
-  
-  VERSE_IR_PALETTE_FAMILIES.forEach((family) => {
-    const nativeSchoolId = VOWEL_FAMILY_TO_SCHOOL[family] || 'VOID';
-    // Access the authoritative biophysical color from the Python engine payload
-    const schoolColors = palettePayload[nativeSchoolId] || palettePayload.VOID;
-    const vowelData = schoolColors[family] || schoolColors.AX;
-    
-    // We use the HSL from the payload to ensure biophysical accuracy
-    const { hue, metrics = {} } = vowelData;
-    const { spreadNorm = 0.5, sharpnessNorm = 0.5 } = metrics;
 
-    const saturation = nativeSchoolId === 'VOID' ? 15 : 85;
-    
-    // Identical lightness logic to phoneticColor.js for 100% fidelity
-    const lightness = theme === 'dark' 
-      ? 60 - (spreadNorm * 5) + (sharpnessNorm * 5)
-      : 45 + (spreadNorm * 5);
-    
+  VERSE_IR_PALETTE_FAMILIES.forEach((family) => {
+    // Try raw family first (preserves explicit entries like OO → ABJURATION),
+    // then fall back to normalized form to pick up aliases like YUW → UW → ABJURATION.
+    const nativeSchoolId = VOWEL_FAMILY_TO_SCHOOL[family]
+      || VOWEL_FAMILY_TO_SCHOOL[normalizeVowelFamily(family)]
+      || 'VOID';
+    const school = SCHOOLS[nativeSchoolId] || SCHOOLS.VOID;
+
+    // Use the school's canonical hue for a truly distinct 8-color palette.
+    const hue = school.colorHsl.h;
+    const saturation = nativeSchoolId === 'VOID' ? school.colorHsl.s : 85;
+    const baseL = school.colorHsl.l;
+
+    const lightness = theme === 'dark'
+      ? Math.min(75, baseL + 10)
+      : Math.max(35, baseL - 5);
+
     result[family] = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
   });
-  
+
   return Object.freeze(result);
 }
 

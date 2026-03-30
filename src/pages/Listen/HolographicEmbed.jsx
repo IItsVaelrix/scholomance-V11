@@ -1,5 +1,109 @@
+/**
+ * HolographicEmbed — Transmission console DOM layer.
+ *
+ * Enhancements:
+ * - Futuristic Web Audio API button sounds (synthesized, no file deps)
+ * - Still-water ripple on click — expands from touch point
+ * - Warm holographic glow pulse on hover
+ * - Aetheric current overflow twitch — random, purely visual, never disturbs audio
+ * - Music-reactive signal core (is-live class drives glow animation in CSS)
+ */
+
+import { useState, useEffect, useCallback } from 'react';
 import { getTrackEmbedConfig } from "../../lib/musicEmbeds";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Web Audio — synthesized button tones.
+   AudioContext is created per-click and closed after the tone ends to avoid
+   holding open audio resources between interactions.
+───────────────────────────────────────────────────────────────────────────── */
+function playButtonSound(type = 'tap') {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    const t = ctx.currentTime;
+
+    if (type === 'play') {
+      // Rising tri-wave chord: activation ascending ramp
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.exponentialRampToValueAtTime(880, t + 0.14);
+      gain.gain.setValueAtTime(0.07, t);
+      gain.gain.linearRampToValueAtTime(0.05, t + 0.14);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.32);
+      osc.start(t);
+      osc.stop(t + 0.32);
+    } else if (type === 'station') {
+      // Two-tone sine sweep: tuning into a frequency
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1047, t);          // C6
+      osc.frequency.exponentialRampToValueAtTime(523, t + 0.18);  // C5
+      gain.gain.setValueAtTime(0.055, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+      osc.start(t);
+      osc.stop(t + 0.24);
+    } else if (type === 'volume') {
+      // Short soft sine blip
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(660, t);
+      osc.frequency.linearRampToValueAtTime(720, t + 0.06);
+      gain.gain.setValueAtTime(0.038, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      osc.start(t);
+      osc.stop(t + 0.1);
+    } else {
+      // Default tap: crisp high sine descend
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1320, t);
+      osc.frequency.exponentialRampToValueAtTime(660, t + 0.07);
+      gain.gain.setValueAtTime(0.042, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+      osc.start(t);
+      osc.stop(t + 0.11);
+    }
+
+    osc.addEventListener('ended', () => { ctx.close().catch(() => {}); }, { once: true });
+  } catch {
+    // Silently degrade — audio API may be blocked or unavailable
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Ripple — injects a DOM span at the click point, animates via CSS keyframe,
+   self-removes on animationend. Still-water effect: slow expansion, subtle fade.
+───────────────────────────────────────────────────────────────────────────── */
+function spawnRipple(btn, event) {
+  const rect = btn.getBoundingClientRect();
+  const x = event.clientX - rect.left;
+  const y = event.clientY - rect.top;
+
+  const ripple = document.createElement('span');
+  ripple.className = 'transport-ripple';
+  ripple.style.left = `${x}px`;
+  ripple.style.top = `${y}px`;
+  btn.appendChild(ripple);
+
+  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   makeHandler — wraps a button's click handler with sound + ripple.
+───────────────────────────────────────────────────────────────────────────── */
+function makeHandler(handler, soundType = 'tap') {
+  return (e) => {
+    playButtonSound(soundType);
+    spawnRipple(e.currentTarget, e);
+    handler?.();
+  };
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   HolographicEmbed
+───────────────────────────────────────────────────────────────────────────── */
 export default function HolographicEmbed({
   trackUrl,
   trackId,
@@ -17,50 +121,61 @@ export default function HolographicEmbed({
   onPrevTrack,
   onNextTrack,
 }) {
-  const resolvedTrackUrl = trackUrl || trackId || "";
+  /* Aetheric current overflow twitch — truly random interval, purely visual */
+  const [isTwitching, setIsTwitching] = useState(false);
+
+  useEffect(() => {
+    let timeout;
+    const scheduleNextTwitch = () => {
+      // Randomize between 8 and 38 seconds — never predictable
+      const delay = 8000 + Math.random() * 30000;
+      timeout = setTimeout(() => {
+        setIsTwitching(true);
+        // Twitch resolves in 500ms — matches CSS animation duration
+        setTimeout(() => setIsTwitching(false), 500);
+        scheduleNextTwitch();
+      }, delay);
+    };
+    scheduleNextTwitch();
+    return () => clearTimeout(timeout);
+  }, []);
+
+  /* Resolve props */
+  const resolvedTrackUrl = trackUrl || trackId || '';
   const embed = getTrackEmbedConfig(resolvedTrackUrl);
-  const providerLabel = embed.provider ? String(embed.provider).toUpperCase() : "OFFLINE";
-  const displayTitle = title || "No signal";
+  const providerLabel = embed.provider ? String(embed.provider).toUpperCase() : 'OFFLINE';
+  const displayTitle  = title || 'No signal';
   const controlsDisabled = !resolvedTrackUrl;
 
-  // Player state enum: standby | loading | playing | paused
   const playerState = !resolvedTrackUrl
-    ? "standby"
-    : isTuning
-    ? "loading"
-    : isPlaying
-    ? "playing"
-    : "paused";
+    ? 'standby'
+    : isTuning  ? 'loading'
+    : isPlaying ? 'playing'
+    : 'paused';
 
   const stateLabel = {
-    standby: "STANDBY",
-    loading: "SYNCING",
-    playing: "TRANSMITTING",
-    paused: "STANDBY",
-  }[playerState] ?? "STANDBY";
+    standby: 'STANDBY', loading: 'SYNCING',
+    playing: 'TRANSMITTING', paused: 'STANDBY',
+  }[playerState] ?? 'STANDBY';
 
   const signalStatusValue = {
-    standby: "Standby",
-    loading: "Synchronizing",
-    playing: "Transmitting",
-    paused: "Paused",
-  }[playerState] ?? "Standby";
+    standby: 'Standby', loading: 'Synchronizing',
+    playing: 'Transmitting', paused: 'Paused',
+  }[playerState] ?? 'Standby';
 
   const coreClass = [
-    "signal-core",
-    !resolvedTrackUrl ? "is-empty" : "",
-    isPlaying ? "is-live" : "is-idle",
-    isTuning ? "is-tuning" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    'signal-core',
+    !resolvedTrackUrl ? 'is-empty' : '',
+    isPlaying ? 'is-live' : 'is-idle',
+    isTuning  ? 'is-tuning' : '',
+  ].filter(Boolean).join(' ');
 
   return (
     <section
       className={`listen-console listen-console--${playerState}`}
       aria-label={`${displayTitle} transmission console`}
     >
-      {/* TransmissionCore */}
+      {/* ── TransmissionCore ──────────────────────────────────────────── */}
       <div className="listen-console__core-shell">
         <div className={coreClass}>
           <div className="signal-core__halo" />
@@ -97,38 +212,41 @@ export default function HolographicEmbed({
                 </svg>
 
                 <div className="signal-core__screen-label">{stateLabel}</div>
-                <div className="signal-core__glyph">{glyph || "✦"}</div>
+                <div className="signal-core__glyph">{glyph || '✦'}</div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ConsoleDivider */}
+      {/* ── ConsoleDivider ────────────────────────────────────────────── */}
       <div className="listen-console__divider" aria-hidden="true" />
 
-      {/* StationPlate */}
+      {/* ── StationPlate ──────────────────────────────────────────────── */}
       <div className="listen-console__plate">
         <span className="listen-console__plate-glyph" aria-hidden="true">✦</span>
         <h2 className="listen-console__title">{displayTitle}</h2>
         <span className="listen-console__plate-glyph" aria-hidden="true">✦</span>
       </div>
 
-      {/* TransportConsole */}
+      {/* ── TransportConsole — holographic touch surface ──────────────── */}
       <div
-        className="transport-console"
+        className={[
+          'transport-console',
+          isTwitching ? 'is-twitching' : '',
+        ].filter(Boolean).join(' ')}
         role="group"
         aria-label={`${displayTitle} transport controls`}
       >
-        {/* Holographic screen surface */}
+        {/* Holographic scanline surface */}
         <div className="transport-console__screen" aria-hidden="true" />
 
-        {/* StationNavRow */}
+        {/* Station navigation row */}
         <div className="transport-console__row transport-console__row--station">
           <button
             type="button"
             className="transport-console__btn transport-console__btn--station"
-            onClick={onPrevTrack}
+            onClick={makeHandler(onPrevTrack, 'station')}
             disabled={controlsDisabled}
             aria-label="Previous station"
           >
@@ -137,7 +255,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn transport-console__btn--station"
-            onClick={onNextTrack}
+            onClick={makeHandler(onNextTrack, 'station')}
             disabled={controlsDisabled}
             aria-label="Next station"
           >
@@ -145,12 +263,12 @@ export default function HolographicEmbed({
           </button>
         </div>
 
-        {/* PrimaryTransportRow */}
+        {/* Primary transport row */}
         <div className="transport-console__row transport-console__row--primary">
           <button
             type="button"
             className="transport-console__btn"
-            onClick={onRewind}
+            onClick={makeHandler(onRewind, 'tap')}
             disabled={controlsDisabled}
             aria-label="Rewind 10 seconds"
           >
@@ -159,7 +277,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn transport-console__btn--play"
-            onClick={onPlay}
+            onClick={makeHandler(onPlay, 'play')}
             disabled={controlsDisabled}
             aria-label="Play transmission"
           >
@@ -168,7 +286,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={onPause}
+            onClick={makeHandler(onPause, 'tap')}
             disabled={controlsDisabled}
             aria-label="Pause transmission"
           >
@@ -177,7 +295,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={onFastForward}
+            onClick={makeHandler(onFastForward, 'tap')}
             disabled={controlsDisabled}
             aria-label="Fast forward 10 seconds"
           >
@@ -185,12 +303,12 @@ export default function HolographicEmbed({
           </button>
         </div>
 
-        {/* SecondaryTransportRow */}
+        {/* Secondary transport row */}
         <div className="transport-console__row transport-console__row--secondary">
           <button
             type="button"
             className="transport-console__btn"
-            onClick={onVolumeDown}
+            onClick={makeHandler(onVolumeDown, 'volume')}
             disabled={controlsDisabled}
             aria-label="Decrease volume by 5 percent"
           >
@@ -206,7 +324,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={onVolumeUp}
+            onClick={makeHandler(onVolumeUp, 'volume')}
             disabled={controlsDisabled}
             aria-label="Increase volume by 5 percent"
           >
@@ -214,14 +332,14 @@ export default function HolographicEmbed({
           </button>
         </div>
 
-        {/* ConsoleMetaRow */}
+        {/* Console meta row */}
         <div className="transport-console__meta" aria-hidden="true">
           <span>TRANSMISSION CORE</span>
           <span>{providerLabel}</span>
         </div>
       </div>
 
-      {/* SignalStatus */}
+      {/* ── SignalStatus ──────────────────────────────────────────────── */}
       <div
         className="signal-status"
         role="status"

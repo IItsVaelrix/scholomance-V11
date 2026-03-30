@@ -277,23 +277,45 @@ function getTask(id) {
     return parseTaskRow(row);
 }
 
+/**
+ * Allowlist of valid column names for UPDATE queries on collab_tasks.
+ * Prevents SQL injection via dynamic column name construction.
+ */
+const ALLOWED_TASK_COLUMNS = new Set([
+    'title',
+    'description',
+    'status',
+    'priority',
+    'result',
+    'assigned_agent',
+    'pipeline_run_id',
+]);
+
 function updateTask(id, updates) {
     const fields = [];
     const params = [];
 
-    if (updates.title !== undefined) { fields.push('title = ?'); params.push(updates.title); }
-    if (updates.description !== undefined) { fields.push('description = ?'); params.push(updates.description); }
-    if (updates.status !== undefined) {
-        fields.push('status = ?');
-        params.push(updates.status);
-        if (updates.status === 'done') {
-            fields.push("completed_at = datetime('now')");
+    // SECURITY: Validate all update keys against allowlist before building SQL
+    for (const [key, value] of Object.entries(updates || {})) {
+        if (!ALLOWED_TASK_COLUMNS.has(key)) {
+            console.warn(`[collab.persistence] Attempted to update invalid column: ${key}`);
+            continue;
         }
+        
+        if (key === 'title') { fields.push('title = ?'); params.push(value); }
+        else if (key === 'description') { fields.push('description = ?'); params.push(value); }
+        else if (key === 'status') {
+            fields.push('status = ?');
+            params.push(value);
+            if (value === 'done') {
+                fields.push("completed_at = datetime('now')");
+            }
+        }
+        else if (key === 'priority') { fields.push('priority = ?'); params.push(value); }
+        else if (key === 'result') { fields.push('result = ?'); params.push(JSON.stringify(value)); }
+        else if (key === 'assigned_agent') { fields.push('assigned_agent = ?'); params.push(value); }
+        else if (key === 'pipeline_run_id') { fields.push('pipeline_run_id = ?'); params.push(value); }
     }
-    if (updates.priority !== undefined) { fields.push('priority = ?'); params.push(updates.priority); }
-    if (updates.result !== undefined) { fields.push('result = ?'); params.push(JSON.stringify(updates.result)); }
-    if (updates.assigned_agent !== undefined) { fields.push('assigned_agent = ?'); params.push(updates.assigned_agent); }
-    if (updates.pipeline_run_id !== undefined) { fields.push('pipeline_run_id = ?'); params.push(updates.pipeline_run_id); }
 
     if (fields.length === 0) return getTask(id);
 

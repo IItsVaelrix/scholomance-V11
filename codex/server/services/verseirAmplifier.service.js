@@ -54,6 +54,8 @@ function buildCacheKey(verseIR, options) {
     routing: options?.routing ?? null,
     domainOverrides: options?.domainOverrides ?? null,
     domainExtensions: options?.domainExtensions ?? null,
+    pixelBrainEnabled: options?.pixelBrainEnabled ?? null,
+    pixelBrainCanvas: options?.pixelBrainCanvas ?? null,
   });
 }
 

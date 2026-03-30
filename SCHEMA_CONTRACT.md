@@ -3,13 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.17** | Last updated: 2026-03-29
+**Version: 1.18** | Last updated: 2026-03-30
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
 
 ---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: VerseIR PixelBrain phase 1 bridge contract
+- Version: 1.17 -> 1.18
+- Changed fields: added `PixelBrainPalette`, `PixelBrainCoordinate`, and `PixelBrainPayload`; `VerseIRAmplifierPayload` may now optionally expose `pixelBrain`
+- Breaking: no
+- Claude impact: Read analysis surfaces may optionally consume `analysis.verseIRAmplifier.pixelBrain` for future pixel overlays, but no existing UI consumer is required to change
+- Blackbox impact: panel-analysis fixtures and VerseIR amplifier serialization snapshots can include the new optional `pixelBrain` payload
 
 ## SCHEMA CHANGE NOTICE
 
@@ -456,6 +465,53 @@ interface VerseIRAmplifierResult {
   payload?: Record<string, unknown> | null;
 }
 
+interface PixelBrainPalette {
+  key: string;
+  bytecode: string;
+  schoolId: string | null;
+  rarity: string;
+  effect: string;
+  colors: string[];
+  byteMap: Record<string, string>;
+}
+
+interface PixelBrainCoordinate {
+  tokenId: number;
+  token: string;
+  lineIndex: number;
+  bytecode: string;
+  schoolId: string | null;
+  rarity: string;
+  effect: string;
+  emphasis: number;
+  x: number;
+  y: number;
+  z: number;
+  snappedX: number;
+  snappedY: number;
+  paletteKey: string;
+}
+
+interface PixelBrainPayload {
+  version: string;
+  tokenCount: number;
+  activeTokenCount: number;
+  paletteCount: number;
+  dominantAxis: "horizontal" | "vertical" | "diagonal" | "radial";
+  dominantSymmetry: "none" | "horizontal" | "vertical" | "radial";
+  canvas: {
+    width: number;
+    height: number;
+    gridSize: number;
+    goldenPoint: {
+      x: number;
+      y: number;
+    };
+  };
+  palettes: PixelBrainPalette[];
+  coordinates: PixelBrainCoordinate[];
+}
+
 interface VerseIRAmplifierPayload {
   version: string;
   activeAmplifiers: number;
@@ -475,6 +531,7 @@ interface VerseIRAmplifierPayload {
     rare: VerseIRAmplifierMatch[];
     inexplicable: VerseIRAmplifierMatch[];
   };
+  pixelBrain?: PixelBrainPayload | null;
   trueVision?: VerseIRTrueVisionPayload | null;
   diagnostics: Diagnostic[];
   amplifiers: VerseIRAmplifierResult[];
@@ -1334,6 +1391,7 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.15 | 2026-03-29 | Added optional `Scroll.submittedAt` so autosaved drafts can be distinguished from first-time submissions | no |
 | 1.16 | 2026-03-29 | Added VerseIR TrueVision travelling-wave payloads plus formalized token visual/trueVision bytecodes | no |
 | 1.17 | 2026-03-29 | Added VerseIR-native `narrativeAMP` panel-analysis payloads and documented `oracle` as a compatibility alias during migration | no |
+| 1.18 | 2026-03-30 | Added optional VerseIR amplifier `pixelBrain` payloads for the Phase 1 token-bytecode, coordinate, and palette bridge | no |
 
 ---
 

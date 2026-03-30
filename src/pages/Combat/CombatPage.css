@@ -1030,9 +1030,17 @@
   overflow: hidden;
 }
 
-.spellbook-inline-editor:focus-within {
-  border-color: rgba(101, 31, 255, 0.5);
-  box-shadow: 0 0 0 1px rgba(101, 31, 255, 0.1), inset 0 0 16px rgba(101, 31, 255, 0.025);
+.spellbook-inline-editor:focus-within,
+.spellbook-editor-host:focus-within {
+  border-color: color-mix(
+    in srgb, 
+    rgba(101, 31, 255, 0.6) calc(40% + (var(--spellbook-sonic-intensity, 0) * 60%)), 
+    rgba(101, 31, 255, 0.3)
+  );
+  box-shadow: 
+    0 0 calc(4px + (var(--spellbook-sonic-intensity, 0) * 12px)) 
+    rgba(101, 31, 255, calc(0.1 + (var(--spellbook-sonic-intensity, 0) * 0.2))), 
+    inset 0 0 16px rgba(101, 31, 255, calc(0.02 + (var(--spellbook-sonic-intensity, 0) * 0.04)));
 }
 
 .spellbook-inline-textarea.truesight-transparent,
@@ -1409,11 +1417,6 @@
   border-radius: var(--radius-sm, 4px);
   overflow: hidden;
   background: rgba(8, 6, 16, 0.8);
-}
-
-.spellbook-editor-host:focus-within {
-  border-color: rgba(101, 31, 255, 0.6);
-  box-shadow: 0 0 0 2px rgba(101, 31, 255, 0.15);
 }
 
 .spellbook-textarea {

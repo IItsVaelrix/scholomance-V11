@@ -8,7 +8,10 @@ import { z } from 'zod';
 import { createPanelAnalysisService } from '../services/panelAnalysis.service.js';
 import { parseBooleanEnv, parsePositiveIntegerEnv } from '../utils/envFlags.js';
 
-const MAX_TEXT_LENGTH = 500_000;
+// SECURITY: Reduced max text length to prevent DoS via CPU/memory exhaustion
+// Premium users can have higher limits via separate endpoint
+const MAX_TEXT_LENGTH = 100_000; // 100KB max for standard users
+const ANALYSIS_TIMEOUT_MS = 30_000; // 30 second timeout for analysis operations
 const DEFAULT_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_CACHE_MAX_SIZE = 1000;
 const ENABLE_PANEL_ANALYSIS_CACHE = parseBooleanEnv('ENABLE_PANEL_ANALYSIS_CACHE', true);
@@ -133,7 +136,15 @@ export async function panelAnalysisRoutes(fastify, opts = {}) {
           }
         }
 
-        const data = await panelAnalysisService.analyzePanels(parsed.data.text);
+        // SECURITY: Wrap analysis in timeout to prevent DoS via hanging operations
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Analysis timeout: operation exceeded 30 seconds')), ANALYSIS_TIMEOUT_MS);
+        });
+        
+        const data = await Promise.race([
+          panelAnalysisService.analyzePanels(parsed.data.text),
+          timeoutPromise,
+        ]);
         const responsePayload = {
           source: 'server-analysis',
           data,

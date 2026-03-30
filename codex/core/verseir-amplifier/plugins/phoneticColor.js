@@ -17,11 +17,13 @@ const biophysicalData = require('../../../../verseir_palette_payload.json');
 
 /**
  * Resolves biophysical color coordinates based on cochlear place metrics.
+ * Uses the school's canonical hue directly to produce 8 truly distinct colors.
+ * The payload's per-family delta hues (±10° within a school) were indistinguishable
+ * variations of a single school color — replaced with the canonical school hue.
  */
 function resolveBiophysicalVowelColor(family, nativeSchoolId, vowelData, theme = 'dark') {
-  // Use the shifted hue from the biophysical metrics (Python generator)
-  // to ensure every vowel has a distinctive 'earned' color.
-  const hue = vowelData.hue !== undefined ? vowelData.hue : (SCHOOLS[nativeSchoolId]?.colorHsl?.h || 0);
+  // Use the school's canonical hue — NOT the payload's delta hue.
+  const hue = SCHOOLS[nativeSchoolId]?.colorHsl?.h ?? 0;
   const metrics = vowelData.metrics || {};
 
   const {

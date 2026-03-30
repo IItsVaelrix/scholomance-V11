@@ -1,6 +1,6 @@
 # Dead Code Report
 
-Generated at: 2026-03-29T17:41:47.421Z
+Generated at: 2026-03-29T23:46:27.407Z
 
 ## Unreachable Files
 Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
@@ -8,10 +8,15 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src\data\vowelPalette.js
 - [ ] src\lib\audioAdminApi.ts
 - [ ] src\lib\css\schoolStyles.js
-- [ ] src\lib\scholomanceCorpus.api.js
 - [ ] src\lib\truesight\compiler\verseIRQueries.js
 - [ ] src\lib\workers\analysis.worker.js
 - [ ] src\lib\worldApi.js
+- [ ] src\pages\Listen\ArcaneKnob.tsx
+- [ ] src\pages\Listen\ArcaneRadio.tsx
+- [ ] src\pages\Listen\BrassGearDial.jsx
+- [ ] src\pages\Listen\CrystalBallVisualizer.tsx
+- [ ] src\pages\Listen\NixieTube.jsx
+- [ ] src\pages\Listen\scenes\CrystalBallScene.js
 - [ ] src\types\core\analysis.ts
 - [ ] src\types\core\combat.ts
 - [ ] src\types\core\judiciary.ts
@@ -32,6 +37,7 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] codex\core\rhyme\predictor.js
 - [ ] codex\core\rhyme\training.js
 - [ ] codex\core\rhyme\validator.js
+- [ ] codex\server\services\phonemicOracle.service.js
 - [ ] codex\server\services\rhyme-astrology\indexRepo.js
 - [ ] codex\server\services\rhyme-astrology\lexiconRepo.js
 - [ ] codex\services\adapters\index.js
@@ -45,6 +51,8 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `BookIcon` in `src\components\Icons.jsx`
 - [ ] `CheckIcon` in `src\components\Icons.jsx`
 - [ ] `CloseIcon` in `src\components\Icons.jsx`
+- [ ] `ChevronsRightIcon` in `src\components\Icons.jsx`
+- [ ] `ChevronsLeftIcon` in `src\components\Icons.jsx`
 - [ ] `SCHOOL_ANGLES` in `src\data\library.js`
 - [ ] `schoolToBadgeClass` in `src\data\library.js`
 - [ ] `XP_SOURCES` in `src\data\progression_constants.js`
@@ -94,11 +102,11 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `deriveFeatureAdjustedWeights` in `src\lib\pls\ranker.js`
 - [ ] `getXpForLevel` in `src\lib\progressionUtils.js`
 - [ ] `PAGE_COMPONENTS` in `src\lib\routes.js`
-- [ ] `ScholomanceCorpusAPI` in `src\lib\scholomanceCorpus.api.js`
 - [ ] `SyntaxAnalyzer` in `src\lib\syntax.layer.js`
 - [ ] `classifySyntaxToken` in `src\lib\syntax.layer.js`
 - [ ] `getSyntaxIdentityKey` in `src\lib\syntax.layer.js`
 - [ ] `getVerseIrColorProjection` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `buildVerseIrPalette` in `src\lib\truesight\color\pcaChroma.js`
 - [ ] `VERSE_IR_PCA_CHROMA_BASIS` in `src\lib\truesight\color\pcaChroma.js`
 - [ ] `TRUESIGHT_ANALYSIS_MODES` in `src\lib\truesight\compiler\analysisModes.js`
 - [ ] `VERSE_IR_VERSION` in `src\lib\truesight\compiler\compileVerseToIR.js`
@@ -113,6 +121,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `deserializeVerseIR` in `src\lib\truesight\compiler\verseIRSerialization.js`
 - [ ] `WORD_PATTERN` in `src\lib\wordTokenization.js`
 - [ ] `getSyntacticIntegrity` in `src\pages\Combat\components\Spellbook.jsx`
+- [ ] `ArcaneRadio` in `src\pages\Listen\ArcaneRadio.tsx`
 - [ ] `DocumentStats` in `src\types\core\analysis.ts`
 - [ ] `DocumentParsed` in `src\types\core\analysis.ts`
 - [ ] `JudiciaryLayer` in `src\types\core\judiciary.ts`
@@ -204,7 +213,10 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `CaptchaService` in `codex\server\services\captcha.service.js`
 - [ ] `ConsoleMailerService` in `codex\server\services\mailer.service.js`
 - [ ] `SendGridMailerService` in `codex\server\services\mailer.service.js`
+- [ ] `createPhonemicOracleService` in `codex\server\services\phonemicOracle.service.js`
 - [ ] `getPendingCount` in `codex\server\services\wordLookupCoalescer.js`
+- [ ] `RHYME_ASTROLOGY_ARTIFACT_FILES` in `codex\server\utils\rhymeAstrologyPaths.js`
+- [ ] `hasRhymeAstrologyArtifactBundle` in `codex\server\utils\rhymeAstrologyPaths.js`
 - [ ] `FreeDictionaryAdapter` in `codex\services\adapters\freeDictionary.adapter.js`
 - [ ] `createAdapterChain` in `codex\services\adapters\index.js`
 - [ ] `createTokenGraphPhoneticRepo` in `codex\services\token-graph\phonetic.repo.js`

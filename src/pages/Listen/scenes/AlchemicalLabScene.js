@@ -4,13 +4,7 @@ import Phaser from 'phaser';
  * AlchemicalLabScene.js — Scholomance Signal Chamber Background
  *
  * Renders a dark alchemical laboratory environment behind the Thaumaturgy Console.
- * All animations are driven by precise bytecode math in update(time, delta):
- *   - Bottle glows: multi-harmonic sine pulses
- *   - Candle flicker: sum of three incommensurate sine waves (Perlin-like)
- *   - LED indicators: deterministic scrolling column pattern
- *   - Arch portal: slow linear rotation
- *
- * NO tweens. All motion = f(time).
+ * Now acts as a 2D backdrop while Three.js handles the 3D shelves.
  */
 export class AlchemicalLabScene extends Phaser.Scene {
   constructor() {
@@ -23,6 +17,13 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._leftCols      = [];
     this._rightCols     = [];
     this._archAngle     = 0;
+    this._sig           = 0;
+  }
+
+  updateState(data) {
+    if (data.signalLevel !== undefined) {
+      this._sig = data.signalLevel;
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -32,39 +33,37 @@ export class AlchemicalLabScene extends Phaser.Scene {
   create() {
     const { width: W, height: H } = this.scale;
 
+    // ── Existing 2D Logic ────────────────────────────────────────
     // Generate soft-circle particle texture
     this._makeParticleTex();
 
     // ── Static layers (drawn once) ───────────────────────────────
     this._bgGfx       = this.add.graphics();
-    this._archStatGfx = this.add.graphics();   // static arch rings / ticks
-    this._archRotGfx  = this.add.graphics();   // hexagram that rotates
+    this._archStatGfx = this.add.graphics();
+    this._archRotGfx  = this.add.graphics();
     this._leftGfx     = this.add.graphics();
     this._rightGfx    = this.add.graphics();
     this._bottleGfx   = this.add.graphics();
     this._candleGfx   = this.add.graphics();
 
     // ── Dynamic layers (cleared + redrawn each frame) ───────────
-    this._glowGfx     = this.add.graphics();   // bottle & candle halos
-    this._ledGfx      = this.add.graphics();   // indicator column segments
+    this._glowGfx     = this.add.graphics();
+    this._ledGfx      = this.add.graphics();
 
     // ── Top overlay (drawn last) ─────────────────────────────────
     this._vigGfx      = this.add.graphics();
 
-    // Build everything
+    // Build 2D elements
     this._drawBackground(W, H);
     this._drawArchStatic(W, H);
-    this._drawArchRotating(W, H);     // draws initial frame; rotated in update
-    this._drawLeftWing(W, H);
-    this._drawRightWing(W, H);
-    this._buildBottles(W, H);
-    this._buildCandleBodies(W, H);
+    this._drawArchRotating(W, H);
     this._buildParticles(W, H);
     this._drawVignette(W, H);
   }
 
   // ─────────────────────────────────────────────────────────────────
   // PARTICLE TEXTURE
+
   // ─────────────────────────────────────────────────────────────────
 
   _makeParticleTex() {
@@ -541,21 +540,29 @@ export class AlchemicalLabScene extends Phaser.Scene {
       });
     });
 
-    // ── Floating golden dust (whole scene) ───────────────────────
-    this.add.particles(W / 2, H / 2, 'labPt', {
-      speed: { min: 1, max: 5 },
-      angle: { min: 0, max: 360 },
-      scale: { start: 0.05, end: 0 },
-      alpha: { start: 0.2, end: 0 },
-      lifespan: { min: 4000, max: 9000 },
-      frequency: 110,
-      quantity: 1,
-      tint: [0xc9a227, 0xaa8820, 0xddcc44],
-      emitZone: {
-        type: 'random',
-        source: new Phaser.Geom.Rectangle(0, 0, W, H),
-      },
-    });
+    // ── Floating golden dust (whole scene with Fake 3D perspective) ───────────
+    // Particles higher on screen (farther) are smaller and move slower.
+    for (let i = 0; i < 100; i++) {
+      const depth = Math.random(); // 0 = far, 1 = near
+      const y = H * (0.1 + depth * 0.8);
+      const scale = 0.02 + depth * 0.08;
+      const speed = 1 + depth * 10;
+      
+      this.add.particles(W / 2, y, 'labPt', {
+        speed: { min: speed * 0.5, max: speed },
+        angle: { min: 0, max: 360 },
+        scale: { start: scale, end: 0 },
+        alpha: { start: 0.1 + depth * 0.2, end: 0 },
+        lifespan: { min: 4000, max: 9000 },
+        frequency: 200,
+        quantity: 1,
+        tint: [0xc9a227, 0xaa8820, 0xddcc44],
+        emitZone: {
+          type: 'random',
+          source: new Phaser.Geom.Rectangle(0, y - 20, W, 40),
+        },
+      });
+    }
 
     // ── Teal arcane sparks orbiting the portal ────────────────────
     const cx = W * 0.5;
@@ -628,15 +635,13 @@ export class AlchemicalLabScene extends Phaser.Scene {
 
   update(time) {
     const t = time * 0.001;  // seconds
+    const sig = this._sig || 0;
 
     // 1. Slow portal rotation (2 RPM = 30s/revolution)
     this._archRotGfx.setRotation(t * (Math.PI * 2 / 30));
 
-    // 2. Bottle glows + candle halos
-    this._updateGlows(t);
-
-    // 3. LED indicator columns
-    this._updateLEDs(t);
+    // 2. LED indicator columns (if enabled)
+    // this._updateLEDs(t);
   }
 
   _updateGlows(t) {
