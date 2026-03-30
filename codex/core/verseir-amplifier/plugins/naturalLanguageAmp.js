@@ -671,90 +671,35 @@ export const naturalLanguageAmp = {
   
   /**
    * Check if text appears to be a natural language prompt
-   * FIX: Use LEXICAL_VISUAL_DB and Scholomance vocabulary instead of hardcoded arrays
+   * FIX: Use LEXICAL_VISUAL_DB + token-based matching for proper routing
    */
   isNaturalLanguagePrompt(text) {
-    if (!text || text.length < 3) return false;
+    if (!text || text.length < 5) return false;
     
     const tokens = tokenize(text);
     const lowerText = text.toLowerCase();
     
-    // FIX: Check if any token exists in LEXICAL_VISUAL_DB (Scholomance vocabulary)
-    const hasSemanticWeight = tokens.some(token => LEXICAL_VISUAL_DB.has(token));
-    if (hasSemanticWeight) return true;
-    
-    // Check for intent keywords (FIX: use token-based matching)
+    // 1. INTENT CHECK: Catch commands like "Make it...", "Generate...", "Style..."
     for (const keywords of Object.values(INTENT_KEYWORDS)) {
       for (const keyword of keywords) {
-        const keywordTokens = keyword.split(' ');
-        if (keywordTokens.length === 1) {
-          if (tokens.includes(keyword)) {
-            return true;
-          }
-        } else {
-          if (lowerText.includes(keyword)) {
-            return true;
-          }
+        // Fixed: Uses tokens.includes to catch end-of-sentence keywords
+        if (lowerText.startsWith(keyword) || tokens.includes(keyword)) {
+          return true;
         }
       }
     }
     
-    // Check for style keywords
+    // 2. THE DYNAMIC BRIDGE: Catch any subject defined in the Scholomance Visual DB
+    // This replaces hardcoded SUBJECT_KEYWORDS array
+    const hasSemanticSubject = tokens.some(token => LEXICAL_VISUAL_DB.has(token));
+    if (hasSemanticSubject) return true;
+    
+    // 3. STYLE FALLBACK: Catch raw formatting requests like "8-bit" or "gameboy"
     for (const styleKeywords of Object.values(STYLE_KEYWORDS)) {
       for (const keyword of styleKeywords) {
-        if (lowerText.includes(keyword)) {
+        if (tokens.includes(keyword)) {
           return true;
         }
-      }
-    }
-    
-    // Check for material keywords
-    for (const materialKeywords of Object.values(MATERIAL_KEYWORDS)) {
-      for (const keyword of materialKeywords) {
-        if (tokens.includes(keyword) || lowerText.includes(keyword)) {
-          return true;
-        }
-      }
-    }
-    
-    // Check for mood keywords
-    for (const moodKeywords of Object.values(MOOD_KEYWORDS)) {
-      for (const keyword of moodKeywords) {
-        if (tokens.includes(keyword) || lowerText.includes(keyword)) {
-          return true;
-        }
-      }
-    }
-    
-    // Check for color keywords
-    for (const colorKeywords of Object.values(COLOR_KEYWORDS)) {
-      for (const keyword of colorKeywords) {
-        if (tokens.includes(keyword) || lowerText.includes(keyword)) {
-          return true;
-        }
-      }
-    }
-    
-    // Check for lighting keywords
-    for (const lightingKeywords of Object.values(LIGHTING_KEYWORDS)) {
-      for (const keyword of lightingKeywords) {
-        if (tokens.includes(keyword) || lowerText.includes(keyword)) {
-          return true;
-        }
-      }
-    }
-    
-    // Check for composition keywords
-    for (const keyword of COMPOSITION_KEYWORDS) {
-      if (tokens.includes(keyword)) {
-        return true;
-      }
-    }
-    
-    // Check for effect keywords
-    for (const keyword of EFFECT_KEYWORDS) {
-      if (tokens.includes(keyword)) {
-        return true;
       }
     }
     
@@ -777,15 +722,16 @@ export const naturalLanguageAmp = {
         commentary: 'No text provided for natural language analysis.',
       });
     }
+
+    // --- THE GEOMETRY STARVATION PATCH ---
+    // If prompt has fewer than 10 words, force 'generate' mode so PixelBrain
+    // has enough coordinate mass (tokens) to render a dense, visible structure.
+    const tokenCount = tokenize(rawText).length;
+    const mode = (tokenCount < 10) ? 'generate' : (options.nluMode || 'direct');
+    // -------------------------------------
     
     // Parse the prompt
     const parsed = parseNaturalLanguagePrompt(rawText);
-    
-    // FIX: Auto-switch to generate mode for short prompts to avoid geometry starvation
-    // PixelBrain needs ~10+ tokens for visible output; short prompts starve the coordinate system
-    const tokenCount = tokenize(rawText).length;
-    const autoMode = tokenCount < 10 ? 'generate' : (options.nluMode || 'direct');
-    const mode = autoMode;
     
     // Convert entities to mathematical constraints (THE BRIDGE)
     const mathConstraints = nluToPixelBrainParams(parsed.entities, parsed.semanticParams);
