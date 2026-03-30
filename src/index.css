@@ -53,7 +53,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   font-family: var(--font-sans);
-  background: 
+  background:
     radial-gradient(ellipse 80vw 60vh at 25% 15%,
       hsla(var(--active-school-h), var(--active-school-s), var(--active-school-l), 0.25) 0%, transparent 50%),
     radial-gradient(ellipse 60vw 50vh at 75% 25%,
@@ -66,6 +66,11 @@ body {
   line-height: 1.6;
   overflow-x: hidden;
   cursor: default;
+}
+
+/* Listen Page - Critical background to prevent purple flash on load */
+.listen-chamber {
+  background: #010305 !important;
 }
 
 body::before {

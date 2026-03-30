@@ -1,11 +1,21 @@
 /**
  * AlchemicalLabScene.js — Background atmosphere with rotating portal halo
- * 
+ *
  * Performance: All textures are pre-baked at module level (shared across instances)
  * to eliminate runtime texture generation delays.
+ * 
+ * NOTE: Phaser is dynamically imported to avoid blocking initial page load.
+ * DO NOT add static import - use getPhaser() helper instead.
  */
 
-import Phaser from 'phaser';
+// Dynamic Phaser loader - prevents blocking initial bundle
+let _PhaserLib = null;
+async function getPhaser() {
+  if (!_PhaserLib) {
+    _PhaserLib = (await import('phaser')).default;
+  }
+  return _PhaserLib;
+}
 
 // ══════════════════════════════════════════════════════════════════════════
 // MODULE-LEVEL CACHED TEXTURES (pre-baked, shared across all instances)
@@ -53,8 +63,10 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._archAngle = 0;
     this._sig = 0;
     this._archRotSprite = null;
+    this._sonicGearSprite = null;
     this._archHexR = 0;
     this._startTime = 0;
+    this._frictionSparks = null;
   }
 
   preload() {
@@ -95,8 +107,132 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._drawBackground(W, H);
     this._drawArchStatic(W, H);
     this._createArchRotatingSprite(W, H); // ✅ GPU-accelerated rotating hexagram
+    this._createSonicGearSprite(W, H);    // ⚙️ NEW: Metallic Sonic Gear
     this._buildParticles(W, H);
+    this._buildFrictionSparks(W, H); // ⚡ NEW: Friction sparks for unrust phase
     this._drawVignette(W, H);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // SONIC GEAR (Metallic core within the hexagram)
+  // ─────────────────────────────────────────────────────────────────
+
+  _createSonicGearSprite(W, H) {
+    const cx = W * 0.5;
+    const cy = H * 0.50;
+    const gearR = this._archHexR * 0.52;
+    const texSize = Math.ceil(gearR * 2.5);
+    const center = texSize / 2;
+
+    const textureKey = `sonicGear_metal_${Math.round(texSize)}`;
+    
+    if (!this.textures.exists(textureKey)) {
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      
+      // 1. Shadow/Depth Underlayer
+      g.fillStyle(0x05080a, 0.8);
+      g.fillCircle(center, center, gearR + 4);
+
+      // 2. Main Gear Body (Metallic Rim with Bevel)
+      // Outer Rim (Iron)
+      g.lineStyle(6, 0x2a2e30, 1);
+      g.strokeCircle(center, center, gearR);
+      // Inner Highlight (Steel Shine)
+      g.lineStyle(1.5, 0x889499, 0.4);
+      g.strokeCircle(center, center, gearR - 2);
+      // Outer Edge Highlight
+      g.lineStyle(1, 0x5a6469, 0.6);
+      g.strokeCircle(center, center, gearR + 2);
+
+      // 3. 12 Solid Metallic Teeth
+      for (let i = 0; i < 12; i++) {
+        const ang = Phaser.Math.DegToRad(i * 30);
+        const nextAng = Phaser.Math.DegToRad(i * 30 + 15);
+        
+        // Solid tooth block (Iron)
+        g.fillStyle(0x2a2e30, 1);
+        const points = [
+          { x: center + Math.cos(ang - 0.08) * gearR, y: center + Math.sin(ang - 0.08) * gearR },
+          { x: center + Math.cos(ang - 0.05) * (gearR + 10), y: center + Math.sin(ang - 0.05) * (gearR + 10) },
+          { x: center + Math.cos(ang + 0.05) * (gearR + 10), y: center + Math.sin(ang + 0.05) * (gearR + 10) },
+          { x: center + Math.cos(ang + 0.08) * gearR, y: center + Math.sin(ang + 0.08) * gearR }
+        ];
+        g.fillPoints(points, true);
+        
+        // Tooth highlight (Top edge glint)
+        g.lineStyle(1, 0x889499, 0.5);
+        g.lineBetween(points[1].x, points[1].y, points[2].x, points[2].y);
+      }
+
+      // 4. Reinforced Spokes (Heavy Iron)
+      for (let i = 0; i < 6; i++) {
+        const ang = Phaser.Math.DegToRad(i * 60);
+        // Triple-line spokes for mechanical weight
+        g.lineStyle(3, 0x1a2428, 1);
+        g.lineBetween(center, center, center + Math.cos(ang) * gearR, center + Math.sin(ang) * gearR);
+        g.lineStyle(1, 0x5a6469, 0.3);
+        g.lineBetween(center, center, center + Math.cos(ang + 0.02) * gearR, center + Math.sin(ang + 0.02) * gearR);
+      }
+
+      // 5. Waveform Etchings (Resonant Glow)
+      for (let i = 0; i < 6; i++) {
+        const ang = Phaser.Math.DegToRad(i * 60 + 30);
+        for (let j = 0; j < 5; j++) {
+          const r = gearR * (0.35 + j * 0.12);
+          const x = center + Math.cos(ang) * r;
+          const y = center + Math.sin(ang) * r;
+          // Core glow
+          g.fillStyle(0x2ddbde, 0.8);
+          g.fillCircle(x, y, 1.5);
+          // Halo
+          g.fillStyle(0x2ddbde, 0.2);
+          g.fillCircle(x, y, 4);
+        }
+      }
+
+      // 6. Heavy Hub (Flywheel Core)
+      // Core mass
+      g.fillStyle(0x0a1215, 1);
+      g.fillCircle(center, center, gearR * 0.28);
+      // Metallic hub ring
+      g.lineStyle(3, 0x3a4449, 1);
+      g.strokeCircle(center, center, gearR * 0.28);
+      // Center bore
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(center, center, gearR * 0.1);
+      g.lineStyle(1, 0x2ddbde, 0.5);
+      g.strokeCircle(center, center, gearR * 0.1);
+
+      g.generateTexture(textureKey, texSize, texSize);
+      g.destroy();
+    }
+
+    this._sonicGearSprite = this.add.sprite(cx, cy, textureKey);
+    this._sonicGearSprite.setOrigin(0.5);
+    this._sonicGearSprite.setBlendMode(Phaser.BlendModes.SCREEN);
+    this._sonicGearSprite.setAlpha(0.85);
+    this._sonicGearSprite.setDepth(2);
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // FRICTION SPARKS (Visual manifestation of mechanical resistance)
+  // ─────────────────────────────────────────────────────────────────
+
+  _buildFrictionSparks(W, H) {
+    const cx = W * 0.5;
+    const cy = H * 0.50;
+
+    // Emitter for sparks flying off the hexagram during unrusting
+    this._frictionSparks = this.add.particles(cx, cy, 'labPt', {
+      speed: { min: 80, max: 200 },
+      scale: { start: 0.25, end: 0 },
+      alpha: { start: 0.6, end: 0 },
+      lifespan: { min: 400, max: 700 },
+      gravityY: 150,
+      blendMode: 'ADD',
+      tint: 0x2ddbde,
+      frequency: -1, // Do not emit by default
+    });
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -210,7 +346,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     const cy = H * 0.50;
     const outerR = Math.max(W, H) * 0.45;
 
-    // Soft outer glow halos — subtle aura around the player
+    // 1. Soft outer glow halos — subtle aura around the player
     const halos = [
       { r: outerR + 80, w: 12, a: 0.02 },
       { r: outerR + 45, w: 8, a: 0.035 },
@@ -221,7 +357,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
       g.strokeCircle(cx, cy, r);
     });
 
-    // Main outer ring — dark metal
+    // 2. Main outer ring — dark metal
     g.lineStyle(6, 0x091610, 1);
     g.strokeCircle(cx, cy, outerR + 2);
     g.lineStyle(2, 0x14281a, 0.8);
@@ -229,7 +365,42 @@ export class AlchemicalLabScene extends Phaser.Scene {
     g.lineStyle(1, 0x0a1810, 0.35);
     g.strokeCircle(cx, cy, outerR - 8);
 
-    // Tick marks
+    // 3. THE BEZEL: Massive Gilded Mounting Plate for Phonemic Pips
+    const bezelR = outerR * 0.78;
+    const bezelWidth = 32;
+
+    // Heavy Brass/Iron Plate (Solid Mass)
+    g.lineStyle(bezelWidth, 0x1a160a, 1);
+    g.strokeCircle(cx, cy, bezelR);
+    
+    // Outer Bevel (Top-lit highlight)
+    g.lineStyle(3, 0x8a723a, 0.5);
+    g.strokeCircle(cx, cy, bezelR + (bezelWidth / 2));
+    
+    // Inner Bevel (Structural Shadow)
+    g.lineStyle(2, 0x000000, 0.9);
+    g.strokeCircle(cx, cy, bezelR - (bezelWidth / 2));
+    
+    // Surface Detail (Brushed metal etching)
+    g.lineStyle(1, 0x2a2214, 0.4);
+    g.strokeCircle(cx, cy, bezelR + 4);
+    g.strokeCircle(cx, cy, bezelR - 4);
+
+    // 4. PIP SOCKETS (8 Deep-Drilled Divots)
+    for (let i = 0; i < 8; i++) {
+      const ang = (i / 8) * Math.PI * 2;
+      const px = cx + Math.cos(ang) * bezelR;
+      const py = cy + Math.sin(ang) * bezelR;
+      
+      // Socket Depth (Drilled into the plate)
+      g.fillStyle(0x000000, 1);
+      g.fillCircle(px, py, 8);
+      // Socket Rim (Mechanical Chamfer)
+      g.lineStyle(2, 0x5a4a2a, 0.6);
+      g.strokeCircle(px, py, 9);
+    }
+
+    // 5. Tick marks
     for (let deg = 0; deg < 360; deg += 10) {
       const isMajor = deg % 30 === 0;
       const len = isMajor ? 14 : 7;
@@ -269,6 +440,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._archCx = cx;
     this._archCy = cy;
     this._archHexR = hexR;
+    this._bezelR = bezelR;
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -335,30 +507,122 @@ export class AlchemicalLabScene extends Phaser.Scene {
 
   update(_time) {
     const elapsed = (Date.now() - this._startTime) / 1000; // seconds since start
-    // const sig = this._sig || 0; // Reserved for future signal-reactive animation
+    const cx = this.scale.width * 0.5;
+    const cy = this.scale.height * 0.50;
 
-    // 1. Portal rotation with gear unrust effect
-    // First 8 seconds: slow acceleration (cubic ease-out)
-    // After 8 seconds: full speed (30s per revolution)
+    // 1. Portal rotation and Ignition Sequence (15s total)
     if (this._archRotSprite) {
       let rotation;
-      if (elapsed < 8) {
-        // Unrust phase: cubic ease-out (starts slow, accelerates)
-        const progress = elapsed / 8;
-        const easedProgress = 1 - Math.pow(1 - progress, 3); // cubic ease-out
-        const targetAngle = (Math.PI * 2 / 30) * elapsed; // where we'd be at full speed
-        rotation = targetAngle * easedProgress;
-      } else {
-        // Full speed phase: continue from where unrust left off
-        const unrustEndAngle = (Math.PI * 2 / 30) * 8; // angle at 8s
-        const fullSpeedElapsed = elapsed - 8;
-        rotation = unrustEndAngle + (Math.PI * 2 / 30) * fullSpeedElapsed;
-      }
-      this._archRotSprite.rotation = rotation;
-    }
+      let alpha = 0.8;
+      let tint = 0x2ddbde;
 
-    // 2. LED indicator columns (if enabled)
-    // this._updateLEDs(t);
+      if (elapsed < 15) {
+        // --- IGNITION PHASE (0-15s) ---
+        const progress = elapsed / 15;
+        const easedProgress = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+        const targetAngle = (Math.PI * 2 / 30) * elapsed; // angle if at full speed
+        rotation = targetAngle * easedProgress;
+
+        if (elapsed < 13.5) {
+          // 1.1 PULSE PHASE (3 x 4.5s = 13.5s)
+          // Pulse from 0.2 to 1.0 opacity three times
+          const pulseProgress = (elapsed % 4.5) / 4.5;
+          const pulseIntensity = (Math.sin(pulseProgress * Math.PI * 2 - Math.PI / 2) * 0.5 + 0.5);
+          alpha = 0.3 + (0.7 * pulseIntensity);
+          
+          // Friction sparks building with progress
+          if (this._frictionSparks) {
+            const innerR = this._archHexR * 0.577;
+            const sparkChance = 0.05 + (progress * 0.3);
+            for (let i = 0; i < 6; i++) {
+              if (Math.random() < sparkChance * pulseIntensity) {
+                const jointAngle = rotation + (i * Math.PI / 3) + (Math.PI / 6);
+                this._frictionSparks.emitParticleAt(cx + Math.cos(jointAngle) * innerR, cy + Math.sin(jointAngle) * innerR, 1);
+              }
+            }
+          }
+        } else {
+          // 1.2 STROBE PHASE (1.5s violent flicker)
+          const isFlickerOn = Math.random() > 0.4;
+          alpha = isFlickerOn ? 1.0 : 0.1;
+          
+          // Violent spark output during strobe
+          if (this._frictionSparks) {
+            const innerR = this._archHexR * 0.577;
+            for (let i = 0; i < 6; i++) {
+              if (Math.random() > 0.3) {
+                const jointAngle = rotation + (i * Math.PI / 3) + (Math.PI / 6);
+                this._frictionSparks.emitParticleAt(cx + Math.cos(jointAngle) * innerR, cy + Math.sin(jointAngle) * innerR, 2);
+              }
+            }
+          }
+        }
+
+        // Tint shift: fade from cold dark teal to resonant cyan
+        const tintInterp = Phaser.Display.Color.Interpolate.ColorWithColor(
+          Phaser.Display.Color.ValueToColor(0x0f2c1e),
+          Phaser.Display.Color.ValueToColor(0x2ddbde),
+          1,
+          easedProgress
+        );
+        tint = Phaser.Display.Color.GetColor(tintInterp.r, tintInterp.g, tintInterp.b);
+      } else {
+        // --- STASIS PHASE (15s+) ---
+        const unrustEndAngle = (Math.PI * 2 / 30) * 15;
+        const fullSpeedElapsed = elapsed - 15;
+        rotation = unrustEndAngle + (Math.PI * 2 / 30) * fullSpeedElapsed;
+        alpha = 0.9; // Solid, stable glow
+        tint = 0x2ddbde;
+
+        if (this._frictionSparks && this._frictionSparks.emitting) {
+          this._frictionSparks.stop();
+        }
+      }
+
+      this._archRotSprite.rotation = rotation;
+      this._archRotSprite.setAlpha(alpha);
+      this._archRotSprite.setTint(tint);
+
+      // 2. Sonic Gear Counter-Rotation
+      if (this._sonicGearSprite) {
+        // Rotates in opposite direction, slightly faster for torque feel
+        this._sonicGearSprite.rotation = -rotation * 1.5;
+        this._sonicGearSprite.setAlpha(alpha * 0.8); // Slightly dimmer than the seal
+        this._sonicGearSprite.setTint(tint);
+
+        // Sonic Vibration in Stasis
+        if (elapsed >= 15) {
+          const vibe = Math.sin(Date.now() * 0.05) * 0.5;
+          this._sonicGearSprite.x = cx + vibe;
+          this._sonicGearSprite.y = cy + vibe;
+        }
+      }
+
+      // 3. Phonemic Pips (Yellow Lights in Bezel Sockets)
+      this._glowGfx.clear();
+      if (this._bezelR) {
+        for (let i = 0; i < 8; i++) {
+          const ang = (i / 8) * Math.PI * 2;
+          const px = cx + Math.cos(ang) * this._bezelR;
+          const py = cy + Math.sin(ang) * this._bezelR;
+          
+          // Use alpha from the ritual
+          const pipAlpha = alpha * 0.9;
+          
+          // Core light (gem/tube)
+          this._glowGfx.fillStyle(0xffcc44, pipAlpha);
+          this._glowGfx.fillCircle(px, py, 3.5);
+          
+          // Inner glow (blooms from socket)
+          this._glowGfx.fillStyle(0xffaa00, pipAlpha * 0.4);
+          this._glowGfx.fillCircle(px, py, 8);
+          
+          // Outer bloom (bleeds onto brass)
+          this._glowGfx.fillStyle(0xff8800, pipAlpha * 0.15);
+          this._glowGfx.fillCircle(px, py, 14);
+        }
+      }
+    }
   }
 
   updateState(data) {
