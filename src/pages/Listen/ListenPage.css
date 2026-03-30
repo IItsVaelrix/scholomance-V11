@@ -352,6 +352,7 @@
 .listen-console--playing .spectrum-bar {
   animation: spectrum-bounce 0.8s ease-in-out infinite;
   animation-delay: var(--bar-delay, 0s);
+  animation-fill-mode: both;
 }
 
 @keyframes spectrum-bounce {
@@ -467,6 +468,8 @@
   align-items: flex-end;
   gap: 2px;
   margin-bottom: 1.5rem;
+  /* Ensure consistent height regardless of warning state */
+  min-height: 4rem;
 }
 
 .vfa-bar {
@@ -484,6 +487,7 @@
 .listen-console--playing .vfa-bar {
   animation: phoneme-bounce 0.6s ease-in-out infinite;
   animation-delay: calc(var(--bar-index, 0) * 0.04s);
+  animation-fill-mode: both;
 }
 
 @keyframes phoneme-bounce {
@@ -2891,11 +2895,20 @@
     transparent
   );
   pointer-events: none;
+  /* Hidden by default, shown when warning state is active */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.phoneme-threshold-line.is-visible {
+  opacity: 1;
 }
 
 /* Warning state — viz container goes relative so threshold line positions */
 .vfa-viz--warn {
   position: relative;
+  /* Prevent layout shift when entering/exiting warning state */
+  min-height: 4rem;
 }
 
 /* Exploit label below the bars */
@@ -2905,9 +2918,20 @@
   letter-spacing: 0.25em;
   color: rgba(220, 60, 30, 0.8);
   text-transform: uppercase;
-  margin-top: -0.75rem;
+  margin-top: 0.5rem;
   margin-bottom: 0.5rem;
   animation: entropy-fill-flare 1.5s ease-in-out infinite;
+  /* Reserve space even when not visible to prevent layout shift */
+  min-height: 1rem;
+  /* Hidden by default, shown when warning state is active */
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.phoneme-exploit-label.is-visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 

@@ -1,8 +1,9 @@
 const DEFAULT_SONIC_STATION_BUCKETS = Object.freeze({
   SONIC: Object.freeze([
-    "https://suno.com/song/44c7a9b9-4053-4d1e-84e3-2b8252f0f57b",
-    "https://suno.com/song/236e9f87-4d38-43da-a98a-b39447256d21",
-    "https://suno.com/song/74a37c2a-3c4c-4841-a618-fe244ba981a8",
+    // Direct audio URLs (not embed pages) for WebAudio analysis
+    "https://cdn1.suno.ai/44c7a9b9-4053-4d1e-84e3-2b8252f0f57b.mp3",
+    "https://cdn1.suno.ai/236e9f87-4d38-43da-a98a-b39447256d21.mp3",
+    "https://cdn1.suno.ai/74a37c2a-3c4c-4841-a618-fe244ba981a8.mp3",
   ]),
   PSYCHIC: Object.freeze([]),
   VOID: Object.freeze([]),

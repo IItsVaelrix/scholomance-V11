@@ -299,15 +299,13 @@ export default function ListenPage() {
                 style={{ '--bar-index': i } as React.CSSProperties}
               />
             ))}
-            {phonemeWarning && (
-              <div className="phoneme-threshold-line" aria-hidden="true" />
-            )}
+            {/* Threshold line always rendered, visibility controlled by CSS */}
+            <div className={`phoneme-threshold-line ${phonemeWarning ? 'is-visible' : ''}`} aria-hidden="true" />
           </div>
-          {phonemeWarning && (
-            <div className="phoneme-exploit-label" aria-live="assertive">
-              HEURISTIC LIMIT — RETURNS DECAY
-            </div>
-          )}
+          {/* Exploit label always rendered, visibility controlled by CSS */}
+          <div className={`phoneme-exploit-label ${phonemeWarning ? 'is-visible' : ''}`} aria-live="assertive">
+            HEURISTIC LIMIT — RETURNS DECAY
+          </div>
           <div className="phase-controls">
             <button className="phase-btn">CONSONANT</button>
             <button className="phase-btn">VOWEL</button>
