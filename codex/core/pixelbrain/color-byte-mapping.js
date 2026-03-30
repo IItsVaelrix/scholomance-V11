@@ -7,6 +7,11 @@ import {
   roundTo,
 } from './shared.js';
 
+/**
+ * LAYER 2: COLOR-BYTE MAPPING WITH SEMANTIC INTEGRATION
+ * Maps bytecode strings to color palettes using semantic parameters from Layer 1
+ */
+
 function resolveSchoolColor(schoolId, colorFeatures = {}) {
   const school = SCHOOLS[String(schoolId || 'VOID').trim().toUpperCase()] || SCHOOLS.VOID || {
     colorHsl: { h: 0, s: 0, l: 50 },
@@ -27,6 +32,134 @@ function resolveSchoolColor(schoolId, colorFeatures = {}) {
         : (Number(school?.colorHsl?.l) || 50) / 100
     ),
   });
+}
+
+/**
+ * Generate palette from semantic parameters (Layer 1 → Layer 2 bridge)
+ * @param {Object} semanticParams - SemanticParameters from visual-extractor
+ * @returns {Object} Color palette with metadata
+ */
+export function generatePaletteFromSemanticParameters(semanticParams) {
+  const safeParams = semanticParams || {};
+  const colorProps = safeParams.color || {};
+  const surfaceProps = safeParams.surface || {};
+  const lightProps = safeParams.light || {};
+
+  // Base hue from color properties or light color
+  let baseHue = Number(colorProps.primaryHue) || 0;
+  if (lightProps.color) {
+    const hex = String(lightProps.color).replace('#', '');
+    if (/^[0-9A-F]{6}$/i.test(hex)) {
+      const r = parseInt(hex.slice(0, 2), 16) / 255;
+      const g = parseInt(hex.slice(2, 4), 16) / 255;
+      const b = parseInt(hex.slice(4, 6), 16) / 255;
+      baseHue = rgbToHue(r, g, b);
+    }
+  }
+
+  // Saturation modified by surface reflectivity
+  const baseSaturation = clamp01(
+    Number(colorProps.saturation) || 0.5 + (surfaceProps.reflectivity || 0) * 0.3
+  );
+
+  // Brightness modified by light intensity
+  const baseBrightness = clamp01(
+    Number(colorProps.brightness) || 0.5 * (lightProps.intensity || 0.5) + 0.25
+  );
+
+  // Palette size from complexity
+  const baseSize = Math.round(3 + (safeParams.form?.complexity || 0.5) * 3);
+  const paletteSize = Math.max(3, Math.min(6, baseSize));
+
+  const colors = buildSemanticPaletteColors({
+    hue: baseHue,
+    saturation: baseSaturation,
+    brightness: baseBrightness,
+    paletteSize,
+    material: surfaceProps.material,
+    texture: surfaceProps.texture,
+  });
+
+  return Object.freeze({
+    primaryHue: roundTo(baseHue, 2),
+    saturation: roundTo(baseSaturation),
+    brightness: roundTo(baseBrightness),
+    paletteSize,
+    colors,
+    material: surfaceProps.material || 'stone',
+    texture: surfaceProps.texture || 'grained',
+  });
+}
+
+/**
+ * Build palette colors based on semantic properties
+ */
+function buildSemanticPaletteColors(params) {
+  const { hue, saturation, brightness, paletteSize, material, texture } = params;
+  const colors = [];
+
+  // Material-specific color adjustments
+  const materialMods = {
+    metal: { satMod: -0.1, briMod: +0.15, hueShift: 0 },
+    stone: { satMod: -0.2, briMod: 0, hueShift: 0 },
+    organic: { satMod: +0.1, briMod: -0.1, hueShift: 15 },
+    energy: { satMod: +0.2, briMod: +0.1, hueShift: -10 },
+    crystalline: { satMod: +0.15, briMod: +0.2, hueShift: 20 },
+    fabric: { satMod: -0.05, briMod: -0.05, hueShift: 5 },
+  };
+
+  const mod = materialMods[material] || materialMods.stone;
+
+  // Texture-specific variation
+  const textureVariation = {
+    smooth: 0.05,
+    grained: 0.12,
+    crystalline: 0.08,
+    fibrous: 0.15,
+  }[texture] || 0.1;
+
+  for (let i = 0; i < paletteSize; i++) {
+    const ratio = paletteSize === 1 ? 0 : i / (paletteSize - 1);
+    
+    // Lightness gradient
+    const lightness = Math.max(15, Math.min(85, 
+      (brightness * 100) - 25 + (ratio * 50) + (mod.briMod * 20)
+    ));
+    
+    // Saturation with texture variation
+    const satVariation = (Math.random() - 0.5) * textureVariation * 20;
+    const saturationVal = Math.max(10, Math.min(90,
+      (saturation * 100) + mod.satMod * 20 + satVariation
+    ));
+    
+    // Hue with slight variation per color
+    const hueVariation = (Math.random() - 0.5) * textureVariation * 30;
+    const hueVal = ((hue + mod.hueShift + hueVariation) % 360 + 360) % 360;
+
+    colors.push(hslToHex(hueVal, saturationVal, lightness));
+  }
+
+  return Object.freeze(colors);
+}
+
+/**
+ * Convert RGB to hue (0-360)
+ */
+function rgbToHue(r, g, b) {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+
+  if (d === 0) return 0;
+
+  let h;
+  switch (max) {
+    case r: h = ((g - b) / d) * 60; break;
+    case g: h = ((b - r) / d + 2) * 60; break;
+    case b: h = ((r - g) / d + 4) * 60; break;
+  }
+
+  return ((h % 360) + 360) % 360;
 }
 
 function paletteStepCount(rarity, effect, requestedSize) {

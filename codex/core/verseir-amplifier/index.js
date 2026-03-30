@@ -5,6 +5,7 @@ import { phoneticColorAmplifier } from './plugins/phoneticColor.js';
 import { pixelBrainPhase1BridgeAmplifier } from './plugins/pixelBrainBridge.js';
 import { lexicalResonanceAmplifier } from './plugins/lexicalResonance.js';
 import { travellingWaveFilterBankAmplifier } from './plugins/travellingWaveFilterBank.js';
+import { naturalLanguageAmp } from './plugins/naturalLanguageAmp.js';
 import {
   clamp01,
   collectVerseIRTokenStats,
@@ -24,6 +25,7 @@ const DEFAULT_ROUTING_TOP_K = 3;
 const DEFAULT_ROUTING_MIN_SCORE = 0.05;
 
 export const DEFAULT_VERSEIR_AMPLIFIERS = Object.freeze([
+  naturalLanguageAmp,
   phoneticColorAmplifier,
   pixelBrainPhase1BridgeAmplifier,
   travellingWaveFilterBankAmplifier,

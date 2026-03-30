@@ -7,6 +7,76 @@ import {
 } from './shared.js';
 import { snapToPixelGrid } from './anti-alias-control.js';
 
+/**
+ * Generate spiral coordinates using golden ratio
+ * @param {Object} center - Center point {x, y}
+ * @param {number} turns - Number of spiral turns
+ * @param {number} pointsPerTurn - Points per turn
+ * @returns {Array} Array of coordinate objects
+ */
+export function generateSpiralCoordinates(center, turns = 3, pointsPerTurn = 8) {
+  const coordinates = [];
+  const safeCenter = center || { x: 80, y: 72 };
+
+  for (let turn = 0; turn < turns; turn++) {
+    for (let i = 0; i < pointsPerTurn; i++) {
+      const angle = (turn * 360) + (i / pointsPerTurn * 360);
+      const radius = (turn * GOLDEN_RATIO) + (i / pointsPerTurn);
+
+      coordinates.push({
+        x: roundTo(safeCenter.x + Math.cos(angle * Math.PI / 180) * radius * 8),
+        y: roundTo(safeCenter.y + Math.sin(angle * Math.PI / 180) * radius * 8),
+        z: turn, // depth layer
+      });
+    }
+  }
+
+  return Object.freeze(coordinates);
+}
+
+/**
+ * Map semantic parameters to coordinate constraints
+ * @param {Object} semanticParams - SemanticParameters from Layer 1
+ * @param {Object} canvasSize - Canvas dimensions
+ * @returns {Object} Coordinate constraints
+ */
+export function mapSemanticToCoordinateConstraints(semanticParams, canvasSize) {
+  const safeParams = semanticParams || {};
+  const safeCanvas = toCanvasSize(canvasSize);
+
+  const formConstraints = {
+    dominantAxis: safeParams.form?.dominantAxis || 'horizontal',
+    symmetry: safeParams.form?.symmetry || 'none',
+    scale: clamp01(safeParams.form?.scale || 1.0),
+    complexity: clamp01(safeParams.form?.complexity || 0.5),
+  };
+
+  const surfaceConstraints = {
+    material: safeParams.surface?.material || 'stone',
+    roughness: clamp01(safeParams.surface?.roughness || 0.5),
+    reflectivity: clamp01(safeParams.surface?.reflectivity || 0.3),
+  };
+
+  const lightConstraints = {
+    angle: ((Number(safeParams.light?.angle) || 45) % 360 + 360) % 360,
+    hardness: clamp01(safeParams.light?.hardness || 0.5),
+    intensity: clamp01(safeParams.light?.intensity || 0.5),
+  };
+
+  // Calculate coordinate density from complexity
+  const baseDensity = 8 + Math.floor(formConstraints.complexity * 12);
+  const spiralTurns = Math.ceil(formConstraints.complexity * 4);
+
+  return Object.freeze({
+    form: formConstraints,
+    surface: surfaceConstraints,
+    light: lightConstraints,
+    coordinateDensity: baseDensity,
+    spiralTurns,
+    canvas: safeCanvas,
+  });
+}
+
 function toCanvasSize(canvasSize = {}) {
   const width = Math.max(16, Math.round(Number(canvasSize?.width) || DEFAULT_PIXELBRAIN_CANVAS.width));
   const height = Math.max(16, Math.round(Number(canvasSize?.height) || DEFAULT_PIXELBRAIN_CANVAS.height));

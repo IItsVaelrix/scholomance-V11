@@ -326,6 +326,7 @@ export class SignalChamberScene extends Phaser.Scene {
 
   _drawConsoleShell() {
     const sx = this._sx, sy = this._sy;
+    const ms = this._ms;
     const cx = CONSOLE.x * sx, cy = CONSOLE.y * sy;
     const cw = CONSOLE.w * sx, ch = CONSOLE.h * sy;
     const cr = CONSOLE.cr * sx;
@@ -371,25 +372,25 @@ export class SignalChamberScene extends Phaser.Scene {
     // Top-left filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx - cw / 2 + 60 * sx, cy - ch / 2 + 40 * sy);
-    this._consSurf.quadraticCurveTo(cx - cw / 2 + 120 * sx, cy - ch / 2 + 20 * sy, cx - cw / 2 + 180 * sx, cy - ch / 2 + 45 * sy);
+    this._consSurf.curveTo(cx - cw / 2 + 120 * sx, cy - ch / 2 + 20 * sy, cx - cw / 2 + 180 * sx, cy - ch / 2 + 45 * sy);
     this._consSurf.strokePath();
 
     // Top-right filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx + cw / 2 - 60 * sx, cy - ch / 2 + 40 * sy);
-    this._consSurf.quadraticCurveTo(cx + cw / 2 - 120 * sx, cy - ch / 2 + 20 * sy, cx + cw / 2 - 180 * sx, cy - ch / 2 + 45 * sy);
+    this._consSurf.curveTo(cx + cw / 2 - 120 * sx, cy - ch / 2 + 20 * sy, cx + cw / 2 - 180 * sx, cy - ch / 2 + 45 * sy);
     this._consSurf.strokePath();
 
     // Bottom-left filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx - cw / 2 + 40 * sx, cy + ch / 2 - 100 * sy);
-    this._consSurf.quadraticCurveTo(cx - cw / 2 + 20 * sx, cy + ch / 2 - 60 * sy, cx - cw / 2 + 60 * sx, cy + ch / 2 - 30 * sy);
+    this._consSurf.curveTo(cx - cw / 2 + 20 * sx, cy + ch / 2 - 60 * sy, cx - cw / 2 + 60 * sx, cy + ch / 2 - 30 * sy);
     this._consSurf.strokePath();
 
     // Bottom-right filigree
     this._consSurf.beginPath();
     this._consSurf.moveTo(cx + cw / 2 - 40 * sx, cy + ch / 2 - 100 * sy);
-    this._consSurf.quadraticCurveTo(cx + cw / 2 - 20 * sx, cy + ch / 2 - 60 * sy, cx + cw / 2 - 60 * sx, cy + ch / 2 - 30 * sy);
+    this._consSurf.curveTo(cx + cw / 2 - 20 * sx, cy + ch / 2 - 60 * sy, cx + cw / 2 - 60 * sx, cy + ch / 2 - 30 * sy);
     this._consSurf.strokePath();
 
     // ── Mana-pulse lines (Cyber-elven tech) ─────────────────────────

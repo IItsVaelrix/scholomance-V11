@@ -15,7 +15,8 @@ import {
   CollabPage,
   ProfilePage,
   CombatPage,
-  NexusPage
+  NexusPage,
+  PixelBrainPage
 } from "./lib/routes.js";
 
 // Ambiently preload Phaser to eliminate latency when mounting visualizers
@@ -36,6 +37,7 @@ const router = createBrowserRouter([
       { path: "collab", element: <CollabPage /> },
       { path: "combat", element: <CombatPage /> },
       { path: "nexus", element: <NexusPage /> },
+      { path: "pixelbrain", element: <PixelBrainPage /> },
     ],
   },
 ]);

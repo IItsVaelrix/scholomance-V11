@@ -139,60 +139,27 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
               neck.position.set(px, y + 0.7, 0.5);
               scene.add(neck);
             }
-          } else if (i === 1) { // Middle
-            if (isLeft) { // Tomes
-              for(let j=0; j<3; j++) {
-                const book = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.2), darkMetal);
-                book.position.set(x - 0.4 + j*0.3, y + 0.6, 0.5);
-                book.rotation.set((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
-                scene.add(book);
-              }
-            } else { // Crystal Orb
-              const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.2, 32), goldMat);
-              base.position.set(x, y + 0.1, 0.5);
-              scene.add(base);
-              
-              const orb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), glassMat);
-              orb.position.set(x, y + 0.7, 0.5);
-              scene.add(orb);
-              
-              const coreMat = new THREE.MeshStandardMaterial({ color: 0x9944ff, emissive: 0x9944ff, emissiveIntensity: 0.8 });
-              const core = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), coreMat);
-              core.position.set(x, y + 0.7, 0.5);
-              scene.add(core);
-              props3D.push({ obj: core, type: 'orb', baseIntensity: 0.8 });
+          } else if (i === 1) { // Middle: Tomes (symmetric on both sides)
+            for(let j=0; j<3; j++) {
+              const book = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.2), darkMetal);
+              book.position.set(x - 0.4 + j*0.3, y + 0.6, 0.5);
+              book.rotation.set((Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2, (Math.random() - 0.5) * 0.2);
+              scene.add(book);
             }
-          } else if (i === 2) { // Top
-            if (isLeft) { // Monitor
-              const monitorBase = new THREE.Mesh(new THREE.BoxGeometry(1.5, 1.2, 0.2), darkMetal);
-              monitorBase.position.set(x, y + 0.6, 0.5);
-              scene.add(monitorBase);
-              
-              const screenMat = new THREE.MeshStandardMaterial({ color: 0x000000, emissive: 0x00cfc8, emissiveIntensity: 0.4 });
-              const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1.0), screenMat);
-              screen.position.set(x, y + 0.6, 0.61);
-              scene.add(screen);
-              props3D.push({ obj: screen, type: 'monitor', baseIntensity: 0.4 });
-            } else { // Resonator
-              const base = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.4, 0.2, 16), darkMetal);
-              base.position.set(x, y + 0.1, 0.5);
-              scene.add(base);
-              
-              const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.8, 8), goldMat);
-              stem.position.set(x, y + 0.6, 0.5);
-              scene.add(stem);
-              
-              const micHeadMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, wireframe: true });
-              const micHead = new THREE.Mesh(new THREE.SphereGeometry(0.25, 8, 8), micHeadMat);
-              micHead.position.set(x, y + 1.1, 0.5);
-              scene.add(micHead);
-              
-              const micCoreMat = new THREE.MeshStandardMaterial({ color: 0xc9a227, emissive: 0xc9a227, emissiveIntensity: 1.0 });
-              const micCore = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), micCoreMat);
-              micCore.position.set(x, y + 1.1, 0.5);
-              scene.add(micCore);
-              props3D.push({ obj: micCore, type: 'resonator', baseIntensity: 1.0 });
-            }
+          } else if (i === 2) { // Top: Crystal Orb (symmetric on both sides)
+            const base = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.2, 32), goldMat);
+            base.position.set(x, y + 0.1, 0.5);
+            scene.add(base);
+
+            const orb = new THREE.Mesh(new THREE.SphereGeometry(0.5, 32, 32), glassMat);
+            orb.position.set(x, y + 0.7, 0.5);
+            scene.add(orb);
+
+            const coreMat = new THREE.MeshStandardMaterial({ color: 0x9944ff, emissive: 0x9944ff, emissiveIntensity: 0.8 });
+            const core = new THREE.Mesh(new THREE.SphereGeometry(0.4, 16, 16), coreMat);
+            core.position.set(x, y + 0.7, 0.5);
+            scene.add(core);
+            props3D.push({ obj: core, type: 'orb', baseIntensity: 0.8 });
           }
         }
       };

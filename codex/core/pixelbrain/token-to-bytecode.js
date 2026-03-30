@@ -1,9 +1,21 @@
 import { normalizeVowelFamily } from '../../../src/lib/phonology/vowelFamily.js';
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from '../../../src/data/schools.js';
 import { clamp01, createBytecodeString, roundTo } from './shared.js';
+import { extractVisualParameters } from '../semantic/visual-extractor.js';
+import { getDominantMaterial, getDominantTexture } from '../semantic/phonetic-materials.js';
 
 const RARE_PHONEMES = new Set(['TH', 'DH', 'ZH', 'NG', 'OY']);
 const INEXPLICABLE_PHONEMES = new Set(['ZH', 'OY']);
+
+/**
+ * LAYER 1 → LAYER 2 BRIDGE
+ * Token-to-Bytecode with Semantic Integration
+ * 
+ * Converts VerseIR tokens to bytecode strings using:
+ * - Phonetic analysis (rarity from phonemes)
+ * - Prosodic signals (rhyme, stress, syllable count)
+ * - Semantic parameters (from Layer 1 visual extractor)
+ */
 
 function countIndexHits(indexMap, key) {
   if (!(indexMap instanceof Map) || key === null || key === undefined) {
@@ -172,4 +184,56 @@ export function buildPixelBrainTokenBytecode(token, verseIR) {
 
 export function tokenToBytecode(token, verseIR) {
   return buildPixelBrainTokenBytecode(token, verseIR)?.bytecode || createBytecodeString();
+}
+
+/**
+ * Extract semantic parameters and convert to bytecode with Layer 1 integration
+ * @param {Object} token - VerseIR token
+ * @param {Object} verseIR - Full verse IR object
+ * @returns {Object} Token bytecode with semantic parameters
+ */
+export function buildPixelBrainTokenBytecodeWithSemantics(token, verseIR) {
+  if (!token || typeof token !== 'object') {
+    return null;
+  }
+
+  // Layer 1: Extract semantic parameters
+  const semanticParams = extractVisualParameters(token);
+  
+  // Layer 1 → Layer 2: Get dominant material and texture from phonemes
+  const dominantMaterial = getDominantMaterial(token?.phonemes);
+  const dominantTexture = getDominantTexture(token?.phonemes);
+  
+  // Layer 2: Build bytecode from semantic + phonetic analysis
+  const signal = buildTokenSignal(token, verseIR);
+  const schoolId = mapVowelFamilyToSchoolId(
+    token?.primaryStressedVowelFamily || token?.terminalVowelFamily || token?.vowelFamily?.[0]
+  );
+  const rarity = calculateRarityFromPhonemes(token?.phonemes);
+  const effect = determineEffectFromToken(token, verseIR);
+  const bytecode = createBytecodeString({ schoolId, rarity, effect });
+  
+  // Enhanced color features with semantic integration
+  const colorFeatures = extractColorFeatures(token, { schoolId, rarity, effect });
+  
+  return Object.freeze({
+    tokenId: Number.isInteger(Number(token?.id)) ? Number(token.id) : -1,
+    token: String(token?.normalized || token?.text || '').trim().toLowerCase(),
+    lineIndex: Number.isInteger(Number(token?.lineIndex)) ? Number(token.lineIndex) : 0,
+    tokenIndexInLine: Number.isInteger(Number(token?.tokenIndexInLine)) ? Number(token.tokenIndexInLine) : 0,
+    globalTokenIndex: Number.isInteger(Number(token?.globalTokenIndex)) ? Number(token.globalTokenIndex) : 0,
+    syllableDepth: Math.max(0, Number(token?.syllableCount) || 0),
+    schoolId,
+    rarity,
+    effect,
+    bytecode,
+    isAnchor: signal.isAnchor,
+    anchorWeight: signal.anchorWeight,
+    colorFeatures,
+    // Layer 1 semantic parameters
+    semanticParams,
+    // Phonetic material mapping
+    material: dominantMaterial,
+    texture: dominantTexture,
+  });
 }

@@ -234,7 +234,6 @@ export default function CombatPage() {
       <main className="combat-dashboard vellum-surface">
         <PanelGroup 
           direction="horizontal" 
-          onLayout={handleLayoutChange}
         >
           {/* COLUMN 1: THE SPELLBOOK (Input) */}
           <Panel 

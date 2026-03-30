@@ -1561,7 +1561,6 @@ export default function ReadPage() {
         <PanelGroup
           className="ide-panel-group"
           direction={isNarrowViewport ? "vertical" : "horizontal"}
-          onLayout={handleLayoutChange}
         >
           {/* 1. Dedicated Activity Bar (Icons only, far left) */}
           <Panel
