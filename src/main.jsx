@@ -16,11 +16,15 @@ import {
   ProfilePage,
   CombatPage,
   NexusPage,
-  PixelBrainPage
+  PixelBrainPage,
+  PAGE_COMPONENTS,
 } from "./lib/routes.js";
 
 // Ambiently preload Phaser to eliminate latency when mounting visualizers
 void import("phaser").catch(() => {});
+
+// Eagerly preload all page chunks so every navigation is instant
+Object.values(PAGE_COMPONENTS).forEach(c => c.preload?.());
 
 const router = createBrowserRouter([
   {

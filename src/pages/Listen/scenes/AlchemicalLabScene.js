@@ -54,6 +54,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._sig = 0;
     this._archRotSprite = null;
     this._archHexR = 0;
+    this._startTime = 0;
   }
 
   preload() {
@@ -71,6 +72,9 @@ export class AlchemicalLabScene extends Phaser.Scene {
 
     // Set scene zIndex for proper layering in multi-scene game
     this.scene.settings.zIndex = 0; // Background layer
+
+    // Track startup timing for gear unrust effect
+    this._startTime = Date.now();
 
     // ── Static layers (drawn once) ───────────────────────────────
     this._bgGfx = this.add.graphics();
@@ -329,13 +333,28 @@ export class AlchemicalLabScene extends Phaser.Scene {
   // UPDATE  — all animation is f(time), no tweens
   // ─────────────────────────────────────────────────────────────────
 
-  update(time) {
-    const t = time * 0.001; // seconds
+  update(_time) {
+    const elapsed = (Date.now() - this._startTime) / 1000; // seconds since start
     // const sig = this._sig || 0; // Reserved for future signal-reactive animation
 
-    // 1. Portal rotation (2 RPM = 30s/revolution) - full page circumference
+    // 1. Portal rotation with gear unrust effect
+    // First 8 seconds: slow acceleration (cubic ease-out)
+    // After 8 seconds: full speed (30s per revolution)
     if (this._archRotSprite) {
-      this._archRotSprite.rotation = t * (Math.PI * 2 / 30);
+      let rotation;
+      if (elapsed < 8) {
+        // Unrust phase: cubic ease-out (starts slow, accelerates)
+        const progress = elapsed / 8;
+        const easedProgress = 1 - Math.pow(1 - progress, 3); // cubic ease-out
+        const targetAngle = (Math.PI * 2 / 30) * elapsed; // where we'd be at full speed
+        rotation = targetAngle * easedProgress;
+      } else {
+        // Full speed phase: continue from where unrust left off
+        const unrustEndAngle = (Math.PI * 2 / 30) * 8; // angle at 8s
+        const fullSpeedElapsed = elapsed - 8;
+        rotation = unrustEndAngle + (Math.PI * 2 / 30) * fullSpeedElapsed;
+      }
+      this._archRotSprite.rotation = rotation;
     }
 
     // 2. LED indicator columns (if enabled)
@@ -347,4 +366,59 @@ export class AlchemicalLabScene extends Phaser.Scene {
       this._sig = data.signalLevel;
     }
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// STATIC RENDER FOR CACHING (LCP optimization)
+// ══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Render static background to canvas data URL for caching.
+ * This captures all non-animated elements for instant LCP on subsequent visits.
+ * 
+ * @param {number} width - Canvas width
+ * @param {number} height - Canvas height
+ * @returns {Promise<string>} Data URL of rendered static background
+ */
+export async function renderStaticBackground(width, height) {
+  // Create offscreen Phaser game
+  const PhaserLib = (await import('phaser')).default;
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  
+  const game = new PhaserLib.Game({
+    type: PhaserLib.WEBGL,
+    parent: canvas,
+    width,
+    height,
+    backgroundColor: '#010305',
+    transparent: false,
+    antialias: true,
+    scene: [],
+    render: {
+      pixelArt: false,
+      antialias: true,
+    },
+  });
+  
+  return new Promise((resolve) => {
+    game.events.once('ready', () => {
+      // Create temporary scene to render static elements
+      const tempScene = new AlchemicalLabScene();
+      game.scene.add('temp', tempScene, true);
+      
+      // Wait for scene to create static elements
+      setTimeout(() => {
+        // Get data URL
+        const dataURL = canvas.toDataURL('image/png', 0.9);
+        
+        // Clean up
+        game.destroy(true);
+        
+        resolve(dataURL);
+      }, 500);
+    });
+  });
 }

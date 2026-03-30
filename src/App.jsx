@@ -72,7 +72,7 @@ export default function App() {
                   exit="exit"
                   transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.15, ease: "easeOut" }}
                 >
-                  <Suspense fallback={<div>Loading...</div>}>
+                  <Suspense fallback={null}>
                     <Outlet />
                   </Suspense>
                 </motion.main>

@@ -529,6 +529,204 @@
   100% { opacity: 0.4; transform: scale(1); }
 }
 
+/* LCP placeholder spin animation */
+@keyframes lcp-placeholder-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.lcp-placeholder-spin {
+  animation: lcp-placeholder-spin 30s linear infinite;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ALCHEMICAL LAB STATIC BACKGROUND (LCP Optimization)
+   Pure CSS background that shows instantly - no JS required
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.alchemical-lab-background {
+  background: #010305;
+}
+
+.alchemical-lab-static-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* Stone wall pattern using CSS gradients */
+.alchemical-stone-wall {
+  position: absolute;
+  inset: 0;
+  background: 
+    /* Mortar lines - horizontal */
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 35px,
+      rgba(2, 5, 7, 0.8) 35px,
+      rgba(2, 5, 7, 0.8) 36px
+    ),
+    /* Mortar lines - vertical (offset every other row) */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 71px,
+      rgba(2, 5, 7, 0.8) 71px,
+      rgba(2, 5, 7, 0.8) 72px
+    ),
+    /* Stone base color variation */
+    linear-gradient(
+      135deg,
+      #030709 0%,
+      #040a0f 25%,
+      #03060c 50%,
+      #050b0e 75%,
+      #040810 100%
+    );
+  opacity: 0.6;
+}
+
+/* Central arch portal */
+.alchemical-arch-portal {
+  position: absolute;
+  top: 4%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 400px;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Arch rings */
+.arch-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 68, 34, 0.4);
+}
+
+.arch-ring--outer {
+  width: 360px;
+  height: 360px;
+  border-width: 6px;
+  border-color: rgba(9, 22, 16, 1) rgba(20, 40, 26, 0.8) rgba(10, 24, 16, 0.35);
+  box-shadow: 
+    0 0 45px rgba(0, 68, 34, 0.025),
+    0 0 28px rgba(0, 68, 34, 0.045),
+    0 0 14px rgba(0, 68, 34, 0.07);
+}
+
+.arch-ring--mid {
+  width: 280px;
+  height: 280px;
+  opacity: 0.45;
+}
+
+.arch-ring--inner {
+  width: 160px;
+  height: 160px;
+  opacity: 0.3;
+}
+
+/* Hexagram (Star of David) - starts horizontal, accelerates like unrusting gears */
+.arch-hexagram {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  /* Start at 0deg (perfectly horizontal), accelerate over 8 seconds to full speed */
+  animation: hexagram-unrust 8s cubic-bezier(0.7, 0, 0.15, 1) forwards,
+             hexagram-rotate 30s linear infinite 8s;
+}
+
+/* Initial acceleration phase - like gears unrusting */
+@keyframes hexagram-unrust {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(96deg); /* 8 seconds into 30s cycle = 96 degrees */
+  }
+}
+
+/* Sustained rotation phase - full speed after unrust */
+@keyframes hexagram-rotate {
+  from {
+    transform: rotate(96deg);
+  }
+  to {
+    transform: rotate(456deg); /* 96 + 360 = one full rotation */
+  }
+}
+
+.hexagram-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.hexagram-tri-up,
+.hexagram-tri-down {
+  fill: none;
+  stroke: #2ddbde;
+  stroke-width: 1.5;
+  opacity: 0.4;
+}
+
+.hexagram-tri-down {
+  transform: rotate(180deg);
+  transform-origin: center;
+}
+
+/* Vignette overlay - darkens edges */
+.alchemical-vignette {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(
+      ellipse at center,
+      transparent 50%,
+      rgba(0, 0, 0, 0.4) 80%,
+      rgba(0, 0, 0, 0.52) 100%
+    );
+  pointer-events: none;
+}
+
+/* Phaser canvas - fades in when loaded */
+.alchemical-lab-phaser {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+@media (max-width: 768px) {
+  .alchemical-arch-portal {
+    width: 280px;
+    height: 280px;
+  }
+  
+  .arch-ring--outer {
+    width: 260px;
+    height: 260px;
+  }
+  
+  .arch-ring--mid {
+    width: 200px;
+    height: 200px;
+  }
+  
+  .arch-ring--inner {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .arch-hexagram {
+    width: 140px;
+    height: 140px;
+  }
+}
+
 @media (max-width: 1024px) {
   .hud-sidebar--right { display: none; }
   .hud-center { margin-right: 0; }

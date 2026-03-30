@@ -159,10 +159,16 @@ export default function CombatPage() {
       }
     };
 
-    initPhaser();
+    // Defer Phaser init to idle time — page content renders first, arena loads after
+    const useRIC = typeof requestIdleCallback !== 'undefined';
+    const idleHandle = useRIC
+      ? requestIdleCallback(initPhaser, { timeout: 3000 })
+      : setTimeout(initPhaser, 0);
 
     return () => {
       mounted = false;
+      if (useRIC) cancelIdleCallback(idleHandle);
+      else clearTimeout(idleHandle);
       if (gameRef.current) {
         gameRef.current.destroy(true);
         gameRef.current = null;
