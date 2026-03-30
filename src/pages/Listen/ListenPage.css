@@ -234,6 +234,22 @@
   justify-content: center;
 }
 
+/* Breathing animation when playing - CSS only, no Framer Motion */
+/* Disabled: was causing 20px layout shift between playing/non-playing states */
+.core-mount.is-playing {
+  /* animation: core-breathe 4s ease-in-out infinite; */
+  will-change: auto;
+}
+
+/* @keyframes core-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.01);
+  }
+} */
+
 .core-status-plate {
   position: absolute;
   bottom: -4rem;
@@ -324,8 +340,33 @@
   flex: 1;
   min-width: 3px;
   border-radius: 2px 2px 0 0;
-  transition: height 0.1s ease;
+  background: var(--hud-accent);
+  opacity: calc(0.3 + var(--bar-index, 0) / 32 * 0.7);
   box-shadow: 0 0 8px currentColor;
+  height: 15%;
+  transform-origin: bottom;
+  will-change: transform;
+}
+
+/* Animated spectrum when playing */
+.listen-console--playing .spectrum-bar {
+  animation: spectrum-bounce 0.8s ease-in-out infinite;
+  animation-delay: var(--bar-delay, 0s);
+}
+
+@keyframes spectrum-bounce {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  25% {
+    transform: scaleY(3.5);
+  }
+  50% {
+    transform: scaleY(5);
+  }
+  75% {
+    transform: scaleY(2.5);
+  }
 }
 
 .param-node {
@@ -433,6 +474,28 @@
   background: var(--hud-accent);
   opacity: 0.4;
   box-shadow: 0 0 5px var(--hud-accent);
+  height: 12%;
+  border-radius: 2px 2px 0 0;
+  transform-origin: bottom;
+  will-change: transform;
+}
+
+/* Animated phoneme bars when playing */
+.listen-console--playing .vfa-bar {
+  animation: phoneme-bounce 0.6s ease-in-out infinite;
+  animation-delay: calc(var(--bar-index, 0) * 0.04s);
+}
+
+@keyframes phoneme-bounce {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  33% {
+    transform: scaleY(4.5);
+  }
+  66% {
+    transform: scaleY(2.5);
+  }
 }
 
 .phase-controls {

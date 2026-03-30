@@ -58,8 +58,16 @@ export default function ListenPage() {
     ? 'entropy-high'
     : '';
 
-  // Phoneme density warning — fires when signal is saturated (anti-exploit threshold)
-  const phonemeWarning = signalLevel > 0.72;
+  // Phoneme density warning with hysteresis to prevent flickering
+  // Enters warning at 0.75, exits at 0.68 (7% hysteresis band)
+  const [phonemeWarning, setPhonemeWarning] = useState(false);
+  useEffect(() => {
+    if (signalLevel > 0.75) {
+      setPhonemeWarning(true);
+    } else if (signalLevel < 0.68) {
+      setPhonemeWarning(false);
+    }
+  }, [signalLevel]);
 
   const currentStation = useMemo(
     () => {
@@ -135,13 +143,9 @@ export default function ListenPage() {
 
       {/* Center: The Core 3D Console */}
       <main className="hud-center">
-        <motion.div 
-          className="core-mount"
-          animate={{ scale: isPlaying ? [1, 1.01, 1] : 1 }}
-          transition={{ repeat: Infinity, duration: 4 }}
-        >
+        <div className={`core-mount ${isPlaying ? 'is-playing' : ''}`}>
           <SignalChamberConsole />
-          
+
           {/* Floating Status Plate */}
           <div className="core-status-plate" style={{ '--accent': currentStation.color } as any}>
             <div className="status-indicator">
@@ -153,7 +157,7 @@ export default function ListenPage() {
               {(432 + signalLevel * 8).toFixed(2)} Hz
             </div>
           </div>
-        </motion.div>
+        </div>
       </main>
 
       {/* Right Sidebar: Parameters */}
@@ -172,20 +176,16 @@ export default function ListenPage() {
             </div>
             <div className="spectrum-canvas">
               <div className="spectrum-bars">
-                {Array.from({ length: 32 }).map((_, i) => {
-                  const height = isPlaying ? 20 + Math.random() * 80 : 5;
-                  return (
-                    <div
-                      key={i}
-                      className="spectrum-bar"
-                      style={{
-                        height: `${height}%`,
-                        backgroundColor: `var(--hud-accent)`,
-                        opacity: 0.3 + (i / 32) * 0.7,
-                      }}
-                    />
-                  );
-                })}
+                {Array.from({ length: 32 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="spectrum-bar"
+                    style={{
+                      '--bar-delay': `${i * 0.05}s`,
+                      '--bar-index': i,
+                    } as React.CSSProperties}
+                  />
+                ))}
               </div>
             </div>
           </div>
@@ -293,14 +293,10 @@ export default function ListenPage() {
           </div>
           <div className={`vfa-viz ${phonemeWarning ? 'vfa-viz--warn' : ''}`}>
             {[...Array(16)].map((_, i) => (
-              <motion.div
+              <div
                 key={i}
                 className={`vfa-bar ${phonemeWarning && i >= 11 ? 'vfa-bar--warn' : ''}`}
-                animate={{ height: isPlaying ? [
-                  `${15 + signalLevel * 55 + Math.sin(i * 0.9) * 20}%`,
-                  `${10 + signalLevel * 65 + Math.cos(i * 0.7) * 22}%`,
-                ] : '8%' }}
-                transition={{ repeat: Infinity, duration: 0.38 + i * 0.025 }}
+                style={{ '--bar-index': i } as React.CSSProperties}
               />
             ))}
             {phonemeWarning && (
