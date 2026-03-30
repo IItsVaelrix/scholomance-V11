@@ -7,10 +7,13 @@
  *      permanent, distinctive hues for phonetic families.
  */
 
+import { createRequire } from 'node:module';
 import { normalizeVowelFamily } from '../../../../src/lib/phonology/vowelFamily.js';
 import { VOWEL_FAMILY_TO_SCHOOL, SCHOOLS } from '../../../../src/data/schools.js';
 import { clamp01, roundTo, createAmplifierResult } from '../shared.js';
-import biophysicalData from '../../../../verseir_palette_payload.json';
+
+const require = createRequire(import.meta.url);
+const biophysicalData = require('../../../../verseir_palette_payload.json');
 
 /**
  * Resolves biophysical color coordinates based on cochlear place metrics.
