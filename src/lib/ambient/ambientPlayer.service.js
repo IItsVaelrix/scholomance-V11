@@ -1,4 +1,5 @@
 import { getTrackEmbedConfig } from "../musicEmbeds";
+import { SCHOOLS } from "../../data/schools.js";
 import {
   getDefaultSchoolId,
   getRandomizedStationTrackUrl,
@@ -12,6 +13,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   volume: 0.5,
   autoplayAmbient: false,
   cyclingEnabled: true,
+  sinkId: "", // Default system output
 });
 
 const DEFAULT_OPTIONS = Object.freeze({
@@ -82,6 +84,14 @@ const PERCUSSIVE_PULSE_CONFIG = Object.freeze({
   peakWeight: 1.85,
   transientWeight: 2.45,
   crestWeight: 1.15,
+});
+
+const BPM_TRACKING_CONFIG = Object.freeze({
+  defaultBPM: 90, // Ambient baseline when no audio
+  minBPM: 60,     // Minimum detectable tempo
+  maxBPM: 180,    // Maximum detectable tempo
+  smoothingAlpha: 0.15, // EMA smoothing for BPM stability
+  beatWindowMs: 2000, // Window for beat detection
 });
 
 export function createPercussivePulseState(overrides = {}) {
@@ -202,17 +212,20 @@ function readPersistedSettings(storage) {
   };
 }
 
-function createAudioContext() {
+function createAudioContext(sinkId = "") {
   if (!canUseBrowser()) return null;
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtx) return null;
   try {
-    return new AudioCtx();
+    const options = {};
+    if (sinkId && typeof AudioCtx.prototype.setSinkId === "function") {
+      options.sinkId = sinkId;
+    }
+    return new AudioCtx(options);
   } catch {
     return null;
   }
 }
-
 function createWhiteNoiseBuffer(audioContext, durationSec) {
   const length = Math.max(1, Math.floor(audioContext.sampleRate * durationSec));
   const buffer = audioContext.createBuffer(1, length, audioContext.sampleRate);
@@ -525,6 +538,7 @@ async function createTrackController({
       provider: embed.provider,
       capabilities,
       analyser,
+      audio, // Expose for setSinkId
       schoolId: null,
       loadPromise,
       getVolume: () => currentVolume,
@@ -747,8 +761,14 @@ function createAmbientPlayerService(options = {}) {
     volume: persisted.volume,
     autoplayAmbient: Boolean(persisted.autoplayAmbient),
     cyclingEnabled: Boolean(persisted.cyclingEnabled),
+    sinkId: persisted.sinkId || "",
+    outputDevices: [],
     audioUnlocked: false,
     error: null,
+    // BPM tracking state
+    bpm: BPM_TRACKING_CONFIG.defaultBPM,
+    lastBeatMs: 0,
+    beatIntervalMs: 667, // Default ~90 BPM
   };
 
   const listeners = new Set();
@@ -774,6 +794,7 @@ function createAmbientPlayerService(options = {}) {
   let tuneOperationId = 0;
   let activeTuneOperationId = 0;
   let contextRecoveryListenersAttached = false;
+  let deviceChangeListenersAttached = false;
 
   // ─── Internal helpers ──────────────────────────────────────────────────────
 
@@ -781,6 +802,72 @@ function createAmbientPlayerService(options = {}) {
     const dynamic = dynamicSchools.find((s) => s.id === schoolId);
     if (dynamic) return dynamic;
     return getSchoolAudioConfig(schoolId);
+  }
+
+  async function updateOutputDevices() {
+    if (!canUseBrowser() || !navigator.mediaDevices?.enumerateDevices) {
+      return;
+    }
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const audioOutputs = devices
+        .filter((d) => d.kind === "audiooutput")
+        .map((d) => ({
+          deviceId: d.deviceId,
+          label: d.label || (d.deviceId === "default" ? "System Default" : `Output ${d.deviceId.slice(0, 4)}...`),
+        }));
+      setState({ outputDevices: audioOutputs });
+    } catch (err) {
+      console.warn("Failed to enumerate audio devices:", err);
+    }
+  }
+
+  async function applySinkId(sinkId, ctrl = currentController) {
+    const context = audioContextRef.current;
+    const success = { context: false, audio: false };
+
+    if (context && typeof context.setSinkId === "function") {
+      try {
+        await context.setSinkId(sinkId);
+        success.context = true;
+      } catch (err) {
+        console.warn("Failed to set sink ID on AudioContext:", err);
+      }
+    }
+
+    // Also try applying to provided or current controller's audio element
+    const audio = ctrl?.audio;
+    if (audio && typeof audio.setSinkId === "function") {
+      try {
+        await audio.setSinkId(sinkId);
+        success.audio = true;
+      } catch (err) {
+        console.warn("Failed to set sink ID on HTMLAudioElement:", err);
+      }
+    }
+    
+    return success.context || success.audio;
+  }
+
+  function handleDeviceChange() {
+    void updateOutputDevices();
+  }
+
+  function attachDeviceListeners() {
+    if (!canUseBrowser() || !navigator.mediaDevices || deviceChangeListenersAttached) {
+      return;
+    }
+    navigator.mediaDevices.addEventListener("devicechange", handleDeviceChange);
+    deviceChangeListenersAttached = true;
+    void updateOutputDevices();
+  }
+
+  function detachDeviceListeners() {
+    if (!canUseBrowser() || !navigator.mediaDevices || !deviceChangeListenersAttached) {
+      return;
+    }
+    navigator.mediaDevices.removeEventListener("devicechange", handleDeviceChange);
+    deviceChangeListenersAttached = false;
   }
 
   function resolveTrackUrlForSchool(schoolId, fallbackTrackUrl = null) {
@@ -817,7 +904,7 @@ function createAmbientPlayerService(options = {}) {
     if (current && current.state !== "closed") {
       return current;
     }
-    audioContextRef.current = createAudioContext();
+    audioContextRef.current = createAudioContext(state.sinkId);
     return audioContextRef.current;
   }
 
@@ -928,6 +1015,7 @@ function createAmbientPlayerService(options = {}) {
       volume: state.volume,
       autoplayAmbient: state.autoplayAmbient,
       cyclingEnabled: state.cyclingEnabled,
+      sinkId: state.sinkId,
     };
     try {
       storage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(payload));
@@ -1120,6 +1208,52 @@ function createAmbientPlayerService(options = {}) {
     return computeSyntheticSignalLevel();
   }
 
+  /**
+   * Updates BPM tracking based on percussive pulse detection.
+   * Uses exponential moving average for smooth tempo transitions.
+   */
+  function updateBPM(pulseLevel, nowMs) {
+    if (!state.isPlaying || !Number.isFinite(pulseLevel) || pulseLevel < 0.3) {
+      // No valid beat data — maintain default BPM
+      return;
+    }
+
+    const previousBeatMs = state.lastBeatMs;
+    const previousInterval = state.beatIntervalMs;
+    const currentInterval = nowMs - previousBeatMs;
+
+    // Validate interval is within reasonable BPM range (60-180 BPM = 1000-333ms)
+    const isValidInterval = currentInterval >= 333 && currentInterval <= 1000;
+
+    if (isValidInterval && previousBeatMs > 0) {
+      // Smooth the interval with EMA
+      const smoothedInterval = previousInterval * (1 - BPM_TRACKING_CONFIG.smoothingAlpha) +
+                               currentInterval * BPM_TRACKING_CONFIG.smoothingAlpha;
+
+      // Convert interval to BPM
+      const detectedBPM = 60000 / smoothedInterval;
+      const clampedBPM = Math.max(BPM_TRACKING_CONFIG.minBPM,
+                          Math.min(BPM_TRACKING_CONFIG.maxBPM, detectedBPM));
+
+      // Update state
+      state.beatIntervalMs = smoothedInterval;
+      state.bpm = clampedBPM;
+    }
+
+    state.lastBeatMs = nowMs;
+  }
+
+  /**
+   * Returns the current detected BPM.
+   * Falls back to default BPM when no audio is playing.
+   */
+  function getBPM() {
+    if (!state.isPlaying) {
+      return BPM_TRACKING_CONFIG.defaultBPM;
+    }
+    return state.bpm || BPM_TRACKING_CONFIG.defaultBPM;
+  }
+
   async function completeTuning(id = activeTuneOperationId) {
     if (!isTuneOperationCurrent(id)) {
       // Stale operation — if we're stuck in TUNING with no pending timer,
@@ -1267,6 +1401,11 @@ function createAmbientPlayerService(options = {}) {
     if (!isTuneOperationActive(id)) {
       destroyController(ctrl);
       return false;
+    }
+
+    // Apply currently selected hardware output
+    if (state.sinkId) {
+      await applySinkId(state.sinkId, ctrl);
     }
 
     ctrl.schoolId = schoolId;
@@ -1516,6 +1655,9 @@ function createAmbientPlayerService(options = {}) {
   async function unlockAudio() {
     try {
       await ensureContextRunning();
+      if (state.sinkId) {
+        await applySinkId(state.sinkId);
+      }
     } catch (err) {
       console.warn("unlockAudio: ensureContextRunning failed", err);
     }
@@ -1726,6 +1868,13 @@ function createAmbientPlayerService(options = {}) {
     setCyclingEnabled(!state.cyclingEnabled);
   }
 
+  async function setOutputDevice(deviceId) {
+    const nextSinkId = deviceId || "";
+    setState({ sinkId: nextSinkId });
+    persistSettings();
+    await applySinkId(nextSinkId);
+  }
+
   function seek(offset) {
     if (currentController && typeof currentController.seek === "function") {
       currentController.seek(offset);
@@ -1741,6 +1890,7 @@ function createAmbientPlayerService(options = {}) {
     }
     container = null;
     detachContextRecoveryListeners();
+    detachDeviceListeners();
     pendingTuneOperationId = null;
     nextTuneOperationId();
     const context = audioContextRef.current;
@@ -1753,12 +1903,15 @@ function createAmbientPlayerService(options = {}) {
 
   // Initialize
   attachContextRecoveryListeners();
+  attachDeviceListeners();
 
   return {
     subscribe,
     getState,
     setContainer,
     getSignalLevel,
+    getBPM,
+    updateBPM,
     setDynamicSchools,
     setPlayableSchools,
     unlockAudio,
@@ -1773,6 +1926,8 @@ function createAmbientPlayerService(options = {}) {
     toggleAutoplayAmbient,
     setCyclingEnabled,
     toggleCyclingEnabled,
+    setOutputDevice,
+    updateOutputDevices,
     destroy,
     ensureContextRunning,
     getAnalyser,

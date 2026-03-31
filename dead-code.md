@@ -1,11 +1,13 @@
 # Dead Code Report
 
-Generated at: 2026-03-31T09:15:56.096Z
+Generated at: 2026-03-31T20:34:02.227Z
 
 ## Unreachable Files
 Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
 
 - [ ] src\lib\audioAdminApi.ts
+- [ ] src\lib\css\schoolStyles.js
+- [ ] src\lib\phonology\phoneticWeighting.js
 - [ ] src\lib\truesight\compiler\verseIRQueries.js
 - [ ] src\lib\workers\analysis.worker.js
 - [ ] src\lib\worldApi.js
@@ -14,10 +16,8 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src\pages\Listen\ArcaneRadio.tsx
 - [ ] src\pages\Listen\ArcaneShelfPanel.jsx
 - [ ] src\pages\Listen\BrassGearDial.jsx
-- [ ] src\pages\Listen\CrystalBallVisualizer.tsx
 - [ ] src\pages\Listen\NixieTube.jsx
 - [ ] src\pages\Listen\scenes\ArcaneBookshelfScene.js
-- [ ] src\pages\Listen\scenes\CrystalBallScene.js
 - [ ] src\types\core\analysis.ts
 - [ ] src\types\core\combat.ts
 - [ ] src\types\core\judiciary.ts
@@ -33,7 +33,6 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src\types\runtime\runtime.ts
 - [ ] codex\core\pixelbrain\extensions\physics-extensions.js
 - [ ] codex\core\pixelbrain\extensions\style-extensions.js
-- [ ] codex\core\pixelbrain\image-to-pixel-art.js
 - [ ] codex\core\pixelbrain\image-to-semantic-bridge.js
 - [ ] codex\core\pixelbrain-phase3.js
 - [ ] codex\core\rhyme\dataset.js
@@ -55,14 +54,14 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 Symbols that are exported but not referenced in any other file. (Note: May include false positives for dynamic usage or entry point exports).
 
 - [ ] `BookIcon` in `src\components\Icons.jsx`
-- [ ] `CheckIcon` in `src\components\Icons.jsx`
-- [ ] `CloseIcon` in `src\components\Icons.jsx`
 - [ ] `ChevronsRightIcon` in `src\components\Icons.jsx`
 - [ ] `ChevronsLeftIcon` in `src\components\Icons.jsx`
+- [ ] `COLORS` in `src\data\library.js`
 - [ ] `SCHOOL_ANGLES` in `src\data\library.js`
 - [ ] `schoolToBadgeClass` in `src\data\library.js`
 - [ ] `XP_SOURCES` in `src\data\progression_constants.js`
 - [ ] `RHYME_SUBTYPES` in `src\data\rhymeScheme.patterns.js`
+- [ ] `DEFAULT_VOWEL_COLORS` in `src\data\schoolPalettes.js`
 - [ ] `SCHOOL_SKINS` in `src\data\schoolPalettes.js`
 - [ ] `SCHOOL_SKINS_LIGHT` in `src\data\schoolPalettes.js`
 - [ ] `getSchoolById` in `src\data\schools.js`
@@ -71,7 +70,6 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `getNextSchool` in `src\data\schools.js`
 - [ ] `getSchoolAngle` in `src\data\schools.js`
 - [ ] `getSchoolBadgeClass` in `src\data\schools.js`
-- [ ] `getSonicStationBuckets` in `src\data\sonicStationBuckets.js`
 - [ ] `getSonicStationTrackPool` in `src\data\sonicStationBuckets.js`
 - [ ] `emitXPEvent` in `src\hooks\useProgression.jsx`
 - [ ] `useXPEventListener` in `src\hooks\useProgression.jsx`
@@ -79,6 +77,9 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `AMBIENT_PLAYER_EVENTS` in `src\lib\ambient\ambientPlayer.service.js`
 - [ ] `createPercussivePulseState` in `src\lib\ambient\ambientPlayer.service.js`
 - [ ] `getPercussivePulseLevelFromWaveform` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `lerpBytecodeAMP` in `src\lib\ambient\bytecodeAMP.js`
+- [ ] `getBPMRotationSpeed` in `src\lib\ambient\bytecodeAMP.js`
+- [ ] `getBPMRotationWithPhase` in `src\lib\ambient\bytecodeAMP.js`
 - [ ] `SCHOOL_AUDIO_CONFIG` in `src\lib\ambient\schoolAudio.config.js`
 - [ ] `AudioAdminErrorReason` in `src\lib\audioAdminApi.ts`
 - [ ] `AudioFilePayload` in `src\lib\audioAdminApi.ts`
@@ -87,6 +88,8 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `normalizeAdminToken` in `src\lib\audioAdminApi.ts`
 - [ ] `buildAudioAdminHeaders` in `src\lib\audioAdminApi.ts`
 - [ ] `configureZodForCsp` in `src\lib\config\zod.config.js`
+- [ ] `generateSchoolCSSVariables` in `src\lib\css\schoolStyles.js`
+- [ ] `generateLockedSchoolStyles` in `src\lib\css\schoolStyles.js`
 - [ ] `isLikelyDynamicImportFailure` in `src\lib\lazyWithRetry.js`
 - [ ] `GENRES` in `src\lib\literaryClassifier.js`
 - [ ] `LITERARY_DEVICES` in `src\lib\literaryDevices.detector.js`
@@ -98,6 +101,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `PATTERN_COLORS` in `src\lib\patternColor.js`
 - [ ] `ARPABET_CONSONANTS` in `src\lib\phonology\phoneme.constants.js`
 - [ ] `PhoneticWeightBalancer` in `src\lib\phonology\phoneticWeighting.js`
+- [ ] `weightBalancer` in `src\lib\phonology\phoneticWeighting.js`
 - [ ] `PHONOLOGICAL_PROCESS_RULES` in `src\lib\phonology\phonologicalProcesses.js`
 - [ ] `getDeviceId` in `src\lib\platform\wordCache.js`
 - [ ] `deriveFeatureAdjustedWeights` in `src\lib\pls\ranker.js`
@@ -162,10 +166,50 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `DOCTRINES` in `codex\core\opponent.engine.js`
 - [ ] `PhoneticMatcher` in `codex\core\phonetic_matcher.js`
 - [ ] `snapValueToPixelGrid` in `codex\core\pixelbrain\anti-alias-control.js`
+- [ ] `drawHandDrawnLine` in `codex\core\pixelbrain\anti-alias-control.js`
+- [ ] `encodeBytecodeError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `decodeBytecodeError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `getRecoveryHintsForError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createTypeMismatchError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createOutOfBoundsError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createCoordinateError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createColorError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `evaluateFormula` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateFibonacciGrid` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateParametricCurve` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateGridProjection` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateEdgeTrace` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateFractalIteration` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateTemplateBased` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `applyTemplateConstraints` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `lerpFormulas` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `GEAR_GLIDE_CONFIG` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `createGearGlideState` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `updateGearGlide` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `formulaToPhaserRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getBPMRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getBPMRotationWithPulse` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `syncMultipleElements` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getTimeForRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `generateRotationKeyframes` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `extractEdgePoints` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `fitParametricCurve` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `detectGridPattern` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `quantizeColorsToFormula` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `generateTemplateFromFormula` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `generateIdleAnimationConfig` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
 - [ ] `generatePermutationTable` in `codex\core\pixelbrain\procedural-noise.js`
 - [ ] `perlin2D` in `codex\core\pixelbrain\procedural-noise.js`
 - [ ] `getTexturePalette` in `codex\core\pixelbrain\procedural-noise.js`
 - [ ] `normalizeDegrees` in `codex\core\pixelbrain\shared.js`
+- [ ] `snapToGrid` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `addAnchorPoint` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `removeAnchorPoint` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `createLayer` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `getCell` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `createFrame` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `getOnionSkins` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `importFromAseprite` in `codex\core\pixelbrain\template-grid-engine.js`
 - [ ] `RHYME_ASTROLOGY_API_VERSION` in `codex\core\rhyme-astrology\contracts.js`
 - [ ] `RHYME_ASTROLOGY_QUERY_MODES` in `codex\core\rhyme-astrology\contracts.js`
 - [ ] `RHYME_ASTROLOGY_QUERY_DEFAULTS` in `codex\core\rhyme-astrology\contracts.js`

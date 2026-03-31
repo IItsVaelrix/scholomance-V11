@@ -7,6 +7,8 @@ import { useAuth } from "../../hooks/useAuth.jsx";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { preloadRoute } from "../../lib/routes.js";
 
+import { triggerHapticPulse, UI_HAPTICS } from "../../lib/platform/haptics.js";
+
 const SunIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
        stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -54,6 +56,8 @@ const MOBILE_ROUTE_COPY = {
   read: "Compose scrolls and inspect their hidden anatomy.",
   combat: "Cast verses into live conflict and scoring.",
   nexus: "Survey unlocked paths, schools, and progression.",
+  pixelbrain: "Neural network visualization and metadata mapping.",
+  career: "Transmute professional experience into high-acuity sigils.",
   collab: "Coordinate agent work and active pipelines.",
   profile: "Review account standing and inner-sanctum access.",
   auth: "Enter the portal and secure your chamber.",
@@ -120,9 +124,7 @@ export default function Navigation() {
   }, []);
 
   const handleToggle = useCallback(() => {
-    if (window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(10);
-    }
+    triggerHapticPulse(UI_HAPTICS.MEDIUM);
     setIsMenuOpen((prev) => !prev);
     setNavigatingPath(null);
   }, []);
@@ -130,9 +132,7 @@ export default function Navigation() {
   // Magical nav: select link → glow animation → navigate quickly
   const handleMobileNavClick = useCallback((e, linkPath) => {
     e.preventDefault();
-    if (window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(5);
-    }
+    triggerHapticPulse(UI_HAPTICS.TICK);
     if (navigatingPath) return; // already transitioning
     handleNav(linkPath);
   }, [navigatingPath, handleNav]);

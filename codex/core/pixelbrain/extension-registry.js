@@ -1,3 +1,15 @@
+/**
+ * PixelBrain Extension Registry
+ * 
+ * Manages extension registration and hook execution with bytecode error handling.
+ */
+
+import {
+  MODULE_IDS,
+  createExtensionError,
+  createHookError,
+} from './bytecode-error.js';
+
 const EXTENSION_TYPES = new Set(['PHYSICS', 'STYLE', 'CUSTOM_PROP']);
 const HOOK_PROPERTY_TO_TYPE = Object.freeze({
   onCoordinateMap: 'coordinate-map',
@@ -9,7 +21,10 @@ const HOOK_PROPERTY_TO_TYPE = Object.freeze({
 function normalizeExtensionType(type) {
   const normalized = String(type || '').trim().toUpperCase();
   if (!EXTENSION_TYPES.has(normalized)) {
-    throw new Error(`Unsupported PixelBrain extension type: ${type}`);
+    throw createExtensionError(MODULE_IDS.EXT_REGISTRY, 'UNSUPPORTED_TYPE', type, {
+      providedType: type,
+      allowedTypes: [...EXTENSION_TYPES],
+    });
   }
   return normalized;
 }
@@ -17,7 +32,10 @@ function normalizeExtensionType(type) {
 function normalizeHookType(type) {
   const normalized = String(type || '').trim().toLowerCase();
   if (!Object.values(HOOK_PROPERTY_TO_TYPE).includes(normalized)) {
-    throw new Error(`Unsupported PixelBrain hook type: ${type}`);
+    throw createHookError(MODULE_IDS.EXT_REGISTRY, normalized, 'INVALID_TYPE', {
+      providedType: type,
+      allowedTypes: Object.values(HOOK_PROPERTY_TO_TYPE),
+    });
   }
   return normalized;
 }
@@ -31,12 +49,18 @@ function toPublicExtensionRecord(extension) {
 
 function validateExtension(extension) {
   if (!extension || typeof extension !== 'object') {
-    throw new Error('PixelBrain extension must be an object.');
+    throw createExtensionError(MODULE_IDS.EXT_REGISTRY, 'INVALID_OBJECT', null, {
+      providedValue: extension,
+      expectedType: 'object',
+    });
   }
 
   const id = String(extension.id || '').trim();
   if (!id) {
-    throw new Error('PixelBrain extension must expose a non-empty id.');
+    throw createExtensionError(MODULE_IDS.EXT_REGISTRY, 'MISSING_ID', null, {
+      providedId: extension.id,
+      requirement: 'non-empty string',
+    });
   }
 
   return Object.freeze({
@@ -65,7 +89,11 @@ export function createExtensionRegistry(options = {}) {
   function registerHookRecord(extension, type, hook) {
     const normalizedType = normalizeHookType(type);
     if (typeof hook !== 'function') {
-      throw new Error(`PixelBrain extension hook for ${normalizedType} must be a function.`);
+      throw createHookError(MODULE_IDS.EXT_REGISTRY, normalizedType, 'NOT_FUNCTION', {
+        hookType: normalizedType,
+        extensionId: extension.id,
+        actualType: typeof hook,
+      });
     }
 
     hooks.get(normalizedType).push({
@@ -99,7 +127,10 @@ export function createExtensionRegistry(options = {}) {
   function register(extension) {
     const normalized = validateExtension(extension);
     if (extensions.has(normalized.id)) {
-      throw new Error(`PixelBrain extension ${normalized.id} is already registered.`);
+      throw createExtensionError(MODULE_IDS.EXT_REGISTRY, 'ALREADY_REGISTERED', normalized.id, {
+        extensionId: normalized.id,
+        existingExtension: toPublicExtensionRecord(normalized),
+      });
     }
 
     const context = createContext(normalized);

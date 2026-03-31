@@ -1,164 +1,18 @@
 :root {
-  --school-sonic: #1ab4a8;
-  --school-sonic-hsl: 175, 85%, 55%;
-  --school-sonic-glow: hsla(175, 85%, 55%, 0.4);
-  --school-sonic-lock-bleed: hsla(175, 85%, 55%, 0.4);
-  --school-psychic: #3b82f6;
-  --school-psychic-hsl: 220, 90%, 60%;
-  --school-psychic-glow: hsla(220, 90%, 60%, 0.4);
-  --school-psychic-lock-bleed: hsla(220, 90%, 60%, 0.4);
-  --school-void: #94a3b8;
-  --school-void-hsl: 215, 15%, 41%;
-  --school-void-glow: hsla(215, 15%, 41%, 0.4);
-  --school-void-lock-bleed: hsla(215, 15%, 41%, 0.4);
-  --school-alchemy: #ec4899;
-  --school-alchemy-hsl: 325, 80%, 58%;
-  --school-alchemy-glow: hsla(325, 80%, 58%, 0.4);
-  --school-alchemy-lock-bleed: hsla(325, 80%, 58%, 0.4);
-  --school-will: #ef4444;
-  --school-will-hsl: 0, 85%, 48%;
-  --school-will-glow: hsla(0, 85%, 48%, 0.4);
-  --school-will-lock-bleed: hsla(0, 85%, 48%, 0.4);
-  --school-necromancy: #22c55e;
-  --school-necromancy-hsl: 120, 75%, 40%;
-  --school-necromancy-glow: hsla(120, 75%, 40%, 0.4);
-  --school-necromancy-lock-bleed: hsla(120, 75%, 40%, 0.4);
-  --school-abjuration: #06b6d4;
-  --school-abjuration-hsl: 180, 80%, 68%;
-  --school-abjuration-glow: hsla(180, 80%, 68%, 0.4);
-  --school-abjuration-lock-bleed: hsla(180, 80%, 68%, 0.4);
-  --school-divination: #eab308;
-  --school-divination-hsl: 45, 90%, 68%;
-  --school-divination-glow: hsla(45, 90%, 68%, 0.4);
-  --school-divination-lock-bleed: hsla(45, 90%, 68%, 0.4);
-  --school-sonic-angle: 288deg;
-  --school-psychic-angle: 72deg;
-  --school-void-angle: 0deg;
-  --school-alchemy-angle: 144deg;
-  --school-will-angle: 216deg;
-  --school-necromancy-angle: 36deg;
-  --school-abjuration-angle: 108deg;
-  --school-divination-angle: 180deg;
-  --active-school-color: #1ab4a8;
-  --active-school-h: 175;
-  --active-school-s: 85%;
-  --active-school-l: 55%;
-  --active-school-glow: hsla(175, 85%, 55%, 0.4);
-  --active-aurora-intensity: 0.9;
-  --active-saturation: 90%;
-  --active-vignette-strength: 0.7;
-  --active-scanline-opacity: 0;
-}
-.school--locked-distant {
-  opacity: 0.2;
-  filter: grayscale(1) blur(1px);
-  cursor: not-allowed;
-  position: relative;
-}
-
-.school--locked-distant::after {
-  content: attr(data-glyph);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1.5rem;
-  opacity: 0.3;
-  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.3));
-}
-
-.school--locked-approaching {
-  opacity: 0.4;
-  filter: grayscale(0.7);
-  cursor: not-allowed;
-  position: relative;
-}
-
-.school--locked-approaching::after {
-  content: attr(data-glyph);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1.5rem;
-  opacity: 0.6;
-  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.5));
-  opacity: 0.7;
-  transition: opacity 150ms ease;
-}
-
-.school--locked-approaching:hover::after {
-  opacity: 1;
-}
-
-.school--locked-near {
-  opacity: 0.65;
-  filter: grayscale(0.3);
-  cursor: pointer;
-  position: relative;
-}
-
-.school--locked-near::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: inherit;
-  background: var(--lock-bleed-color, rgba(255, 255, 255, 0.2));
-  opacity: 0.15;
-  transition: opacity 150ms ease;
-}
-
-.school--locked-near:hover::before {
-  opacity: 0.3;
-}
-
-.school--locked-near::after {
-  content: attr(data-glyph);
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1.5rem;
-  opacity: 0.9;
-  color: var(--lock-bleed-color, rgba(255, 255, 255, 0.9));
-  text-shadow: 0 0 12px var(--lock-bleed-color, rgba(255, 255, 255, 0.6));
-}
-
-/* lock-pulse and lock-glow animations removed — replaced with hover glow */
-
-.school-progress-ring {
-  transition: stroke-dashoffset 0.3s ease;
-}
-
-/* Unlock animation */
-@keyframes unlock-flash {
-  0% { background-color: rgba(255, 255, 255, 0); }
-  50% { background-color: rgba(255, 255, 255, 0.3); }
-  100% { background-color: rgba(255, 255, 255, 0); }
-}
-
-.school-unlocked {
-  animation: unlock-flash 0.8s ease-out;
-}
-
-/* Light mode — swap lock indicators to dark colors */
-[data-theme="light"] .school--locked::after,
-[data-theme="light"] .school--locked-approaching::after,
-[data-theme="light"] .school--locked-near::after {
-  color: var(--lock-bleed-color, rgba(0, 0, 0, 0.5));
-  text-shadow: none;
-}
-
-[data-theme="light"] .school--locked-near::before {
-  background: var(--lock-bleed-color, rgba(0, 0, 0, 0.1));
-}
-
-@keyframes unlock-flash-light {
-  0% { background-color: rgba(0, 0, 0, 0); }
-  50% { background-color: rgba(0, 0, 0, 0.08); }
-  100% { background-color: rgba(0, 0, 0, 0); }
-}
-
-[data-theme="light"] .school-unlocked {
-  animation: unlock-flash-light 0.8s ease-out;
+  --sonic-primary: hsl(175, 85%, 55%);
+  --sonic-primary-glow: hsla(175, 85%, 55%, 0.3);
+  --psychic-primary: hsl(220, 90%, 60%);
+  --psychic-primary-glow: hsla(220, 90%, 60%, 0.3);
+  --void-primary: hsl(215, 15%, 41%);
+  --void-primary-glow: hsla(215, 15%, 41%, 0.3);
+  --alchemy-primary: hsl(325, 80%, 58%);
+  --alchemy-primary-glow: hsla(325, 80%, 58%, 0.3);
+  --will-primary: hsl(0, 85%, 48%);
+  --will-primary-glow: hsla(0, 85%, 48%, 0.3);
+  --necromancy-primary: hsl(120, 75%, 40%);
+  --necromancy-primary-glow: hsla(120, 75%, 40%, 0.3);
+  --abjuration-primary: hsl(180, 80%, 68%);
+  --abjuration-primary-glow: hsla(180, 80%, 68%, 0.3);
+  --divination-primary: hsl(45, 90%, 68%);
+  --divination-primary-glow: hsla(45, 90%, 68%, 0.3);
 }

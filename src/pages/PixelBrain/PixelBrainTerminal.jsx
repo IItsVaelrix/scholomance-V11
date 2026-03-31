@@ -1,5 +1,7 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import { motion } from "framer-motion";
+import { FormulaLibrary } from "./FormulaLibrary";
+import { formulaToBytecode } from "../../lib/pixelbrain.adapter";
 import "./PixelBrainTerminal.css";
 
 function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
@@ -217,14 +219,14 @@ function PaletteDisplay({ palettes }) {
   );
 }
 
-function AnalysisMetrics({ result }) {
+function AnalysisMetrics({ result, onExport }) {
   if (!result) return null;
 
   if (result.message) {
     return (
       <div className="metrics-section">
         <div className="section-header">
-          <span className="header-icon">&#x25C6;</span>
+          <span className="header-icon">◆</span>
           <span>ANALYSIS METRICS</span>
         </div>
         <div className="empty-message" style={{ textAlign: "center", padding: "20px" }}>
@@ -238,7 +240,7 @@ function AnalysisMetrics({ result }) {
     return (
       <div className="metrics-section">
         <div className="section-header">
-          <span className="header-icon">&#x25C6;</span>
+          <span className="header-icon">◆</span>
           <span>ANALYSIS METRICS</span>
         </div>
         <div className="error-message" style={{ textAlign: "center", padding: "20px", color: "#ff6b6b" }}>
@@ -260,8 +262,13 @@ function AnalysisMetrics({ result }) {
   return (
     <div className="metrics-section">
       <div className="section-header">
-        <span className="header-icon">&#x25C6;</span>
+        <span className="header-icon">◆</span>
         <span>ANALYSIS METRICS</span>
+        {onExport && (
+          <button className="mini-export-btn" onClick={onExport} title="Export Sigil">
+            <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>download</span>
+          </button>
+        )}
       </div>
       <div className="metrics-grid">
         {metrics.map((metric, index) => (
@@ -334,9 +341,56 @@ function AnalyzingState() {
   );
 }
 
-export default function PixelBrainTerminal({ mode, analysisResult }) {
+export default function PixelBrainTerminal({ mode, analysisResult, onFormulaSelect, onClose }) {
+  const handleExport = () => {
+    if (!analysisResult) return;
+    
+    // Generate bytecode
+    const bytecode = analysisResult.bytecode || (analysisResult.formula ? formulaToBytecode(analysisResult.formula) : "0x000");
+    
+    // Create export payload
+    const data = JSON.stringify({
+      version: "11.3",
+      timestamp: Date.now(),
+      analysis: {
+        tokenCount: analysisResult.tokenCount,
+        palettes: analysisResult.palettes,
+        bytecode
+      }
+    }, null, 2);
+
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `pixelbrain_sigil_${Date.now()}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="pixelbrain-terminal">
+      {onClose && (
+        <button 
+          className="terminal-close-btn" 
+          onClick={onClose}
+          aria-label="Close terminal"
+          style={{
+            position: 'absolute',
+            top: '10px',
+            right: '10px',
+            zIndex: 100,
+            background: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            color: 'white',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            padding: '4px'
+          }}
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      )}
       {/* CRT Effects */}
       <div className="crt-overlay" aria-hidden="true">
         <div className="scanlines"></div>
@@ -381,7 +435,7 @@ export default function PixelBrainTerminal({ mode, analysisResult }) {
               )}
 
               <div className="results-sidebar">
-                {analysisResult.referenceImage && (
+                {analysisResult.referenceImage ? (
                   <div className="reference-image-display">
                     <div className="sidebar-label">REFERENCE</div>
                     <img
@@ -408,8 +462,13 @@ export default function PixelBrainTerminal({ mode, analysisResult }) {
                       </div>
                     )}
                   </div>
+                ) : (
+                  <FormulaLibrary 
+                    onSelect={onFormulaSelect} 
+                    currentFormulaId={analysisResult.formula?.id} 
+                  />
                 )}
-                <AnalysisMetrics result={analysisResult} />
+                <AnalysisMetrics result={analysisResult} onExport={handleExport} />
                 <PaletteDisplay palettes={analysisResult.palettes} />
               </div>
             </div>
@@ -419,9 +478,16 @@ export default function PixelBrainTerminal({ mode, analysisResult }) {
 
       {/* Terminal Bezel */}
       <div className="terminal-bezel" aria-hidden="true">
-        <div className="bezel-knob knob-left"></div>
-        <div className="bezel-knob knob-right"></div>
         <div className="bezel-brand">PIXELBRAIN</div>
+        {/* Holographic Bezel Emitters */}
+        <div className="bezel-emitter emitter-left">
+          <div className="emitter-core">0xL</div>
+          <div className="emitter-rings"></div>
+        </div>
+        <div className="bezel-emitter emitter-right">
+          <div className="emitter-core">0xR</div>
+          <div className="emitter-rings"></div>
+        </div>
       </div>
     </div>
   );

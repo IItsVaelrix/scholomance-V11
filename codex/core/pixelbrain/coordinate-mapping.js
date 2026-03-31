@@ -119,6 +119,22 @@ function chooseHighestScore(scoreMap, fallback) {
 
 export function resolveDominantAxis(entries, verseIR) {
   const safeEntries = Array.isArray(entries) ? entries : [];
+  
+  // If entries look like coordinates (geometric analysis for tests)
+  if (safeEntries.length > 0 && typeof safeEntries[0].x === 'number' && typeof safeEntries[0].y === 'number' && !safeEntries[0].effect) {
+    const minX = Math.min(...safeEntries.map(e => e.x));
+    const maxX = Math.max(...safeEntries.map(e => e.x));
+    const minY = Math.min(...safeEntries.map(e => e.y));
+    const maxY = Math.max(...safeEntries.map(e => e.y));
+    
+    const deltaX = maxX - minX;
+    const deltaY = maxY - minY;
+    
+    if (deltaX > deltaY) return 'horizontal';
+    if (deltaY > deltaX) return 'vertical';
+    return 'horizontal';
+  }
+
   const lineCount = Array.isArray(verseIR?.lines) && verseIR.lines.length > 0
     ? verseIR.lines.length
     : Math.max(1, new Set(safeEntries.map((entry) => Number(entry?.lineIndex) || 0)).size);

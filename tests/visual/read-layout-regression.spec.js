@@ -16,7 +16,8 @@ function buildLongScrollContent(wordCount = 650, wordsPerLine = 12) {
 
 test.describe("Read page layout regressions", () => {
   test("theme toggle remains visible and changes theme", async ({ page }) => {
-    await page.goto("/read", { waitUntil: "domcontentloaded" });
+    await page.goto("/read", { waitUntil: "load" });
+    await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
     await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
     const themeToggle = page.getByRole("button", { name: /Switch to (dark|light) mode/i });
@@ -38,7 +39,8 @@ test.describe("Read page layout regressions", () => {
       test.skip(true, "Desktop layout assertion");
     }
 
-    await page.goto("/read", { waitUntil: "domcontentloaded" });
+    await page.goto("/read", { waitUntil: "load" });
+    await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
     await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
     const beginNewScrollButton = page.getByRole("button", { name: "Begin New Scroll" });
@@ -107,7 +109,8 @@ test.describe("Read page layout regressions", () => {
       test.skip(true, "Desktop layout assertion");
     }
 
-    await page.goto("/read", { waitUntil: "domcontentloaded" });
+    await page.goto("/read", { waitUntil: "load" });
+    await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
     await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
     const beginNewScrollButton = page.getByRole("button", { name: "Begin New Scroll" });

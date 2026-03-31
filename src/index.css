@@ -1,6 +1,98 @@
 @import './lib/css/generated/school-styles.css';
 
 /* ========================================
+   GPU ACCELERATION GLOBAL OPTIMIZATIONS
+   Promote animated elements to GPU layers
+   ======================================== */
+
+/* Global GPU promotion for all motion components */
+motion-div,
+motion-section,
+motion-article,
+motion-aside,
+motion-header,
+motion-footer,
+motion-nav,
+motion-main,
+motion-span,
+motion-button,
+motion-ul,
+motion-li {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Framer Motion animated elements — GPU accelerated */
+[class*="framer-"],
+[data-framer-motion] {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* IntelliSense popup — GPU accelerated */
+.intellisense-popup,
+.intellisense-suggestion {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Floating panels — GPU accelerated */
+.floating-panel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity, box-shadow;
+}
+
+/* Tooltips — GPU accelerated */
+.word-tooltip,
+.tooltip-content {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+}
+
+/* Navigation transitions — GPU accelerated */
+.nav-transition,
+.page-transition {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Atmosphere effects — GPU accelerated */
+.aurora-layer,
+.vignette-overlay,
+.scanlines-overlay {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: opacity, transform;
+}
+
+/* Reduced motion — disable will-change to free GPU memory */
+@media (prefers-reduced-motion: reduce) {
+  motion-div,
+  motion-section,
+  motion-article,
+  motion-aside,
+  motion-header,
+  motion-footer,
+  motion-nav,
+  motion-main,
+  motion-span,
+  motion-button,
+  motion-ul,
+  motion-li,
+  [class*="framer-"],
+  [data-framer-motion],
+  .intellisense-popup,
+  .floating-panel,
+  .word-tooltip,
+  .aurora-layer {
+    will-change: auto;
+  }
+}
+
+/* ========================================
    Z-INDEX REGISTRY — Scholomance V11
    See UI_SPEC.md §3 for binding rules.
    ========================================

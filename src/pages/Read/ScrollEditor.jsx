@@ -6,10 +6,8 @@ import IntelliSense from "../../components/IntelliSense.jsx";
 import Gutter from "./Gutter.jsx";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
-import { DEFAULT_VOWEL_COLORS } from "../../data/schoolPalettes.js";
-import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
-import { decodeBytecode, synthesizeBytecodeFromLegacy } from "./bytecodeRenderer.js";
+import { decodeBytecode } from "./bytecodeRenderer.js";
 
 const MAX_CONTENT_LENGTH = 50000;
 const CONTENT_DEBOUNCE_MS = 300;
@@ -250,8 +248,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   plsPhoneticFeatures = null,
   highlightedLines = [],
   pinnedLines = null,
-  vowelColors = null,
-  colorMap = null,
   syntaxLayer = null,
   analysisMode = 'none',
   theme = 'dark',
@@ -587,22 +583,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     allOverlayTokens,
   ]);
 
-  const analysisSources = useMemo(() => ({
-    analyzedWords,
-    analyzedWordsByCharStart: derivedAnalyzedWordsByCharStart,
-    analyzedWordsByIdentity,
-  }), [analyzedWords, derivedAnalyzedWordsByCharStart, analyzedWordsByIdentity]);
-
-  // Decoupled color logic via useColorCodex hook
-  const { colorMap: hookColorMap, shouldColorWord: shouldColorWordHook } = useColorCodex(
-    analysisSources, 
+  // Bytecode-native color logic via useColorCodex hook
+  // Consumes visualBytecode from wordAnalyses (produced by Codex VerseIR amplifier)
+  const { shouldColorWord: shouldColorWordHook } = useColorCodex(
+    Array.from(derivedAnalyzedWordsByCharStart.values()),
     activeConnections,
-    vowelColors || DEFAULT_VOWEL_COLORS,
-    syntaxLayer, 
-    { theme: activeTheme, analysisMode }
+    syntaxLayer,
+    { analysisMode }
   );
-
-  const activeColorMap = colorMap || hookColorMap;
 
   // Build color activation context from active connections.
   // 1) Color direct connected words.
@@ -1204,35 +1192,22 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         const wordVowelFamily = analysis
                           ? normalizeVowelFamily(rawVowelFamily)
                           : null;
-                        const shouldColorWord = analysis
+                        
+                        // Get bytecode from analysis (authoritative source from Codex)
+                        const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
+                        
+                        // Determine if word should be colored using bytecode-native logic
+                        const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily)
                           : false;
 
-                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
-                        const fallbackColor = activeTheme === 'light' ? "#1a1a2e" : "#f8f9ff";
-                        const codexEntry = shouldColorWord ? (activeColorMap?.get(charStart) ?? null) : null;
-
-                        const resolvedSchool = wordVowelFamily
-                          ? (VOWEL_FAMILY_TO_SCHOOL[wordVowelFamily] || null)
-                          : null;
-
-                        // Bytecode evolution: prioritize native bytecode from analysis if present,
-                        // otherwise synthesize it from the legacy codexEntry during the transition.
-                        const bytecode = analysis?.visualBytecode || (shouldColorWord && codexEntry !== null
-                          ? synthesizeBytecodeFromLegacy(codexEntry, resolvedSchool)
-                          : null);
-
-                        const decoded = bytecode
+                        // Decode bytecode into CSS classes and custom properties
+                        const decoded = bytecode && shouldColor
                           ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
                           : null;
 
-                        // Only apply color when there is a direct scored entry in the colorMap
-                        // OR authoritative bytecode that isn't inert.
-                        const hasScoredEntry = (shouldColorWord && codexEntry !== null) || (bytecode !== null && bytecode.effectClass !== 'INERT');
-                        const color = hasScoredEntry
-                          ? (decoded?.color || codexEntry?.color || (rawVowelFamily && activeColors[rawVowelFamily]) || activeColors[wordVowelFamily] || fallbackColor)
-                          : undefined;
-                        const wordOpacity = hasScoredEntry ? (codexEntry?.opacity ?? undefined) : undefined;
+                        // Color from bytecode is authoritative — no legacy fallbacks
+                        const color = decoded?.color || null;
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordPayload = buildWordPayloadFromToken({
@@ -1247,27 +1222,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
                           charStart,
                           charEnd,
-                          vowelFamily: hasScoredEntry ? (wordVowelFamily || null) : null,
+                          vowelFamily: shouldColor ? (wordVowelFamily || null) : null,
                           isStopWord,
                         };
 
                         const wordClassName = [
                           'truesight-word',
-                          hasScoredEntry ? 'grimoire-word' : 'grimoire-word--grey',
+                          shouldColor ? 'grimoire-word' : 'grimoire-word--grey',
                           decoded?.className || '',
                           isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                         ].filter(Boolean).join(' ');
-
-                        // Prioritize bytecode-provided color for 100% phonetic accuracy,
-                        // falling back to legacy family-based colors.
-                        const finalColor = decoded?.color || color;
 
                         if (!onWordActivate) {
                           return (
                             <span
                               key={start}
                               className={wordClassName}
-                              style={{ color: finalColor, opacity: wordOpacity, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
+                              style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
                               data-char-start={charStart}
                             >
                               {token}
@@ -1280,7 +1251,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             key={start}
                             type="button"
                             className={`${wordClassName} grimoire-word--interactive`}
-                            style={{ color: finalColor, opacity: wordOpacity, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
+                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}
@@ -1310,10 +1281,20 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                     <motion.div
                       key={`ghost-${li}`}
                       className={`truesight-line truesight-line--${lineData.lineType} truesight-line--highlighted truesight-ghost-line`}
-                      initial={{ y: initialY, opacity: 0.6 }}
-                      animate={{ y: targetY, opacity: 1 }}
-                      exit={{ y: initialY, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 140, damping: 20 }}
+                      initial={{ y: initialY, opacity: 0.6, scale: 0.98 }}
+                      animate={{ y: targetY, opacity: 1, scale: 1 }}
+                      exit={{ y: initialY, opacity: 0, scale: 0.98 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 140,
+                        damping: 20,
+                        mass: 0.8,
+                        restDelta: 0.001
+                      }}
+                      style={{
+                        willChange: "transform, opacity",
+                        contain: "layout paint style"
+                      }}
                     >
                       {lineData.tokens.map(({ token, start: charStart, lineIndex, wordIndex }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
@@ -1325,27 +1306,25 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           || derivedAnalyzedWordsByCharStart.get(charStart)
                           || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
                         const rawVowelFamily = analysis?.vowelFamily;
-                        const wordVowelFamily = analysis ? normalizeVowelFamily(rawVowelFamily) : null;   
-                        const shouldColor = analysis ? shouldColorWordHook(charStart, clean, wordVowelFamily) : false;
-                        const activeColors = vowelColors || DEFAULT_VOWEL_COLORS;
-                        const codexEntry = shouldColor ? (activeColorMap?.get(charStart) ?? null) : null;       
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(rawVowelFamily) : null;
+                        
+                        // Get bytecode from analysis (authoritative source from Codex)
+                        const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
+                        
+                        // Determine if word should be colored using bytecode-native logic
+                        const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
+                          : false;
 
-                        const resolvedSchool = wordVowelFamily
-                          ? (VOWEL_FAMILY_TO_SCHOOL[wordVowelFamily] || null)
-                          : null;
-                        const bytecode = analysis?.visualBytecode || (shouldColor && codexEntry
-                          ? synthesizeBytecodeFromLegacy(codexEntry, resolvedSchool)
-                          : null);
-                        const decoded = bytecode
+                        // Decode bytecode into CSS classes and custom properties
+                        const decoded = bytecode && shouldColor
                           ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
                           : null;
 
-                        const color = decoded?.color || (shouldColor
-                          ? (codexEntry?.color || (rawVowelFamily && activeColors[rawVowelFamily]) || activeColors[wordVowelFamily] || undefined)
-                          : undefined);
-
-                        const isMultiSyllable = shouldColor && (codexEntry?.isMultiSyllable || decoded?.syllableDepth >= 2);
-                        const isRichMultiSyllable = shouldColor && (codexEntry?.syllablesMatched >= 3 || decoded?.syllableDepth >= 3);
+                        // Color from bytecode is authoritative
+                        const color = decoded?.color || null;
+                        const isMultiSyllable = shouldColor && (decoded?.syllableDepth >= 2);
+                        const isRichMultiSyllable = shouldColor && (decoded?.syllableDepth >= 3);
 
                         return (
                           <span
@@ -1357,11 +1336,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                               isMultiSyllable ? "word--multi-rhyme" : "",
                               isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
-                            style={{ color, ...(decoded?.style || {}) }}
+                            style={{ color: color || undefined, ...(decoded?.style || {}) }}
                           >
                             {token}
                           </span>
-                        );                      })}
+                        );
+                      })}
                     </motion.div>
                   );
                 })}

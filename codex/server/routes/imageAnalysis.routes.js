@@ -11,7 +11,7 @@ import { analyzeReferenceImage } from '../services/imageAnalysis.service.js';
  */
 export async function imageAnalysisRoutes(app) {
   // Upload and analyze reference image
-  app.post('/api/image/analyze', {
+  app.post('/analyze', {
     config: {
       rateLimit: {
         max: 10,
@@ -19,20 +19,6 @@ export async function imageAnalysisRoutes(app) {
       },
     },
     schema: {
-      consumes: ['multipart/form-data'],
-      body: {
-        type: 'object',
-        properties: {
-          image: {
-            type: 'string',
-            format: 'binary',
-          },
-          description: {
-            type: 'string',
-            maxLength: 500,
-          },
-        },
-      },
       response: {
         200: {
           type: 'object',
@@ -60,6 +46,7 @@ export async function imageAnalysisRoutes(app) {
       });
 
       if (!data || !data.file) {
+        app.log.warn('Upload attempt with no file or invalid data');
         return reply.status(400).send({
           error: 'No image file provided. Upload a PNG, JPEG, or BMP image.',
         });
@@ -75,7 +62,7 @@ export async function imageAnalysisRoutes(app) {
       }
 
       // Read file buffer
-      const buffer = await data.file.toBuffer();
+      const buffer = await data.toBuffer();
 
       // Get optional description
       const description = data.fields.description?.value || '';
@@ -108,7 +95,7 @@ export async function imageAnalysisRoutes(app) {
   });
 
   // Simple JSON-based endpoint for base64 images (alternative to multipart)
-  app.post('/api/image/analyze/base64', {
+  app.post('/analyze/base64', {
     config: {
       rateLimit: {
         max: 10,

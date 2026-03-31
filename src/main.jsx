@@ -17,6 +17,7 @@ import {
   CombatPage,
   NexusPage,
   PixelBrainPage,
+  CareerPage,
   PAGE_COMPONENTS,
 } from "./lib/routes.js";
 
@@ -42,6 +43,7 @@ const router = createBrowserRouter([
       { path: "combat", element: <CombatPage /> },
       { path: "nexus", element: <NexusPage /> },
       { path: "pixelbrain", element: <PixelBrainPage /> },
+      { path: "career", element: <CareerPage /> },
     ],
   },
 ]);

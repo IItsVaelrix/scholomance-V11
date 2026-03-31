@@ -201,6 +201,17 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     service.toggleCyclingEnabled();
   }, [service]);
 
+  const setOutputDevice = useCallback(
+    async (deviceId: string) => {
+      await service.setOutputDevice(deviceId);
+    },
+    [service]
+  );
+
+  const updateOutputDevices = useCallback(async () => {
+    await service.updateOutputDevices();
+  }, [service]);
+
   const setOrbVisibility = useCallback((visible: boolean) => {
     const nextVisible = Boolean(visible);
     setOrbVisibleState(nextVisible);
@@ -262,6 +273,10 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     setCyclingEnabled,
     toggleCyclingEnabled,
     orbVisible,
+    outputDevices: state.outputDevices || [],
+    sinkId: state.sinkId || "",
+    setOutputDevice,
+    updateOutputDevices,
     setOrbVisibility,
     toggleOrbVisibility,
     unlockAudio,

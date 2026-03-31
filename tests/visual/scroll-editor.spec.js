@@ -2,7 +2,8 @@ import { test, expect } from "@playwright/test";
 
 test.describe("ScrollEditor save behavior", () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/read", { waitUntil: "domcontentloaded" });
+    await page.goto("/read", { waitUntil: "load" });
+    await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
     await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
   });
 

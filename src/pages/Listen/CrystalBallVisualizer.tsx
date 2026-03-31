@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import type Phaser from 'phaser';
 import { CrystalBallScene } from './scenes/CrystalBallScene';
+import { getAmbientPlayerService } from '../../lib/ambient/ambientPlayer.service.js';
 
 interface CrystalBallVisualizerProps {
   signalLevel: number;
@@ -45,7 +46,8 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
         const scene = game?.scene.getScene('CrystalBallScene') as CrystalBallScene;
         sceneRef.current = scene;
         // Push initial state immediately
-        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId });
+        const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
+        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId, bpm });
       });
 
       gameRef.current = game;
@@ -60,7 +62,8 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
   }, [size]);
 
   useEffect(() => {
-    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId });
+    const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
+    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId, bpm });
   }, [signalLevel, schoolColor, glyph, isTuning, schoolId]);
 
   return (

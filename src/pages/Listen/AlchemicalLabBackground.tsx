@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type Phaser from 'phaser';
 import { cacheBackground } from '../../lib/cache/backgroundCache';
+import { getAmbientPlayerService } from '../../lib/ambient/ambientPlayer.service.js';
 
 // Shared game reference for SignalChamberConsole to attach to
 let sharedPhaserGame: Phaser.Game | null = null;
@@ -129,7 +130,8 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
   useEffect(() => {
     // Sync React state to Phaser background scene
     if (bgSceneRef.current) {
-      bgSceneRef.current.updateState({ signalLevel });
+      const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
+      bgSceneRef.current.updateState({ signalLevel, bpm });
     }
   }, [signalLevel]);
 
@@ -159,11 +161,10 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
           <div className="arch-ring arch-ring--outer" />
           <div className="arch-ring arch-ring--mid" />
           <div className="arch-ring arch-ring--inner" />
-          <div className="arch-hexagram">
-            <svg viewBox="0 0 200 200" className="hexagram-svg">
-              {/* Hexagram starts perfectly horizontal (pointing up/down) */}
-              <path d="M100 30 L170 150 L30 150 Z" className="hexagram-tri-up" />
-              <path d="M100 170 L170 50 L30 50 Z" className="hexagram-tri-down" />
+          <div className="arch-pentagram">
+            <svg viewBox="0 0 200 200" className="pentagram-svg">
+              {/* Pentagram drawn with a single continuous stroke for sharp magical look */}
+              <path d="M100 20 L147 165 L24 75 L176 75 L53 165 Z" className="pentagram-path" />
             </svg>
           </div>
         </div>

@@ -43,6 +43,7 @@ export const LINKS = [
   { id: "combat", path: "/combat", label: "Combat" },
   { id: "nexus",  path: "/nexus",  label: "Nexus" },
   { id: "pixelbrain", path: "/pixelbrain", label: "PixelBrain" },
+  { id: "career", path: "/career", label: "Career" },
   { id: "collab", path: "/collab", label: "Collab" },
 ];
 

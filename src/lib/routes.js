@@ -9,6 +9,7 @@ export const ProfilePage = lazyWithRetry(() => import("../pages/Profile/ProfileP
 export const CombatPage = lazyWithRetry(() => import("../pages/Combat/CombatPage.jsx"), "combat-page");
 export const NexusPage = lazyWithRetry(() => import("../pages/Nexus/NexusPage.jsx"), "nexus-page");
 export const PixelBrainPage = lazyWithRetry(() => import("../pages/PixelBrain/PixelBrainPage.jsx"), "pixelbrain-page");
+export const CareerPage = lazyWithRetry(() => import("../pages/Career/CareerPage"), "career-page");
 
 export const PAGE_COMPONENTS = {
   "/watch": WatchPage,
@@ -20,6 +21,7 @@ export const PAGE_COMPONENTS = {
   "/combat": CombatPage,
   "/nexus": NexusPage,
   "/pixelbrain": PixelBrainPage,
+  "/career": CareerPage,
 };
 
 /**

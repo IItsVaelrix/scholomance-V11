@@ -39,9 +39,10 @@ test.describe('Gremlin Chaos Test', () => {
   test('should survive rapid interaction and environment changes', async ({ page }) => {
     // 1. Navigation Spam
     const navLinks = ['watch', 'listen', 'read'];
-    // Wait for at least one nav link to be visible to ensure hydration
-    await page.waitForSelector('nav a', { state: 'visible' });
-    
+    // Wait for navigation to be visible - use more specific selector
+    await page.waitForSelector('.primary-nav', { state: 'visible', timeout: 15000 });
+    await page.waitForSelector('a.nav-link', { state: 'visible', timeout: 5000 });
+
     for (let i = 0; i < 10; i++) {
       const target = navLinks[i % navLinks.length];
       await page.click(`nav a[href="/${target}"]`);

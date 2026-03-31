@@ -505,16 +505,12 @@
   word-break: break-all;
 }
 
-/* === TERMINAL BEZEL (Etch-a-Sketch knobs) === */
+/* === TERMINAL BEZEL (Holographic emitters) === */
 .terminal-bezel {
   position: relative;
   margin-top: -2px;
   padding: 16px 20px 20px;
-  background: linear-gradient(
-    180deg,
-    #1a1a1a 0%,
-    #0d0d0d 100%
-  );
+  background: #1a1a1a;
   border: 2px solid #222;
   border-top: none;
   border-radius: 0 0 8px 8px;
@@ -523,33 +519,43 @@
   align-items: center;
 }
 
-.bezel-knob {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    #3a3a3a 0%,
-    #1a1a1a 60%,
-    #0a0a0a 100%
-  );
-  border: 2px solid #2a2a2a;
-  box-shadow:
-    0 4px 8px rgba(0, 0, 0, 0.4),
-    inset 0 2px 4px rgba(255, 255, 255, 0.1);
+.bezel-emitter {
   position: relative;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.bezel-knob::after {
-  content: "";
+.emitter-core {
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid var(--active-school-color, #00ff88);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 8px;
+  color: var(--active-school-color, #00ff88);
+  box-shadow: 0 0 10px var(--active-school-color, #00ff88);
+  z-index: 2;
+}
+
+.emitter-rings {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 16px;
-  background: #444;
-  transform: translate(-50%, -100%);
-  border-radius: 2px;
+  inset: 0;
+  border: 1px solid var(--active-school-color, #00ff88);
+  border-radius: 50%;
+  opacity: 0.3;
+  animation: emitter-pulse 2s infinite ease-out;
+}
+
+@keyframes emitter-pulse {
+  0% { transform: scale(0.8); opacity: 0.5; }
+  100% { transform: scale(1.4); opacity: 0; }
 }
 
 .bezel-brand {
@@ -573,9 +579,9 @@
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .bezel-knob {
-    width: 32px;
-    height: 32px;
+  .bezel-emitter {
+    width: 36px;
+    height: 36px;
   }
 }
 

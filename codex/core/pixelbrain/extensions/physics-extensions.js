@@ -44,128 +44,147 @@ function applyMotionBlur(buffer, durationMs) {
 /**
  * Physics extension for stretch/squash animation
  */
-export const physicsStretchSquash = {
-  id: 'physics-stretch-squash',
-  type: 'PHYSICS',
-  
-  config: DEFAULT_CONFIG,
-  
-  /**
-   * Update extension configuration
-   * @param {Object} newConfig - New configuration values
-   */
-  configure(newConfig) {
-    Object.assign(this.config, {
-      ...DEFAULT_CONFIG,
-      ...newConfig,
-    });
+export const physicsStretchSquash = Object.assign(
+  function(payload, context) {
+    const coords = payload.coordinates || (Array.isArray(payload) ? payload : []);
+    return {
+      ...payload,
+      coordinates: physicsStretchSquash.hooks.onCoordinateMap(coords, context)
+    };
   },
-  
-  hooks: {
+  {
+    id: 'physics-stretch-squash',
+    type: 'PHYSICS',
+    
+    config: { ...DEFAULT_CONFIG }, // Remove Object.freeze to allow configure()
+    
     /**
-     * Apply stretch/squash to coordinates
-     * @param {Array} coords - Input coordinates
-     * @param {Object} _context - Extension context
-     * @returns {Array} Modified coordinates
+     * Update extension configuration
+     * @param {Object} newConfig - New configuration values
      */
-    onCoordinateMap(coords, _context) {
-      if (!Array.isArray(coords) || coords.length === 0) return coords;
-      
-      const { stretchFactor, squashFactor } = this.config;
-      const centerX = Math.max(...coords.map(c => c.x || 0)) / 2;
-      const centerY = Math.max(...coords.map(c => c.y || 0)) / 2;
-      
-      return coords.map((coord, index) => {
-        // Create wave-like stretch pattern
-        const wavePhase = (index / coords.length) * Math.PI * 2;
-        const stretchX = 1 + (Math.sin(wavePhase) * (stretchFactor - 1) * 0.5);
-        const squashY = 1 - (Math.sin(wavePhase) * (1 - squashFactor) * 0.5);
-        
-        return {
-          ...coord,
-          x: Math.round(centerX + ((coord.x - centerX) * stretchX)),
-          y: Math.round(centerY + ((coord.y - centerY) * squashY)),
-        };
+    configure(newConfig) {
+      Object.assign(this.config, {
+        ...DEFAULT_CONFIG,
+        ...newConfig,
       });
     },
     
-    /**
-     * Apply motion blur for animation frames
-     * @param {Uint8ClampedArray} buffer - Pixel buffer
-     * @param {Object} _context - Extension context
-     * @returns {Uint8ClampedArray} Modified buffer
-     */
-    onRender(buffer, _context) {
-      if (!(buffer instanceof Uint8ClampedArray)) return buffer;
+    hooks: {
+      /**
+       * Apply stretch/squash to coordinates
+       * @param {Array} coords - Input coordinates
+       * @param {Object} _context - Extension context
+       * @returns {Array} Modified coordinates
+       */
+      onCoordinateMap(coords, _context) {
+        if (!Array.isArray(coords) || coords.length === 0) return coords;
+        
+        const { stretchFactor, squashFactor } = physicsStretchSquash.config;
+        const centerX = Math.max(...coords.map(c => c.x || 0)) / 2;
+        const centerY = Math.max(...coords.map(c => c.y || 0)) / 2;
+        
+        return coords.map((coord, index) => {
+          // Create wave-like stretch pattern
+          const wavePhase = (index / coords.length) * Math.PI * 2;
+          const stretchX = 1 + (Math.sin(wavePhase) * (stretchFactor - 1) * 0.5);
+          const squashY = 1 - (Math.sin(wavePhase) * (1 - squashFactor) * 0.5);
+          
+          return {
+            ...coord,
+            x: Math.round(centerX + ((coord.x - centerX) * stretchX)),
+            y: Math.round(centerY + ((coord.y - centerY) * squashY)),
+          };
+        });
+      },
       
-      const { animationDuration } = this.config;
-      return applyMotionBlur(buffer, animationDuration);
+      /**
+       * Apply motion blur for animation frames
+       * @param {Uint8ClampedArray} buffer - Pixel buffer
+       * @param {Object} _context - Extension context
+       * @returns {Uint8ClampedArray} Modified buffer
+       */
+      onRender(buffer, _context) {
+        if (!(buffer instanceof Uint8ClampedArray)) return buffer;
+        
+        const { animationDuration } = physicsStretchSquash.config;
+        return applyMotionBlur(buffer, animationDuration);
+      },
     },
-  },
-  
-  /**
-   * Activate extension
-   * @param {Object} context - Extension registry context
-   */
-  activate(context) {
-    context.registerHook('coordinate-map', this.hooks.onCoordinateMap);
-    context.registerHook('render', this.hooks.onRender);
-  },
-  
-  /**
-   * Deactivate extension
-   * @param {Object} context - Extension registry context
-   */
-  deactivate(context) {
-    context.unregisterHook('coordinate-map');
-    context.unregisterHook('render');
-  },
-};
+    
+    /**
+     * Activate extension
+     * @param {Object} context - Extension registry context
+     */
+    activate(context) {
+      context.registerHook('coordinate-map', this.hooks.onCoordinateMap);
+      context.registerHook('render', this.hooks.onRender);
+    },
+    
+    /**
+     * Deactivate extension
+     * @param {Object} context - Extension registry context
+     */
+    deactivate(context) {
+      context.unregisterHook('coordinate-map');
+      context.unregisterHook('render');
+    },
+  }
+);
 
 /**
  * Gravity simulation extension
  * Applies gravitational pull to coordinates
  */
-export const physicsGravity = {
-  id: 'physics-gravity',
-  type: 'PHYSICS',
-  
-  config: Object.freeze({
-    gravity: 9.8, // m/s² equivalent
-    timeStep: 0.016, // 60fps
-    floorY: null, // Auto-detect if null
-  }),
-  
-  hooks: {
-    onCoordinateMap(coords, _context) {
-      if (!Array.isArray(coords) || coords.length === 0) return coords;
-      
-      const { gravity, timeStep, floorY } = this.config;
-      const maxY = Math.max(...coords.map(c => c.y || 0));
-      const floor = floorY !== null ? floorY : maxY;
-      
-      return coords.map((coord) => {
-        const height = floor - (coord.y || 0);
-        const fallTime = Math.sqrt((2 * height) / gravity);
-        const velocity = gravity * fallTime * timeStep;
-        
-        return {
-          ...coord,
-          y: Math.min(floor, (coord.y || 0) + velocity * 10),
-          z: Math.max(0, (coord.z || 0) - velocity),
-        };
-      });
+export const physicsGravity = Object.assign(
+  function(payload, context) {
+    const coords = payload.coordinates || (Array.isArray(payload) ? payload : []);
+    return {
+      ...payload,
+      coordinates: physicsGravity.hooks.onCoordinateMap(coords, context)
+    };
+  },
+  {
+    id: 'physics-gravity',
+    type: 'PHYSICS',
+    
+    config: {
+      gravity: 9.8, // m/s² equivalent
+      timeStep: 0.016, // 60fps
+      floorY: null, // Auto-detect if null
     },
-  },
-  
-  activate(context) {
-    context.registerHook('coordinate-map', this.hooks.onCoordinateMap);
-  },
-  
-  deactivate(context) {
-    context.unregisterHook('coordinate-map');
-  },
-};
+    
+    hooks: {
+      onCoordinateMap(coords, _context) {
+        if (!Array.isArray(coords) || coords.length === 0) return coords;
+        
+        const { gravity, timeStep, floorY } = physicsGravity.config;
+        const maxY = Math.max(...coords.map(c => c.y || 0));
+        const floor = floorY !== null ? floorY : maxY;
+        
+        return coords.map((coord) => {
+          const height = floor - (coord.y || 0);
+          const fallTime = Math.sqrt((2 * height) / gravity);
+          const velocity = gravity * fallTime * timeStep;
+          
+          return {
+            ...coord,
+            y: Math.min(floor, (coord.y || 0) + velocity * 10),
+            z: Math.max(0, (coord.z || 0) - velocity),
+          };
+        });
+      },
+    },
+    
+    activate(context) {
+      context.registerHook('coordinate-map', this.hooks.onCoordinateMap);
+    },
+    
+    deactivate(context) {
+      context.unregisterHook('coordinate-map');
+    },
+  }
+);
+
 
 /**
  * Bounce animation extension

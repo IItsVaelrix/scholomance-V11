@@ -9,7 +9,8 @@ function makeLongContent(lines = 140) {
 }
 
 test("tmp read seam repro", async ({ page }) => {
-  await page.goto("/read", { waitUntil: "domcontentloaded" });
+  await page.goto("/read", { waitUntil: "load" });
+  await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
   await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
   await page.getByRole("button", { name: "Begin New Scroll" }).click();

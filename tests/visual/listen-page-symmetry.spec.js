@@ -24,15 +24,15 @@ test.describe("Listen Page Symmetry QA", () => {
   test("console is centered on page", async ({ page }) => {
     await page.setViewportSize({ width: 1920, height: 1080 });
     await page.goto("/listen", { waitUntil: "load" });
-    await page.waitForSelector(".listen-shell", { state: "visible", timeout: 10000 });
+    await page.waitForSelector(".listen-chamber", { state: "visible", timeout: 10000 });
 
-    const consoleEl = page.locator(".signal-chamber-player-overlay");
+    const consoleEl = page.locator(".signal-chamber-console");
     await expect(consoleEl).toBeVisible();
 
     const box = await consoleEl.boundingBox();
     const centerX = box.x + box.width / 2;
     const viewportCenterX = 1920 / 2;
-    
+
     // Should be within 150px of center
     expect(Math.abs(centerX - viewportCenterX)).toBeLessThan(150);
   });
@@ -41,16 +41,15 @@ test.describe("Listen Page Symmetry QA", () => {
     await page.goto("/listen", { waitUntil: "load" });
     await page.waitForTimeout(2000);
 
-    const header = page.locator(".listen-header");
+    const header = page.locator(".hud-header");
     await expect(header).toBeVisible();
 
-    const badges = header.locator(".badge");
-    await expect(badges).toHaveCount(2);
+    const logoText = header.locator(".logo-text");
+    await expect(logoText).toBeVisible();
 
-    // Status should be STANDBY or TRANSMITTING
-    const statusBadge = badges.last();
-    const statusText = await statusBadge.textContent();
-    expect(statusText).toMatch(/STANDBY|TRANSMITTING/i);
+    // Version indicator should be visible
+    const versionInd = header.locator(".logo-ver");
+    await expect(versionInd).toBeVisible();
   });
 
   test("visual screenshot for manual review", async ({ page }) => {

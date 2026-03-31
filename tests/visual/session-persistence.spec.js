@@ -17,7 +17,8 @@ test.describe("Session Persistence", () => {
     };
 
         // === SESSION 1: Create a new scroll ===
-        await page.goto("/read", { waitUntil: "domcontentloaded" });
+        await page.goto("/read", { waitUntil: "load" });
+        await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
         await expect(page.locator(".ide-layout-wrapper")).toBeVisible();
 
         // Wait for animations to settle before clicking

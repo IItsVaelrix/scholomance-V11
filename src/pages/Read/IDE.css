@@ -1709,18 +1709,96 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
-/* ── Visual Bytecode effect tiers ─────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────────────────
+   GPU ACCELERATION LAYER PROMOTIONS
+   Promote frequently-updated elements to their own compositor layers
+   ────────────────────────────────────────────────────────────────────────── */
+
+.ide-layout-wrapper {
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Editor container — promote to GPU layer */
+.ide-layout-wrapper .editor-textarea-wrapper {
+  contain: layout paint;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Textarea — GPU accelerated scrolling */
+.ide-layout-wrapper .editor-textarea {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: scroll-position;
+}
+
+/* Truesight overlay — GPU accelerated for word-by-word rendering */
+.ide-layout-wrapper .truesight-overlay {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: scroll-position;
+  contain: layout paint;
+}
+
+/* Truesight lines — promote each line to reduce repaint */
+.ide-layout-wrapper .truesight-line {
+  contain: layout style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Words — GPU accelerated for color/glow changes */
+.ide-layout-wrapper .truesight-word,
+.ide-layout-wrapper .grimoire-word {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: color, text-shadow, filter, background-color;
+  contain: layout style;
+}
+
+/* Interactive words — additional promotion for hover states */
+.ide-layout-wrapper .grimoire-word--interactive {
+  will-change: transform, background-color, box-shadow;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Ghost layer — heavily animated, full GPU promotion */
+.ide-layout-wrapper .truesight-ghost-layer {
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
+.ide-layout-wrapper .truesight-ghost-line {
+  contain: layout paint style;
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BYTECODE EFFECTS — GPU ACCELERATED
+   Use transform-based effects where possible, minimize layout thrashing
+   ────────────────────────────────────────────────────────────────────────── */
 
 .ide-layout-wrapper [class*="vb-effect--"] {
   --vb-glow-intensity: 0;
   --vb-saturation-boost: 0;
   --vb-syllable-depth: 0;
-  transition: text-shadow 0.3s ease, filter 0.3s ease;
+  will-change: text-shadow, filter, transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: text-shadow 0.3s ease, filter 0.3s ease, transform 0.3s ease;
 }
 
 /* RESONANT: subtle single-syllable presence */
 .ide-layout-wrapper .vb-effect--resonant {
   text-shadow: 0 0 calc(4px * var(--vb-glow-intensity)) currentColor;
+  transform: translateZ(0);
 }
 
 /* HARMONIC: earned multi-syllable glow */
@@ -1730,6 +1808,7 @@
     0 0 calc(6px * var(--vb-glow-intensity)) var(--vb-glow-color),
     0 0 calc(14px * var(--vb-glow-intensity)) var(--vb-glow-color);
   filter: brightness(calc(1 + 0.1 * var(--vb-glow-intensity)));
+  transform: translateZ(0);
 }
 
 /* TRANSCENDENT: rare/inexplicable, maximum earned effect */
@@ -1741,9 +1820,47 @@
     0 0 calc(30px * var(--vb-glow-intensity)) var(--vb-glow-color);
   filter: brightness(calc(1 + 0.15 * var(--vb-glow-intensity)))
           saturate(calc(1 + 0.3 * var(--vb-saturation-boost)));
+  transform: translateZ(0);
+  will-change: text-shadow, filter, transform;
 }
 
-/* Bytecode School Overlays (Authoritative) */
+/* Anchor words — subtle scale promotion */
+.ide-layout-wrapper .vb-anchor {
+  box-shadow: 0 1px 0 0 currentColor;
+  transform: translateZ(0);
+}
+
+/* Hover states — use transform for GPU acceleration */
+.ide-layout-wrapper .grimoire-word:hover,
+.ide-layout-wrapper .truesight-word:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateZ(0);
+}
+
+/* Focus states — GPU accelerated outline */
+.ide-layout-wrapper .grimoire-word--interactive:focus-visible,
+.ide-layout-wrapper .truesight-word-token:focus-visible {
+  outline: 1px solid rgba(124, 198, 255, 0.9);
+  outline-offset: 1px;
+  transform: translateZ(0);
+}
+
+/* Reduced motion — disable will-change to free GPU memory */
+@media (prefers-reduced-motion: reduce) {
+  .ide-layout-wrapper [class*="vb-effect--"],
+  .ide-layout-wrapper .truesight-word,
+  .ide-layout-wrapper .grimoire-word,
+  .ide-layout-wrapper .truesight-ghost-line {
+    will-change: auto;
+    transition: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   SCROLLBAR GPU OPTIMIZATION
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Bytecode School Overlays (Authoritative) — GPU accelerated */
 .ide-layout-wrapper .vb-school--sonic { --vb-school-glow: var(--sonic-primary); }
 .ide-layout-wrapper .vb-school--psychic { --vb-school-glow: var(--psychic-primary); }
 .ide-layout-wrapper .vb-school--void { --vb-school-glow: var(--void-primary); }
@@ -1754,24 +1871,16 @@
 .ide-layout-wrapper .vb-rarity--rare {
   font-weight: 600;
   letter-spacing: 0.01em;
+  transform: translateZ(0);
 }
 .ide-layout-wrapper .vb-rarity--inexplicable {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-decoration: underline dotted rgba(255, 255, 255, 0.4);
+  transform: translateZ(0);
 }
 
-/* Bytecode Anchors (Rhyme cluster cores) */
-.ide-layout-wrapper .vb-anchor {
-  box-shadow: 0 1px 0 0 currentColor;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ide-layout-wrapper [class*="vb-effect--"] {
-    transition: none;
-  }
-}
-
+/* Rhyme highlight underline — GPU accelerated */
 .ide-layout-wrapper .grimoire-word--rhyme-highlight::after {
   content: "";
   position: absolute;
@@ -1783,6 +1892,8 @@
   background: currentColor;
   box-shadow: 0 0 8px currentColor;
   opacity: 0.75;
+  transform: translateZ(0);
+  will-change: opacity, box-shadow;
 }
 
 .ide-layout-wrapper .rhyme-scheme-panel,

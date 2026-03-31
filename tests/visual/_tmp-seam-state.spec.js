@@ -9,7 +9,8 @@ function makeLongContent(lines = 320) {
 }
 
 test("tmp seam state capture", async ({ page }) => {
-  await page.goto("/read", { waitUntil: "domcontentloaded" });
+  await page.goto("/read", { waitUntil: "load" });
+  await page.waitForSelector(".ide-layout-wrapper", { state: "visible", timeout: 15000 });
 
   const newBtn = page.getByRole("button", { name: /new scroll/i }).first();
   await expect(newBtn).toBeVisible();

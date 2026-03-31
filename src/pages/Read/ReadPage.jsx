@@ -22,7 +22,6 @@ import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool, getRitualPalette } from "../../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
-import { buildColorMap } from "../../lib/colorCodex.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
 import { getCachedWord, setCachedWord, pruneOldCaches } from "../../lib/platform/wordCache.js";
@@ -63,7 +62,7 @@ const TOOLTIP_HEIGHT = 510;
 const TOOLTIP_MARGIN = 12;
 const TOOLTIP_OFFSET_X = 14;
 const TOOLTIP_OFFSET_Y = -8;
-const AUTOSAVE_DELAY_MS = 1200;
+const AUTOSAVE_DELAY_MS = 180000; // 3 minutes
 
 const ENABLE_SYNTAX_RHYME_LAYER = parseBooleanEnvFlag(
   import.meta.env.VITE_ENABLE_SYNTAX_RHYME_LAYER,
@@ -395,25 +394,13 @@ export default function ReadPage() {
     return map;
   }, [deepAnalysis]);
 
-  const colorMap = useMemo(() => {
-    if (!deepAnalysis?.wordAnalyses || !deepAnalysis?.allConnections) return null;
-    return buildColorMap(
-      deepAnalysis.wordAnalyses,
-      deepAnalysis.allConnections,
-      activeVowelColors,
-      {
-        theme,
-        analysisMode,
-        syntaxLayer: deepAnalysis?.syntaxSummary || null,
-      }
-    );
-  }, [deepAnalysis, activeVowelColors, theme, analysisMode]);
+  // Bytecode is already on wordAnalyses from the backend — no need to build colorMap
+  // The visualBytecode field on each wordAnalysis is authoritative and produced by Codex
 
-  const [committedColors, setCommittedColors] = useState({
+  const [committedAnalysis, setCommittedAnalysis] = useState({
     analyzedWords: new Map(),
     analyzedWordsByIdentity: new Map(),
     analyzedWordsByCharStart: new Map(),
-    colorMap: null,
   });
   const isTypingRef = useRef(false);
   const typingTimeoutRef = useRef(null);
@@ -421,14 +408,14 @@ export default function ReadPage() {
 
   useEffect(() => {
     if (!deepAnalysis?.wordAnalyses?.length) return;
-    const next = { analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap };
+    const next = { analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart };
     if (isTypingRef.current) {
       pendingCommitRef.current = next;
     } else {
-      setCommittedColors(next);
+      setCommittedAnalysis(next);
       pendingCommitRef.current = null;
     }
-  }, [deepAnalysis, analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart, colorMap]);
+  }, [deepAnalysis, analyzedWords, analyzedWordsByIdentity, analyzedWordsByCharStart]);
 
   useEffect(() => {
     return () => {
@@ -682,7 +669,7 @@ export default function ReadPage() {
     typingTimeoutRef.current = setTimeout(() => {
       isTypingRef.current = false;
       if (pendingCommitRef.current) {
-        setCommittedColors(pendingCommitRef.current);
+        setCommittedAnalysis(pendingCommitRef.current);
         pendingCommitRef.current = null;
       }
     }, 400);
@@ -1139,15 +1126,14 @@ export default function ReadPage() {
             plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
             onContentChange={handleEditorContentChange}
             onTitleChange={handleEditorTitleChange}
-            analyzedWords={committedColors.analyzedWords}
-            analyzedWordsByIdentity={committedColors.analyzedWordsByIdentity}
-            analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
+            analyzedWords={committedAnalysis.analyzedWords}
+            analyzedWordsByIdentity={committedAnalysis.analyzedWordsByIdentity}
+            analyzedWordsByCharStart={committedAnalysis.analyzedWordsByCharStart}
             activeConnections={overlayConnections}
             lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
             highlightedLines={effectiveHighlightedLines}
             pinnedLines={pinnedLines}
             vowelColors={activeVowelColors}
-            colorMap={committedColors.colorMap}
             syntaxLayer={deepAnalysis?.syntaxSummary}
             analysisMode={analysisMode}
             theme={theme}
@@ -1711,15 +1697,14 @@ export default function ReadPage() {
                     plsPhoneticFeatures={scoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null}
                     onContentChange={handleEditorContentChange}
                     onTitleChange={handleEditorTitleChange}
-                    analyzedWords={committedColors.analyzedWords}
-                    analyzedWordsByIdentity={committedColors.analyzedWordsByIdentity}
-                    analyzedWordsByCharStart={committedColors.analyzedWordsByCharStart}
+                    analyzedWords={committedAnalysis.analyzedWords}
+                    analyzedWordsByIdentity={committedAnalysis.analyzedWordsByIdentity}
+                    analyzedWordsByCharStart={committedAnalysis.analyzedWordsByCharStart}
                     activeConnections={overlayConnections}
                     lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
                     highlightedLines={effectiveHighlightedLines}
                     pinnedLines={pinnedLines}
                     vowelColors={activeVowelColors}
-                    colorMap={committedColors.colorMap}
                     syntaxLayer={deepAnalysis?.syntaxSummary}
                     analysisMode={analysisMode}
                     theme={theme}

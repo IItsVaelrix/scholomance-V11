@@ -7,6 +7,110 @@
    School: SONIC THAUMATURGY
    ============================================================ */
 
+/* ─── GPU ACCELERATION ────────────────────────────────────── */
+
+.combat-page {
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Battle scene — GPU accelerated canvas container */
+.combat-battle-scene {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+
+/* Battle log entries — GPU accelerated for scroll performance */
+.combat-battle-log-entry {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  contain: layout style;
+}
+
+/* Status bars — GPU accelerated for smooth updates */
+.combat-status-bar,
+.combat-health-bar,
+.combat-mana-bar {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: width, transform;
+  contain: layout style;
+}
+
+/* Spell cast effects — GPU accelerated animations */
+.combat-spell-cast-effect {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity, filter;
+  contain: layout style;
+}
+
+/* Score reveal animations — GPU accelerated */
+.combat-score-reveal {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity, scale;
+  contain: layout style;
+}
+
+/* Spellbook cards — GPU accelerated hover/selection */
+.combat-spellbook-card {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, box-shadow, filter;
+  contain: layout style;
+}
+
+.combat-spellbook-card:hover {
+  transform: translateZ(0) scale(1.02);
+}
+
+/* Opponent doctrine panel — GPU accelerated */
+.combat-opponent-doctrine-panel {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+
+/* Action bar — GPU accelerated for quick access */
+.combat-action-bar {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+
+.combat-action-button {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, background-color, box-shadow;
+  contain: layout style;
+}
+
+/* Turn banner — GPU accelerated */
+.combat-turn-banner {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+
+/* Reduced motion — disable will-change */
+@media (prefers-reduced-motion: reduce) {
+  .combat-battle-log-entry,
+  .combat-status-bar,
+  .combat-health-bar,
+  .combat-mana-bar,
+  .combat-spell-cast-effect,
+  .combat-score-reveal,
+  .combat-spellbook-card,
+  .combat-action-button {
+    will-change: auto;
+    transition: none;
+  }
+}
+
 /* ─── Page Shell ────────────────────────────────────────────── */
 
 .combat-page {

@@ -6,7 +6,8 @@
       "Bash(taskkill *)",
       "Bash(true)",
       "Bash(timeout *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(findstr *)"
     ]
   },
   "$version": 3

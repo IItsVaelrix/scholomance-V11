@@ -7,6 +7,7 @@
 
 import { clamp01, GOLDEN_RATIO } from './shared.js';
 import { snapToPixelGrid } from './anti-alias-control.js';
+import { analyzeImageToFormula, formulaToBytecode } from './image-to-bytecode-formula.js';
 
 /**
  * @typedef {Object} ImageAnalysis
@@ -27,10 +28,14 @@ import { snapToPixelGrid } from './anti-alias-control.js';
 export function generatePixelArtFromImage(imageAnalysis, canvasSize, extension = null) {
   const { colors, composition, semanticParams, pixelData, dimensions } = imageAnalysis;
   
-  // Build palette from image colors
+  // 1. Extract mathematical formula from image
+  const formula = analyzeImageToFormula(imageAnalysis);
+  const bytecode = formulaToBytecode(formula);
+
+  // 2. Build palette from image colors
   const palettes = buildPaletteFromImageColors(colors, semanticParams);
   
-  // Generate coordinates from image features
+  // 3. Generate coordinates from image features
   const coordinates = extractFeaturesAsCoordinates(pixelData, dimensions, composition, canvasSize);
   
   // Apply extension if specified
@@ -43,8 +48,10 @@ export function generatePixelArtFromImage(imageAnalysis, canvasSize, extension =
     coordinates: finalCoordinates,
     palettes,
     canvas: canvasSize,
-    dominantAxis: composition.dominantAxis || 'horizontal',
-    dominantSymmetry: composition.hasSymmetry ? composition.symmetryType : 'none',
+    formula,
+    bytecode,
+    dominantAxis: composition?.dominantAxis || 'horizontal',
+    dominantSymmetry: composition?.hasSymmetry ? (composition?.symmetryType || 'none') : 'none',
   };
 }
 
@@ -158,7 +165,7 @@ function extractFeaturesAsCoordinates(pixelData, dimensions, composition, canvas
   
   // Snap to pixel grid
   return coordinates.map(coord => {
-    const snapped = snapToPixelGrid(coord.x, coord.y, canvasSize.gridSize || 1);
+    const snapped = snapToPixelGrid(coord, canvasSize.gridSize || 1);
     return {
       ...coord,
       snappedX: snapped.x,
@@ -289,6 +296,50 @@ export function generateSilhouetteFromImage(imageAnalysis, canvasSize) {
   // Left edge
   for (let y = silhouetteMaxY; y >= silhouetteMinY; y -= gridSize) {
     coordinates.push({ x: silhouetteMinX, y, z: 0, emphasis: 1, source: 'silhouette' });
+  }
+  
+  return coordinates;
+}
+
+/**
+ * Transcribe all non-transparent pixels into coordinates (1:1 Reconstruction)
+ * @param {Uint8ClampedArray} pixelData
+ * @param {Object} dimensions
+ * @param {Object} canvasSize
+ * @returns {Array} Coordinates
+ */
+export function transcribeFullPixelData(pixelData, dimensions, canvasSize) {
+  const { width: srcWidth, height: srcHeight } = dimensions;
+  const { width: canvasWidth, height: canvasHeight } = canvasSize;
+  
+  const scaleX = canvasWidth / srcWidth;
+  const scaleY = canvasHeight / srcHeight;
+  const scale = Math.min(scaleX, scaleY);
+  
+  const offsetX = (canvasWidth - srcWidth * scale) / 2;
+  const offsetY = (canvasHeight - srcHeight * scale) / 2;
+  
+  const coordinates = [];
+  
+  for (let y = 0; y < srcHeight; y++) {
+    for (let x = 0; x < srcWidth; x++) {
+      const idx = (y * srcWidth + x) * 4;
+      if (pixelData[idx + 3] < 1) continue; // Skip fully transparent
+
+      const canvasX = Math.round(x * scale + offsetX);
+      const canvasY = Math.round(y * scale + offsetY);
+      
+      coordinates.push({
+        x: canvasX,
+        y: canvasY,
+        z: 0,
+        color: rgbToHex(pixelData[idx], pixelData[idx+1], pixelData[idx+2]),
+        emphasis: pixelData[idx + 3] / 255,
+        source: 'full_reconstruction',
+        snappedX: canvasX,
+        snappedY: canvasY,
+      });
+    }
   }
   
   return coordinates;

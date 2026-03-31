@@ -25,9 +25,13 @@ import HolographicEmbed from './HolographicEmbed.jsx';
 
 interface SignalChamberConsoleProps {
   overrideSchoolId?: string;
+  onOrbClick?: () => void;
 }
 
-export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ overrideSchoolId }) => {
+export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ 
+  overrideSchoolId,
+  onOrbClick
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef     = useRef<SignalChamberSceneType | null>(null);
 
@@ -46,6 +50,8 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ over
     tuneNextSchool,
     tunePreviousSchool,
     togglePlayPause,
+    sinkId,
+    getBPM,
   } = useAmbientPlayer(allSchoolIds);
 
   const currentSchoolId = overrideSchoolId || rawSchoolId;
@@ -139,6 +145,7 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ over
       scene.onPlayPause     = togglePlayPause;
       scene.onVolumeChange  = setVolume;
       scene.onStationSelect = tuneToSchool;
+      scene.onOrbClick      = onOrbClick;
     };
 
     attachToSharedGame();
@@ -155,11 +162,13 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ over
     sceneRef.current.onPlayPause     = togglePlayPause;
     sceneRef.current.onVolumeChange  = setVolume;
     sceneRef.current.onStationSelect = tuneToSchool;
-  }, [togglePlayPause, setVolume, tuneToSchool]);
+    sceneRef.current.onOrbClick      = onOrbClick;
+  }, [togglePlayPause, setVolume, tuneToSchool, onOrbClick]);
 
   // ── Push reactive state into scene each render ─────────────────────────
 
   useEffect(() => {
+    const bpm = getBPM?.() || 90;
     sceneRef.current?.updateState({
       signalLevel,
       volume,
@@ -171,8 +180,9 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ over
       schoolId:    currentSchoolId,
       glyph:       currentStation?.glyph ?? '✦',
       stations,
+      bpm,
     });
-  }, [signalLevel, volume, isTuning, isPlaying, statusLabel, currentStation, currentSchoolId, stations]);
+  }, [signalLevel, volume, isTuning, isPlaying, statusLabel, currentStation, currentSchoolId, stations, getBPM]);
 
   // ── Accessibility: visually-hidden control layer ───────────────────────
   // Mirrors all Phaser-side interactive surfaces with real DOM controls.
@@ -204,6 +214,8 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ over
           onVolumeUp={() => stepVolume(0.05)}
           onPrevTrack={prevTrack}
           onNextTrack={nextTrack}
+          onIgnite={onOrbClick}
+          sinkId={sinkId}
         />
       </div>
 

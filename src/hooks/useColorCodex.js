@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
-import { buildColorMap } from '../lib/colorCodex';
 import { normalizeVowelFamily } from '../lib/phonology/vowelFamily';
+import { VOWEL_FAMILY_TO_SCHOOL } from '../data/schools.js';
 
 const STOP_WORDS = new Set([
   "A", "AN", "THE",
@@ -23,120 +23,55 @@ const STOP_WORDS = new Set([
 ]);
 
 /**
- * useColorCodex
- * Decoupled hook for managing phonetic color state and word eligibility.
+ * useColorCodex — Bytecode-native hook for phonetic color state.
+ * 
+ * Consumes VisualBytecode from wordAnalyses (produced by Codex VerseIR amplifier).
+ * No longer builds legacy colorMap — bytecode is authoritative.
  */
-export function useColorCodex(analysisSources, activeConnections, palette, syntaxLayer = null, options = {}) {
-  const { theme = 'dark', analysisMode = 'none' } = options;
+export function useColorCodex(wordAnalyses, activeConnections, syntaxLayer = null, options = {}) {
+  const { analysisMode = 'none' } = options;
 
-  const wordAnalyses = useMemo(() => {
-    if (Array.isArray(analysisSources)) return analysisSources;
-    if (analysisSources instanceof Map) {
-      return Array.from(analysisSources.entries()).map(([k, v]) => ({
-        ...v,
-        normalizedWord: typeof k === 'string' ? k : v.normalizedWord,
-        charStart: typeof k === 'number' ? k : v.charStart
-      }));
+  // Build charStart -> bytecode lookup from wordAnalyses
+  const bytecodeByCharStart = useMemo(() => {
+    const map = new Map();
+    if (!Array.isArray(wordAnalyses)) return map;
+
+    for (const analysis of wordAnalyses) {
+      const charStart = Number(analysis?.charStart);
+      if (!Number.isInteger(charStart) || charStart < 0) continue;
+
+      // Prioritize visualBytecode, fall back to trueVisionBytecode
+      const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
+      if (bytecode) {
+        map.set(charStart, { bytecode, analysis });
+      }
     }
-    
-    if (analysisSources && typeof analysisSources === 'object') {
-      const { analyzedWords, analyzedWordsByCharStart, analyzedWordsByIdentity } = analysisSources;
-      
-      // Use charStart-based map as primary flattened source if available
-      if (analyzedWordsByCharStart instanceof Map) {
-        return Array.from(analyzedWordsByCharStart.entries()).map(([k, v]) => ({ ...v, charStart: k }));
-      }
 
-      const combined = new Map();
-      if (analyzedWords instanceof Map) {
-        for (const [k, v] of analyzedWords) combined.set(k, v);
-      }
-      if (analyzedWordsByIdentity instanceof Map) {
-        for (const [k, v] of analyzedWordsByIdentity) combined.set(k, v);
-      }
-      return Array.from(combined.values());
-    }
-    return [];
-  }, [analysisSources]);
+    return map;
+  }, [wordAnalyses]);
 
-  const colorMap = useMemo(() => {
-    if (wordAnalyses.length === 0 || !palette) return new Map();
-    return buildColorMap(wordAnalyses, activeConnections, palette, {
-      theme,
-      analysisMode,
-      syntaxLayer,
-    });
-  }, [wordAnalyses, activeConnections, palette, theme, analysisMode, syntaxLayer]);
-
+  // Build connection context for rhyme mode coloring
   const colorContext = useMemo(() => {
     const connectedTokenCharStarts = new Set();
     const substitutionFamilies = new Set();
-    // Families that have at least one non-stop word directly in a connection.
-    // These families should NOT broaden to all peers — only direct participants get colored.
     const directNonStopFamilies = new Set();
     const connections = Array.isArray(activeConnections) ? activeConnections : [];
-
-    const resolveWordFamilyInternal = (wordRef) => {
-      if (!wordRef) return null;
-      const direct = normalizeVowelFamily(wordRef.vowelFamily);
-      if (direct) return direct;
-      const clean = (wordRef.normalizedWord || wordRef.word || "").toUpperCase();
-      if (analysisSources) {
-        if (analysisSources instanceof Map) {
-           const fromWord = analysisSources.get(clean);
-           if (fromWord) return normalizeVowelFamily(fromWord.vowelFamily);
-        } else if (typeof analysisSources === 'object') {
-          const { analyzedWordsByCharStart, analyzedWords } = analysisSources;
-          if (Number.isInteger(wordRef.charStart)) {
-            const fromCS = analyzedWordsByCharStart?.get(wordRef.charStart);
-            if (fromCS) return normalizeVowelFamily(fromCS.vowelFamily);
-          }
-          if (clean) {
-            const fromWord = analyzedWords?.get(clean);
-            if (fromWord) return normalizeVowelFamily(fromWord.vowelFamily);
-          }
-        }
-      }
-      return null;
-    };
 
     if (connections.length === 0) {
       return { connectedTokenCharStarts, substitutionFamilies, directNonStopFamilies };
     }
 
-    // Resolve the normalized word for a connection ref, falling back to analysisSources
-    const resolveNormalizedWord = (wordRef) => {
-      if (!wordRef) return "";
-      const direct = (wordRef.normalizedWord || wordRef.word || "").toUpperCase();
-      if (direct) return direct;
-      // Fall back to analysisSources by charStart
-      if (Number.isInteger(wordRef.charStart) && analysisSources) {
-        if (analysisSources instanceof Map) {
-          for (const [key, val] of analysisSources) {
-            if (typeof key === 'string' && val?.charStart === wordRef.charStart) return key;
-          }
-        } else if (typeof analysisSources === 'object') {
-          const fromCS = analysisSources.analyzedWordsByCharStart?.get(wordRef.charStart);
-          if (fromCS) return (fromCS.normalizedWord || fromCS.word || "").toUpperCase();
-          // Search analyzedWords map for matching charStart
-          if (analysisSources.analyzedWords) {
-            for (const [key, val] of analysisSources.analyzedWords) {
-              if (val?.charStart === wordRef.charStart) return key;
-            }
-          }
-        }
-      }
-      return "";
-    };
-
     for (const conn of connections) {
       const register = (wordRef) => {
         if (!wordRef) return;
-        if (Number.isInteger(wordRef.charStart)) connectedTokenCharStarts.add(wordRef.charStart);
-        const family = resolveWordFamilyInternal(wordRef);
+        const charStart = Number(wordRef?.charStart);
+        if (Number.isInteger(charStart) && charStart >= 0) {
+          connectedTokenCharStarts.add(charStart);
+        }
+        const family = normalizeVowelFamily(wordRef?.vowelFamily);
         if (family) {
           substitutionFamilies.add(family);
-          const norm = resolveNormalizedWord(wordRef);
+          const norm = (wordRef?.normalizedWord || wordRef?.word || "").toUpperCase();
           if (norm && !STOP_WORDS.has(norm)) {
             directNonStopFamilies.add(family);
           }
@@ -147,45 +82,101 @@ export function useColorCodex(analysisSources, activeConnections, palette, synta
     }
 
     return { connectedTokenCharStarts, substitutionFamilies, directNonStopFamilies };
-  }, [activeConnections, analysisSources]);
+  }, [activeConnections]);
 
+  /**
+   * Determines if a word should be colored based on its bytecode and analysis mode.
+   * 
+   * @param {number} charStart - Character offset of the word
+   * @param {string} normalizedWord - Uppercase normalized word
+   * @param {string} vowelFamily - Vowel family identifier
+   * @returns {boolean} - True if the word should be colored
+   */
   const shouldColorWord = useCallback((charStart, normalizedWord, vowelFamily) => {
     const isStopWord = STOP_WORDS.has(normalizedWord);
-    const codexEntry = Number.isInteger(charStart) ? colorMap.get(charStart) : null;
-    const passesGhostFloor = !codexEntry || codexEntry.isAnchor || Number(codexEntry.salience) >= 0.25;
-    
-    // Explicit VOWEL mode: Color all content words
-    if (analysisMode === 'vowel') {
-      if (isStopWord) return false;
-      return passesGhostFloor;
+    const entry = bytecodeByCharStart.get(charStart);
+    const bytecode = entry?.bytecode;
+
+    // No bytecode = no color (unless in vowel mode with content word)
+    if (!bytecode) {
+      if (analysisMode === 'vowel' && !isStopWord) {
+        // In vowel mode, color content words by their family even without bytecode
+        return !!vowelFamily;
+      }
+      return false;
     }
 
-    // Explicit RHYME mode or DEFAULT (if connections exist)
+    // INERT bytecode = never color
+    if (bytecode.effectClass === 'INERT') {
+      return false;
+    }
+
+    // VOWEL mode: color all non-stop words with valid bytecode
+    if (analysisMode === 'vowel') {
+      return !isStopWord;
+    }
+
+    // RHYME mode: color based on connection participation
     const isRhymeMode = analysisMode === 'rhyme' || (analysisMode === 'none' && activeConnections.length > 0);
-    
+
     if (isRhymeMode) {
+      // Direct connection participants always get colored
+      if (colorContext.connectedTokenCharStarts.has(charStart)) {
+        return true;
+      }
+
+      // Check syntax suppression
+      const syntaxToken = syntaxLayer?.tokenByCharStart?.get(charStart);
+      if (syntaxToken?.rhymePolicy === "suppress") {
+        return false;
+      }
+
+      // Stop words never get colored in rhyme mode
+      if (isStopWord) {
+        return false;
+      }
+
+      // Family peers: only color if family has no non-stop direct participant
       const family = normalizeVowelFamily(vowelFamily);
       const isPeer = family && colorContext.substitutionFamilies.has(family);
+      if (isPeer && colorContext.directNonStopFamilies.has(family)) {
+        return false;
+      }
 
-      const syntaxToken = syntaxLayer?.tokenByCharStart?.get(charStart);
-      if (syntaxToken?.rhymePolicy === "suppress") return false;
+      // Color if has resonance (glowIntensity > 0) and is a peer
+      if (isPeer && bytecode.glowIntensity > 0) {
+        return true;
+      }
 
-      if (isStopWord) return false;
-
-      // If this word is directly part of a connection, always color it
-      if (colorContext.connectedTokenCharStarts.has(charStart)) return true;
-
-      // Only broaden to family peers when the family has no non-stop direct participant.
-      // This prevents coloring all EH words when "echo" (non-stop) already represents EH.
-      if (isPeer && colorContext.directNonStopFamilies.has(family)) return false;
-
-      if (!isPeer) return false;
-
-      return passesGhostFloor;
+      return false;
     }
 
-    return false;
-  }, [colorContext, analysisMode, activeConnections, syntaxLayer, colorMap]);
+    // Default: color if bytecode has any resonance signal
+    return bytecode.glowIntensity > 0 || bytecode.effectClass !== 'INERT';
+  }, [bytecodeByCharStart, colorContext, analysisMode, activeConnections, syntaxLayer]);
 
-  return { colorMap, shouldColorWord };
+  /**
+   * Retrieves bytecode and derived color info for a word.
+   * 
+   * @param {number} charStart - Character offset of the word
+   * @returns {{ bytecode: object|null, analysis: object|null, school: string|null, color: string|null }}
+   */
+  const getBytecodeForWord = useCallback((charStart) => {
+    const entry = bytecodeByCharStart.get(charStart);
+    if (!entry) {
+      return { bytecode: null, analysis: null, school: null, color: null };
+    }
+
+    const { bytecode, analysis } = entry;
+    const school = bytecode?.school || (analysis?.vowelFamily ? VOWEL_FAMILY_TO_SCHOOL[normalizeVowelFamily(analysis.vowelFamily)] : null) || null;
+    const color = bytecode?.color || null;
+
+    return { bytecode, analysis, school, color };
+  }, [bytecodeByCharStart]);
+
+  return { 
+    bytecodeByCharStart, 
+    shouldColorWord,
+    getBytecodeForWord,
+  };
 }

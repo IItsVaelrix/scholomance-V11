@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { getTrackEmbedConfig } from "../../lib/musicEmbeds";
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -17,9 +18,17 @@ import { getTrackEmbedConfig } from "../../lib/musicEmbeds";
    AudioContext is created per-click and closed after the tone ends to avoid
    holding open audio resources between interactions.
 ───────────────────────────────────────────────────────────────────────────── */
-function playButtonSound(type = 'tap') {
+function playButtonSound(type = 'tap', sinkId = '') {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Apply sinkId if supported and provided
+    if (sinkId && typeof ctx.setSinkId === 'function') {
+      void ctx.setSinkId(sinkId).catch(err => {
+        console.warn("Failed to set sinkId for button sound:", err);
+      });
+    }
+
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.connect(gain);
@@ -93,13 +102,61 @@ function spawnRipple(btn, event) {
 /* ─────────────────────────────────────────────────────────────────────────────
    makeHandler — wraps a button's click handler with sound + ripple.
 ───────────────────────────────────────────────────────────────────────────── */
-function makeHandler(handler, soundType = 'tap') {
+function makeHandler(handler, soundType = 'tap', sinkId = '') {
   return (e) => {
-    playButtonSound(soundType);
+    playButtonSound(soundType, sinkId);
     spawnRipple(e.currentTarget, e);
     handler?.();
   };
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PowerArcIcon — Arcane ignition symbol.
+   Styled arcing power button that fits the Resonance Chamber aesthetic.
+───────────────────────────────────────────────────────────────────────────── */
+const PowerArcIcon = ({ color, isPlaying, isTuning }) => (
+  <svg viewBox="0 0 64 64" className={`power-arc-icon ${isPlaying ? 'is-active' : ''} ${isTuning ? 'is-tuning' : ''}`} aria-hidden="true">
+    <defs>
+      <filter id="powerGlow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2.5" result="blur" />
+        <feFlood floodColor={color} floodOpacity="0.5" result="glowColor" />
+        <feComposite in="glowColor" in2="blur" operator="in" result="softGlow" />
+        <feMerge>
+          <feMergeNode in="softGlow" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+    </defs>
+    
+    {/* Main Power Ring */}
+    <path 
+      className="power-arc-ring"
+      d="M22 17C17.1 20.6 14 26.4 14 33C14 43.5 22.5 52 33 52C43.5 52 52 43.5 52 33C52 26.4 48.9 20.6 44 17" 
+      stroke={color} 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      fill="none"
+      filter="url(#powerGlow)"
+    />
+    
+    {/* Central Stem (Lightning Bolt hybrid) */}
+    <path 
+      className="power-arc-stem"
+      d="M33 10L33 22L30 26L33 34" 
+      stroke={color} 
+      strokeWidth="3" 
+      strokeLinecap="round" 
+      fill="none"
+      filter="url(#powerGlow)"
+    />
+    
+    {/* Static Arcs jumping the gap */}
+    <g className="power-arc-secondary" stroke={color} strokeWidth="1" strokeLinecap="round" opacity="0.4">
+      <path d="M28 14L31 18" />
+      <path d="M38 14L35 18" />
+    </g>
+  </svg>
+);
 
 /* ─────────────────────────────────────────────────────────────────────────────
    HolographicEmbed
@@ -121,6 +178,8 @@ export default function HolographicEmbed({
   onVolumeUp,
   onPrevTrack,
   onNextTrack,
+  onIgnite,
+  sinkId = '',
 }) {
   /* Aetheric current overflow twitch — truly random interval, purely visual */
   const [isTwitching, setIsTwitching] = useState(false);
@@ -178,7 +237,11 @@ export default function HolographicEmbed({
       style={{ '--active-school-color': schoolColor }}
     >
       {/* ── TransmissionCore ──────────────────────────────────────────── */}
-      <div className="listen-console__core-shell">
+      <motion.div 
+        className="listen-console__core-shell"
+        layoutId="central-orb"
+        transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
+      >
         <div className={coreClass}>
           <div className="signal-core__halo" />
           <div className="signal-core__aperture">
@@ -209,17 +272,27 @@ export default function HolographicEmbed({
                         d="M26 176 C56 132, 92 208, 124 164 S188 110, 224 168 S280 212, 306 150" />
                   <path className="signal-core__wave-line signal-core__wave-line--secondary"
                         d="M24 144 C54 172, 90 118, 122 146 S188 190, 224 144 S280 108, 304 132" />
-                  <circle className="signal-core__focus-dot"   cx="160" cy="160" r="10" />
-                  <circle className="signal-core__focus-pulse" cx="160" cy="160" r="18" />
                 </svg>
 
                 <div className="signal-core__screen-label">{stateLabel}</div>
-                <div className="signal-core__glyph">{glyph || '✦'}</div>
+                
+                {/* Central Power Ignition Icon — Replaces Glyph and Focus Dots */}
+                <button 
+                  className="signal-core__ignition-btn"
+                  onClick={makeHandler(onIgnite, 'play', sinkId)}
+                  aria-label="Ignite Station Matrix"
+                >
+                  <PowerArcIcon 
+                    color={schoolColor} 
+                    isPlaying={isPlaying} 
+                    isTuning={isTuning} 
+                  />
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── ConsoleDivider ────────────────────────────────────────────── */}
       <div className="listen-console__divider" aria-hidden="true" />
@@ -248,7 +321,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn transport-console__btn--station"
-            onClick={makeHandler(onPrevTrack, 'station')}
+            onClick={makeHandler(onPrevTrack, 'station', sinkId)}
             disabled={controlsDisabled}
             aria-label="Previous station"
           >
@@ -257,7 +330,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn transport-console__btn--station"
-            onClick={makeHandler(onNextTrack, 'station')}
+            onClick={makeHandler(onNextTrack, 'station', sinkId)}
             disabled={controlsDisabled}
             aria-label="Next station"
           >
@@ -270,7 +343,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={makeHandler(onRewind, 'tap')}
+            onClick={makeHandler(onRewind, 'tap', sinkId)}
             disabled={controlsDisabled}
             aria-label="Rewind 10 seconds"
           >
@@ -279,7 +352,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn transport-console__btn--play"
-            onClick={makeHandler(onPlay, 'play')}
+            onClick={makeHandler(onPlay, 'play', sinkId)}
             disabled={controlsDisabled}
             aria-label="Play transmission"
           >
@@ -288,7 +361,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={makeHandler(onPause, 'tap')}
+            onClick={makeHandler(onPause, 'tap', sinkId)}
             disabled={controlsDisabled}
             aria-label="Pause transmission"
           >
@@ -297,7 +370,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={makeHandler(onFastForward, 'tap')}
+            onClick={makeHandler(onFastForward, 'tap', sinkId)}
             disabled={controlsDisabled}
             aria-label="Fast forward 10 seconds"
           >
@@ -310,7 +383,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={makeHandler(onVolumeDown, 'volume')}
+            onClick={makeHandler(onVolumeDown, 'volume', sinkId)}
             disabled={controlsDisabled}
             aria-label="Decrease volume by 5 percent"
           >
@@ -326,7 +399,7 @@ export default function HolographicEmbed({
           <button
             type="button"
             className="transport-console__btn"
-            onClick={makeHandler(onVolumeUp, 'volume')}
+            onClick={makeHandler(onVolumeUp, 'volume', sinkId)}
             disabled={controlsDisabled}
             aria-label="Increase volume by 5 percent"
           >

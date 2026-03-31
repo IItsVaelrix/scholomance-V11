@@ -6,7 +6,7 @@ import { attachPlsVerseIRBridge, buildPlsVerseIRBridge } from "../lib/pls/verseI
 import { parseBooleanEnvFlag } from "./useCODExPipeline.jsx";
 import { analyzeDocumentAsync, warmAnalysisWorker } from "../lib/workers/analysis.client.js";
 
-const ANALYSIS_DEBOUNCE_MS = 2000;
+const ANALYSIS_DEBOUNCE_MS = 180000; // 3 minutes
 const REQUEST_TIMEOUT_MS = 15000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL || "")
   .trim()

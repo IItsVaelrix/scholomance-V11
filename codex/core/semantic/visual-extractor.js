@@ -111,20 +111,30 @@ export const DEFAULT_VISUAL_PARAMS = Object.freeze({
   surface: { material: 'stone', reflectivity: 0.3, roughness: 0.5, texture: 'grained' },
   form: { scale: 1.0, symmetry: 'none', complexity: 0.5, dominantAxis: 'horizontal' },
   light: { angle: 45, hardness: 0.5, color: '#888888', intensity: 0.5 },
+  color: { primaryHue: 0, saturation: 0.5, brightness: 0.5, paletteSize: 3 },
   semanticTags: [],
 });
 
 /**
  * Extract visual parameters from a token
- * @param {Object} token - VerseIR token with phonemes, school, analysis
+ * @param {Object|string} token - VerseIR token with phonemes, school, analysis, or just a string
  * @returns {SemanticParameters}
  */
 export function extractVisualParameters(token) {
-  const normalized = String(token?.text || token?.normalized || '').toLowerCase().trim();
+  const normalized = typeof token === 'string' 
+    ? token.toLowerCase().trim()
+    : String(token?.text || token?.normalized || '').toLowerCase().trim();
   const base = LEXICAL_VISUAL_DB.get(normalized) || DEFAULT_VISUAL_PARAMS;
 
+  // Ensure color is present
+  const baseWithColor = {
+    ...DEFAULT_VISUAL_PARAMS,
+    ...base,
+    color: base.color || { ...DEFAULT_VISUAL_PARAMS.color }
+  };
+
   // Apply phonetic modifiers
-  const phonemeMod = applyPhoneticModifiers(token?.phonemes || [], base);
+  const phonemeMod = applyPhoneticModifiers(token?.phonemes || [], baseWithColor);
 
   // Apply school modifiers
   const schoolMod = applySchoolModifiers(token?.schoolId, phonemeMod);
@@ -369,6 +379,13 @@ export class SemanticController {
       enableSemanticWeight: true,
       ...options,
     });
+  }
+
+  /**
+   * Apply school affinity modifiers to visual parameters (Static for Phase 3)
+   */
+  static applySchoolModifiers(baseParams, schoolId) {
+    return applySchoolModifiers(schoolId, baseParams);
   }
 
   /**
