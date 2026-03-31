@@ -699,6 +699,38 @@ body::after {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--text-primary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 767px) {
+  .nav-inner {
+    justify-content: center !important;
+  }
+  
+  .nav-brand {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: var(--text-base);
+  }
+
+  .nav-controls {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .nav-toggle {
+    display: none !important;
+  }
+
+  .theme-toggle {
+    width: 36px;
+    height: 36px;
+  }
 }
 
 .nav-links {
@@ -1479,32 +1511,35 @@ h6 { font-size: var(--text-base); }
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 16%, transparent), transparent 48%),
-    rgba(3, 3, 12, 0.92);
+    radial-gradient(circle at top, color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 20%, transparent), transparent 60%),
+    rgba(3, 3, 12, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   z-index: 1100;
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
+  align-items: flex-start;
+  justify-content: center;
   padding: calc(48px + var(--space-4)) var(--space-4) max(var(--space-4), var(--safe-area-bottom));
   overflow-y: auto;
 }
 
 [data-theme="light"] .nav-mobile-overlay {
   background:
-    radial-gradient(circle at top, color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 10%, transparent), transparent 48%),
-    rgba(248, 248, 252, 0.94);
+    radial-gradient(circle at top, color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 12%, transparent), transparent 60%),
+    rgba(248, 248, 252, 0.96);
 }
 
 .nav-mobile-shell {
   width: min(100%, 34rem);
   border-radius: 1.5rem;
-  border: 1px solid color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 18%, rgba(255, 255, 255, 0.08));
+  border: 1px solid color-mix(in srgb, var(--active-school-color, var(--school-sonic)) 22%, rgba(255, 255, 255, 0.12));
   background:
-    linear-gradient(180deg, rgba(12, 12, 26, 0.96), rgba(6, 5, 18, 0.98));
+    linear-gradient(180deg, rgba(12, 12, 26, 0.98), rgba(6, 5, 18, 0.99));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 24px 48px rgba(0, 0, 0, 0.38);
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 32px 64px rgba(0, 0, 0, 0.45);
   overflow: hidden;
+  transform-origin: top center;
 }
 
 [data-theme="light"] .nav-mobile-shell {

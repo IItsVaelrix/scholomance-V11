@@ -1,13 +1,11 @@
 # Dead Code Report
 
-Generated at: 2026-03-31T00:55:14.624Z
+Generated at: 2026-03-31T09:15:56.096Z
 
 ## Unreachable Files
 Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
 
-- [ ] src\data\vowelPalette.js
 - [ ] src\lib\audioAdminApi.ts
-- [ ] src\lib\css\schoolStyles.js
 - [ ] src\lib\truesight\compiler\verseIRQueries.js
 - [ ] src\lib\workers\analysis.worker.js
 - [ ] src\lib\worldApi.js
@@ -75,15 +73,12 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `getSchoolBadgeClass` in `src\data\schools.js`
 - [ ] `getSonicStationBuckets` in `src\data\sonicStationBuckets.js`
 - [ ] `getSonicStationTrackPool` in `src\data\sonicStationBuckets.js`
-- [ ] `getSchoolForVowel` in `src\data\vowelPalette.js`
-- [ ] `getVowelsBySchool` in `src\data\vowelPalette.js`
 - [ ] `emitXPEvent` in `src\hooks\useProgression.jsx`
 - [ ] `useXPEventListener` in `src\hooks\useProgression.jsx`
 - [ ] `onXPEvent` in `src\hooks\useProgression.jsx`
 - [ ] `AMBIENT_PLAYER_EVENTS` in `src\lib\ambient\ambientPlayer.service.js`
 - [ ] `createPercussivePulseState` in `src\lib\ambient\ambientPlayer.service.js`
 - [ ] `getPercussivePulseLevelFromWaveform` in `src\lib\ambient\ambientPlayer.service.js`
-- [ ] `AmbientPlayerService` in `src\lib\ambient\ambientPlayer.service.js`
 - [ ] `SCHOOL_AUDIO_CONFIG` in `src\lib\ambient\schoolAudio.config.js`
 - [ ] `AudioAdminErrorReason` in `src\lib\audioAdminApi.ts`
 - [ ] `AudioFilePayload` in `src\lib\audioAdminApi.ts`
@@ -92,8 +87,6 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `normalizeAdminToken` in `src\lib\audioAdminApi.ts`
 - [ ] `buildAudioAdminHeaders` in `src\lib\audioAdminApi.ts`
 - [ ] `configureZodForCsp` in `src\lib\config\zod.config.js`
-- [ ] `generateSchoolCSSVariables` in `src\lib\css\schoolStyles.js`
-- [ ] `generateLockedSchoolStyles` in `src\lib\css\schoolStyles.js`
 - [ ] `isLikelyDynamicImportFailure` in `src\lib\lazyWithRetry.js`
 - [ ] `GENRES` in `src\lib\literaryClassifier.js`
 - [ ] `LITERARY_DEVICES` in `src\lib\literaryDevices.detector.js`

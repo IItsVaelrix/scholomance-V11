@@ -120,6 +120,9 @@ export default function Navigation() {
   }, []);
 
   const handleToggle = useCallback(() => {
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(10);
+    }
     setIsMenuOpen((prev) => !prev);
     setNavigatingPath(null);
   }, []);
@@ -127,6 +130,9 @@ export default function Navigation() {
   // Magical nav: select link → glow animation → navigate quickly
   const handleMobileNavClick = useCallback((e, linkPath) => {
     e.preventDefault();
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(5);
+    }
     if (navigatingPath) return; // already transitioning
     handleNav(linkPath);
   }, [navigatingPath, handleNav]);
@@ -139,14 +145,21 @@ export default function Navigation() {
     <>
       <nav className="primary-nav" aria-label="Primary navigation">
         <div className="nav-inner">
-          <NavLink 
-            to="/watch" 
-            className="nav-brand font-bold" 
-            aria-label="Scholomance Home"
-            onClick={(e) => { e.preventDefault(); handleNav("/watch"); }}
+          <motion.button
+            className="nav-brand font-bold"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-expanded={isMenuOpen}
+            onClick={handleToggle}
+            whileTap={{ scale: 0.96 }}
+            animate={{ 
+              textShadow: isMenuOpen 
+                ? "0 0 20px var(--active-school-color)" 
+                : "0 0 0px var(--active-school-color)"
+            }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
             SCHOLOMANCE
-          </NavLink>
+          </motion.button>
 
           {/* Desktop nav links */}
           <div id="nav-links" className="nav-links">
