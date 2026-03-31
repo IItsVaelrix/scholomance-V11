@@ -44,6 +44,7 @@ import { createCorpusService } from './services/corpus.service.js';
 import { corpusRoutes } from './routes/corpus.routes.js';
 import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
 import { resolveRhymeAstrologyArtifactPaths } from './utils/rhymeAstrologyPaths.js';
+import { imageAnalysisRoutes } from './routes/imageAnalysis.routes.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -752,6 +753,7 @@ fastify.register(combatRoutes);
 fastify.register(lexiconRoutes, { prefix: '/api/lexicon', adapter: lexiconAdapter });
 fastify.register(worldRoutes, { prefix: '/api/world', adapter: lexiconAdapter, persistence });
 fastify.register(corpusRoutes, { prefix: '/api/corpus', adapter: corpusAdapter });
+fastify.register(imageAnalysisRoutes, { prefix: '/api/image' });
 if (ENABLE_RHYME_ASTROLOGY) {
     if (RHYME_ASTROLOGY_PATHS.usedExistingArtifactsFallback || RHYME_ASTROLOGY_PATHS.usedProductionPersistentFallback) {
         fastify.log.warn({

@@ -109,6 +109,7 @@ export default function HolographicEmbed({
   trackId,
   title,
   glyph,
+  schoolColor = '#2ddbde',
   isPlaying = false,
   isTuning = false,
   volumePercent = 0,
@@ -174,6 +175,7 @@ export default function HolographicEmbed({
     <section
       className={`listen-console listen-console--${playerState}`}
       aria-label={`${displayTitle} transmission console`}
+      style={{ '--active-school-color': schoolColor }}
     >
       {/* ── TransmissionCore ──────────────────────────────────────────── */}
       <div className="listen-console__core-shell">

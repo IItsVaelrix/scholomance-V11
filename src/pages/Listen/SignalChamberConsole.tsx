@@ -23,7 +23,11 @@ import { getSchoolAudioConfig } from '../../lib/ambient/schoolAudio.config';
 import type { SignalChamberScene as SignalChamberSceneType } from './scenes/SignalChamberScene';
 import HolographicEmbed from './HolographicEmbed.jsx';
 
-export const SignalChamberConsole: React.FC = () => {
+interface SignalChamberConsoleProps {
+  overrideSchoolId?: string;
+}
+
+export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({ overrideSchoolId }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef     = useRef<SignalChamberSceneType | null>(null);
 
@@ -31,7 +35,7 @@ export const SignalChamberConsole: React.FC = () => {
 
   const {
     status,
-    currentSchoolId,
+    currentSchoolId: rawSchoolId,
     isPlaying,
     isTuning,
     signalLevel,
@@ -43,6 +47,8 @@ export const SignalChamberConsole: React.FC = () => {
     tunePreviousSchool,
     togglePlayPause,
   } = useAmbientPlayer(allSchoolIds);
+
+  const currentSchoolId = overrideSchoolId || rawSchoolId;
 
   const stations = useMemo(
     () =>
@@ -61,9 +67,9 @@ export const SignalChamberConsole: React.FC = () => {
     [stations, currentSchoolId]
   );
   const currentTrackUrl = useMemo(() => {
-    const schoolId = currentSchoolId ?? currentStation?.id ?? null;
+    const schoolId = rawSchoolId ?? currentStation?.id ?? null;
     return schoolId ? getSchoolAudioConfig(schoolId)?.trackUrl ?? null : null;
-  }, [currentSchoolId, currentStation]);
+  }, [rawSchoolId, currentStation]);
 
   const statusLabel = isTuning
     ? 'SYNCING'
@@ -186,6 +192,7 @@ export const SignalChamberConsole: React.FC = () => {
           trackUrl={currentTrackUrl}
           title={currentStation?.name ?? 'No signal'}
           glyph={currentStation?.glyph ?? '✦'}
+          schoolColor={currentStation?.color ?? '#2ddbde'}
           isPlaying={isPlaying}
           isTuning={isTuning}
           volumePercent={Math.round(volume * 100)}

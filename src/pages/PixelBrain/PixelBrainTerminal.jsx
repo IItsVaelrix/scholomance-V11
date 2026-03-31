@@ -59,13 +59,18 @@ function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
 
     // Draw coordinates with progressive reveal
     const safeCoords = (coordinates || []).slice(0, Math.ceil((coordinates || []).length * progress));
-    
+
     safeCoords.forEach((coord, index) => {
       const x = (coord.snappedX / canvas.width) * width;
       const y = (coord.snappedY / canvas.height) * height;
-      const colors = paletteMap.get(coord.paletteKey) || ["#666666"];
-      const colorIndex = Math.floor(coord.emphasis * (colors.length - 1));
-      const color = colors[Math.min(colorIndex, colors.length - 1)];
+      
+      // Use direct color if available (from image), otherwise use palette
+      let color = coord.color;
+      if (!color) {
+        const colors = paletteMap.get(coord.paletteKey) || ["#666666"];
+        const colorIndex = Math.floor(coord.emphasis * (colors.length - 1));
+        color = colors[Math.min(colorIndex, colors.length - 1)];
+      }
 
       // Draw node
       ctx.fillStyle = color;
@@ -81,7 +86,7 @@ function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
         const nextCoord = safeCoords[index + 1];
         const nextX = (nextCoord.snappedX / canvas.width) * width;
         const nextY = (nextCoord.snappedY / canvas.height) * height;
-        
+
         ctx.strokeStyle = color;
         ctx.lineWidth = 1 + coord.emphasis * 2;
         ctx.globalAlpha = 0.4 + coord.emphasis * 0.4;
@@ -92,11 +97,13 @@ function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
         ctx.globalAlpha = 1;
       }
 
-      // Draw token label
-      ctx.fillStyle = "#888";
-      ctx.font = "8px 'JetBrains Mono', monospace";
-      ctx.textAlign = "center";
-      ctx.fillText(coord.token.substring(0, 6), x, y + 18);
+      // Draw token label (only for non-image sources)
+      if (!coord.source || !coord.source.startsWith('image')) {
+        ctx.fillStyle = "#888";
+        ctx.font = "8px 'JetBrains Mono', monospace";
+        ctx.textAlign = "center";
+        ctx.fillText(coord.token.substring(0, 6), x, y + 18);
+      }
     });
 
     // Draw scan line effect
@@ -356,7 +363,7 @@ export default function PixelBrainTerminal({ mode, analysisResult }) {
                 {new Date().toLocaleTimeString()}
               </span>
             </div>
-            
+
             <div className="results-content">
               {analysisResult.error || analysisResult.message ? (
                 <div className="results-message">
@@ -372,8 +379,36 @@ export default function PixelBrainTerminal({ mode, analysisResult }) {
                   isAnalyzing={false}
                 />
               )}
-              
+
               <div className="results-sidebar">
+                {analysisResult.referenceImage && (
+                  <div className="reference-image-display">
+                    <div className="sidebar-label">REFERENCE</div>
+                    <img
+                      src={analysisResult.referenceImage.preview}
+                      alt="Reference"
+                      className="reference-thumbnail"
+                    />
+                    {analysisResult.referenceImage.analysis && (
+                      <div className="reference-analysis-mini">
+                        <div className="mini-colors">
+                          {analysisResult.referenceImage.analysis.colors?.slice(0, 4).map((color, i) => (
+                            <div
+                              key={i}
+                              className="mini-swatch"
+                              style={{ backgroundColor: color.hex }}
+                              title={`${color.hex} (${color.percentage}%)`}
+                            />
+                          ))}
+                        </div>
+                        <div className="mini-stats">
+                          {analysisResult.referenceImage.analysis.composition?.dominantAxis}
+                          {analysisResult.referenceImage.analysis.composition?.hasSymmetry ? ' • symmetric' : ''}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <AnalysisMetrics result={analysisResult} />
                 <PaletteDisplay palettes={analysisResult.palettes} />
               </div>

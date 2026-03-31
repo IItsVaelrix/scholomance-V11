@@ -3,7 +3,7 @@ import { SCHOOLS } from "../data/schools";
 import {
   AMBIENT_PLAYER_STATES,
   getAmbientPlayerService,
-} from "../lib/ambient/ambientPlayer.service";
+} from "../lib/ambient/ambientPlayer.service.js";
 import { getPlayableSchoolIds, getSchoolAudioConfig } from "../lib/ambient/schoolAudio.config";
 
 const ORB_VISIBILITY_STORAGE_KEY = "scholomance.ambient.orb.visible.v1";
@@ -231,6 +231,10 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     service.getByteFrequencyData(array);
   }, [service]);
 
+  const ensureContextRunning = useCallback(async () => {
+    await service.ensureContextRunning();
+  }, [service]);
+
   return {
     ...state,
     currentSchoolId,
@@ -264,5 +268,6 @@ export function useAmbientPlayer(unlockedSchools: string[] = []): any {
     seek,
     getAnalyser,
     getByteFrequencyData,
+    ensureContextRunning,
   };
 }

@@ -234,35 +234,33 @@
   justify-content: center;
 }
 
-/* Breathing animation when playing - CSS only, no Framer Motion */
-/* Disabled: was causing 20px layout shift between playing/non-playing states */
-.core-mount.is-playing {
-  /* animation: core-breathe 4s ease-in-out infinite; */
-  will-change: auto;
-}
-
-/* @keyframes core-breathe {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.01);
-  }
-} */
-
 .core-status-plate {
   position: absolute;
-  bottom: -4rem;
-  text-align: center;
+  top: -85px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  padding: 14px 20px;
+  background: rgba(10, 15, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 2px solid var(--accent);
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.5),
+    inset 0 0 15px rgba(0, 0, 0, 0.4);
+  z-index: 5;
+  pointer-events: none;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
+  gap: 4px;
+  text-align: center;
+  /* Spec v1.6: Smooth chromatic painting */
+  transition: border-color 1.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   font-size: 0.6rem;
   letter-spacing: 0.3em;
@@ -279,14 +277,6 @@
 .pulse-dot.is-active {
   box-shadow: 0 0 10px var(--hud-accent);
   animation: pulse 2s infinite;
-}
-
-.core-status-plate h2 {
-  font-size: 2.5rem;
-  font-weight: 900;
-  letter-spacing: -0.05em;
-  color: var(--accent, var(--hud-accent));
-  text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .frequency-readout {
@@ -2385,7 +2375,7 @@
 }
 
 /* ========================================
-   ARCANE LABORATORY � MASTER DESIGN SYSTEM
+   ARCANE LABORATORY  MASTER DESIGN SYSTEM
    Shelving, Props, Monitor, and Halo
    ======================================== */
 
@@ -2645,7 +2635,7 @@
   width: 100%; height: 100%; 
   border-radius: 2px 6px 6px 2px;
   box-shadow: 
-    inset 1px 1px 0 rgba(255,255,255,0.1),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
     2px 0 5px rgba(0,0,0,0.5);
   border: 1px solid rgba(201, 162, 39, 0.2);
   display: flex; align-items: center; justify-content: center;
@@ -3192,4 +3182,29 @@
   visibility: visible;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   SPEC V1.6 — CHROMATIC INFUSION & MAGIC NAMEPLATE
+   Smooth painting of the UI based on detected sonic energy.
+   ═══════════════════════════════════════════════════════════════════════════ */
 
+.magic-name-plate {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+  margin: 4px 0;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  text-shadow: 0 0 12px var(--accent);
+  transition: color 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.magic-name-plate.is-glitching {
+  filter: brightness(1.4) contrast(1.2);
+  text-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent);
+}
+
+/* Paint the player console via the active school color */
+.listen-console, .signal-chamber-shell {
+  --active-school-color: var(--accent, #2ddbde);
+  transition: --active-school-color 1.8s cubic-bezier(0.4, 0, 0.2, 1);
+}

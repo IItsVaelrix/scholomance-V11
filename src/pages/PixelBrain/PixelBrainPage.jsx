@@ -39,7 +39,132 @@ const INPUT_MODES = [
   { id: "verse", label: "Verse Analysis", description: "Analyze your verse text directly", icon: "📜" },
   { id: "nlu-direct", label: "NLU Direct", description: "Plain English → deterministic params", icon: "🎯" },
   { id: "nlu-generate", label: "NLU Generate", description: "Plain English → generated verse → analysis", icon: "✨" },
+  { id: "reference-image", label: "Reference Image", description: "Upload an image + describe it", icon: "🖼️" },
 ];
+
+/**
+ * Generate coordinates from image analysis (client-side edge detection)
+ */
+function generateCoordinatesFromImage(imageAnalysis, canvasSize) {
+  const { colors, composition, dimensions } = imageAnalysis;
+  const { analyzed: { width: srcWidth, height: srcHeight } } = dimensions;
+  const { width: canvasWidth, height: canvasHeight, gridSize } = canvasSize;
+  
+  // Calculate scale to fit image on canvas
+  const scaleX = canvasWidth / srcWidth;
+  const scaleY = canvasHeight / srcHeight;
+  const scale = Math.min(scaleX, scaleY);
+  
+  // Offset to center
+  const offsetX = (canvasWidth - srcWidth * scale) / 2;
+  const offsetY = (canvasHeight - srcHeight * scale) / 2;
+  
+  const coordinates = [];
+  const visited = new Set();
+  
+  // Use pixel data if available, otherwise generate from composition
+  const pixelData = imageAnalysis.pixelData ? new Uint8ClampedArray(imageAnalysis.pixelData) : null;
+  
+  if (pixelData) {
+    // Edge detection on pixel data
+    const edgeThreshold = 30;
+    
+    for (let y = 1; y < srcHeight - 1; y++) {
+      for (let x = 1; x < srcWidth - 1; x++) {
+        const idx = (y * srcWidth + x) * 4;
+        
+        // Skip transparent pixels
+        if (pixelData[idx + 3] < 128) continue;
+        
+        // Simple edge detection
+        const leftIdx = (y * srcWidth + (x - 1)) * 4;
+        const topIdx = ((y - 1) * srcWidth + x) * 4;
+        
+        const leftDiff = Math.abs(pixelData[idx] - pixelData[leftIdx]) +
+                         Math.abs(pixelData[idx + 1] - pixelData[leftIdx + 1]) +
+                         Math.abs(pixelData[idx + 2] - pixelData[leftIdx + 2]);
+        
+        const topDiff = Math.abs(pixelData[idx] - pixelData[topIdx]) +
+                        Math.abs(pixelData[idx + 1] - pixelData[topIdx + 1]) +
+                        Math.abs(pixelData[idx + 2] - pixelData[topIdx + 2]);
+        
+        const isEdge = leftDiff > edgeThreshold || topDiff > edgeThreshold;
+        
+        if (isEdge) {
+          const canvasX = Math.round(x * scale + offsetX);
+          const canvasY = Math.round(y * scale + offsetY);
+          
+          const key = `${canvasX},${canvasY}`;
+          if (!visited.has(key)) {
+            visited.add(key);
+            
+            const r = pixelData[idx];
+            const g = pixelData[idx + 1];
+            const b = pixelData[idx + 2];
+            const emphasis = Math.min(1, (leftDiff + topDiff) / 510);
+            
+            coordinates.push({
+              x: canvasX,
+              y: canvasY,
+              z: 0,
+              color: rgbToHex(r, g, b),
+              emphasis,
+              source: 'image_edge',
+              snappedX: Math.round(canvasX / gridSize) * gridSize,
+              snappedY: Math.round(canvasY / gridSize) * gridSize,
+            });
+          }
+        }
+      }
+    }
+  }
+  
+  // Fallback: generate from composition if no edges found
+  if (coordinates.length === 0) {
+    return generateFallbackCoordinates(composition, canvasSize);
+  }
+  
+  return coordinates;
+}
+
+/**
+ * Generate fallback coordinates based on composition analysis
+ */
+function generateFallbackCoordinates(composition, canvasSize) {
+  const { width, height, gridSize } = canvasSize;
+  const coordinates = [];
+  
+  // Generate grid based on complexity
+  const density = 8 + Math.round((composition.complexity || 0.5) * 20);
+  const step = Math.floor(Math.min(width, height) / density);
+  
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      coordinates.push({
+        x,
+        y,
+        z: 0,
+        color: '#808080',
+        emphasis: 0.5,
+        source: 'fallback',
+        snappedX: Math.round(x / gridSize) * gridSize,
+        snappedY: Math.round(y / gridSize) * gridSize,
+      });
+    }
+  }
+  
+  return coordinates;
+}
+
+/**
+ * Convert RGB to hex
+ */
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => {
+    const hex = Math.min(255, Math.max(0, x)).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('').toUpperCase();
+}
 
 export default function PixelBrainPage() {
   const [inputText, setInputText] = useState("");
@@ -49,9 +174,12 @@ export default function PixelBrainPage() {
   const [terminalMode, setTerminalMode] = useState("input");
   const [selectedExtension, setSelectedExtension] = useState("none");
   const [phase3Enabled, setPhase3Enabled] = useState(true);
-  const [inputMode, setInputMode] = useState("verse"); // 'verse' | 'nlu-direct' | 'nlu-generate'
+  const [inputMode, setInputMode] = useState("verse"); // 'verse' | 'nlu-direct' | 'nlu-generate' | 'reference-image'
   const [parsedIntent, setParsedIntent] = useState(null);
+  const [referenceImage, setReferenceImage] = useState(null); // { file, preview, analysis }
+  const [imageWeight, setImageWeight] = useState(0.6); // Image vs text blend weight
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const handleDemoSelect = useCallback((demo) => {
     setSelectedDemo(demo.label);
@@ -64,13 +192,154 @@ export default function PixelBrainPage() {
     }
   }, []);
 
+  const handleImageUpload = useCallback(async (file) => {
+    if (!file) return;
+    
+    // Validate file type
+    const validTypes = ['image/png', 'image/jpeg', 'image/bmp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Unsupported image format. Please use PNG, JPEG, or BMP.');
+      return;
+    }
+    
+    // Validate file size (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image too large. Maximum size is 5MB.');
+      return;
+    }
+    
+    // Create preview
+    const preview = URL.createObjectURL(file);
+    setReferenceImage({ file, preview, analysis: null });
+    
+    // Upload and analyze
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('description', inputText || '');
+      
+      const response = await fetch('/api/image/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Analysis failed');
+      }
+      
+      const data = await response.json();
+      setReferenceImage(prev => ({ ...prev, analysis: data.analysis }));
+    } catch (error) {
+      console.error('Image analysis failed:', error);
+      alert(`Image analysis failed: ${error.message}`);
+      setReferenceImage(null);
+    }
+  }, [inputText]);
+  
+  const handleImageDrop = useCallback((e) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  }, [handleImageUpload]);
+  
+  const handleImageSelect = useCallback((e) => {
+    const file = e.target.files[0];
+    if (file) {
+      handleImageUpload(file);
+    }
+  }, [handleImageUpload]);
+  
+  const handleClearImage = useCallback(() => {
+    if (referenceImage?.preview) {
+      URL.revokeObjectURL(referenceImage.preview);
+    }
+    setReferenceImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [referenceImage]);
+
   const handleAnalyze = useCallback(async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !referenceImage) return;
 
     setIsAnalyzing(true);
     setTerminalMode("analyzing");
 
     try {
+      // Reference image mode
+      if (inputMode === 'reference-image') {
+        if (!referenceImage?.analysis) {
+          throw new Error('Please upload an image first');
+        }
+        
+        // Use image analysis directly
+        const imageAnalysis = referenceImage.analysis;
+        const semanticParams = imageAnalysis.semanticParams;
+        
+        // Generate pixel art coordinates from image
+        const canvasSize = { width: 160, height: 144, gridSize: 1 };
+        const extension = semanticParams?.extension || selectedExtension !== 'none' ? selectedExtension : null;
+        
+        // Build coordinates from image edges
+        const coordinates = generateCoordinatesFromImage(imageAnalysis, canvasSize);
+        
+        // Build palettes from image colors
+        const palettes = imageAnalysis.colors?.map(c => ({
+          hex: c.hex,
+          weight: c.percentage / 100,
+        })) || [];
+        
+        setParsedIntent({
+          intent: `Image-driven: ${imageAnalysis.colors?.[0]?.hex || 'unknown'} dominant`,
+          confidence: 0.85,
+          mathConstraints: {
+            coordinateDensity: imageAnalysis.composition?.complexity || 0.5,
+            latticeConnections: Math.round((imageAnalysis.composition?.edgeDensity || 0.1) * 100),
+            surface: {
+              material: semanticParams?.surface?.material || 'metal',
+            },
+            ditherMethod: semanticParams?.ditherMethod || 'ordered',
+            extension: semanticParams?.extension,
+          },
+          semanticParams,
+          imageAnalysis,
+        });
+        
+        setAnalysisResult({
+          version: "1.1.0",
+          tokenCount: coordinates.length,
+          activeTokenCount: coordinates.filter(c => c.emphasis > 0.3).length,
+          paletteCount: imageAnalysis.colors?.length || 0,
+          dominantAxis: imageAnalysis.composition?.dominantAxis || 'horizontal',
+          dominantSymmetry: imageAnalysis.composition?.hasSymmetry ? imageAnalysis.composition?.symmetryType : 'none',
+          canvas: canvasSize,
+          palettes: [{
+            key: 'image_palette',
+            colors: imageAnalysis.colors?.map(c => c.hex) || [],
+            weights: imageAnalysis.colors?.map(c => c.percentage / 100) || [],
+          }],
+          coordinates: coordinates.map(c => ({
+            ...c,
+            token: `img_${c.x}_${c.y}`,
+            paletteKey: 'image_palette',
+          })),
+          phase3Enabled,
+          selectedExtension,
+          inputMode,
+          referenceImage: {
+            preview: referenceImage.preview,
+            analysis: imageAnalysis,
+          },
+        });
+        
+        setIsAnalyzing(false);
+        setTerminalMode("result");
+        return;
+      }
+      
       // Determine if we need to use NLU or direct verse analysis
       const useNLU = inputMode === 'nlu-direct' || inputMode === 'nlu-generate';
       const nluMode = inputMode === 'nlu-direct' ? 'direct' : 'generate';
@@ -79,7 +348,7 @@ export default function PixelBrainPage() {
       const response = await fetch("/api/analysis/panels", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text: inputText,
           nluMode: useNLU ? nluMode : undefined,
         }),
@@ -90,21 +359,21 @@ export default function PixelBrainPage() {
       }
 
       const data = await response.json();
-      
+
       // Extract NLU payload if using NLU mode
       let nluPayload = null;
       if (useNLU) {
         nluPayload = data?.verseIRAmplifier?.amplifiers?.find(
           (amp) => amp?.id === 'natural_language_amp'
         )?.payload;
-        
+
         if (nluPayload) {
           setParsedIntent(nluPayload);
         }
       } else {
         setParsedIntent(null);
       }
-      
+
       // Extract PixelBrain payload
       const pixelBrain = data?.verseIRAmplifier?.pixelBrain;
       
@@ -220,10 +489,17 @@ export default function PixelBrainPage() {
     setParsedIntent(null);
     setAnalysisResult(null);
     setTerminalMode("input");
+    if (referenceImage?.preview) {
+      URL.revokeObjectURL(referenceImage.preview);
+    }
+    setReferenceImage(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
-  }, []);
+  }, [referenceImage]);
 
   return (
     <div className="pixelbrain-page">
@@ -348,6 +624,113 @@ export default function PixelBrainPage() {
           </div>
         </motion.section>
 
+        {inputMode === 'reference-image' && (
+          <motion.section
+            className="reference-image-section"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.18 }}
+          >
+            <h2 className="section-label">
+              <span className="label-icon">&#x1F5BC;</span>
+              REFERENCE IMAGE
+            </h2>
+            <div
+              className={`image-upload-zone ${referenceImage ? 'has-image' : ''}`}
+              onDrop={handleImageDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {referenceImage?.preview ? (
+                <div className="image-preview-container">
+                  <img
+                    src={referenceImage.preview}
+                    alt="Reference"
+                    className="reference-preview"
+                  />
+                  <button
+                    className="clear-image-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearImage();
+                    }}
+                    title="Remove image"
+                  >
+                    ✕
+                  </button>
+                  {referenceImage.analysis && (
+                    <div className="image-analysis-badge">
+                      ✓ Analyzed
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="image-upload-prompt">
+                  <span className="upload-icon">&#x1F4E4;</span>
+                  <p>Drop an image here or click to upload</p>
+                  <p className="upload-hint">PNG, JPEG, BMP (max 5MB)</p>
+                </div>
+              )}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/bmp"
+                onChange={handleImageSelect}
+                className="hidden-file-input"
+                disabled={isAnalyzing}
+              />
+            </div>
+            
+            {referenceImage && (
+              <div className="image-description-section">
+                <label className="description-label">
+                  <span className="label-icon">&#x270E;</span>
+                  Describe this image (optional):
+                </label>
+                <textarea
+                  className="image-description-input"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Add context about what you want to create from this image..."
+                  disabled={isAnalyzing}
+                  rows={3}
+                />
+              </div>
+            )}
+            
+            {referenceImage?.analysis && (
+              <div className="image-analysis-summary">
+                <div className="analysis-row">
+                  <span className="analysis-key">Colors:</span>
+                  <div className="color-swatch-row">
+                    {referenceImage.analysis.colors?.slice(0, 5).map((color, i) => (
+                      <div
+                        key={i}
+                        className="color-swatch"
+                        style={{ backgroundColor: color.hex }}
+                        title={`${color.hex} (${color.percentage}%)`}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="analysis-row">
+                  <span className="analysis-key">Composition:</span>
+                  <span className="analysis-value">
+                    {referenceImage.analysis.composition?.dominantAxis} axis,
+                    {referenceImage.analysis.composition?.hasSymmetry ? ' symmetric' : ' asymmetric'}
+                  </span>
+                </div>
+                <div className="analysis-row">
+                  <span className="analysis-key">Material:</span>
+                  <span className="analysis-value">
+                    {referenceImage.analysis.semanticParams?.surface?.material || 'auto'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </motion.section>
+        )}
+
         {parsedIntent && (
           <motion.div
             className="parsed-intent"
@@ -414,7 +797,11 @@ export default function PixelBrainPage() {
                     ? "Enter your verse text for phonetic analysis...\n\nExample:\nThe thunder rolls across the silent plain\nWhile echoes sing of sorrow and of pain"
                     : inputMode === 'nlu-direct'
                     ? "Describe what you want to see...\n\nExample: crystal dragon with fire effects"
-                    : "Describe what you want to see (verse will be generated)...\n\nExample: dark knight in a haunted castle"
+                    : inputMode === 'nlu-generate'
+                    ? "Describe what you want to see (verse will be generated)...\n\nExample: dark knight in a haunted castle"
+                    : inputMode === 'reference-image'
+                    ? "Describe what you want to create from this image...\n\nExample: a pixel art character based on this reference"
+                    : "Enter text..."
                 }
                 aria-label="Verse input for PixelBrain analysis"
                 disabled={isAnalyzing}

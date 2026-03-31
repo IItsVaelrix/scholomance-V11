@@ -47,6 +47,19 @@ export {
 } from './pixelbrain/color-byte-mapping.js';
 
 export {
+  imageToPixelBrainParams,
+  mergeImageAndNLUParams,
+  generatePaletteFromImage,
+  extractCoordinateHints,
+} from './pixelbrain/image-to-semantic-bridge.js';
+
+export {
+  generatePixelArtFromImage,
+  generateSilhouetteFromImage,
+  fillShape,
+} from './pixelbrain/image-to-pixel-art.js';
+
+export {
   perlinNoiseGrid,
   noiseToTexture,
   applyDithering,

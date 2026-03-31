@@ -43,8 +43,8 @@ export const SCHOOLS = {
   SONIC: {
     id: "SONIC",
     name: "Sonic Thaumaturgy",
-    color: "#a855f7", // Distinctive Purple
-    colorHsl: { h: 275, s: 85, l: 55 },
+    color: "#1ab4a8", // Resonant Teal (Shifted from Purple per user req)
+    colorHsl: { h: 175, s: 85, l: 55 },
     angle: 288,
     unlockXP: 0,
     description: "The art of sonic manipulation and harmonic resonance",
@@ -61,7 +61,7 @@ export const SCHOOLS = {
   PSYCHIC: {
     id: "PSYCHIC",
     name: "Psychic Schism",
-    color: "#3b82f6", // Distinctive Blue
+    color: "#3b82f6", // Authoritative Bytecode Blue
     colorHsl: { h: 220, s: 90, l: 60 },
     angle: 72,
     unlockXP: 250,
@@ -79,7 +79,7 @@ export const SCHOOLS = {
   VOID: {
     id: "VOID",
     name: "The Void",
-    color: "#94a3b8", // Neutral Slate/Grey
+    color: "#94a3b8", // Entropy Slate
     colorHsl: { h: 215, s: 15, l: 41 },
     angle: 0,
     unlockXP: 1500,
@@ -97,7 +97,7 @@ export const SCHOOLS = {
   ALCHEMY: {
     id: "ALCHEMY",
     name: "Verbal Alchemy",
-    color: "#ec4899", // Distinctive Pink
+    color: "#ec4899", // Authoritative Pink
     colorHsl: { h: 325, s: 80, l: 58 },
     angle: 144,
     unlockXP: 8000,
@@ -115,7 +115,7 @@ export const SCHOOLS = {
   WILL: {
     id: "WILL",
     name: "Willpower Surge",
-    color: "#ef4444", // Distinctive Red
+    color: "#ef4444", // Authoritative Red
     colorHsl: { h: 0, s: 85, l: 48 },
     angle: 216,
     unlockXP: 25000,
@@ -135,7 +135,7 @@ export const SCHOOLS = {
   NECROMANCY: {
     id: "NECROMANCY",
     name: "Necromancy",
-    color: "#22c55e", // Distinctive Green
+    color: "#22c55e", // Authoritative Green
     colorHsl: { h: 120, s: 75, l: 40 },
     angle: 36,
     unlockXP: 100000,
@@ -153,7 +153,7 @@ export const SCHOOLS = {
   ABJURATION: {
     id: "ABJURATION",
     name: "Abjuration",
-    color: "#06b6d4", // Distinctive Cyan
+    color: "#06b6d4", // Authoritative Cyan
     colorHsl: { h: 180, s: 80, l: 68 },
     angle: 108,
     unlockXP: 500000,
@@ -171,7 +171,7 @@ export const SCHOOLS = {
   DIVINATION: {
     id: "DIVINATION",
     name: "Divination",
-    color: "#eab308", // Distinctive Gold/Yellow
+    color: "#eab308", // Authoritative Gold
     colorHsl: { h: 45, s: 90, l: 68 },
     angle: 180,
     unlockXP: 2000000,

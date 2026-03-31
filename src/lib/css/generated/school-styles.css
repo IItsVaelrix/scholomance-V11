@@ -1,8 +1,8 @@
 :root {
-  --school-sonic: #a855f7;
-  --school-sonic-hsl: 275, 85%, 55%;
-  --school-sonic-glow: hsla(275, 85%, 55%, 0.4);
-  --school-sonic-lock-bleed: hsla(275, 85%, 55%, 0.4);
+  --school-sonic: #1ab4a8;
+  --school-sonic-hsl: 175, 85%, 55%;
+  --school-sonic-glow: hsla(175, 85%, 55%, 0.4);
+  --school-sonic-lock-bleed: hsla(175, 85%, 55%, 0.4);
   --school-psychic: #3b82f6;
   --school-psychic-hsl: 220, 90%, 60%;
   --school-psychic-glow: hsla(220, 90%, 60%, 0.4);
@@ -39,11 +39,11 @@
   --school-necromancy-angle: 36deg;
   --school-abjuration-angle: 108deg;
   --school-divination-angle: 180deg;
-  --active-school-color: #a855f7;
-  --active-school-h: 275;
+  --active-school-color: #1ab4a8;
+  --active-school-h: 175;
   --active-school-s: 85%;
   --active-school-l: 55%;
-  --active-school-glow: hsla(275, 85%, 55%, 0.4);
+  --active-school-glow: hsla(175, 85%, 55%, 0.4);
   --active-aurora-intensity: 0.9;
   --active-saturation: 90%;
   --active-vignette-strength: 0.7;

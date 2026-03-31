@@ -1,6 +1,6 @@
 # Dead Code Report
 
-Generated at: 2026-03-29T23:46:27.407Z
+Generated at: 2026-03-31T00:55:14.624Z
 
 ## Unreachable Files
 Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
@@ -11,11 +11,14 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src\lib\truesight\compiler\verseIRQueries.js
 - [ ] src\lib\workers\analysis.worker.js
 - [ ] src\lib\worldApi.js
+- [ ] src\pages\Listen\ArcaneBookshelfCanvas.jsx
 - [ ] src\pages\Listen\ArcaneKnob.tsx
 - [ ] src\pages\Listen\ArcaneRadio.tsx
+- [ ] src\pages\Listen\ArcaneShelfPanel.jsx
 - [ ] src\pages\Listen\BrassGearDial.jsx
 - [ ] src\pages\Listen\CrystalBallVisualizer.tsx
 - [ ] src\pages\Listen\NixieTube.jsx
+- [ ] src\pages\Listen\scenes\ArcaneBookshelfScene.js
 - [ ] src\pages\Listen\scenes\CrystalBallScene.js
 - [ ] src\types\core\analysis.ts
 - [ ] src\types\core\combat.ts
@@ -30,6 +33,11 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src\types\lib\pls.ts
 - [ ] src\types\lib\rhyme.ts
 - [ ] src\types\runtime\runtime.ts
+- [ ] codex\core\pixelbrain\extensions\physics-extensions.js
+- [ ] codex\core\pixelbrain\extensions\style-extensions.js
+- [ ] codex\core\pixelbrain\image-to-pixel-art.js
+- [ ] codex\core\pixelbrain\image-to-semantic-bridge.js
+- [ ] codex\core\pixelbrain-phase3.js
 - [ ] codex\core\rhyme\dataset.js
 - [ ] codex\core\rhyme\generator.js
 - [ ] codex\core\rhyme\index.js
@@ -37,7 +45,7 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] codex\core\rhyme\predictor.js
 - [ ] codex\core\rhyme\training.js
 - [ ] codex\core\rhyme\validator.js
-- [ ] codex\server\services\phonemicOracle.service.js
+- [ ] codex\server\services\narrativeAMP.service.js
 - [ ] codex\server\services\rhyme-astrology\indexRepo.js
 - [ ] codex\server\services\rhyme-astrology\lexiconRepo.js
 - [ ] codex\services\adapters\index.js
@@ -101,7 +109,6 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `getDeviceId` in `src\lib\platform\wordCache.js`
 - [ ] `deriveFeatureAdjustedWeights` in `src\lib\pls\ranker.js`
 - [ ] `getXpForLevel` in `src\lib\progressionUtils.js`
-- [ ] `PAGE_COMPONENTS` in `src\lib\routes.js`
 - [ ] `SyntaxAnalyzer` in `src\lib\syntax.layer.js`
 - [ ] `classifySyntaxToken` in `src\lib\syntax.layer.js`
 - [ ] `getSyntaxIdentityKey` in `src\lib\syntax.layer.js`
@@ -121,7 +128,9 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `deserializeVerseIR` in `src\lib\truesight\compiler\verseIRSerialization.js`
 - [ ] `WORD_PATTERN` in `src\lib\wordTokenization.js`
 - [ ] `getSyntacticIntegrity` in `src\pages\Combat\components\Spellbook.jsx`
+- [ ] `ArcaneBookshelfCanvas` in `src\pages\Listen\ArcaneBookshelfCanvas.jsx`
 - [ ] `ArcaneRadio` in `src\pages\Listen\ArcaneRadio.tsx`
+- [ ] `ArcaneShelfPanel` in `src\pages\Listen\ArcaneShelfPanel.jsx`
 - [ ] `DocumentStats` in `src\types\core\analysis.ts`
 - [ ] `DocumentParsed` in `src\types\core\analysis.ts`
 - [ ] `JudiciaryLayer` in `src\types\core\judiciary.ts`
@@ -134,6 +143,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `ScoringEngine` in `src\types\core\scoring.ts`
 - [ ] `LiteraryDeviceId` in `src\types\lib\literary.ts`
 - [ ] `LiteraryDevice` in `src\types\lib\literary.ts`
+- [ ] `Emotion` in `src\types\lib\literary.ts`
 - [ ] `MultiSyllableMatch` in `src\types\lib\phoneme.ts`
 - [ ] `PhonologicalProcessResult` in `src\types\lib\phonological.ts`
 - [ ] `CandidateArbiter` in `src\types\lib\pls.ts`
@@ -145,7 +155,6 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `EventCallback` in `src\types\runtime\runtime.ts`
 - [ ] `SCHOOL_EFFECTIVENESS` in `codex\core\combat.balance.js`
 - [ ] `STATUS_TIER_DEFINITIONS` in `codex\core\combat.balance.js`
-- [ ] `clampNumber` in `codex\core\combat.balance.js`
 - [ ] `buildHeuristicCommentary` in `codex\core\commentary\commentary.builder.js`
 - [ ] `TEMPLATE_VOCAB` in `codex\core\commentary\phrase-bank.js`
 - [ ] `MODEL_CORPUS` in `codex\core\commentary\phrase-bank.js`
@@ -159,6 +168,11 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `getUnlockedSynergies` in `codex\core\nexus.registry.js`
 - [ ] `DOCTRINES` in `codex\core\opponent.engine.js`
 - [ ] `PhoneticMatcher` in `codex\core\phonetic_matcher.js`
+- [ ] `snapValueToPixelGrid` in `codex\core\pixelbrain\anti-alias-control.js`
+- [ ] `generatePermutationTable` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `perlin2D` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `getTexturePalette` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `normalizeDegrees` in `codex\core\pixelbrain\shared.js`
 - [ ] `RHYME_ASTROLOGY_API_VERSION` in `codex\core\rhyme-astrology\contracts.js`
 - [ ] `RHYME_ASTROLOGY_QUERY_MODES` in `codex\core\rhyme-astrology\contracts.js`
 - [ ] `RHYME_ASTROLOGY_QUERY_DEFAULTS` in `codex\core\rhyme-astrology\contracts.js`
@@ -177,9 +191,19 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `DEFAULT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
 - [ ] `COMBAT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
 - [ ] `getCombatScoringHeuristics` in `codex\core\scoring.defaults.js`
+- [ ] `MOOD_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `MATERIAL_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `STYLE_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `EFFECT_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `COMPOSITION_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `COLOR_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `entitiesToMathConstraints` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `constraintsToPixelBrainParams` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `getSymbolLibrary` in `codex\core\semantic\semantic-math-bridge.js`
 - [ ] `cadenceClosureWeight` in `codex\core\speaking\prosody.js`
 - [ ] `parseWeave` in `codex\core\spellweave.engine.js`
 - [ ] `createTokenizer` in `codex\core\tokenizer.js`
+- [ ] `parseNaturalLanguagePrompt` in `codex\core\verseir-amplifier\plugins\naturalLanguageAmp.js`
 - [ ] `DEFAULT_VERSEIR_AMPLIFIER_WEIGHT` in `codex\core\verseir-amplifier\shared.js`
 - [ ] `resolveAmplifierDomains` in `codex\core\verseir-amplifier\shared.js`
 - [ ] `estimateTierAmplifierRoute` in `codex\core\verseir-amplifier\shared.js`
@@ -211,9 +235,12 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `PipelineRunStatus` in `codex\server\collab\collab.schemas.js`
 - [ ] `readSqlitePragmas` in `codex\server\db\sqlite.migrations.js`
 - [ ] `CaptchaService` in `codex\server\services\captcha.service.js`
+- [ ] `extractDominantColors` in `codex\server\services\imageAnalysis.service.js`
+- [ ] `analyzeComposition` in `codex\server\services\imageAnalysis.service.js`
+- [ ] `imageToSemanticParams` in `codex\server\services\imageAnalysis.service.js`
 - [ ] `ConsoleMailerService` in `codex\server\services\mailer.service.js`
 - [ ] `SendGridMailerService` in `codex\server\services\mailer.service.js`
-- [ ] `createPhonemicOracleService` in `codex\server\services\phonemicOracle.service.js`
+- [ ] `createNarrativeAMPService` in `codex\server\services\narrativeAMP.service.js`
 - [ ] `getPendingCount` in `codex\server\services\wordLookupCoalescer.js`
 - [ ] `RHYME_ASTROLOGY_ARTIFACT_FILES` in `codex\server\utils\rhymeAstrologyPaths.js`
 - [ ] `hasRhymeAstrologyArtifactBundle` in `codex\server\utils\rhymeAstrologyPaths.js`

@@ -734,11 +734,12 @@ function createAmbientPlayerService(options = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const storage = getStorage(options.storage);
   const persisted = readPersistedSettings(storage);
-  const schoolConfig = getSchoolAudioConfig(persisted.schoolId);
+  const initialSchoolId = persisted.schoolId || getDefaultSchoolId(Object.keys(SCHOOLS));
+  const schoolConfig = getSchoolAudioConfig(initialSchoolId);
 
   let state = {
     status: AMBIENT_PLAYER_STATES.IDLE,
-    schoolId: schoolConfig ? persisted.schoolId : null,
+    schoolId: initialSchoolId,
     queuedSchoolId: null,
     trackUrl: schoolConfig?.trackUrl || null,
     isPlaying: false,
@@ -784,21 +785,21 @@ function createAmbientPlayerService(options = {}) {
 
   function resolveTrackUrlForSchool(schoolId, fallbackTrackUrl = null) {
     if (!schoolId) return fallbackTrackUrl || null;
-    if (schoolId === "SONIC") {
-      const previousTrackUrl = lastResolvedTrackUrlBySchool.get(schoolId) || null;
-      const randomizedTrackUrl = getRandomizedStationTrackUrl(schoolId, { excludeUrl: previousTrackUrl });
-      const resolvedTrackUrl = randomizedTrackUrl || fallbackTrackUrl || null;
-      if (resolvedTrackUrl) {
-        lastResolvedTrackUrlBySchool.set(schoolId, resolvedTrackUrl);
-      }
-      return resolvedTrackUrl;
+    
+    // All schools now use the randomized station track pool
+    const previousTrackUrl = lastResolvedTrackUrlBySchool.get(schoolId) || null;
+    const randomizedTrackUrl = getRandomizedStationTrackUrl(schoolId, { excludeUrl: previousTrackUrl });
+    const resolvedTrackUrl = randomizedTrackUrl || fallbackTrackUrl || null;
+    
+    if (resolvedTrackUrl) {
+      lastResolvedTrackUrlBySchool.set(schoolId, resolvedTrackUrl);
     }
-    return fallbackTrackUrl || null;
+    return resolvedTrackUrl;
   }
 
   function handleTrackEnded(schoolId) {
     transition(AMBIENT_PLAYER_EVENTS.TRACK_ENDED);
-    if (schoolId !== "SONIC") {
+    if (!schoolId) {
       return;
     }
     if (state.status !== AMBIENT_PLAYER_STATES.PLAYING) {
@@ -1388,6 +1389,88 @@ function createAmbientPlayerService(options = {}) {
     return computeSignalLevel();
   }
 
+  let lockedDetectedSchool = null;
+
+  /**
+   * Performs real-time spectral analysis to detect the dominant school.
+   * Locks the first clear detection per play session.
+   */
+  async function getDetectedSchoolId() {
+    // If already locked for this session, stay locked
+    if (lockedDetectedSchool) return lockedDetectedSchool;
+
+    if (!currentController?.analyser) return null;
+    
+    if (audioContext && audioContext.state === 'suspended') {
+      try { await audioContext.resume(); } catch (e) {}
+    }
+    
+    const bufferLength = currentController.analyser.frequencyBinCount;
+    const data = new Uint8Array(bufferLength);
+    currentController.analyser.getByteFrequencyData(data);
+
+    const schoolEnergy = { VOID: 0, SONIC: 0, WILL: 0, ALCHEMY: 0, PSYCHIC: 0 };
+    const schoolBins = { VOID: 0, SONIC: 0, WILL: 0, ALCHEMY: 0, PSYCHIC: 0 };
+
+    for (let i = 0; i < bufferLength; i++) {
+      const v = data[i] / 255.0;
+      const freq = (i * 22050) / bufferLength;
+
+      // SPEC V1.8: Pink-Noise Compensated Weighting (Tilt)
+      // We multiply higher frequencies to account for natural 1/f energy decay
+      let weight = 1.0;
+      let band = null;
+
+      if (freq >= 20 && freq < 150) { 
+        band = 'VOID'; 
+        weight = 1.0; 
+      } else if (freq >= 150 && freq < 500) { 
+        band = 'SONIC'; 
+        weight = 1.4; // Mid-range compensation
+      } else if (freq >= 500 && freq < 2000) { 
+        band = 'WILL'; 
+        weight = 2.2; 
+      } else if (freq >= 2000 && freq < 6500) { 
+        band = 'ALCHEMY'; 
+        weight = 3.5; 
+      } else if (freq >= 6500) { 
+        band = 'PSYCHIC'; 
+        weight = 5.0; // Heavy tilt for high-frequency air
+      }
+
+      if (band) {
+        schoolEnergy[band] += v * weight;
+        schoolBins[band] += 1;
+      }
+    }
+
+    const averages = {};
+    let totalAvg = 0;
+    let maxAvg = 0;
+    let winner = null;
+    
+    Object.entries(schoolEnergy).forEach(([key, energy]) => {
+      const avg = energy / (schoolBins[key] || 1);
+      averages[key] = avg;
+      totalAvg += avg;
+      if (avg > maxAvg) {
+        maxAvg = avg;
+        winner = key;
+      }
+    });
+
+    // RELATIVE DOMINANCE CHECK (Spec v1.8)
+    // A school wins if its average energy is significantly higher than the mean of other bands
+    const otherAvg = (totalAvg - maxAvg) / 4;
+    
+    if (winner && maxAvg > otherAvg * 1.8 && maxAvg > 0.05) {
+      lockedDetectedSchool = winner;
+      return winner;
+    }
+    
+    return null;
+  }
+
   function getAnalyser() {
     return currentController?.analyser || null;
   }
@@ -1583,6 +1666,7 @@ function createAmbientPlayerService(options = {}) {
   async function pause() {
     clearTuneTimer();
     nextTuneOperationId(); // Invalidate any pending tuning operations
+    lockedDetectedSchool = null; // Reset fingerprint lock on pause
     if (currentController) {
       try {
         await currentController.pause();
@@ -1693,6 +1777,7 @@ function createAmbientPlayerService(options = {}) {
     ensureContextRunning,
     getAnalyser,
     getByteFrequencyData,
+    getDetectedSchoolId,
   };
 }
 

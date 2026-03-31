@@ -5,7 +5,7 @@ import { SCHOOLS, generateSchoolColor } from "../data/schools.js";
 import {
   AMBIENT_PLAYER_STATES,
   getAmbientPlayerService,
-} from "../lib/ambient/ambientPlayer.service";
+} from "../lib/ambient/ambientPlayer.service.js";
 
 // ── Aurora level singleton ────────────────────────────────────────────────────
 // 0 = OFF, 1 = DIM, 2 = FULL
@@ -116,12 +116,34 @@ export function useAtmosphere() {
     };
   }, []);
 
-  // Apply school-specific CSS variables when the song, ambient school, or aurora level changes.
+  // Apply school-specific CSS variables when the song, ambient school, or detected sonic energy changes.
+  const [detectedId, setDetectedId] = useState(null);
+
+  useEffect(() => {
+    if (!ambientState.isActive) {
+      setDetectedId(null);
+      return;
+    }
+
+    const service = getAmbientPlayerService();
+    let rafId;
+
+    const poll = async () => {
+      const id = await service.getDetectedSchoolId?.();
+      if (id !== detectedId) setDetectedId(id);
+      rafId = requestAnimationFrame(poll);
+    };
+
+    rafId = requestAnimationFrame(poll);
+    return () => cancelAnimationFrame(rafId);
+  }, [ambientState.isActive, detectedId]);
+
   useEffect(() => {
     const { schoolId: ambientSchoolId, isActive } = ambientState;
 
-    // Priority: Active ambient station > Active song (Watch) > Last selected ambient > Default
-    const activeSchoolId = (isActive && ambientSchoolId)
+    // Priority: Detected School (Sonic Energy) > Active ambient station > Active song (Watch) > Last selected ambient > Default
+    const activeSchoolId = detectedId
+      || (isActive && ambientSchoolId)
       || currentSong?.school
       || ambientSchoolId
       || "SONIC";
@@ -131,14 +153,19 @@ export function useAtmosphere() {
     prevSchoolRef.current = school.id;
 
     const root = document.documentElement;
-    const { h, s, l } = school.colorHsl;
+    const { h, s: baseS, l: baseL } = school.colorHsl;
     const atmo = school.atmosphere;
+
+    // Bytecode Resonance Model: high energy for active tracks
+    const saturation = isActive ? Math.min(100, baseS + 15) : baseS;
+    const lightness = isActive ? Math.min(90, baseL + 5) : baseL;
+    const glowAlpha = isActive ? 0.6 : 0.35;
 
     root.style.setProperty("--active-school-color", generateSchoolColor(school.id));
     root.style.setProperty("--active-school-h", String(h));
-    root.style.setProperty("--active-school-s", `${s}%`);
-    root.style.setProperty("--active-school-l", `${l}%`);
-    root.style.setProperty("--active-school-glow", `hsla(${h}, ${s}%, ${l}%, 0.4)`);
+    root.style.setProperty("--active-school-s", `${saturation}%`);
+    root.style.setProperty("--active-school-l", `${lightness}%`);
+    root.style.setProperty("--active-school-glow", `hsla(${h}, ${saturation}%, ${lightness}%, ${glowAlpha})`);
     root.style.setProperty("--active-aurora-intensity", String(atmo.auroraIntensity * AURORA_FACTORS[_auroraLevel]));
     root.style.setProperty("--active-saturation", `${atmo.saturation}%`);
     root.style.setProperty("--active-vignette-strength", String(atmo.vignetteStrength));

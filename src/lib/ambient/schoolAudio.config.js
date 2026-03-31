@@ -2,8 +2,7 @@ import { SCHOOLS, generateSchoolColor } from "../../data/schools";
 import { getDefaultSonicStationTrackUrl, pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
 
 function getPrimaryTrackUrl(schoolId) {
-  if (schoolId !== "SONIC") return null;
-  return getDefaultSonicStationTrackUrl();
+  return pickRandomSonicStationTrack({ schoolId }) || null;
 }
 
 export const SCHOOL_AUDIO_CONFIG = Object.freeze(
@@ -25,10 +24,8 @@ export function getSchoolAudioConfig(schoolId) {
 }
 
 export function getRandomizedStationTrackUrl(schoolId, { excludeUrl = null } = {}) {
-  if (schoolId !== "SONIC") {
-    return getSchoolAudioConfig(schoolId)?.trackUrl || null;
-  }
-  return pickRandomSonicStationTrack({ excludeUrl }) || getDefaultSonicStationTrackUrl();
+  const config = getSchoolAudioConfig(schoolId);
+  return pickRandomSonicStationTrack({ schoolId, excludeUrl }) || config?.trackUrl || null;
 }
 
 export function getPlayableSchoolIds(_unlockedSchools = []) {

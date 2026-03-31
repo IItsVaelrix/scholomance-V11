@@ -6,6 +6,8 @@ import { useAmbientPlayer } from "../../hooks/useAmbientPlayer";
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { SpectrumCanvas } from "../../components/ParaEQ/SpectrumCanvas";
+import { useSonicAnalysis } from "../../hooks/useSonicAnalysis";
+import { MagicNamePlate } from "./MagicNamePlate";
 import "./ListenPage.css";
 
 /**
@@ -25,7 +27,18 @@ export default function ListenPage() {
     setVolume,
     togglePlayPause,
     getByteFrequencyData,
+    ensureContextRunning,
   } = useAmbientPlayer(allSchoolIds);
+
+  const { detectedSchoolId } = useSonicAnalysis(getByteFrequencyData, isPlaying);
+
+  // Derive the station currently "Painting" the UI
+  // Priority: Detected School (Sonic) > Station Selection (Player)
+  const activeStation = useMemo(() => {
+    const id = detectedSchoolId || currentSchoolId || 'chrono';
+    const school = SCHOOLS[id] || Object.values(SCHOOLS)[0];
+    return { ...school, color: generateSchoolColor(id) };
+  }, [detectedSchoolId, currentSchoolId]);
 
   // ── Entropy tracking — UI-only: punishes looping the same school ──────────
   const [entropyLevel, setEntropyLevel] = useState(0);
@@ -59,6 +72,28 @@ export default function ListenPage() {
     : entropyLevel >= 40
     ? 'entropy-high'
     : '';
+
+  // ── Keyboard Controls ──────────────────────────────────────────────────
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Toggle play/pause on Space
+      if (e.code === 'Space') {
+        // Prevent page scroll
+        e.preventDefault();
+        
+        // Don't trigger if user is in an input/textarea
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+        // Force resume context on interaction
+        void ensureContextRunning();
+        void togglePlayPause();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [togglePlayPause]);
 
   // Phoneme density warning with hysteresis to prevent flickering
   // Enters warning at 0.75, exits at 0.68 (7% hysteresis band)
@@ -146,15 +181,20 @@ export default function ListenPage() {
       {/* Center: The Core 3D Console */}
       <main className="hud-center">
         <div className={`core-mount ${isPlaying ? 'is-playing' : ''}`}>
-          <SignalChamberConsole />
+          <SignalChamberConsole overrideSchoolId={activeStation.id} />
 
           {/* Floating Status Plate */}
-          <div className="core-status-plate" style={{ '--accent': currentStation.color } as any}>
+          <div className="core-status-plate" style={{ '--accent': activeStation.color } as any}>
             <div className="status-indicator">
               <span className={`pulse-dot ${isPlaying ? 'is-active' : ''}`} />
               {isTuning ? "SYNCHRONIZING..." : "RESONANCE_LOCKED"}
             </div>
-            <h2>{currentStation.name.toUpperCase()}</h2>
+            
+            <MagicNamePlate 
+              name={activeStation.name} 
+              color={activeStation.color} 
+            />
+
             <div className="frequency-readout">
               {(432 + signalLevel * 8).toFixed(2)} Hz
             </div>

@@ -549,8 +549,9 @@ export class SignalChamberScene extends Phaser.Scene {
   }
 
   _drawGaugeFaces() {
-    this._drawGaugeFace(this._gauLFace, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, PAL.dimGold);
-    this._drawGaugeFace(this._gauRFace, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, PAL.dimGold);
+    const col = this._col || PAL.dimGold;
+    this._drawGaugeFace(this._gauLFace, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, col);
+    this._drawGaugeFace(this._gauRFace, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, col);
   }
 
   _drawGaugeFace(gfx, cx_ref, cy_ref, r_ref, col) {
@@ -828,7 +829,7 @@ export class SignalChamberScene extends Phaser.Scene {
     const sx = this._sx, sy = this._sy, ms = this._ms;
     const bx = BTN_PLAY.x * sx, by = BTN_PLAY.y * sy;
     const br = BTN_PLAY.r * ms;
-    const col  = this._isPlaying ? PAL.teal : PAL.dimGold;
+    const col  = this._col || PAL.dimGold;
     const glowA = this._isPlaying ? 0.25 : 0;
 
     this._btnBg.clear();
@@ -884,9 +885,9 @@ export class SignalChamberScene extends Phaser.Scene {
 
     this._sigSldFill.clear();
     if (fillH > 0) {
-      this._sigSldFill.fillStyle(PAL.teal, 0.55);
+      this._sigSldFill.fillStyle(this._col || PAL.teal, 0.55);
       this._sigSldFill.fillRoundedRect(stX - stW / 2 + 4 * ms, fillTop, stW - 8 * ms, fillH - 3, 8 * ms);
-      this._sigSldFill.lineStyle(2, PAL.teal, 0.2);
+      this._sigSldFill.lineStyle(2, this._col || PAL.teal, 0.2);
       this._sigSldFill.strokeRoundedRect(stX - stW / 2 + 4 * ms, fillTop, stW - 8 * ms, fillH - 3, 8 * ms);
     }
 
@@ -925,26 +926,30 @@ export class SignalChamberScene extends Phaser.Scene {
 
   _syncTextToState() {
     if (!this._txtStaName) return;
-    const col = this._colHex;
+    const colHex = this._colHex || '#d5b34b';
 
     this._txtStaName.setText(this._stationName || 'NO SIGNAL');
-    this._txtSigStatus?.setText(this._status);
-    this._txtSigVal?.setText(`SIG: ${Math.round(this._sig * 100)}%`);
+    this._txtStaName.setColor(colHex);
+    this._txtSigStatus?.setText(this._status).setColor(colHex);
+    this._txtSigVal?.setText(`SIG: ${Math.round(this._sig * 100)}%`).setColor(colHex);
 
     const chipLabel = this._isTuning  ? '◎ SYNCING'
                     : this._isPlaying ? '◉ TRANSMITTING'
                     :                   '● STANDBY';
-    const chipColor = this._isPlaying ? '#00ffcc'
-                    : this._isTuning  ? '#d47a1ccc'
-                    :                   '#d5b34b88';
+    const chipColor = this._isPlaying ? colHex
+                    : this._isTuning  ? colHex
+                    :                   colHex;
     this._txtStatus?.setText(chipLabel).setColor(chipColor);
 
     if (this._logs.length > 0 && this._logLines) {
       const recent = this._logs.slice(-6);
-      this._logLines.forEach((ln, i) => ln.setText(recent[i] ? `> ${recent[i]}` : ''));
+      this._logLines.forEach((ln, i) => {
+        ln.setText(recent[i] ? `> ${recent[i]}` : '');
+        ln.setColor(colHex);
+      });
     }
 
-    this._txtGlyph?.setColor(col);
+    this._txtGlyph?.setColor(colHex);
   }
 
   // ══════════════════════════════════════════════════════════════════════════
@@ -979,9 +984,22 @@ export class SignalChamberScene extends Phaser.Scene {
       this._col          = this._hexToInt(data.schoolColor);
       this._inTransition = true;
       this._transAlpha   = 0;
-      // Force gauge needle redraws so they pick up the new color immediately
+      
+      // Force gauge needle and face redraws
       this._gaugeL_prev = -1;
       this._gaugeR_prev = -1;
+      this._drawGaugeFaces();
+      
+      // Update persistent text colors
+      this._txtTitle?.setColor(this._colHex);
+      this._txtSub?.setColor(this._colHex);
+      this._txtTermHeader?.setColor(this._colHex);
+      this._txtResonatorHeader?.setColor(this._colHex);
+      this._txtGaugeL?.setColor(this._colHex);
+      this._txtGaugeR?.setColor(this._colHex);
+      
+      // Tint the baked background slightly to match school energy
+      this._rtBg?.setTint(this._col);
     }
 
     if (data.schoolId !== undefined) this._schoolId = data.schoolId;
@@ -1120,9 +1138,9 @@ export class SignalChamberScene extends Phaser.Scene {
     // ── FX: Global ambient haze ──
     this._fxGlow.clear();
     const hazeA = (0.03 + sig * 0.07) * ta;
-    this._fxGlow.fillStyle(PAL.teal, hazeA * 0.4);
+    this._fxGlow.fillStyle(col, hazeA * 0.4);
     this._fxGlow.fillCircle(cx, cy, r * 1.45);
-    this._fxGlow.fillStyle(PAL.dimGold, hazeA * 0.25);
+    this._fxGlow.fillStyle(col, hazeA * 0.25);
     this._fxGlow.fillCircle(conX - conW * 0.3, conY - conH * 0.25, 80 * ms);
 
     // ── Gauges: Lerp + dirty-check redraw ──

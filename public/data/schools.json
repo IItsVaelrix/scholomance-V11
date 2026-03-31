@@ -2,145 +2,145 @@
   "SONIC": {
     "id": "SONIC",
     "name": "Sonic Thaumaturgy",
-    "color": "#651fff",
-    "colorHsl": { "h": 251, "s": 100, "l": 50 },
+    "color": "#1ab4a8",
+    "colorHsl": { "h": 175, "s": 85, "l": 55 },
     "angle": 288,
     "unlockXP": 0,
     "description": "The art of sonic manipulation and harmonic resonance",
-    "tracks": ["lexiconic"],
-    "vowelAffinities": ["AO", "IH", "OW"],
-    "glyph": "?",
+    "tracks": ["sonic_harmony"],
+    "vowelAffinities": ["AE", "EH"],
+    "glyph": "♩",
     "atmosphere": {
-      "auroraIntensity": 1.0,
-      "saturation": 100,
+      "auroraIntensity": 0.9,
+      "saturation": 90,
       "vignetteStrength": 0.7,
-      "scanlineOpacity": 0.15
+      "scanlineOpacity": 0
     }
   },
   "PSYCHIC": {
     "id": "PSYCHIC",
     "name": "Psychic Schism",
-    "color": "#00E5FF",
-    "colorHsl": { "h": 185, "s": 100, "l": 50 },
+    "color": "#3b82f6",
+    "colorHsl": { "h": 220, "s": 90, "l": 60 },
     "angle": 72,
     "unlockXP": 250,
     "description": "Mental discipline and psychic energy projection",
     "tracks": ["schism"],
-    "vowelAffinities": ["AY", "IY", "UW"],
-    "glyph": "?",
+    "vowelAffinities": ["IY", "IH"],
+    "glyph": "◬",
     "atmosphere": {
-      "auroraIntensity": 1.0,
-      "saturation": 100,
-      "vignetteStrength": 0.6,
-      "scanlineOpacity": 0.12
+      "auroraIntensity": 0.8,
+      "saturation": 85,
+      "vignetteStrength": 0.65,
+      "scanlineOpacity": 0
     }
   },
   "VOID": {
     "id": "VOID",
     "name": "The Void",
-    "color": "#a1a1aa",
-    "colorHsl": { "h": 240, "s": 5, "l": 63 },
+    "color": "#94a3b8",
+    "colorHsl": { "h": 215, "s": 15, l: 41 },
     "angle": 0,
     "unlockXP": 1500,
     "description": "The space between spaces, where entropy reigns",
     "tracks": ["void"],
-    "vowelAffinities": ["UH", "ER"],
-    "glyph": "�",
+    "vowelAffinities": ["AX", "UH"],
+    "glyph": "∅",
     "atmosphere": {
-      "auroraIntensity": 0.2,
-      "saturation": 10,
-      "vignetteStrength": 0.9,
-      "scanlineOpacity": 0.25
+      "auroraIntensity": 0.15,
+      "saturation": 15,
+      "vignetteStrength": 0.92,
+      "scanlineOpacity": 0.02
     }
   },
   "ALCHEMY": {
     "id": "ALCHEMY",
     "name": "Verbal Alchemy",
-    "color": "#D500F9",
-    "colorHsl": { "h": 286, "s": 100, "l": 52 },
+    "color": "#ec4899",
+    "colorHsl": { "h": 325, "s": 80, "l": 58 },
     "angle": 144,
     "unlockXP": 8000,
     "description": "The transmutation of meaning through spoken word",
     "tracks": ["alchemy"],
-    "vowelAffinities": ["EY", "A", "OH"],
-    "glyph": "?",
+    "vowelAffinities": ["EY", "OY"],
+    "glyph": "⚗",
     "atmosphere": {
-      "auroraIntensity": 1.2,
-      "saturation": 110,
-      "vignetteStrength": 0.65,
-      "scanlineOpacity": 0.15
+      "auroraIntensity": 1.1,
+      "saturation": 105,
+      "vignetteStrength": 0.6,
+      "scanlineOpacity": 0
     }
   },
   "WILL": {
     "id": "WILL",
     "name": "Willpower Surge",
-    "color": "#FF8A00",
-    "colorHsl": { "h": 33, "s": 100, "l": 50 },
+    "color": "#ef4444",
+    "colorHsl": { "h": 0, "s": 85, "l": 48 },
     "angle": 216,
     "unlockXP": 25000,
     "description": "Focusing raw will into reality-altering force",
     "tracks": ["will"],
-    "vowelAffinities": ["AE", "AW", "EH"],
-    "glyph": "?",
+    "vowelAffinities": ["AH"],
+    "glyph": "⚡",
     "atmosphere": {
-      "auroraIntensity": 1.1,
-      "saturation": 100,
-      "vignetteStrength": 0.6,
-      "scanlineOpacity": 0.1
+      "auroraIntensity": 1.0,
+      "saturation": 95,
+      "vignetteStrength": 0.62,
+      "scanlineOpacity": 0
     }
   },
   "NECROMANCY": {
     "id": "NECROMANCY",
     "name": "Necromancy",
-    "color": null,
-    "colorHsl": { "h": 120, "s": 60, "l": 30 },
+    "color": "#22c55e",
+    "colorHsl": { "h": 120, "s": 75, "l": 40 },
     "angle": 36,
     "unlockXP": 100000,
     "description": "Communication with and manipulation of life force",
     "tracks": [],
-    "vowelAffinities": ["OY"],
-    "glyph": "?",
+    "vowelAffinities": ["AA", "A"],
+    "glyph": "☠",
     "atmosphere": {
-      "auroraIntensity": 0.8,
-      "saturation": 80,
-      "vignetteStrength": 0.8,
-      "scanlineOpacity": 0.2
+      "auroraIntensity": 0.6,
+      "saturation": 55,
+      "vignetteStrength": 0.82,
+      "scanlineOpacity": 0.01
     }
   },
   "ABJURATION": {
     "id": "ABJURATION",
     "name": "Abjuration",
-    "color": null,
-    "colorHsl": { "h": 0, "s": 0, "l": 90 },
-    "angle": 108,
+    "color": "#06b6d4",
+    "colorHsl": { "h": 180, "s": 80, "l": 68 },
+    "angle: 108,
     "unlockXP": 500000,
     "description": "Protective magic and negation of effects",
     "tracks": [],
-    "vowelAffinities": [],
-    "glyph": "?",
+    "vowelAffinities": ["UW", "OW"],
+    "glyph": "◇",
     "atmosphere": {
-      "auroraIntensity": 0.6,
-      "saturation": 30,
+      "auroraIntensity": 0.5,
+      "saturation": 50,
       "vignetteStrength": 0.5,
-      "scanlineOpacity": 0.08
+      "scanlineOpacity": 0
     }
   },
   "DIVINATION": {
     "id": "DIVINATION",
     "name": "Divination",
-    "color": null,
-    "colorHsl": { "h": 50, "s": 90, "l": 60 },
+    "color": "#eab308",
+    "colorHsl": { "h": 45, "s": 90, "l": 68 },
     "angle": 180,
     "unlockXP": 2000000,
     "description": "Seeing across time and space",
     "tracks": [],
-    "vowelAffinities": [],
-    "glyph": "?",
+    "vowelAffinities": ["AO", "AW"],
+    "glyph": "◉",
     "atmosphere": {
-      "auroraIntensity": 0.9,
-      "saturation": 90,
+      "auroraIntensity": 0.85,
+      "saturation": 88,
       "vignetteStrength": 0.55,
-      "scanlineOpacity": 0.1
+      "scanlineOpacity": 0
     }
   }
 }

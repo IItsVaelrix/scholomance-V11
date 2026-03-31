@@ -67,8 +67,14 @@ export function getDefaultSonicStationTrackUrl() {
   return first?.url || null;
 }
 
-export function pickRandomSonicStationTrack({ excludeUrl = null, randomFn = Math.random } = {}) {
-  const pool = getSonicStationTrackPool();
+export function pickRandomSonicStationTrack({ schoolId = null, excludeUrl = null, randomFn = Math.random } = {}) {
+  let pool = getSonicStationTrackPool();
+  if (!pool.length) return null;
+
+  // Filter by school if provided
+  if (schoolId) {
+    pool = pool.filter(track => track.schoolId === schoolId);
+  }
   if (!pool.length) return null;
 
   const filtered = excludeUrl ? pool.filter((track) => track.url !== excludeUrl) : pool;
