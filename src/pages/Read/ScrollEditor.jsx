@@ -1,5 +1,7 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAnimationIntent } from "../../ui/animation/hooks/useAnimationIntent";
+import { motionToCssVars } from "../../ui/animation/adapters/motionToCssVars";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useColorCodex } from "../../hooks/useColorCodex.js";
 import IntelliSense from "../../components/IntelliSense.jsx";
@@ -550,6 +552,22 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const { theme: effectiveTheme } = useTheme();
   const activeTheme = theme || effectiveTheme;
   const reducedMotion = usePrefersReducedMotion();
+
+  // ── Animation AMP Integration ──────────────────────────────────────────
+
+  const highlightIntent = useMemo(() => ({
+    version: 'v1.0',
+    targetId: 'truesight-highlight',
+    preset: 'truesight-highlight',
+    trigger: highlightedLines.length > 0 ? 'state-change' : 'idle',
+    state: { activeCount: highlightedLines.length },
+    constraints: { reducedMotion }
+  }), [highlightedLines.length, reducedMotion]);
+
+  const highlightMotion = useAnimationIntent(highlightIntent);
+  const highlightStyle = motionToCssVars(highlightMotion || { ok: false });
+
+  // ────────────────────────────────────────────────────────────────────────
 
   const allowLegacyWordFallback = useMemo(() => (
     analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
@@ -1238,7 +1256,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             <span
                               key={start}
                               className={wordClassName}
-                              style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
+                              style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto', ...(isLineHighlighted ? highlightStyle : {}) }}
                               data-char-start={charStart}
                             >
                               {token}
@@ -1251,7 +1269,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             key={start}
                             type="button"
                             className={`${wordClassName} grimoire-word--interactive`}
-                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
+                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto', ...(isLineHighlighted ? highlightStyle : {}) }}
                             data-char-start={charStart}
                             data-line-index={lineIndex}
                             data-word-index={wordIndex}

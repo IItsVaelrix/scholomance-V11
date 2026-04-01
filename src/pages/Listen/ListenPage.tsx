@@ -13,6 +13,8 @@ import { OutputDeviceSelector } from "./OutputDeviceSelector";
 import { ScholomanceStation } from "./ScholomanceStation";
 import { triggerHapticPulse, UI_HAPTICS } from "../../lib/platform/haptics";
 import "./ListenPage.css";
+import { useAnimationIntent } from "../../ui/animation/hooks/useAnimationIntent";
+import { motionToFramerProps } from "../../ui/animation/adapters/motionToFramerProps";
 
 /**
  * ListenPage — The Scholomance Resonance Chamber.
@@ -58,6 +60,30 @@ export default function ListenPage() {
     const school = SCHOOLS[id] || Object.values(SCHOOLS)[0];
     return { ...school, color: generateSchoolColor(id) };
   }, [detectedSchoolId, currentSchoolId, isTuning]);
+
+  // ── Animation AMP Integration ──────────────────────────────────────────
+
+  const sidebarIntent = useMemo(() => ({
+    version: 'v1.0',
+    targetId: 'listen-sidebar',
+    preset: 'ritual-panel-enter',
+    trigger: 'mount' as const,
+    constraints: { reducedMotion: prefersReducedMotion }
+  }), [prefersReducedMotion]);
+
+  const sidebarMotion = useAnimationIntent(sidebarIntent);
+  const sidebarProps = motionToFramerProps(sidebarMotion || { ok: false } as any);
+
+  const layerIntent = useMemo(() => ({
+    version: 'v1.0',
+    targetId: 'view-layer',
+    preset: viewMode === 'CHAMBER' ? 'console-awaken' : 'station-select',
+    trigger: 'state-change' as const,
+    constraints: { reducedMotion: prefersReducedMotion }
+  }), [viewMode, prefersReducedMotion]);
+
+  const layerMotion = useAnimationIntent(layerIntent);
+  const layerProps = motionToFramerProps(layerMotion || { ok: false } as any);
 
   // ── Entropy tracking — UI-only: punishes looping the same school ──────────
   const [entropyLevel, setEntropyLevel] = useState(0);
@@ -146,38 +172,6 @@ export default function ListenPage() {
     // setViewMode('STATION');
   }, [isPlaying, isTuning, togglePlayPause]);
 
-  const viewLayerVariants = {
-    visible: {
-      opacity: 1,
-      scale: 1,
-      filter: "blur(0px)",
-      transition: { duration: 0.5, ease: "easeOut" }
-    },
-    hidden: {
-      opacity: 0,
-      scale: 0.95,
-      transition: { duration: 0.4, ease: "easeIn" }
-    },
-    exit: {
-      opacity: 0,
-      scale: 1.8,
-      filter: "blur(15px)",
-      transition: { duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }
-    },
-    // Reverse of exit - for returning from Station
-    returning: {
-      opacity: 0,
-      scale: 1.8,
-      filter: "blur(15px)",
-      transition: { duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }
-    }
-  };
-
-  const uiVariants = {
-    visible: { opacity: 1, transition: { duration: 0.4 } },
-    hidden: { opacity: 0, transition: { duration: 0.3 } }
-  };
-
   return (
     <section
       className={`listen-chamber ${prefersReducedMotion ? "is-reduced-motion" : ""} ${entropyClass}`}
@@ -192,13 +186,13 @@ export default function ListenPage() {
           <motion.div
             key="chamber-view"
             className="view-layer"
-            initial={hasVisitedStation ? "returning" : "hidden"}
-            animate="visible"
-            exit="exit"
-            variants={viewLayerVariants}
+            {...layerProps}
           >
             {/* Left Sidebar: Aperture Control */}
-            <motion.aside className="hud-sidebar hud-sidebar--left" variants={uiVariants}>
+            <motion.aside 
+              className="hud-sidebar hud-sidebar--left" 
+              {...sidebarProps}
+            >
               <div className="sidebar-header">
                 <h3>APERTURE</h3>
                 <p>SIGNAL_PATH_04</p>
@@ -292,7 +286,12 @@ export default function ListenPage() {
             </main>
 
             {/* Right Sidebar: Parameters */}
-            <motion.aside className="hud-sidebar hud-sidebar--right" variants={uiVariants}>
+            <motion.aside 
+              className="hud-sidebar hud-sidebar--right" 
+              {...sidebarProps}
+              initial={sidebarProps.initial || { opacity: 0, x: 30 }}
+              animate={sidebarProps.animate || { opacity: 1, x: 0 }}
+            >
               <div className="sidebar-header">
                 <h3>PARAMETERS</h3>
                 <p>AURAL_INTEGRITY</p>

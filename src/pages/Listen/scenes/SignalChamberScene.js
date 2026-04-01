@@ -291,25 +291,51 @@ export class SignalChamberScene extends Phaser.Scene {
     if (data.isPlaying !== undefined && data.isPlaying !== this._isPlaying) { this._isPlaying = data.isPlaying; this._redrawPlayButton(); }
     if (data.schoolColor !== undefined && data.schoolColor !== this._colHex) { this._colHex = data.schoolColor; this._col = this._hexToInt(data.schoolColor); this._drawGaugeFaces(); }
     if (data.stationName !== undefined) this._txtStaName?.setText(data.stationName);
+    
+    // Store AMP motion data
+    if (data.orbMotion) this._orbMotion = data.orbMotion;
+    if (data.consoleMotion) this._consoleMotion = data.consoleMotion;
   }
 
   update(time, delta) {
     if (!this._isCreated) return;
-    const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER), glow = getBytecodeAMP(time, AMP_CHANNELS.GLOW);
+    
+    // Use AMP motion if available, fallback to legacy bytecode
+    const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER);
+    const glow = this._orbMotion?.glow !== undefined ? this._orbMotion.glow : getBytecodeAMP(time, AMP_CHANNELS.GLOW);
+    const scale = this._orbMotion?.scale !== undefined ? this._orbMotion.scale : 1.0;
+    
     const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms, bpm = this._bpm;
     if (this._schoolChanged) { this._transitionAlpha = Math.min(1, this._transitionAlpha + delta * 0.0035); if (this._transitionAlpha >= 1) this._schoolChanged = false; }
     const ta = this._transitionAlpha;
-    const standbyAlpha = 0.25 * Math.max(0, 1 - sig * 4) * ta * glow;
+    
+    // Modulate standby alpha with AMP glow
+    const standbyAlpha = (this._isPlaying ? 0.6 : 0.25) * Math.max(0.1, glow) * ta;
+    
+    // Apply AMP scale to radar elements
+    const currentR = r * scale;
+    
     // BPM-synced clock-like rotation: smooth, continuous, no wobble
-    this._sprites.hex1.setAlpha(standbyAlpha).setRotation(getRotationAtTime(time, bpm, 90)).setTint(col);
-    this._sprites.hex2.setAlpha(standbyAlpha * 0.7).setRotation(getRotationAtTime(time, bpm, -45)).setTint(col);
-    this._sprites.star.setAlpha(standbyAlpha * 1.4).setRotation(getRotationAtTime(time, bpm, -180)).setTint(col);
-    this._sprites.flower.setAlpha(standbyAlpha * 0.6).setRotation(getRotationAtTime(time, bpm, 45)).setTint(col);
-    this._sprites.metatron.setAlpha(standbyAlpha * 0.8).setRotation(getRotationAtTime(time, bpm, -90)).setTint(col);
-    this._sprites.glint.setAlpha((0.15 + sig * 0.2) * ta * (0.8 + flicker * 0.2)).setRotation(getRotationAtTime(time, bpm, 22.5));
-    this._rdPattern.clear(); this._rdPattern.setAlpha(ta); (this._programs[this._schoolId] || this._genericProgram)(this._rdPattern, cx, cy, r, time, sig, col);
-    this._consGlow.clear(); const gA = (0.035 + sig * 0.1) * ta * (0.9 + flicker * 0.1);
+    this._sprites.hex1.setAlpha(standbyAlpha).setRotation(getRotationAtTime(time, bpm, 90)).setTint(col).setScale(scale);
+    this._sprites.hex2.setAlpha(standbyAlpha * 0.7).setRotation(getRotationAtTime(time, bpm, -45)).setTint(col).setScale(0.7 * scale);
+    this._sprites.star.setAlpha(standbyAlpha * 1.4).setRotation(getRotationAtTime(time, bpm, -180)).setTint(col).setScale(scale);
+    this._sprites.flower.setAlpha(standbyAlpha * 0.6).setRotation(getRotationAtTime(time, bpm, 45)).setTint(col).setScale(1.2 * scale);
+    this._sprites.metatron.setAlpha(standbyAlpha * 0.8).setRotation(getRotationAtTime(time, bpm, -90)).setTint(col).setScale(scale);
+    this._sprites.glint.setAlpha((0.15 + sig * 0.2) * ta * (0.8 + flicker * 0.2)).setRotation(getRotationAtTime(time, bpm, 22.5)).setScale(scale);
+    
+    this._rdPattern.clear(); 
+    this._rdPattern.setAlpha(ta); 
+    (this._programs[this._schoolId] || this._genericProgram)(this._rdPattern, cx, cy, currentR, time, sig, col);
+    
+    // Console glow driven by consoleMotion
+    const consoleGlow = this._consoleMotion?.glow !== undefined ? this._consoleMotion.glow : (0.035 + sig * 0.1);
+    const consoleOpacity = this._consoleMotion?.opacity !== undefined ? this._consoleMotion.opacity : 1.0;
+    
+    this._consGlow.clear(); 
+    const gA = consoleGlow * ta * (0.9 + flicker * 0.1);
+    this._consGlow.setAlpha(consoleOpacity);
     this._consGlow.lineStyle(22, col, gA * 0.4).strokeRoundedRect(CONSOLE.x * this._sx - (CONSOLE.w * this._sx)/2, CONSOLE.y * this._sy - (CONSOLE.h * this._sy)/2, CONSOLE.w * this._sx, CONSOLE.h * this._sx, CONSOLE.cr * this._sx);
+    
     const newL = Phaser.Math.Linear(this._gaugeL_cur, sig, delta * 0.004), newR = Phaser.Math.Linear(this._gaugeR_cur, this._vol, delta * 0.004);
     if (Math.abs(newL - this._gaugeL_prev) > 0.004) { this._redrawGaugeNeedle(this._gauLNeedle, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, newL, col); this._gaugeL_prev = newL; }
     if (Math.abs(newR - this._gaugeR_prev) > 0.004) { this._redrawGaugeNeedle(this._gauRNeedle, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, newR, col); this._gaugeR_prev = newR; }
