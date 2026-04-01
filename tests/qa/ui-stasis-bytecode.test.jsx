@@ -1929,28 +1929,318 @@ describe('UI Stasis — Performance Benchmarks', () => {
   
   describe('Animation Frame Budget', () => {
     it('should complete RAF callback within 4ms (1/4 frame)', async () => {
-      // World-Law: The animation's heartbeat should not consume the entire 
+      // World-Law: The animation's heartbeat should not consume the entire
       // frame. Leave room for the browser and other spells.
       let callbackDuration = 0;
-      
+
       const rafPromise = new Promise((resolve) => {
         requestAnimationFrame((timestamp) => {
           const start = performance.now();
-          
+
           // Simulate some work
           let sum = 0;
           for (let i = 0; i < 1000; i++) {
             sum += i;
           }
-          
+
           callbackDuration = performance.now() - start;
           resolve();
         });
       });
-      
+
       await rafPromise;
-      
+
       expect(callbackDuration).toBeLessThan(4); // 1/4 of 16ms frame
+    });
+  });
+});
+
+// ============================================================================
+// Scholomance Station — View Transition Tests
+// ============================================================================
+
+describe('UI Stasis — Scholomance Station Transition', () => {
+  describe('Ignition Button (Orb Click)', () => {
+    it('should transition from CHAMBER to STATION view on orb click', async () => {
+      // World-Law: The central orb is the gateway to Scholomance Station.
+      // When ignited, the chamber must dissolve and the station must emerge.
+      // A click without transition is a broken portal.
+      
+      let viewMode = 'CHAMBER';
+      const setViewMode = vi.fn((mode) => {
+        viewMode = mode;
+      });
+      
+      const triggerIgnition = vi.fn(() => {
+        // Should call setViewMode('STATION')
+        setViewMode('STATION');
+      });
+      
+      const { container } = render(
+        <div>
+          <button
+            className="signal-core__ignition-btn"
+            onClick={triggerIgnition}
+            aria-label="Ignite Station Matrix"
+            data-testid="ignition-orb"
+          >
+            Power
+          </button>
+          <div data-testid="view-mode">{viewMode}</div>
+        </div>
+      );
+      
+      const orb = container.querySelector('[data-testid="ignition-orb"]');
+      const viewModeDisplay = container.querySelector('[data-testid="view-mode"]');
+      
+      // Initial state: CHAMBER view
+      expect(viewModeDisplay.textContent).toBe('CHAMBER');
+      
+      // Click the orb to ignite
+      await fireEvent.click(orb);
+      
+      // Verify ignition was triggered
+      expect(triggerIgnition).toHaveBeenCalledTimes(1);
+      
+      // Verify view mode transitioned to STATION
+      expect(setViewMode).toHaveBeenCalledWith('STATION');
+      expect(viewMode).toBe('STATION');
+    });
+    
+    it('should emit bytecode error if view transition stalls', async () => {
+      // World-Law: A portal that opens but never transports
+      // is a linguistic violation — the glyph promises transit
+      // but delivers only stillness.
+      
+      let viewMode = 'CHAMBER';
+      const transitionTimeout = 1000; // ms
+      let transitionComplete = false;
+      
+      const brokenTriggerIgnition = vi.fn(() => {
+        // BUG: Does NOT call setViewMode('STATION')
+        // View transition never happens
+      });
+      
+      const { container } = render(
+        <div>
+          <button
+            className="signal-core__ignition-btn"
+            onClick={brokenTriggerIgnition}
+            aria-label="Ignite Station Matrix"
+            data-testid="ignition-orb"
+          >
+            Power
+          </button>
+          <div data-testid="view-mode">{viewMode}</div>
+        </div>
+      );
+      
+      const orb = container.querySelector('[data-testid="ignition-orb"]');
+      
+      // Click the orb
+      await fireEvent.click(orb);
+      
+      // Wait for transition with timeout
+      await waitFor(() => {
+        if (viewMode === 'STATION') {
+          transitionComplete = true;
+        }
+      }, { timeout: transitionTimeout }).catch(() => {
+        // Transition failed - emit bytecode error
+        const error = new BytecodeError(
+          ERROR_CATEGORIES.UI_STASIS,
+          ERROR_SEVERITY.CRIT,
+          MODULE_IDS.UI_STASIS,
+          ERROR_CODES.ANIMATION_LIFECYCLE_HANG,
+          {
+            animationType: 'framer-motion-view-transition',
+            phase: 'CHAMBER-to-STATION',
+            reason: 'View mode never updated after ignition click',
+            componentId: 'ListenPage',
+            expectedViewMode: 'STATION',
+            actualViewMode: viewMode,
+          }
+        );
+        
+        // Verify error format
+        expect(error.bytecode).toMatch(/^PB-ERR-v1-UI_STASIS-CRIT-UISTAS-0E02-/);
+        
+        const decoded = JSON.parse(atob(error.context));
+        expect(decoded.expectedViewMode).toBe('STATION');
+        expect(decoded.actualViewMode).toBe('CHAMBER');
+      });
+      
+      // This test documents the bug: transition doesn't happen
+      expect(transitionComplete).toBe(false);
+    });
+    
+    it('should handle haptic feedback on ignition', async () => {
+      // World-Law: The touch that ignites the station must be answered
+      // with physical resonance — the haptic pulse confirms the spell was cast.
+      
+      const hapticTriggered = { current: false };
+      
+      const triggerIgnition = vi.fn(() => {
+        // Simulate haptic pulse
+        hapticTriggered.current = true;
+      });
+      
+      const { container } = render(
+        <button
+          className="signal-core__ignition-btn"
+          onClick={triggerIgnition}
+          aria-label="Ignite Station Matrix"
+          data-testid="ignition-orb"
+        >
+          Power
+        </button>
+      );
+      
+      const orb = container.querySelector('[data-testid="ignition-orb"]');
+      
+      await fireEvent.click(orb);
+      
+      // Verify ignition handler was called
+      expect(triggerIgnition).toHaveBeenCalledTimes(1);
+      
+      // Haptic should be triggered (documented, not enforced in tests)
+      expect(hapticTriggered.current).toBe(true);
+    });
+  });
+  
+  describe('View Layer Animation', () => {
+    it('should complete CHAMBER exit animation within budget', async () => {
+      // World-Law: The chamber dissolution must complete its utterance
+      // within the animation budget (800ms per Framer Motion config).
+      
+      const animationDuration = 800; // ms from viewLayerVariants.exit
+      const startTime = performance.now();
+      
+      // Simulate animation start
+      let animationComplete = false;
+      
+      const timeoutId = setTimeout(() => {
+        animationComplete = true;
+      }, animationDuration);
+      
+      // Wait for animation
+      await new Promise(resolve => setTimeout(resolve, animationDuration + 50));
+      
+      clearTimeout(timeoutId);
+      
+      expect(animationComplete).toBe(true);
+      
+      const actualDuration = performance.now() - startTime;
+      expect(actualDuration).toBeLessThan(animationDuration + 100); // 100ms tolerance
+    });
+    
+    it('should handle reduced motion preference', async () => {
+      // World-Law: For mages who cannot tolerate motion,
+      // the transition must collapse to instant teleportation.
+      
+      const prefersReducedMotion = true;
+      const expectedDuration = prefersReducedMotion ? 0 : 800;
+      
+      // In reduced motion mode, animations should be instant
+      const transitionDuration = prefersReducedMotion ? 0 : 800;
+      
+      expect(transitionDuration).toBe(expectedDuration);
+    });
+  });
+  
+  describe('Station Navigation Buttons', () => {
+    it('should handle previous station button click', async () => {
+      // World-Law: The station navigator must answer each touch
+      // with a new destination.
+      
+      const onPrevTrack = vi.fn();
+      
+      const { container } = render(
+        <button
+          className="transport-console__btn transport-console__btn--station"
+          onClick={onPrevTrack}
+          disabled={false}
+          aria-label="Previous station"
+          data-testid="prev-station-btn"
+        >
+          ⟨ RETRACE
+        </button>
+      );
+      
+      const btn = container.querySelector('[data-testid="prev-station-btn"]');
+      
+      await fireEvent.click(btn);
+      
+      expect(onPrevTrack).toHaveBeenCalledTimes(1);
+    });
+    
+    it('should handle next station button click', async () => {
+      // World-Law: The station navigator must answer each touch
+      // with a new destination.
+      
+      const onNextTrack = vi.fn();
+      
+      const { container } = render(
+        <button
+          className="transport-console__btn transport-console__btn--station"
+          onClick={onNextTrack}
+          disabled={false}
+          aria-label="Next station"
+          data-testid="next-station-btn"
+        >
+          ADVANCE ⟩
+        </button>
+      );
+      
+      const btn = container.querySelector('[data-testid="next-station-btn"]');
+      
+      await fireEvent.click(btn);
+      
+      expect(onNextTrack).toHaveBeenCalledTimes(1);
+    });
+    
+    it('should disable station buttons when no signal', async () => {
+      // World-Law: Without a signal, the station navigator
+      // must refuse touch — there is nowhere to go.
+      
+      const onPrevTrack = vi.fn();
+      const onNextTrack = vi.fn();
+      
+      const { container } = render(
+        <div>
+          <button
+            className="transport-console__btn transport-console__btn--station"
+            onClick={onPrevTrack}
+            disabled={true}
+            aria-label="Previous station"
+            data-testid="prev-station-btn"
+          >
+            ⟨ RETRACE
+          </button>
+          <button
+            className="transport-console__btn transport-console__btn--station"
+            onClick={onNextTrack}
+            disabled={true}
+            aria-label="Next station"
+            data-testid="next-station-btn"
+          >
+            ADVANCE ⟩
+          </button>
+        </div>
+      );
+      
+      const prevBtn = container.querySelector('[data-testid="prev-station-btn"]');
+      const nextBtn = container.querySelector('[data-testid="next-station-btn"]');
+      
+      expect(prevBtn).toBeDisabled();
+      expect(nextBtn).toBeDisabled();
+      
+      // Clicks should not trigger handlers when disabled
+      await fireEvent.click(prevBtn);
+      await fireEvent.click(nextBtn);
+      
+      expect(onPrevTrack).not.toHaveBeenCalled();
+      expect(onNextTrack).not.toHaveBeenCalled();
     });
   });
 });

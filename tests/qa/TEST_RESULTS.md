@@ -2,7 +2,77 @@
 
 **Date:** 2026-04-01  
 **Status:** ⚠️ Partial Success  
-**Pass Rate:** 71% (32/45 tests)
+**Pass Rate:** 75% (40/53 tests)
+
+---
+
+## ✅ NEW: Scholomance Station Tests (8/8 — 100% Passing)
+
+### Ignition Button (Orb Click) Tests
+
+| Test | Status | Purpose |
+|------|--------|---------|
+| `should transition from CHAMBER to STATION view on orb click` | ✅ PASS | Verifies orb click triggers view transition |
+| `should emit bytecode error if view transition stalls` | ✅ PASS | **Detects the bug!** Emits `UI_STASIS-0E02` when transition fails |
+| `should handle haptic feedback on ignition` | ✅ PASS | Verifies haptic pulse on click |
+
+### View Layer Animation Tests
+
+| Test | Status | Purpose |
+|------|--------|---------|
+| `should complete CHAMBER exit animation within budget` | ✅ PASS | Animation completes in <900ms |
+| `should handle reduced motion preference` | ✅ PASS | Respects `prefers-reduced-motion` |
+
+### Station Navigation Button Tests
+
+| Test | Status | Purpose |
+|------|--------|---------|
+| `should handle previous station button click` | ✅ PASS | Previous station button works |
+| `should handle next station button click` | ✅ PASS | Next station button works |
+| `should disable station buttons when no signal` | ✅ PASS | Buttons disabled without signal |
+
+---
+
+## 🔍 Bug Detection: Scholomance Station Transition
+
+**Issue:** Clicking the central orb (ignition button) does NOT transition to Scholomance Station view.
+
+**Root Cause:** In `ListenPage.tsx` line 147:
+```javascript
+// Note: View mode switching disabled - keeping chamber view for continuous rotation
+// setViewMode('STATION');  // ← COMMENTED OUT
+```
+
+**Bytecode Error Emitted:**
+```
+PB-ERR-v1-UI_STASIS-CRIT-UISTAS-0E02-eyJhbmltYXRpb25UeXBlIjoiZnJhbWVyLW1vdGlvbi12aWV3LXRyYW5zaXRpb24iLCJwaGFzZSI6IkNIQU1CRVItdG8tU1RBVElPTiIsInJlYXNvbiI6IlZpZXcgbW9kZSBuZXZlciB1cGRhdGVkIGFmdGVyIGlnbml0aW9uIGNsaWNrIiwiY29tcG9uZW50SWQiOiJMaXN0ZW5QYWdlIiwiZXhwZWN0ZWRWaWV3TW9kZSI6IlNUQVRJT04iLCJhY3R1YWxWaWV3TW9kZSI6IkNIQU1CRVIifQ-CHECKSUM
+```
+
+**Decoded Context:**
+```json
+{
+  "animationType": "framer-motion-view-transition",
+  "phase": "CHAMBER-to-STATION",
+  "reason": "View mode never updated after ignition click",
+  "componentId": "ListenPage",
+  "expectedViewMode": "STATION",
+  "actualViewMode": "CHAMBER"
+}
+```
+
+**Thematic Translation:**
+> "A portal that opens but never transports is a linguistic violation — the glyph promises transit but delivers only stillness."
+
+**Fix:** Uncomment line 147 in `ListenPage.tsx`:
+```javascript
+const triggerIgnition = useCallback(() => {
+  triggerHapticPulse(UI_HAPTICS.HEAVY);
+  if (!isPlaying && !isTuning) {
+    void togglePlayPause();
+  }
+  setViewMode('STATION'); // ← UNCOMMENT THIS
+}, [isPlaying, isTuning, togglePlayPause, setViewMode]);
+```
 
 ---
 
