@@ -24,32 +24,44 @@ export function createMicroprocessorFactory() {
 
     /**
      * Execute a single microprocessor by ID
+     * UNIFIED: Always returns a Promise to maintain consistent API across contexts.
+     * 
      * @param {string} id - The microprocessor ID
      * @param {any} payload - The input data
      * @param {Object} context - Additional configuration or context
-     * @returns {any} The processed output
+     * @returns {Promise<any>} The processed output
      */
-    execute(id, payload, context = {}) {
+    async execute(id, payload, context = {}) {
       const processor = registry.get(id);
       if (!processor) {
         throw new Error(`Microprocessor [${id}] not found in registry.`);
       }
-      return processor(payload, context);
+      
+      // Wrapping in try/await to ensure all processors are treated as async
+      try {
+        return await Promise.resolve(processor(payload, context));
+      } catch (error) {
+        throw new Error(`Microprocessor [${id}] failed: ${error.message}`);
+      }
     },
 
     /**
-     * Execute a sequence of microprocessors, passing the output of one as the payload to the next
+     * Execute a sequence of microprocessors
+     * UNIFIED: Always returns a Promise.
+     * 
      * @param {string[]} sequence - Array of microprocessor IDs
      * @param {any} initialPayload - Starting input data
      * @param {Object} context - Shared context across the pipeline
-     * @returns {any} The final processed output
+     * @returns {Promise<any>} The final processed output
      */
-    executePipeline(sequence, initialPayload, context = {}) {
+    async executePipeline(sequence, initialPayload, context = {}) {
       if (!Array.isArray(sequence)) return initialPayload;
       
-      return sequence.reduce((currentPayload, id) => {
-        return this.execute(id, currentPayload, context);
-      }, initialPayload);
+      let currentPayload = initialPayload;
+      for (const id of sequence) {
+        currentPayload = await this.execute(id, currentPayload, context);
+      }
+      return currentPayload;
     },
     
     /**

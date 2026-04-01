@@ -4,8 +4,7 @@
  */
 
 import Phaser from 'phaser';
-import { getBytecodeAMP, AMP_CHANNELS } from '../../../lib/ambient/bytecodeAMP';
-import { getRotationAtTime } from '../../../../codex/core/pixelbrain/gear-glide-amp.js';
+import { getBytecodeAMP, AMP_CHANNELS, getRotationAtTime } from '../../../lib/ambient/bytecodeAMP';
 
 const REF = { W: 1920, H: 1080 };
 const CONSOLE = { x: 960, y: 560, w: 1160, h: 640, cr: 16 };
@@ -33,6 +32,7 @@ export class SignalChamberScene extends Phaser.Scene {
     this._gaugeL_cur = 0; this._gaugeR_cur = 0.5; this._gaugeL_prev = -1; this._gaugeR_prev = -1;
     this._needsVolSliderRedraw = true; this._needsSignalSliderRedraw = true;
     this._isCreated = false; this._sx = 1; this._sy = 1; this._ms = 1;
+    this._bpm = 90; // Default BPM for rotation sync
   }
 
   create() {
@@ -186,10 +186,13 @@ export class SignalChamberScene extends Phaser.Scene {
 
   _drawSonic(g, cx, cy, r, t, sig, col) {
     const amp = (14 + sig * 38) * this._ms; g.lineStyle(1.5, col, 0.45 + sig * 0.35); g.beginPath();
-    for (let x = cx - r * 0.84; x <= cx + r * 0.84; x += 4) {
-      const nx = (x - (cx - r * 0.84)) / (r * 1.68);
+    const startX = cx - r * 0.84;
+    const endX = cx + r * 0.84;
+    const range = endX - startX;
+    for (let x = startX; x <= endX; x += 4) {
+      const nx = (x - startX) / range;
       const w = Math.sin(nx * Math.PI * 7 + t * 0.0028) * amp;
-      if (x === cx - r * 0.84) g.moveTo(x, cy + w); else g.lineTo(x, cy + w);
+      if (x === startX) g.moveTo(x, cy + w); else g.lineTo(x, cy + w);
     }
     g.strokePath();
   }
@@ -207,7 +210,7 @@ export class SignalChamberScene extends Phaser.Scene {
     }
   }
 
-  _drawVoid(g, cx, cy, r, t, sig, col) {
+  _drawVoid(g, cx, cy, _r, t, sig, _col) {
     for (const s of this._voidStars) {
       const tw = 0.25 + Math.sin(t * s.speed * 1000 + s.phase) * 0.35;
       g.fillStyle(0xffffff, tw * (0.35 + sig * 0.35)); g.fillCircle(s.x, s.y, s.size * this._ms);
@@ -221,9 +224,9 @@ export class SignalChamberScene extends Phaser.Scene {
     }
   }
 
-  _drawAlchemy(g, cx, cy, r, t, sig, col) { g.lineStyle(1.5, col, 0.3 + sig * 0.2); g.strokeCircle(cx, cy, r * 0.66); }
-  _drawGeneric(g, cx, cy, r, t, sig, col) { g.lineStyle(1.5, col, 0.35 + sig * 0.45); g.strokeCircle(cx, cy, r * 0.5); }
-  _drawSacredGeometry(g, cx, cy, r, t, sig, col) {}
+  _drawAlchemy(g, cx, cy, r, _t, sig, col) { g.lineStyle(1.5, col, 0.3 + sig * 0.2); g.strokeCircle(cx, cy, r * 0.66); }
+  _drawGeneric(g, cx, cy, r, _t, sig, col) { g.lineStyle(1.5, col, 0.35 + sig * 0.45); g.strokeCircle(cx, cy, r * 0.5); }
+  _drawSacredGeometry(_g, _cx, _cy, _r, _t, _sig, _col) {}
 
   _drawGaugeFaces() {
     const col = this._col || PAL.dimGold;
@@ -284,6 +287,7 @@ export class SignalChamberScene extends Phaser.Scene {
     if (data.schoolId !== undefined && data.schoolId !== this._schoolId) { this._schoolChanged = true; this._transitionAlpha = 0; this._schoolId = data.schoolId; }
     if (data.signalLevel !== undefined) { this._sig = data.signalLevel; this._needsSignalSliderRedraw = true; }
     if (data.volume !== undefined) { this._vol = data.volume; this._needsVolSliderRedraw = true; }
+    if (data.bpm !== undefined) { this._bpm = data.bpm; }
     if (data.isPlaying !== undefined && data.isPlaying !== this._isPlaying) { this._isPlaying = data.isPlaying; this._redrawPlayButton(); }
     if (data.schoolColor !== undefined && data.schoolColor !== this._colHex) { this._colHex = data.schoolColor; this._col = this._hexToInt(data.schoolColor); this._drawGaugeFaces(); }
     if (data.stationName !== undefined) this._txtStaName?.setText(data.stationName);
@@ -292,7 +296,7 @@ export class SignalChamberScene extends Phaser.Scene {
   update(time, delta) {
     if (!this._isCreated) return;
     const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER), glow = getBytecodeAMP(time, AMP_CHANNELS.GLOW);
-    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms;
+    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms, bpm = this._bpm;
     if (this._schoolChanged) { this._transitionAlpha = Math.min(1, this._transitionAlpha + delta * 0.0035); if (this._transitionAlpha >= 1) this._schoolChanged = false; }
     const ta = this._transitionAlpha;
     const standbyAlpha = 0.25 * Math.max(0, 1 - sig * 4) * ta * glow;

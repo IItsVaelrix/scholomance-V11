@@ -1,9 +1,11 @@
 /**
  * PIXELBRAIN ADAPTER
- * 
+ *
  * Bridge between UI surface and Codex-level logic.
  * Ensures UI files don't violate architectural boundaries.
  */
+
+import { processorBridge } from './processor-bridge.js';
 
 // --- Coordinate & Formula Logic ---
 import { 
@@ -40,8 +42,27 @@ import {
   getCellAtPosition as codexGetCellAtPosition,
   floodFill as codexFloodFill,
   GRID_TYPES as codexGRID_TYPES,
-  setCell as codexSetCell
+  setCell as codexSetCell,
+  toggleSymmetryAxis as codexToggleSymmetryAxis,
 } from '../../codex/core/pixelbrain/template-grid-engine.js';
+
+// --- Lattice Grid Engine (NEW) ---
+import {
+  generateLatticeGrid as codexGenerateLatticeGrid,
+  renderLattice as codexRenderLattice,
+  paintCell as codexPaintCell,
+  clearCell as codexClearLatticeCell,
+  exportLatticeToAseprite as codexExportLatticeToAseprite,
+  buildOccupancySet as codexBuildOccupancySet,
+  resolveLatticeClick as codexResolveLatticeClick,
+} from '../../codex/core/pixelbrain/lattice-grid-engine.js';
+
+// --- Symmetry AMP ---
+import {
+  detectSymmetry as codexDetectSymmetry,
+  applySymmetryToLattice as codexApplySymmetryToLattice,
+  generateSymmetryOverlay as codexGenerateSymmetryOverlay,
+} from '../../codex/core/pixelbrain/symmetry-amp.js';
 
 // --- Physics & Animation ---
 import {
@@ -117,6 +138,10 @@ export function setCell(layer, x, y, color, emphasis) {
   return codexSetCell(layer, x, y, color, emphasis);
 }
 
+export function toggleSymmetryAxis(grid, axis) {
+  return codexToggleSymmetryAxis(grid, axis);
+}
+
 export function getRotationAtTime(time, bpm) {
   return codexGetRotationAtTime(time, bpm);
 }
@@ -124,3 +149,74 @@ export function getRotationAtTime(time, bpm) {
 export function roundTo(val, precision) {
   return codexRoundTo(val, precision);
 }
+
+// --- LATTICE GRID ENGINE EXPORTS ---
+
+export function generateLatticeGrid(analysis) {
+  return codexGenerateLatticeGrid(analysis);
+}
+
+export function renderLattice(canvas, lattice, zoom) {
+  return codexRenderLattice(canvas, lattice, zoom);
+}
+
+export function paintCell(lattice, col, row, color) {
+  return codexPaintCell(lattice, col, row, color);
+}
+
+export function clearLatticeCell(lattice, col, row) {
+  return codexClearLatticeCell(lattice, col, row);
+}
+
+export function exportLatticeToAseprite(lattice, targetWidth, targetHeight) {
+  return codexExportLatticeToAseprite(lattice, targetWidth, targetHeight);
+}
+
+export function buildOccupancySet(lattice) {
+  return codexBuildOccupancySet(lattice);
+}
+
+export function resolveLatticeClick(clientX, clientY, rect, lattice, zoom, offsetX, offsetY) {
+  return codexResolveLatticeClick(clientX, clientY, rect, lattice, zoom, offsetX, offsetY);
+}
+
+// --- SYMMETRY AMP EXPORTS ---
+
+export function detectSymmetry(pixelData, dimensions) {
+  return codexDetectSymmetry(pixelData, dimensions);
+}
+
+export function applySymmetryToLattice(lattice, symmetry) {
+  return codexApplySymmetryToLattice(lattice, symmetry);
+}
+
+export function generateSymmetryOverlay(symmetry, width, height, zoom) {
+  return codexGenerateSymmetryOverlay(symmetry, width, height, zoom);
+}
+
+// --- SYMMETRY AMP MICROPROCESSOR ---
+/**
+ * Run Symmetry AMP as a microprocessor stage
+ * @param {Object} input - SymmetryAmpInput contract
+ * @returns {SymmetryAmpOutput} SymmetryAmpOutput contract
+ */
+export function runSymmetryAmpProcessor(input) {
+  return processorBridge.execute('amp.symmetry', input);
+}
+
+/**
+ * Run Coord Symmetry AMP as a microprocessor stage
+ * @param {Object} input - CoordSymmetryInput contract
+ * @returns {CoordSymmetryOutput} CoordSymmetryOutput contract
+ */
+export function runCoordSymmetryAmp(input) {
+  return processorBridge.execute('amp.coord-symmetry', input);
+}
+
+// Re-export transform functions for testing
+export {
+  verticalMirror,
+  horizontalMirror,
+  radialRotate,
+  diagonalMirror,
+} from '../../codex/core/pixelbrain/coord-symmetry-amp.js';

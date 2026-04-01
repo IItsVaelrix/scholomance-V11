@@ -37,6 +37,23 @@ Same input → same output. No hidden randomness in scoring pipelines. No timest
 ### 7. Security Before Features
 No new input surface ships without allow-list validation per `ARCH_CONTRACT_SECURITY.md`. No exceptions. No "we'll add validation later." Security review gates the PR, not the milestone.
 
+### 8. Bytecode Is Priority
+
+All persistent state, exports, and interoperable data structures use bytecode encoding. Bytecode is the canonical representation — previews, renders, and UI surfaces are derived from bytecode, not the source of truth. When in doubt, encode to bytecode first.
+
+**Bytecode Error System is Mandatory:**
+- All errors use `PB-ERR-v1-{CATEGORY}-{SEVERITY}-{MODULE}-{CODE}-{CONTEXT_B64}-{CHECKSUM}` format
+- All QA tests use bytecode assertions (`assertEqual`, `assertTrue`, `assertInRange`, `assertType`)
+- All test failures produce AI-parsable bytecode errors
+- Error codes defined in `docs/ByteCode Error System/02_Error_Code_Reference.md`
+- QA integration per `docs/ByteCode Error System/04_QA_Integration_Guide.md`
+
+**Approved Bytecode Schemas:**
+- `PB-ERR-v1` — Error encoding (all categories: TYPE, VALUE, RANGE, STATE, HOOK, EXT, COORD, COLOR, NOISE, RENDER, CANVAS, FORMULA)
+- `PB-RECURSE-v1` — Recursion bug detection
+- `0xF`-prefixed — Pixel art formulas
+- Lattice grids — Sprite coordinate systems
+
 ---
 
 ## Escalation Block Format

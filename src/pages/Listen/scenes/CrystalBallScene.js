@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
-import { getBytecodeAMP, AMP_CHANNELS } from '../../../lib/ambient/bytecodeAMP';
-import { getRotationAtTime } from '../../../../codex/core/pixelbrain/gear-glide-amp.js';
+import { getBytecodeAMP, AMP_CHANNELS, getRotationAtTime } from '../../../lib/ambient/bytecodeAMP';
 
 /**
  * CrystalBallScene.js — GPU-Accelerated Procedural Art for the Arcane Orb.
@@ -101,7 +100,7 @@ export class CrystalBallScene extends Phaser.Scene {
     this.glyphText.setAlpha((0.25 + sig * 0.5) * glow).setScale(1 + sig * 0.1);
   }
 
-  _drawSonicWaves(g, cx, cy, r, t, sig, col, ta) {
+  _drawSonicWaves(g, cx, cy, _r, t, sig, col, ta) {
     const amp = (10 + sig * 40); g.lineStyle(2, col, (0.4 + sig * 0.6) * ta); g.beginPath();
     const startX = cx - r * 0.85, endX = cx + r * 0.85, width = endX - startX;
     for (let x = startX; x <= endX; x += 6) {

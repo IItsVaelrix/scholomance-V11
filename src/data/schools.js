@@ -8,49 +8,24 @@
  * This leaves room for 8 schools (current 5 + 3 future)
  */
 
+import { 
+  SCHOOLS as CORE_SCHOOLS, 
+  VOWEL_FAMILY_TO_SCHOOL as CORE_VOWEL_MAPPING 
+} from '../../codex/core/constants/schools.js';
+
 /**
  * Canonical mapping from ARPAbet vowel family to school of magic.
- * This is the single source of truth — all consumers should import from here.
  */
-export const VOWEL_FAMILY_TO_SCHOOL = Object.freeze({
-  // Core 8 mappings — balanced across all 8 schools
-  IY: 'PSYCHIC',      // High-front clarity
-  IH: 'SONIC',        // Mid-front resonance
-  EY: 'ALCHEMY',      // Diphthong transmutation
-  AE: 'WILL',         // Low-front force
-  A:  'NECROMANCY',   // Low-back death register
-  AO: 'DIVINATION',   // Mid-back oracle vowel
-  OW: 'ABJURATION',   // Rounded-back protective
-  UW: 'ABJURATION',   // High-back closed/warding
-
-  // ARPAbet Aliases — redistributed to 8 schools
-  AA: 'NECROMANCY',   // Open-back death register
-  AH: 'WILL',        // Low force vowel
-  AX: 'VOID',        // Schwa → entropy (most common, muted by VOID's low saturation)
-  AW: 'DIVINATION',  // Open-back oracle diphthong
-  EH: 'WILL',        // Low-front force
-  AY: 'PSYCHIC',     // Bright diphthong → mental clarity
-  OY: 'ALCHEMY',     // Diphthong transmutation
-  OH: 'ABJURATION',  // Rounded-back → protective
-  UH: 'VOID',        // Reduced vowel → entropy
-  OO: 'ABJURATION',  // Rounded-back → protective
-  ER: 'SONIC',       // Rhotacized → resonance
-  UR: 'SONIC',       // Rhotacized → resonance
-});
+export const VOWEL_FAMILY_TO_SCHOOL = CORE_VOWEL_MAPPING;
 
 export const SCHOOLS = {
-  // === INITIAL 5 SCHOOLS ===
+  ...CORE_SCHOOLS,
+  // Add UI-only properties back to core schools
   SONIC: {
-    id: "SONIC",
-    name: "Sonic Thaumaturgy",
-    color: "#1ab4a8", // Resonant Teal (Shifted from Purple per user req)
-    colorHsl: { h: 175, s: 85, l: 55 },
-    angle: 288,
-    unlockXP: 0,
+    ...CORE_SCHOOLS.SONIC,
     description: "The art of sonic manipulation and harmonic resonance",
     tracks: ["sonic_harmony"],
     vowelAffinities: ["AE", "EH"],
-    glyph: "♩",
     atmosphere: {
       auroraIntensity: 0.9,
       saturation: 90,
@@ -59,16 +34,10 @@ export const SCHOOLS = {
     },
   },
   PSYCHIC: {
-    id: "PSYCHIC",
-    name: "Psychic Schism",
-    color: "#3b82f6", // Authoritative Bytecode Blue
-    colorHsl: { h: 220, s: 90, l: 60 },
-    angle: 72,
-    unlockXP: 250,
+    ...CORE_SCHOOLS.PSYCHIC,
     description: "Mental discipline and psychic energy projection",
     tracks: ["schism"],
     vowelAffinities: ["IY", "IH"],
-    glyph: "◬",
     atmosphere: {
       auroraIntensity: 0.8,
       saturation: 85,
@@ -77,16 +46,10 @@ export const SCHOOLS = {
     },
   },
   VOID: {
-    id: "VOID",
-    name: "The Void",
-    color: "#94a3b8", // Entropy Slate
-    colorHsl: { h: 215, s: 15, l: 41 },
-    angle: 0,
-    unlockXP: 1500,
+    ...CORE_SCHOOLS.VOID,
     description: "The space between spaces, where entropy reigns",
     tracks: ["void"],
     vowelAffinities: ["AX", "UH"],
-    glyph: "∅",
     atmosphere: {
       auroraIntensity: 0.15,
       saturation: 15,
@@ -95,16 +58,10 @@ export const SCHOOLS = {
     },
   },
   ALCHEMY: {
-    id: "ALCHEMY",
-    name: "Verbal Alchemy",
-    color: "#ec4899", // Authoritative Pink
-    colorHsl: { h: 325, s: 80, l: 58 },
-    angle: 144,
-    unlockXP: 8000,
+    ...CORE_SCHOOLS.ALCHEMY,
     description: "The transmutation of meaning through spoken word",
     tracks: ["alchemy"],
     vowelAffinities: ["EY", "OY"],
-    glyph: "⚗",
     atmosphere: {
       auroraIntensity: 1.1,
       saturation: 105,
@@ -113,16 +70,10 @@ export const SCHOOLS = {
     },
   },
   WILL: {
-    id: "WILL",
-    name: "Willpower Surge",
-    color: "#ef4444", // Authoritative Red
-    colorHsl: { h: 0, s: 85, l: 48 },
-    angle: 216,
-    unlockXP: 25000,
+    ...CORE_SCHOOLS.WILL,
     description: "Focusing raw will into reality-altering force",
     tracks: ["will"],
     vowelAffinities: ["AH"],
-    glyph: "⚡",
     atmosphere: {
       auroraIntensity: 1.0,
       saturation: 95,
@@ -130,19 +81,11 @@ export const SCHOOLS = {
       scanlineOpacity: 0,
     },
   },
-
-  // === UNLOCKABLE SCHOOLS ===
   NECROMANCY: {
-    id: "NECROMANCY",
-    name: "Necromancy",
-    color: "#22c55e", // Authoritative Green
-    colorHsl: { h: 120, s: 75, l: 40 },
-    angle: 36,
-    unlockXP: 100000,
+    ...CORE_SCHOOLS.NECROMANCY,
     description: "Communication with and manipulation of life force",
     tracks: [],
     vowelAffinities: ["AA", "A"],
-    glyph: "☠",
     atmosphere: {
       auroraIntensity: 0.6,
       saturation: 55,
@@ -151,16 +94,10 @@ export const SCHOOLS = {
     },
   },
   ABJURATION: {
-    id: "ABJURATION",
-    name: "Abjuration",
-    color: "#06b6d4", // Authoritative Cyan
-    colorHsl: { h: 180, s: 80, l: 68 },
-    angle: 108,
-    unlockXP: 500000,
+    ...CORE_SCHOOLS.ABJURATION,
     description: "Protective magic and negation of effects",
     tracks: [],
     vowelAffinities: ["UW", "OW"],
-    glyph: "◇",
     atmosphere: {
       auroraIntensity: 0.5,
       saturation: 50,
@@ -169,16 +106,10 @@ export const SCHOOLS = {
     },
   },
   DIVINATION: {
-    id: "DIVINATION",
-    name: "Divination",
-    color: "#eab308", // Authoritative Gold
-    colorHsl: { h: 45, s: 90, l: 68 },
-    angle: 180,
-    unlockXP: 2000000,
+    ...CORE_SCHOOLS.DIVINATION,
     description: "Seeing across time and space",
     tracks: [],
     vowelAffinities: ["AO", "AW"],
-    glyph: "◉",
     atmosphere: {
       auroraIntensity: 0.85,
       saturation: 88,

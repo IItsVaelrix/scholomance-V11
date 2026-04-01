@@ -1,4 +1,4 @@
-import { clamp01 } from '../../verseir-amplifier/shared.js';
+import { clamp01 } from '../../pixelbrain/shared.js';
 import { INTENT_TYPES, INTENT_KEYWORDS, SUBJECT_KEYWORDS } from './constants.js';
 
 /**

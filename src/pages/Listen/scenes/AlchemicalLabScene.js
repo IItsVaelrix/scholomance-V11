@@ -5,14 +5,14 @@
  * to eliminate runtime texture generation delays.
  */
 
-import { getBytecodeAMP, AMP_CHANNELS } from '../../../lib/ambient/bytecodeAMP';
-import { getRotationAtTime } from '../../../../codex/core/pixelbrain/gear-glide-amp.js';
+import Phaser from 'phaser';
+import { getBytecodeAMP, AMP_CHANNELS, getRotationAtTime } from '../../../lib/ambient/bytecodeAMP';
 
 // Dynamic Phaser loader - prevents blocking initial bundle
 let _PhaserLib = null;
 async function getPhaser() {
   if (!_PhaserLib) {
-    _PhaserLib = (await import('phaser')).default;
+    _PhaserLib = Phaser;
   }
   return _PhaserLib;
 }
@@ -23,7 +23,7 @@ async function getPhaser() {
 
 let PARTICLE_TEXTURE = null;
 
-function preBakeTextures(_PhaserLib) {
+function preBakeTextures() {
   if (PARTICLE_TEXTURE) return; 
 
   const particleG = document.createElement('canvas');
@@ -55,7 +55,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
   }
 
   preload() {
-    preBakeTextures(Phaser);
+    preBakeTextures();
     if (!this.textures.exists('labPt')) {
       this.textures.addCanvas('labPt', PARTICLE_TEXTURE);
     }
@@ -223,7 +223,7 @@ export class AlchemicalLabScene extends Phaser.Scene {
     for (let x = W * 0.91; x < W; x += 2) { g.fillStyle(0x000000, ((x - W * 0.91) / (W * 0.09)) * 0.52); g.fillRect(x, 0, 2, H); }
   }
 
-  update(time, delta) {
+  update(time, _delta) {
     if (!this._isCreated) return;
 
     // ── Update Synchronized Bytecode AMP Signals ──

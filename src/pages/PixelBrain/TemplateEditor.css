@@ -27,6 +27,14 @@
   padding: 2rem;
 }
 
+/* DISABLE CRT FX for lattice editor - grid must be visible */
+.template-editor .crt-flicker,
+.template-editor .scanlines,
+.template-editor .vignette,
+.template-editor .glow-overlay {
+  display: none !important;
+}
+
 .lcd-screen {
   width: 100%;
   max-width: 800px;
@@ -208,19 +216,20 @@
   position: relative;
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start; /* Align to top-left, not center */
+  justify-content: flex-start;
   background: #111;
   border: 1px solid #333;
   border-radius: 4px;
-  overflow: hidden;
+  overflow: auto; /* Allow scroll if canvas is larger */
 }
 
 .editor-canvas,
 .editor-overlay {
-  position: absolute;
+  position: relative; /* Not absolute - let it flow naturally */
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  transform: none !important; /* NO transforms */
 }
 
 .editor-canvas {

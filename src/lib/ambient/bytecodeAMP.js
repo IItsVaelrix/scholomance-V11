@@ -20,12 +20,13 @@ export function getBytecodeAMP(timeMs, channel = AMP_CHANNELS.FLICKER) {
   const t = timeMs * 0.001; // Time in seconds
 
   switch (channel) {
-    case AMP_CHANNELS.FLICKER:
+    case AMP_CHANNELS.FLICKER: {
       // Compound high-frequency waves for 'tasteful' randomness
       const f1 = Math.sin(t * 41.3) * 0.4;
       const f2 = Math.sin(t * 17.7 + 2.1) * 0.4;
       const f3 = Math.sin(t * 83.1 + 0.9) * 0.2;
       return (f1 + f2 + f3 + 1) / 2;
+    }
 
     case AMP_CHANNELS.PULSE:
       // Rhythmic ritual breathing (1.2 Hz)
@@ -46,6 +47,40 @@ export function getBytecodeAMP(timeMs, channel = AMP_CHANNELS.FLICKER) {
     default:
       return 0.5;
   }
+}
+
+/**
+ * Get smooth, continuous clock-like rotation at absolute time
+ *
+ * CRITICAL: This uses absolute time, not delta accumulation.
+ * This guarantees perfectly smooth rotation regardless of frame rate.
+ * Like a clock: seamless, quantized to BPM, no wobble.
+ *
+ * @param {number} absoluteTimeMs - Absolute time since animation start (ms)
+ * @param {number} bpm - Beats per minute
+ * @param {number} degreesPerBeat - Rotation per beat (default: 90)
+ * @returns {number} Rotation in radians (smooth, continuous, clock-like)
+ */
+export function getRotationAtTime(absoluteTimeMs, bpm, degreesPerBeat = 90) {
+  const safeBPM = Number.isFinite(bpm) && bpm > 0 ? bpm : 90;
+
+  // Convert to radians per second
+  // Formula: radiansPerSecond = (degreesPerBeat * π / 180) * (BPM / 60)
+  const radiansPerBeat = degreesPerBeat * Math.PI / 180;
+  const beatsPerSecond = safeBPM / 60;
+  const radiansPerSecond = radiansPerBeat * beatsPerSecond;
+
+  // Convert time to seconds
+  const timeSeconds = absoluteTimeMs * 0.001;
+
+  // Calculate rotation: linear, continuous, clock-like
+  // No wobble, no imperfection, just pure time * speed
+  const rotation = radiansPerSecond * timeSeconds;
+
+  const twoPi = Math.PI * 2;
+  let normalized = rotation % twoPi;
+  if (normalized < 0) normalized += twoPi;
+  return normalized;
 }
 
 /**

@@ -5,6 +5,8 @@
  * Turns message-passing into clean Async/Await promises.
  */
 
+const DEFAULT_TIMEOUT_MS = 10000; // 10s default safety shield
+
 class MicroprocessorWorkerClient {
   constructor() {
     this.worker = null;
@@ -27,14 +29,26 @@ class MicroprocessorWorkerClient {
 
     this.worker.onmessage = (event) => {
       const { taskId, success, result, error } = event.data;
-      const promise = this.pendingTasks.get(taskId);
+      const task = this.pendingTasks.get(taskId);
 
-      if (promise) {
+      if (task) {
+        if (task.timeoutId) clearTimeout(task.timeoutId);
+        
         if (success) {
-          promise.resolve(result);
+          task.resolve(result);
         } else {
-          promise.reject(new Error(error));
+          task.reject(new Error(error));
         }
+        this.pendingTasks.delete(taskId);
+      }
+    };
+
+    this.worker.onerror = (error) => {
+      console.error('[Worker] Fatal Error:', error);
+      // Reject all pending tasks on fatal worker error
+      for (const [taskId, task] of this.pendingTasks.entries()) {
+        if (task.timeoutId) clearTimeout(task.timeoutId);
+        task.reject(new Error('FATAL_WORKER_ERROR'));
         this.pendingTasks.delete(taskId);
       }
     };
@@ -45,12 +59,21 @@ class MicroprocessorWorkerClient {
   /**
    * Execute a single microprocessor in the background
    */
-  execute(id, payload, context = {}) {
+  execute(id, payload, context = {}, options = {}) {
     this.init();
     const taskId = this.nextTaskId++;
+    const timeoutMs = options.timeout ?? DEFAULT_TIMEOUT_MS;
     
     return new Promise((resolve, reject) => {
-      this.pendingTasks.set(taskId, { resolve, reject });
+      const timeoutId = setTimeout(() => {
+        if (this.pendingTasks.has(taskId)) {
+          this.pendingTasks.delete(taskId);
+          reject(new Error(`TASK_TIMEOUT: Microprocessor [${id}] timed out after ${timeoutMs}ms`));
+        }
+      }, timeoutMs);
+
+      this.pendingTasks.set(taskId, { resolve, reject, timeoutId });
+      
       this.worker.postMessage({
         type: 'EXECUTE',
         id,
@@ -64,12 +87,21 @@ class MicroprocessorWorkerClient {
   /**
    * Execute a pipeline of microprocessors in the background
    */
-  executePipeline(sequence, payload, context = {}) {
+  executePipeline(sequence, payload, context = {}, options = {}) {
     this.init();
     const taskId = this.nextTaskId++;
+    const timeoutMs = options.timeout ?? DEFAULT_TIMEOUT_MS;
     
     return new Promise((resolve, reject) => {
-      this.pendingTasks.set(taskId, { resolve, reject });
+      const timeoutId = setTimeout(() => {
+        if (this.pendingTasks.has(taskId)) {
+          this.pendingTasks.delete(taskId);
+          reject(new Error(`PIPELINE_TIMEOUT: Sequence [${sequence.join('->')}] timed out after ${timeoutMs}ms`));
+        }
+      }, timeoutMs);
+
+      this.pendingTasks.set(taskId, { resolve, reject, timeoutId });
+      
       this.worker.postMessage({
         type: 'PIPELINE',
         sequence,

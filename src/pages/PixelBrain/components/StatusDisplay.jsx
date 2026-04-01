@@ -10,7 +10,7 @@ import {
   ErrorIcon,
   CodeIcon 
 } from "../../../components/Icons.jsx";
-import { parseErrorForAI } from "../../../../codex/core/pixelbrain/bytecode-error.js";
+import { parseErrorForAI } from "../../../lib/pixelbrain.adapter.js";
 
 const STATUS_CONFIG = {
   idle: {

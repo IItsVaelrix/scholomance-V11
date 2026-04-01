@@ -1,4 +1,4 @@
-import { verseIRMicroprocessors } from '../../core/microprocessors/index.js';
+import { processorBridge } from '../../../src/lib/processor-bridge.js';
 
 /**
  * IMAGE ANALYSIS SERVICE
@@ -14,41 +14,58 @@ import { verseIRMicroprocessors } from '../../core/microprocessors/index.js';
  * @returns {Promise<Object>} Image analysis result
  */
 export async function analyzeReferenceImage(buffer, mimetype) {
+  // Validate inputs
+  if (!buffer) {
+    const error = new Error('INVALID_INPUT: No buffer provided to analyzeReferenceImage');
+    console.error('[ImageAnalysis]', error.message);
+    throw error;
+  }
+
   try {
-    // 1. Decode bitstream using microprocessor
-    const { pixelData, dimensions } = await verseIRMicroprocessors.execute('pixel.decode', { buffer, mimetype });
-    
+    console.log('[ImageAnalysis] Starting analysis:', { mimetype, bufferSize: buffer?.length });
+
+    // 1. Decode bitstream using unified bridge (Async by default)
+    const decodeStart = Date.now();
+    const { pixelData, dimensions } = await processorBridge.execute('pixel.decode', { buffer, mimetype });
+    console.log('[ImageAnalysis] Decoded in', Date.now() - decodeStart, 'ms:', dimensions);
+
+    // Validate decode result
+    if (!pixelData || !dimensions) {
+      throw new Error('DECODE_FAILED: pixel.decode returned invalid result');
+    }
+
     // 2. Normalization: Resample to working substrate if too large
-    const targetSize = { 
-      width: Math.min(dimensions.width, 256), 
-      height: Math.min(dimensions.height, 256) 
+    const targetSize = {
+      width: Math.min(dimensions.width, 256),
+      height: Math.min(dimensions.height, 256)
     };
-    
-    const { pixelData: substrate, dimensions: workingDims } = verseIRMicroprocessors.execute('pixel.resample', { 
-      pixelData, 
-      dimensions, 
-      targetSize 
+
+    const resampleStart = Date.now();
+    const { pixelData: substrate, dimensions: workingDims } = await processorBridge.execute('pixel.resample', {
+      pixelData,
+      dimensions,
+      targetSize
     });
+    console.log('[ImageAnalysis] Resampled in', Date.now() - resampleStart, 'ms:', workingDims);
 
     // 3. Extraction: Extract colors and composition
+    const extractStart = Date.now();
     const colors = extractDominantColors(substrate);
     const composition = analyzeComposition(substrate, workingDims.width, workingDims.height);
-    
+    console.log('[ImageAnalysis] Extracted in', Date.now() - extractStart, 'ms, colors:', colors.length);
+
     return {
-      success: true,
-      analysis: {
-        colors,
-        composition,
-        dimensions: workingDims,
-        pixelData: Array.from(substrate), // Convert to array for JSON response
-        semanticParams: {
-          surface: { material: 'stone', reflectivity: 0.3, roughness: 0.5 },
-          form: { complexity: 0.5, dominantAxis: composition.dominantAxis }
-        }
+      colors,
+      composition,
+      dimensions: workingDims,
+      pixelData: Array.from(substrate), // Convert to array for JSON response
+      semanticParams: {
+        surface: { material: 'stone', reflectivity: 0.3, roughness: 0.5 },
+        form: { complexity: 0.5, dominantAxis: composition.dominantAxis }
       }
     };
   } catch (error) {
-    console.error('Image analysis failed:', error);
+    console.error('[ImageAnalysis] Error:', error.message);
     throw error;
   }
 }

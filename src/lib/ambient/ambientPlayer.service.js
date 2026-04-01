@@ -1540,8 +1540,13 @@ function createAmbientPlayerService(options = {}) {
 
     if (!currentController?.analyser) return null;
     
+    const audioContext = audioContextRef.current;
     if (audioContext && audioContext.state === 'suspended') {
-      try { await audioContext.resume(); } catch (e) {}
+      try {
+        await audioContext.resume();
+      } catch (e) {
+        // Ignore resume errors during analysis
+      }
     }
     
     const bufferLength = currentController.analyser.frequencyBinCount;

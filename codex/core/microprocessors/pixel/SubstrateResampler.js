@@ -5,7 +5,7 @@
  * Provides specialized sampling for pixel art preservation.
  */
 
-import { clamp01, roundTo } from '../../pixelbrain/shared.js';
+import { roundTo } from '../../pixelbrain/shared.js';
 
 /**
  * Resample pixel data to target dimensions
@@ -14,10 +14,13 @@ import { clamp01, roundTo } from '../../pixelbrain/shared.js';
  */
 export function resampleSubstrate({ pixelData, dimensions, targetSize, mode = 'nearest' }) {
   const { width: srcWidth, height: srcHeight } = dimensions;
-  const { width: dstWidth, height: dstHeight } = targetSize;
+  
+  // Safety: Normalize target dimensions to prevent 0x0 or negative
+  const dstWidth = Math.max(1, Math.round(Number(targetSize?.width) || 1));
+  const dstHeight = Math.max(1, Math.round(Number(targetSize?.height) || 1));
   
   if (srcWidth === dstWidth && srcHeight === dstHeight) {
-    return { pixelData, dimensions: targetSize };
+    return { pixelData, dimensions: { width: dstWidth, height: dstHeight } };
   }
 
   const result = new Uint8ClampedArray(dstWidth * dstHeight * 4);
@@ -34,7 +37,7 @@ export function resampleSubstrate({ pixelData, dimensions, targetSize, mode = 'n
         srcX = Math.floor(x * scaleX);
         srcY = Math.floor(y * scaleY);
       } else {
-        // Simple bilinear logic could go here, defaulting to nearest for pixel art
+        // Simple bilinear logic fallback
         srcX = Math.floor(x * scaleX);
         srcY = Math.floor(y * scaleY);
       }
@@ -50,7 +53,7 @@ export function resampleSubstrate({ pixelData, dimensions, targetSize, mode = 'n
 
   return {
     pixelData: result,
-    dimensions: targetSize,
+    dimensions: { width: dstWidth, height: dstHeight },
     scale: roundTo(Math.min(dstWidth / srcWidth, dstHeight / srcHeight), 4)
   };
 }

@@ -4,15 +4,15 @@
  * Main page component integrating the new UI overhaul
  */
 
-import { useState, useCallback, useRef, useMemo, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme.jsx";
-import { useCurrentSong } from "../../hooks/useCurrentSong.jsx";
 
 // New components
 import { UploadSection } from "./components/UploadSection.jsx";
 import { AnalysisResults } from "./components/AnalysisResults.jsx";
 import { FormulaEditor } from "./components/FormulaEditor.jsx";
+import { StyleTransmuter } from "./components/StyleTransmuter.jsx";
 import { ParameterSliders } from "./components/ParameterSliders.jsx";
 import { ExtensionSelector } from "./components/ExtensionSelector.jsx";
 import { ExportOptions } from "./components/ExportOptions.jsx";
@@ -21,7 +21,6 @@ import { StatusDisplay } from "./components/StatusDisplay.jsx";
 // Legacy components (keep for backward compatibility)
 import PixelBrainTerminal from "./PixelBrainTerminal.jsx";
 import TemplateEditor from "./TemplateEditor.jsx";
-import FormulaLibrary from "./FormulaLibrary.jsx";
 
 // Core logic
 import { 
@@ -29,7 +28,8 @@ import {
   evaluateFormulaWithColor, 
   parseErrorForAI 
 } from "../../lib/pixelbrain.adapter.js";
-import { workerClient } from "../../lib/microprocessor.worker-client.js";
+import { processorBridge } from "../../lib/processor-bridge.js";
+import { analyzeImageClientSide } from "./utils/imageAnalysis.client.js";
 
 import "./PixelBrainPage.css";
 
@@ -54,11 +54,9 @@ const REVERSE_PARAM_MAP = Object.entries(PARAM_MAP).reduce((acc, [k, v]) => {
 
 export default function PixelBrainPage() {
   const { theme } = useTheme();
-  const { currentSong } = useCurrentSong();
   
   // State
   const [activeSchool, setActiveSchool] = useState('VOID');
-  const [inputMode, setInputMode] = useState('reference-image');
   const [referenceImage, setReferenceImage] = useState(null);
   const [imageAnalysis, setImageAnalysis] = useState(null);
   const [formula, setFormula] = useState(null);
@@ -69,6 +67,7 @@ export default function PixelBrainPage() {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
   const [showTerminal, setShowTerminal] = useState(false);
+  const [leftTab, setLeftTab] = useState('upload'); // 'upload' or 'transmute'
   
   const canvasRef = useRef(null);
 
@@ -114,74 +113,80 @@ export default function PixelBrainPage() {
   }, [formula]);
 
   // Handle image upload
+  // PRIMARY path: client-side Canvas API analysis (no backend needed).
+  // SECONDARY path: server enhancement attempted silently — never blocks.
   const handleImageUpload = useCallback(async (file) => {
     setStatus('analyzing');
     setError(null);
-    
+
     try {
-      // Create preview
+      // Step 1: Client-side decode — PNG/JPEG/BMP via Canvas API, always works
       const preview = URL.createObjectURL(file);
       setReferenceImage({ file, preview });
-      
-      // Call backend analysis API
-      const formData = new FormData();
-      formData.append('image', file);
-      
-      const response = await fetch('/api/image/analyze', {
-        method: 'POST',
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        let errorMessage = 'Analysis failed';
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch (e) {
-          // Fallback if response is not JSON
-          errorMessage = `Server Error (${response.status})`;
+
+      let analysis = await analyzeImageClientSide(file);
+      analysis = { ...analysis, preview };
+
+      // Step 2: Server enhancement — optional, non-fatal
+      try {
+        const formData = new FormData();
+        formData.append('image', file);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch('/api/image/analyze', {
+          method: 'POST', body: formData, signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        if (response.ok) {
+          const responseData = await response.json();
+          // Guard both correct and double-wrapped server response shapes
+          const serverAnalysis = responseData.analysis?.colors
+            ? responseData.analysis
+            : responseData.analysis?.analysis;
+          if (serverAnalysis?.colors) {
+            analysis = { ...serverAnalysis, preview };
+          }
         }
-        throw new Error(errorMessage);
-      }
-      
-      const { analysis } = await response.json();
-      
-      // Add client-side preview to analysis
-      const fullAnalysis = {
-        ...analysis,
-        preview
-      };
-      
-      setImageAnalysis(fullAnalysis);
+      } catch { /* server unavailable — client analysis is sufficient */ }
+
+      setImageAnalysis(analysis);
       setStatus('generating');
-      
-      // BACKGROUND PIPELINE: Use WebWorker for tracing lattice
-      // This ensures 5MB+ images don't freeze the UI during edge detection
-      const workerResult = await workerClient.execute('pixel.trace', {
-        pixelData: fullAnalysis.pixelData,
-        dimensions: fullAnalysis.dimensions,
-        threshold: 30
+
+      // Step 3: Background edge trace (non-fatal — generatePixelArtFromImage
+      // runs its own internal trace if workerResult.coordinates is empty)
+      const workerResult = await processorBridge.execute('pixel.trace', {
+        pixelData: analysis.pixelData,
+        dimensions: analysis.dimensions,
+        threshold: 30,
       });
 
-      // Generate result from image analysis (merging worker coordinates)
-      const result = generatePixelArtFromImage(
-        { ...fullAnalysis, coordinates: workerResult.coordinates }, 
+      // Step 4: Generate pixel art coords + formula
+      const result = await generatePixelArtFromImage(
+        { ...analysis, coordinates: workerResult.coordinates },
         { width: 160, height: 144, gridSize: 1 },
         extensions.length > 0 ? extensions[0] : null
       );
-      
+
       setFormula(result.formula);
-      setCoordinates(result.coordinates);
-      setPalettes(result.palettes);
-      
+      setCoordinates(result.coordinates ?? []);
+      setPalettes(result.palettes ?? []);
       setStatus('ready');
-      
+
     } catch (err) {
       console.error('Image upload failed:', err);
-      setError(err.message || 'Image analysis failed');
+      setError(err.message || 'Image analysis failed. Please try again.');
       setStatus('error');
+      setReferenceImage(null);
+      setImageAnalysis(null);
     }
   }, [extensions]);
+
+  const handleTransmuteResult = useCallback((result) => {
+    setCoordinates(result.coordinates);
+    setPalettes(result.palettes);
+    // Note: Transmuter returns canvas info, we could update page canvas state here
+    setStatus('ready');
+  }, []);
 
   // Generate result from image
   const regenerateFromImage = useCallback(async () => {
@@ -190,7 +195,7 @@ export default function PixelBrainPage() {
     try {
       setStatus('generating');
       
-      const result = generatePixelArtFromImage(
+      const result = await generatePixelArtFromImage(
         imageAnalysis, 
         { width: 160, height: 144, gridSize: 1 },
         extensions.length > 0 ? extensions[0] : null
@@ -275,59 +280,77 @@ export default function PixelBrainPage() {
     setError(null);
   }, []);
 
-  // Render canvas preview
+  // Render canvas preview — flat 2D only, no Z transforms
   useEffect(() => {
-    if (!canvasRef.current || !coordinates.length) return;
-    
+    if (!canvasRef.current) return;
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
-    
-    // Clear canvas
-    ctx.fillStyle = theme === 'dark' ? '#0a0a12' : '#ffffff';
+
+    // Use detected source dimensions (no arbitrary standard)
+    const srcW = imageAnalysis?.dimensions?.width || 32;
+    const srcH = imageAnalysis?.dimensions?.height || 32;
+
+    // Calculate scale to fit canvas while preserving aspect ratio
+    const scale = Math.min(canvas.width / srcW, canvas.height / srcH) * 0.85;
+    const offsetX = Math.floor((canvas.width - srcW * scale) / 2);
+    const offsetY = Math.floor((canvas.height - srcH * scale) / 2);
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#0a0a12';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Calculate preview scale (canvas is 800x600, source is 160x144)
-    const previewScale = Math.min(canvas.width / 160, canvas.height / 144) * 0.8;
-    const offsetX = (canvas.width - 160 * previewScale) / 2;
-    const offsetY = (canvas.height - 144 * previewScale) / 2;
-    
-    // Draw grid
-    ctx.strokeStyle = theme === 'dark' ? '#1a1a2e' : '#e0e0e0';
-    ctx.lineWidth = 1;
-    const gridStep = 10 * previewScale;
-    for (let x = offsetX; x <= offsetX + 160 * previewScale; x += gridStep) {
-      ctx.beginPath();
-      ctx.moveTo(x, offsetY);
-      ctx.lineTo(x, offsetY + 144 * previewScale);
-      ctx.stroke();
+
+    if (imageAnalysis?.preview) {
+      const img = new Image();
+      img.onload = () => {
+        // Draw full sprite at native dimensions (nearest-neighbor, fully colored)
+        ctx.drawImage(img, offsetX, offsetY, srcW * scale, srcH * scale);
+
+        // Draw pixel grid overlay
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        ctx.lineWidth = Math.max(0.5, scale * 0.1);
+        
+        // Vertical lines
+        for (let x = 0; x <= srcW; x++) {
+          const px = offsetX + x * scale;
+          ctx.beginPath();
+          ctx.moveTo(px, offsetY);
+          ctx.lineTo(px, offsetY + srcH * scale);
+          ctx.stroke();
+        }
+        
+        // Horizontal lines
+        for (let y = 0; y <= srcH; y++) {
+          const py = offsetY + y * scale;
+          ctx.beginPath();
+          ctx.moveTo(offsetX, py);
+          ctx.lineTo(offsetX + srcW * scale, py);
+          ctx.stroke();
+        }
+
+        // Draw coordinate dots for edge visualization
+        if (coordinates.length > 0) {
+          coordinates.forEach(coord => {
+            const px = offsetX + Math.floor((coord.snappedX ?? coord.x) * scale);
+            const py = offsetY + Math.floor((coord.snappedY ?? coord.y) * scale);
+            ctx.fillStyle = '#ffffff';
+            ctx.globalAlpha = 0.8;
+            ctx.fillRect(px, py, Math.max(1, scale * 0.3), Math.max(1, scale * 0.3));
+            ctx.globalAlpha = 1;
+          });
+        }
+      };
+      img.src = imageAnalysis.preview;
+    } else if (coordinates.length > 0) {
+      // No image, just coordinates (formula-only mode)
+      coordinates.forEach(coord => {
+        const px = offsetX + Math.floor((coord.snappedX ?? coord.x) * scale);
+        const py = offsetY + Math.floor((coord.snappedY ?? coord.y) * scale);
+        ctx.fillStyle = coord.color || '#a0a0c0';
+        ctx.fillRect(px, py, Math.max(1, scale), Math.max(1, scale));
+      });
     }
-    for (let y = offsetY; y <= offsetY + 144 * previewScale; y += gridStep) {
-      ctx.beginPath();
-      ctx.moveTo(offsetX, y);
-      ctx.lineTo(offsetX + 160 * previewScale, y);
-      ctx.stroke();
-    }
-    
-    // Draw coordinates
-    coordinates.forEach(coord => {
-      ctx.fillStyle = coord.color || (theme === 'dark' ? '#ffffff' : '#000000');
-      const px = offsetX + coord.x * previewScale;
-      const py = offsetY + coord.y * previewScale;
-      
-      // Draw as small squares for pixel art feel
-      const size = Math.max(2, previewScale * 0.8);
-      ctx.fillRect(px - size/2, py - size/2, size, size);
-      
-      // Add glow for emphasis
-      if (coord.emphasis > 0.6) {
-        ctx.shadowBlur = 10 * coord.emphasis;
-        ctx.shadowColor = coord.color;
-        ctx.fillRect(px - size/2, py - size/2, size, size);
-        ctx.shadowBlur = 0;
-      }
-    });
-    
-  }, [coordinates, theme]);
+  }, [coordinates, imageAnalysis]);
 
   return (
     <div className="pixelbrain-page">
@@ -367,21 +390,51 @@ export default function PixelBrainPage() {
       <main className="pixelbrain-main">
         {/* Left Panel */}
         <aside className="pixelbrain-panel pixelbrain-panel--left">
-          <UploadSection
-            onImageUpload={handleImageUpload}
-            analysis={imageAnalysis}
-            onClear={handleClear}
-          />
-          
-          {imageAnalysis && (
-            <AnalysisResults analysis={imageAnalysis} />
+          <div className="panel-tabs">
+            <button 
+              className={`tab-btn ${leftTab === 'upload' ? 'active' : ''}`}
+              onClick={() => setLeftTab('upload')}
+            >
+              Analysis
+            </button>
+            <button 
+              className={`tab-btn ${leftTab === 'transmute' ? 'active' : ''}`}
+              onClick={() => setLeftTab('transmute')}
+            >
+              Void Echo
+            </button>
+          </div>
+
+          {leftTab === 'upload' ? (
+            <>
+              <UploadSection
+                onImageUpload={handleImageUpload}
+                analysis={imageAnalysis}
+                onClear={handleClear}
+                uploadError={error}
+              />
+
+              {imageAnalysis && (
+                <AnalysisResults analysis={imageAnalysis} />
+              )}
+            </>
+          ) : (
+            <StyleTransmuter
+              referenceFile={referenceImage?.file}
+              onTransmute={handleTransmuteResult}
+              isProcessing={status === 'analyzing'}
+            />
           )}
-          
-          <FormulaEditor
-            formula={formula}
-            onUpdate={setFormula}
-            onRegenerate={regenerateFromImage}
-          />
+
+          {/* Lattice Grid Editor — for Aseprite export */}
+          {formula && imageAnalysis && (
+            <TemplateEditor
+              initialFormula={formula}
+              initialImage={imageAnalysis}
+              onExport={handleExport}
+              onFormulaChange={setFormula}
+            />
+          )}
         </aside>
 
         {/* Center Panel */}
@@ -394,13 +447,13 @@ export default function PixelBrainPage() {
               height={600}
               aria-label="Asset preview"
             />
-            
-            <StatusDisplay
-              status={status}
-              error={error}
-              bytecode={error ? parseErrorForAI(error)?.bytecode : null}
-            />
           </div>
+
+          <StatusDisplay
+            status={status}
+            error={error}
+            bytecode={error ? parseErrorForAI(error)?.bytecode : null}
+          />
         </section>
 
         {/* Right Panel */}

@@ -53,22 +53,34 @@ export async function imageAnalysisRoutes(app) {
       }
 
       // Validate file type
-      const mimetype = data.file.mimetype;
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/bmp'];
-      if (!allowedTypes.includes(mimetype)) {
+      // REFINED: Fastify-multipart can store mimetype in different locations depending on version/config
+      const mimetype = data.mimetype || data.file?.mimetype || data.file?.headers?.['content-type'];
+      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/bmp'];
+      
+      if (!mimetype || !allowedTypes.includes(mimetype)) {
+        app.log.warn({ mimetype, filename: data.filename }, 'Rejected upload due to invalid/missing mimetype');
         return reply.status(400).send({
-          error: `Unsupported image type: ${mimetype}. Use PNG, JPEG, or BMP.`,
+          error: `Unsupported image type: ${mimetype || 'unknown'}. Use PNG, JPEG, or BMP.`,
         });
       }
 
       // Read file buffer
+      // FIX: Consume the buffer from the file stream correctly
       const buffer = await data.toBuffer();
+
+      // Validate buffer was created
+      if (!buffer || buffer.length === 0) {
+        app.log.warn({ bufferSize: buffer?.length, filename: data.filename }, 'Received empty or invalid buffer');
+        return reply.status(400).send({
+          error: 'Failed to read image data. The file may be corrupted or empty.',
+        });
+      }
 
       // Get optional description
       const description = data.fields.description?.value || '';
 
-      // Analyze image
-      const analysis = await analyzeReferenceImage(buffer);
+      // Analyze image (pass mimetype for proper format detection)
+      const analysis = await analyzeReferenceImage(buffer, mimetype);
 
       // Add user description to semantic params
       if (description) {

@@ -2,29 +2,36 @@
  * UploadSection — Reference image upload with drag-and-drop
  */
 
-import { useCallback, useState, useRef } from 'react';
+import { useCallback, useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { UploadIcon, ImageIcon, CloseIcon } from "../../../components/Icons.jsx";
 
-export function UploadSection({ onImageUpload, analysis, onClear }) {
+export function UploadSection({ onImageUpload, analysis, onClear, uploadError }) {
   const [isDragging, setIsDragging] = useState(false);
-  const [error, setError] = useState(null);
+  const [localError, setLocalError] = useState(null);
   const fileInputRef = useRef(null);
+
+  // Sync parent error with local error
+  useEffect(() => {
+    if (uploadError) {
+      setLocalError(uploadError);
+    }
+  }, [uploadError]);
 
   const handleDrop = useCallback((e) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('File too large. Maximum size is 5MB.');
+        setLocalError('File too large. Maximum size is 5MB.');
         return;
       }
-      setError(null);
+      setLocalError(null);
       onImageUpload(file);
     } else {
-      setError('Please upload a valid image file (PNG, JPEG, BMP).');
+      setLocalError('Please upload a valid image file (PNG, JPEG, BMP).');
     }
   }, [onImageUpload]);
 
@@ -42,19 +49,31 @@ export function UploadSection({ onImageUpload, analysis, onClear }) {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('File too large. Maximum size is 5MB.');
+        setLocalError('File too large. Maximum size is 5MB.');
         return;
       }
-      setError(null);
+      setLocalError(null);
       onImageUpload(file);
     }
   }, [onImageUpload]);
 
-  const triggerFileInput = useCallback(() => {
+  const triggerFileInput = useCallback((e) => {
+    // Prevent double-triggering if clicking the label
+    if (e.target.tagName === 'LABEL' || e.target.closest('label')) {
+      return;
+    }
     if (fileInputRef.current) {
       fileInputRef.current.click();
     }
   }, []);
+
+  const clearError = useCallback((e) => {
+    e.stopPropagation(); // Don't trigger file input when clearing error
+    setLocalError(null);
+  }, []);
+
+  // Show parent error or local error
+  const displayError = localError;
 
   return (
     <div className="upload-section">
@@ -80,23 +99,32 @@ export function UploadSection({ onImageUpload, analysis, onClear }) {
               onChange={handleFileInput}
               className="upload-input"
               aria-label="Upload reference image"
+              onClick={(e) => e.stopPropagation()} // Important: prevent input click from bubbling back to parent
             />
-            
+
             <div className="dropzone-content">
               <UploadIcon className="dropzone-icon" />
               <p className="dropzone-title">Offer your reference to the Void</p>
               <p className="dropzone-hint">PNG, JPEG, BMP — Max 5MB</p>
-              
-              <label htmlFor="image-upload" className="btn btn-secondary">
+
+              {/* Using a div instead of label if parent handles click, or ensure label doesn't double trigger */}
+              <div className="btn btn-secondary">
                 <ImageIcon />
                 Browse Files
-              </label>
+              </div>
             </div>
 
-            {error && (
+            {displayError && (
               <div className="upload-error" role="alert">
                 <CloseIcon />
-                <span>{error}</span>
+                <span>{displayError}</span>
+                <button
+                  className="btn btn-icon btn-sm"
+                  onClick={clearError}
+                  aria-label="Dismiss error"
+                >
+                  <CloseIcon />
+                </button>
               </div>
             )}
           </motion.div>
@@ -117,7 +145,7 @@ export function UploadSection({ onImageUpload, analysis, onClear }) {
                 <CloseIcon />
               </button>
             </div>
-            
+
             {analysis.preview && (
               <img
                 src={analysis.preview}

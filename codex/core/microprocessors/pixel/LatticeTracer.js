@@ -13,9 +13,15 @@ import { clamp01 } from '../../pixelbrain/shared.js';
  * @returns {Object} { coordinates }
  */
 export function traceLattice({ pixelData, dimensions, threshold = 30 }) {
-  const { width, height } = dimensions;
+  const width = Number(dimensions?.width);
+  const height = Number(dimensions?.height);
+  
+  // Safety: Validate dimensions
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
+    throw new Error(`INVALID_TRACER_DIMENSIONS: ${width}x${height}`);
+  }
+
   const coordinates = [];
-  const visited = new Set();
   const edgeThreshold = threshold;
 
   for (let y = 1; y < height - 1; y++) {

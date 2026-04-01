@@ -63,8 +63,12 @@ function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
     const safeCoords = (coordinates || []).slice(0, Math.ceil((coordinates || []).length * progress));
 
     safeCoords.forEach((coord, index) => {
-      const x = (coord.snappedX / canvas.width) * width;
-      const y = (coord.snappedY / canvas.height) * height;
+      // Use native canvas dimensions (no arbitrary standard)
+      const canvasW = canvas?.width || 32;
+      const canvasH = canvas?.height || 32;
+      
+      const x = (coord.snappedX / canvasW) * width;
+      const y = (coord.snappedY / canvasH) * height;
       
       // Use direct color if available (from image), otherwise use palette
       let color = coord.color;
@@ -86,8 +90,8 @@ function LatticeCanvas({ coordinates, canvas, palettes, isAnalyzing }) {
       // Draw connection to next point
       if (index < safeCoords.length - 1) {
         const nextCoord = safeCoords[index + 1];
-        const nextX = (nextCoord.snappedX / canvas.width) * width;
-        const nextY = (nextCoord.snappedY / canvas.height) * height;
+        const nextX = (nextCoord.snappedX / canvasW) * width;
+        const nextY = (nextCoord.snappedY / canvasH) * height;
 
         ctx.strokeStyle = color;
         ctx.lineWidth = 1 + coord.emphasis * 2;

@@ -155,6 +155,26 @@ function generateFibonacciAnchors(width, height) {
 }
 
 /**
+ * Toggle a symmetry axis
+ *
+ * @param {Object} grid - Template grid
+ * @param {string} axis - Axis to toggle (vertical, horizontal, diagonal)
+ * @returns {Object} Updated grid
+ */
+export function toggleSymmetryAxis(grid, axis) {
+  if (!grid.symmetryAxes) grid.symmetryAxes = [];
+
+  const index = grid.symmetryAxes.indexOf(axis);
+  if (index === -1) {
+    grid.symmetryAxes.push(axis);
+  } else {
+    grid.symmetryAxes.splice(index, 1);
+  }
+
+  return grid;
+}
+
+/**
  * Snap coordinate to grid
  *
  * @param {number} x - X coordinate
@@ -173,22 +193,24 @@ export function snapToGrid(x, y, grid) {
       snappedY = Math.round(y / cellSize) * cellSize;
       break;
 
-    case GRID_TYPES.ISOMETRIC:
+    case GRID_TYPES.ISOMETRIC: {
       // Isometric snapping (diamond grid)
       const isoHalf = cellSize / 2;
       snappedX = Math.round(x / isoHalf) * isoHalf;
       snappedY = Math.round(y / isoHalf) * isoHalf;
       break;
+    }
 
-    case GRID_TYPES.HEXAGONAL:
+    case GRID_TYPES.HEXAGONAL: {
       // Hexagonal snapping
       const hexHeight = cellSize * Math.sqrt(3) / 2;
       const hexWidth = cellSize;
       snappedX = Math.round(x / hexWidth) * hexWidth;
       snappedY = Math.round(y / hexHeight) * hexHeight;
       break;
+    }
 
-    case GRID_TYPES.CIRCULAR:
+    case GRID_TYPES.CIRCULAR: {
       // Circular snapping (radial grid)
       const centerX = grid.width / 2;
       const centerY = grid.height / 2;
@@ -200,6 +222,7 @@ export function snapToGrid(x, y, grid) {
       snappedX = centerX + Math.cos(angle) * snappedRadius;
       snappedY = centerY + Math.sin(angle) * snappedRadius;
       break;
+    }
 
     default:
       snappedX = Math.round(x / cellSize) * cellSize;
@@ -240,18 +263,6 @@ export function addAnchorPoint(grid, x, y, label = '', locked = false) {
 export function removeAnchorPoint(grid, index) {
   if (index >= 0 && index < grid.anchorPoints.length) {
     grid.anchorPoints.splice(index, 1);
-  }
-}
-
-/**
- * Toggle symmetry axis
- */
-export function toggleSymmetryAxis(grid, axis) {
-  const index = grid.symmetryAxes.indexOf(axis);
-  if (index >= 0) {
-    grid.symmetryAxes.splice(index, 1);
-  } else {
-    grid.symmetryAxes.push(axis);
   }
 }
 
@@ -493,7 +504,7 @@ export function generateGridPreview(grid) {
       }
       break;
 
-    case GRID_TYPES.ISOMETRIC:
+    case GRID_TYPES.ISOMETRIC: {
       // Diagonal lines (45° and 135°)
       const step = cellSize / Math.sqrt(2);
       for (let i = -width; i <= width * 2; i += step) {
@@ -513,8 +524,9 @@ export function generateGridPreview(grid) {
         });
       }
       break;
+    }
 
-    case GRID_TYPES.HEXAGONAL:
+    case GRID_TYPES.HEXAGONAL: {
       const hexHeight = cellSize * Math.sqrt(3) / 2;
       let row = 0;
       for (let y = 0; y <= height; y += hexHeight) {
@@ -536,8 +548,9 @@ export function generateGridPreview(grid) {
         row++;
       }
       break;
+    }
 
-    case GRID_TYPES.FIBONACCI:
+    case GRID_TYPES.FIBONACCI: {
       // Recursive golden subdivision lines
       let fx = 0, fy = 0, fw = width, fh = height;
       let fside = 0;
@@ -560,6 +573,7 @@ export function generateGridPreview(grid) {
         fside = (fside + 1) % 4;
       }
       break;
+    }
   }
 
   return lines;
@@ -580,7 +594,7 @@ export function getCellAtPosition(grid, screenX, screenY) {
         y: Math.floor(screenY / cellSize) * cellSize,
       };
 
-    case GRID_TYPES.ISOMETRIC:
+    case GRID_TYPES.ISOMETRIC: {
       const isoHalf = cellSize / 2;
       return {
         col: Math.floor(screenX / isoHalf),
@@ -588,8 +602,9 @@ export function getCellAtPosition(grid, screenX, screenY) {
         x: Math.floor(screenX / isoHalf) * isoHalf,
         y: Math.floor(screenY / isoHalf) * isoHalf,
       };
+    }
 
-    case GRID_TYPES.HEXAGONAL:
+    case GRID_TYPES.HEXAGONAL: {
       const hexHeight = cellSize * Math.sqrt(3) / 2;
       return {
         col: Math.floor(screenX / cellSize),
@@ -597,8 +612,9 @@ export function getCellAtPosition(grid, screenX, screenY) {
         x: Math.floor(screenX / cellSize) * cellSize,
         y: Math.floor(screenY / hexHeight) * hexHeight,
       };
+    }
 
-    case GRID_TYPES.FIBONACCI:
+    case GRID_TYPES.FIBONACCI: {
       // Nearest phi-point snapping
       let minD = Infinity;
       let nearest = { x: screenX, y: screenY, col: 0, row: 0 };
@@ -607,6 +623,7 @@ export function getCellAtPosition(grid, screenX, screenY) {
         if (d < minD) { minD = d; nearest = { x: p.x, y: p.y, col: 0, row: 0 }; }
       });
       return nearest;
+    }
 
     default:
       return {

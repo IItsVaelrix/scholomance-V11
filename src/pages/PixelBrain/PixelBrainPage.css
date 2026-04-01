@@ -745,10 +745,8 @@
 /* ─── Status Display ────────────────────────────────────────────────────── */
 
 .status-display {
-  position: absolute;
-  bottom: var(--space-4);
-  left: 50%;
-  transform: translateX(-50%);
+  /* Sibling of canvas-container inside pixelbrain-panel--center */
+  align-self: center;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -757,7 +755,10 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-full);
   font-size: var(--text-2xs);
-  z-index: 10;
+  flex-shrink: 0;
+  /* Error details can expand freely without canvas clipping them */
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .status-idle {
@@ -860,20 +861,37 @@
 .canvas-container {
   position: relative;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10, 10, 18, 0.6);
+  background: #0a0a12;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xl);
   overflow: hidden;
 }
 
 .preview-canvas {
-  max-width: 100%;
-  max-height: 100%;
+  /* Pixel-perfect scaling — no smoothing at any zoom level */
+  image-rendering: pixelated;
+  image-rendering: crisp-edges; /* Firefox */
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  display: block;
+}
+
+/* Panels stay on the same Z plane — DOM order handles stacking */
+.pixelbrain-panel--left,
+.pixelbrain-panel--right {
+  position: relative;
+  z-index: 1;
+}
+
+/* StatusDisplay lives outside canvas-container as a sibling */
+.pixelbrain-panel--center {
+  position: relative;
 }
 
 /* ─── Terminal Overlay ──────────────────────────────────────────────────── */
@@ -883,6 +901,259 @@
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
   z-index: 1000;
+}
+
+/* ─── Panel Tabs ───────────────────────────────────────────────────────── */
+
+.panel-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 0.5rem;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.tab-btn:hover {
+  color: #eee;
+}
+
+.tab-btn.active {
+  color: #c9a227;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -0.5rem;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #c9a227;
+  box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
+}
+
+/* ─── Style Transmuter ──────────────────────────────────────────────────── */
+
+.style-transmuter {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.option-group label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.school-grid-mini {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.mini-school-btn {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: #888;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-school-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--school-color);
+  color: var(--school-color);
+}
+
+.mini-school-btn.active {
+  background: rgba(var(--school-color-rgb), 0.1);
+  border-color: var(--school-color);
+  color: var(--school-color);
+  box-shadow: 0 0 15px rgba(var(--school-color-rgb), 0.2);
+}
+
+.style-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.style-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  padding: 0.6rem;
+  color: #aaa;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.style-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.style-btn.active {
+  background: rgba(201, 162, 39, 0.1);
+  border-color: #c9a227;
+  color: #eee;
+}
+
+.transmute-ignite-btn {
+  background: linear-gradient(135deg, #c9a227 0%, #a67c1a 100%);
+  border: none;
+  border-radius: 4px;
+  padding: 1rem;
+  color: #000;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.transmute-ignite-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+/* ─── Formula Library ───────────────────────────────────────────────────── */
+
+.formula-library {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  height: 100%;
+  overflow-y: auto;
+  padding-right: 0.5rem;
+}
+
+.formula-library .section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.formula-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.formula-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.formula-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(201, 162, 39, 0.3);
+}
+
+.formula-card.active {
+  background: rgba(201, 162, 39, 0.08);
+  border-color: #c9a227;
+  box-shadow: 0 0 15px rgba(201, 162, 39, 0.15);
+}
+
+.formula-card__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.formula-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #eee;
+}
+
+.school-badge {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.1em;
+}
+
+.school-badge.school-sonic   { background: rgba(101, 31, 255, 0.2); color: #651fff; }
+.school-badge.school-void    { background: rgba(161, 161, 170, 0.2); color: #a1a1aa; }
+.school-badge.school-alchemy { background: rgba(213, 0, 249, 0.2); color: #d500f9; }
+.school-badge.school-psychic { background: rgba(0, 229, 255, 0.2); color: #00e5ff; }
+
+.formula-desc {
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1.4;
+  margin-bottom: 1rem;
+}
+
+.formula-card__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bytecode-preview {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: #c9a227;
+  opacity: 0.8;
+}
+
+.type-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  opacity: 0.4;
 }
 
 /* ─── Responsive ────────────────────────────────────────────────────────── */

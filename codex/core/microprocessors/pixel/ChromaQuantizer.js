@@ -5,8 +5,8 @@
  * Synchronizes external visual data with world-law color constraints.
  */
 
-import { SCHOOLS } from '../../../../src/data/schools.js';
-import { clamp01, roundTo } from '../../pixelbrain/shared.js';
+import { SCHOOLS } from '../../constants/schools.js';
+import { roundTo } from '../../pixelbrain/shared.js';
 
 /**
  * Quantize colors to nearest school affinity

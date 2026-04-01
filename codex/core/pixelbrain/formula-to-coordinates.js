@@ -176,7 +176,7 @@ export function evaluateGridProjection(formula, canvasSize, time = 0) {
       }
       break;
 
-    case GRID_TYPES.HEXAGONAL:
+    case GRID_TYPES.HEXAGONAL: {
       const hexHeight = safeCellSize * Math.sqrt(3) / 2;
       let hexRow = 0;
       for (let y = 0; y < gridHeight; y += hexHeight) {
@@ -194,8 +194,9 @@ export function evaluateGridProjection(formula, canvasSize, time = 0) {
         hexRow++;
       }
       break;
+    }
 
-    case GRID_TYPES.ISOMETRIC:
+    case GRID_TYPES.ISOMETRIC: {
       const isoStep = safeCellSize / Math.sqrt(2);
       for (let i = 0; i < 40; i++) {
         for (let j = 0; j < 40; j++) {
@@ -215,6 +216,7 @@ export function evaluateGridProjection(formula, canvasSize, time = 0) {
         }
       }
       break;
+    }
   }
 
   return coordinates;
