@@ -354,90 +354,80 @@ export default function PixelBrainPage() {
 
   return (
     <div className="pixelbrain-page">
-      {/* Top Bar */}
-      <header className="pixelbrain-topbar">
+      {/* Surgical Matrix Topbar */}
+      <div className="pixelbrain-topbar">
         <div className="topbar-left">
-          <h1 className="topbar-title">PixelBrain</h1>
-          <span className="topbar-subtitle">Arcane Asset Generation</span>
+          <span className="topbar-title">PIXELBRAIN // VOID_ECHO v1.1</span>
+          <span className="telemetry-text">[STATUS: {status.toUpperCase()}] [MODE: TRANSMUTATION]</span>
         </div>
-        
-        <div className="topbar-center">
-          <div className="school-selector">
-            {SCHOOLS.map(school => (
-              <button
-                key={school}
-                className={`school-btn ${activeSchool === school ? 'is-active' : ''}`}
-                onClick={() => setActiveSchool(school)}
-                data-school={school.toLowerCase()}
-              >
-                {school}
-              </button>
-            ))}
-          </div>
-        </div>
-        
         <div className="topbar-right">
+          <span className="telemetry-text">0x{Math.random().toString(16).slice(2, 10).toUpperCase()}</span>
           <button
-            className="btn btn-ghost"
+            className="telemetry-text"
+            style={{ background: 'none', border: '1px solid #444', padding: '2px 8px', marginLeft: '12px', cursor: 'pointer' }}
             onClick={() => setShowTerminal(!showTerminal)}
           >
-            {showTerminal ? 'Hide Terminal' : 'Show Terminal'}
+            {showTerminal ? 'HIDE_TERMINAL' : 'SHOW_TERMINAL'}
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="pixelbrain-main">
-        {/* Left Panel */}
+      <div className="pixelbrain-main">
+        {/* Left Sidebar: Controls */}
         <aside className="pixelbrain-panel pixelbrain-panel--left">
           <div className="panel-tabs">
             <button 
               className={`tab-btn ${leftTab === 'upload' ? 'active' : ''}`}
               onClick={() => setLeftTab('upload')}
             >
-              Analysis
+              UPLINK
             </button>
             <button 
               className={`tab-btn ${leftTab === 'transmute' ? 'active' : ''}`}
               onClick={() => setLeftTab('transmute')}
             >
-              Void Echo
+              MATRIX
+            </button>
+            <button 
+              className={`tab-btn ${leftTab === 'echo' ? 'active' : ''}`}
+              onClick={() => setLeftTab('echo')}
+            >
+              ECHO
             </button>
           </div>
 
-          {leftTab === 'upload' ? (
-            <>
-              <UploadSection
-                onImageUpload={handleImageUpload}
-                analysis={imageAnalysis}
-                onClear={handleClear}
-                uploadError={error}
+          <div className="tab-content">
+            {leftTab === 'upload' && (
+              <>
+                <UploadSection
+                  onImageUpload={handleImageUpload}
+                  analysis={imageAnalysis}
+                  onClear={handleClear}
+                  uploadError={error}
+                />
+                {imageAnalysis && (
+                  <AnalysisResults analysis={imageAnalysis} />
+                )}
+              </>
+            )}
+            {leftTab === 'transmute' && (
+              <StyleTransmuter 
+                referenceFile={referenceImage?.file}
+                onTransmute={handleTransmuteResult}
+                isProcessing={status === 'analyzing'}
               />
-
-              {imageAnalysis && (
-                <AnalysisResults analysis={imageAnalysis} />
-              )}
-            </>
-          ) : (
-            <StyleTransmuter
-              referenceFile={referenceImage?.file}
-              onTransmute={handleTransmuteResult}
-              isProcessing={status === 'analyzing'}
-            />
-          )}
-
-          {/* Lattice Grid Editor — for Aseprite export */}
-          {formula && imageAnalysis && (
-            <TemplateEditor
-              initialFormula={formula}
-              initialImage={imageAnalysis}
-              onExport={handleExport}
-              onFormulaChange={setFormula}
-            />
-          )}
+            )}
+            {leftTab === 'echo' && (
+              <DuplicateSection 
+                referenceFile={referenceImage?.file}
+                isProcessing={status === 'generating'}
+                onProcessingChange={(p) => setStatus(p ? 'generating' : 'ready')}
+              />
+            )}
+          </div>
         </aside>
 
-        {/* Center Panel */}
+        {/* Center: Viewport */}
         <section className="pixelbrain-panel pixelbrain-panel--center">
           <div className="canvas-container">
             <canvas
@@ -445,19 +435,31 @@ export default function PixelBrainPage() {
               className="preview-canvas"
               width={800}
               height={600}
-              aria-label="Asset preview"
             />
           </div>
 
           <StatusDisplay
             status={status}
             error={error}
-            bytecode={error ? parseErrorForAI(error)?.bytecode : null}
           />
         </section>
 
-        {/* Right Panel */}
+        {/* Right Sidebar: Telemetry & Compiler */}
         <aside className="pixelbrain-panel pixelbrain-panel--right">
+          <div className="section-header">
+            <span className="telemetry-text">LATTICE COMPILER</span>
+          </div>
+          
+          <div className="bytecode-terminal">
+            <div className="terminal-header telemetry-text">0xF_SYNTAX_STREAM</div>
+            <textarea 
+              className="terminal-textarea telemetry-text"
+              style={{ width: '100%', height: '120px', background: '#000', border: '1px solid #333', color: '#00FF41', padding: '8px', fontSize: '12px' }}
+              value={formula ? formulaToBytecode(formula) : "AWAITING_TRANSMUTATION..."}
+              readOnly
+            />
+          </div>
+
           <ParameterSliders
             parameters={parameters}
             onChange={handleParameterChange}
@@ -469,16 +471,15 @@ export default function PixelBrainPage() {
             onChange={setExtensions}
           />
           
-          {coordinates.length > 0 && (
-            <ExportOptions
-              onExport={handleExport}
-              formula={formula}
-              coordinates={coordinates}
-              palettes={palettes}
-            />
-          )}
+          <button 
+            className="transmute-ignite-btn"
+            onClick={() => handleExport('FORMULA')}
+            disabled={!formula}
+          >
+            EXECUTE_BURN_TO_LATTICE
+          </button>
         </aside>
-      </main>
+      </div>
 
       {/* Terminal Overlay */}
       <AnimatePresence>
@@ -497,12 +498,7 @@ export default function PixelBrainPage() {
                 palettes,
                 formula,
                 canvas: { width: 160, height: 144, gridSize: 1 },
-                tokenCount: coordinates.length,
-                activeTokenCount: coordinates.length,
-                paletteCount: palettes.length,
-                dominantAxis: imageAnalysis.composition?.dominantAxis,
-                dominantSymmetry: imageAnalysis.composition?.hasSymmetry ? imageAnalysis.composition.symmetryType : 'none',
-                referenceImage: { preview: imageAnalysis.preview, analysis: imageAnalysis }
+                referenceImage
               } : null}
               onClose={() => setShowTerminal(false)}
             />

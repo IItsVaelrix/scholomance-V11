@@ -85,8 +85,13 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    checkMe();
-    fetchCsrfToken();
+    const initAuth = async () => {
+      // Fetch CSRF first to ensure session is initialized on the server
+      await fetchCsrfToken();
+      // Then check if the user is authenticated
+      await checkMe();
+    };
+    initAuth();
   }, [checkMe, fetchCsrfToken]);
 
   const login = async (username, password) => {

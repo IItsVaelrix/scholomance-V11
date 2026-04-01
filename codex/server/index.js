@@ -246,6 +246,29 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_API_TIMEO
     }
 }
 
+fastify.setErrorHandler((error, request, reply) => {
+  const statusCode = error.statusCode || 500;
+  
+  // Log the error with request details
+  request.log.error({
+    err: error,
+    method: request.method,
+    url: request.url,
+    sessionId: request.session?.id,
+    statusCode
+  }, '[SERVER] Unhandled error');
+
+  if (statusCode >= 500) {
+    reply.status(statusCode).send({
+      error: 'Internal Server Error',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred.',
+      bytecode: error.code || 'UNKNOWN_ERROR'
+    });
+  } else {
+    reply.status(statusCode).send(error);
+  }
+});
+
 // 1. Initialize session store
 const useRedisStore =
   process.env.NODE_ENV === 'production' ||
@@ -266,9 +289,15 @@ if (useRedisStore) {
     socket: {
       tls: isTls ? true : undefined, // Explicitly enable TLS for rediss://
       reconnectStrategy: (retries) => {
-        const delay = Math.min(retries * 50, 2000);
+        // Stop retrying after 10 attempts to prevent hanging forever
+        if (retries > 10) {
+          fastify.log.error('[REDIS] Max reconnection attempts reached. Disabling Redis sessions.');
+          return new Error('Max reconnection attempts reached');
+        }
+        const delay = Math.min(retries * 100, 3000);
         return delay;
       },
+      connectTimeout: 5000, // 5 second connection timeout
       // Upstash sometimes closes idle connections, so we set a heartbeat
       keepAlive: 5000 
     }

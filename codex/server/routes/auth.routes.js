@@ -180,13 +180,45 @@ export async function authRoutes(fastify, _opts) {
     // CSRF Token
     // SECURITY: Rate limit to prevent session flooding attacks
     fastify.get('/csrf-token', {
-        config: { rateLimit: { max: 10, timeWindow: '1 minute' } }
+        config: { rateLimit: { max: 15, timeWindow: '1 minute' } }
     }, async (request, reply) => {
-        if (!request.session.user) {
-            request.session[LEXICON_GUEST_SESSION_KEY] = true;
+        const start = Date.now();
+        try {
+            if (!request.session) {
+                request.log.error('[CSRF] Session not found on request object');
+                return reply.status(500).send({ message: 'Session initialization failed' });
+            }
+
+            if (!request.session.user) {
+                request.session[LEXICON_GUEST_SESSION_KEY] = true;
+            }
+            
+            const sessionInitMs = Date.now() - start;
+            
+            const token = await reply.generateCsrf();
+            const csrfGenMs = Date.now() - (start + sessionInitMs);
+            
+            await request.session.save();
+            const sessionSaveMs = Date.now() - (start + sessionInitMs + csrfGenMs);
+            
+            const totalMs = Date.now() - start;
+            if (totalMs > 500) {
+                request.log.warn({
+                    totalMs,
+                    sessionInitMs,
+                    csrfGenMs,
+                    sessionSaveMs,
+                    store: fastify.config?.session?.store?.constructor?.name || 'default'
+                }, '[CSRF] Slow token generation detected');
+            }
+
+            return { token };
+        } catch (error) {
+            request.log.error({ err: error, durationMs: Date.now() - start }, '[CSRF] Failed to generate token');
+            return reply.status(500).send({ 
+                message: 'Internal server error during security token generation',
+                error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            });
         }
-        const token = await reply.generateCsrf();
-        await request.session.save();
-        return { token };
     });
 }
