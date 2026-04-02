@@ -52,9 +52,15 @@ export default function MetricsGrid({ metrics }) {
   return (
     <motion.div
       className="metrics-grid"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 }}
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.04
+          }
+        }
+      }}
     >
       {Object.entries(metrics).map(([key, value]) => {
         const config = METRIC_CONFIG[key];
@@ -63,7 +69,15 @@ export default function MetricsGrid({ metrics }) {
         const Icon = config.icon;
         
         return (
-          <div key={key} className="metric-card">
+          <motion.div 
+            key={key} 
+            className="metric-card"
+            variants={{
+              hidden: { opacity: 0, y: 15 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            whileHover={{ scale: 1.02, borderColor: 'var(--color-collab-gold)' }}
+          >
             <Icon className="metric-icon" />
             <div className="metric-content">
               <span className="metric-label">{config.label}</span>
@@ -71,7 +85,7 @@ export default function MetricsGrid({ metrics }) {
                 {config.format(value)}
               </span>
             </div>
-          </div>
+          </motion.div>
         );
       })}
     </motion.div>

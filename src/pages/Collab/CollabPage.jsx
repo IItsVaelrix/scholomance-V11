@@ -4,6 +4,7 @@
  * Adapted from PixelBrain architecture
  */
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { z } from 'zod';
 
@@ -415,7 +416,12 @@ export default function CollabPage() {
     return (
         <div className="collab-page">
             {/* Topbar */}
-            <header className="collab-topbar">
+            <motion.header 
+                className="collab-topbar"
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ duration: 0.4, ease: "easeOut" }}
+            >
                 <div className="topbar-left">
                     <span className="topbar-title">COLLAB CONSOLE // AGENT_ORCHESTRATION</span>
                     <span className="topbar-subtitle">
@@ -435,12 +441,17 @@ export default function CollabPage() {
                         REFRESH
                     </button>
                 </div>
-            </header>
+            </motion.header>
 
             {/* Main 3-Panel Layout */}
             <div className="collab-main">
                 {/* LEFT PANEL: Navigation + Context */}
-                <aside className="collab-panel collab-panel--left">
+                <motion.aside 
+                    className="collab-panel collab-panel--left"
+                    initial={{ x: -30, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
+                >
                     {/* Tab Navigation */}
                     <div className="collab-tabs" role="tablist" aria-label="Collaboration views">
                         {TABS.map(tab => (
@@ -521,12 +532,30 @@ export default function CollabPage() {
                             )}
                         </div>
                     </div>
-                </aside>
+                </motion.aside>
 
                 {/* CENTER PANEL: Viewport */}
-                <section className="collab-panel collab-panel--center" ref={canvasRef}>
+                <motion.section 
+                    className="collab-panel collab-panel--center" 
+                    ref={canvasRef}
+                    initial={{ scale: 0.98, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+                >
                     <div className="viewport-container">
-                        {renderTabContent()}
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                                className="viewport-motion-wrapper"
+                                style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}
+                            >
+                                {renderTabContent()}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                     
                     {/* Status Display (below viewport) */}
@@ -535,10 +564,15 @@ export default function CollabPage() {
                         conflict={conflict}
                         context={error || null}
                     />
-                </section>
+                </motion.section>
 
                 {/* RIGHT PANEL: Telemetry */}
-                <aside className="collab-panel collab-panel--right">
+                <motion.aside 
+                    className="collab-panel collab-panel--right"
+                    initial={{ x: 30, opacity: 0 }}
+                    animate={{ x: 0, opacity: 1 }}
+                    transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+                >
                     {/* Live Metrics */}
                     <div className="telemetry-section">
                         <div className="telemetry-header">LIVE METRICS</div>

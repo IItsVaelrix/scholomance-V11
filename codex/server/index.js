@@ -46,6 +46,7 @@ import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
 import { resolveRhymeAstrologyArtifactPaths } from './utils/rhymeAstrologyPaths.js';
 import { imageAnalysisRoutes } from './routes/imageAnalysis.routes.js';
 import { registerSchoolStylesRoutes } from './routes/schoolStyles.routes.js';
+import { createMailQueueWorker, createMailerService } from './services/mailer.service.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -181,6 +182,23 @@ const HOST = process.env.HOST ?? '0.0.0.0';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS ?? 5000);
 const SHUTDOWN_TIMEOUT_MS = parsePositiveIntEnv('SHUTDOWN_TIMEOUT_MS', 10000);
 const AUDIO_ADMIN_TOKEN = getAudioAdminToken();
+const SERVER_BASE_URL = String(
+    process.env.PUBLIC_SERVER_URL ||
+    process.env.VITE_API_BASE_URL ||
+    `http://localhost:${PORT}`
+).trim();
+const PUBLIC_APP_URL = String(
+    process.env.PUBLIC_APP_URL ||
+    process.env.VITE_PUBLIC_APP_URL ||
+    (IS_PRODUCTION ? SERVER_BASE_URL : 'http://localhost:5173')
+).trim();
+const mailerService = createMailerService(fastify.log, {
+    appBaseUrl: SERVER_BASE_URL,
+    appName: 'Scholomance',
+});
+const mailQueueWorker = createMailQueueWorker(mailerService, {
+    logger: fastify.log,
+});
 const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
@@ -526,7 +544,13 @@ fastify.get('/metrics', {
   };
 });
 
-fastify.register(authRoutes, { prefix: '/auth' });
+fastify.register(authRoutes, {
+    prefix: '/auth',
+    mailer: mailerService,
+    appBaseUrl: SERVER_BASE_URL,
+    publicAppUrl: PUBLIC_APP_URL,
+    appName: 'Scholomance',
+});
 
 // Reference API Proxy Routes
 // SECURITY: Rate limit external API proxy to prevent enumeration attacks
@@ -904,6 +928,11 @@ async function closeRedisConnection() {
 
 function closePersistenceConnections() {
     try {
+        mailQueueWorker.stop();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[MAILER] Queue worker stop failed.');
+    }
+    try {
         persistence.close();
     } catch (error) {
         fastify.log.warn({ err: error }, '[DB:user] Failed to close cleanly.');
@@ -973,6 +1002,9 @@ export const start = async () => {
             await redisClient.connect();
         }
         await PhonemeEngine.init();
+        if (!IS_TEST_RUNTIME) {
+            mailQueueWorker.start();
+        }
         await fastify.listen({ host: HOST, port: PORT });
     } catch (error) {
         fastify.log.error(error);

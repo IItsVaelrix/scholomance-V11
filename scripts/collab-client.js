@@ -17,21 +17,74 @@
  */
 
 const BASE_URL = process.env.COLLAB_URL || 'http://localhost:3000/collab';
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+
+// Cookie jar for session management (Node.js fetch doesn't handle cookies automatically)
+let _sessionCookie = null;
 
 async function collabFetch(path, agentId, options = {}) {
     const url = `${BASE_URL}${path}`;
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(agentId ? { 'X-Agent-ID': agentId } : {}),
+        ...options.headers,
+    };
+    // Attach session cookie if available
+    if (_sessionCookie) {
+        headers['Cookie'] = _sessionCookie;
+    }
     const res = await fetch(url, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(agentId ? { 'X-Agent-ID': agentId } : {}),
-            ...options.headers,
-        },
+        headers,
     });
+    // Capture session cookie from response
+    const setCookie = res.headers.get('set-cookie');
+    if (setCookie) {
+        const match = setCookie.match(/connect\.sid=([^;]+)/);
+        if (match) {
+            _sessionCookie = `connect.sid=${match[1]}`;
+        }
+    }
     const data = await res.json();
     if (!res.ok) {
         const err = new Error(data.error || `HTTP ${res.status}`);
         err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+
+export async function login(username, password) {
+    // Get CSRF token
+    const csrfRes = await fetch(`${API_BASE}/auth/csrf-token`, { credentials: 'include' });
+    const csrfData = await csrfRes.json();
+    const csrfToken = csrfData.token;
+    
+    // Login
+    const loginRes = await fetch(`${API_BASE}/auth/login`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken,
+        },
+        body: JSON.stringify({ username, password }),
+        credentials: 'include',
+    });
+    
+    // Capture session cookie
+    const setCookie = loginRes.headers.get('set-cookie');
+    if (setCookie) {
+        const match = setCookie.match(/connect\.sid=([^;]+)/);
+        if (match) {
+            _sessionCookie = `connect.sid=${match[1]}`;
+        }
+    }
+    
+    const data = await loginRes.json();
+    if (!loginRes.ok) {
+        const err = new Error(data.message || 'Login failed');
+        err.status = loginRes.status;
         err.data = data;
         throw err;
     }
@@ -126,7 +179,7 @@ async function main() {
 
     if (!command) {
         console.log('Usage: AGENT_ID=<id> node collab-client.js <command> [options]');
-        console.log('Commands: register, heartbeat, tasks, claim, complete, status, agents, pipelines, activity');
+        console.log('Commands: login, register, heartbeat, tasks, claim, complete, status, agents, pipelines, activity');
         process.exit(0);
     }
 
@@ -134,6 +187,13 @@ async function main() {
 
     try {
         switch (command) {
+            case 'login': {
+                const username = getFlag(args, '--username') || process.env.COLLAB_USER || 'test';
+                const password = getFlag(args, '--password') || process.env.COLLAB_PASS || 'password';
+                const result = await login(username, password);
+                console.log('Logged in:', JSON.stringify(result, null, 2));
+                break;
+            }
             case 'register': {
                 const name = getFlag(args, '--name') || agentId;
                 const role = getFlag(args, '--role') || 'backend';

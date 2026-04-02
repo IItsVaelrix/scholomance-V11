@@ -18,7 +18,8 @@
       "Bash(npm *)",
       "Bash(head *)",
       "Bash(echo *)",
-      "Bash(mv *)"
+      "Bash(mv *)",
+      "Bash(curl *)"
     ]
   },
   "$version": 3

@@ -36,6 +36,7 @@ function createCookieJar() {
 
 describe('[Server] index route integration', () => {
   let fastify;
+  let userPersistence;
   let userDbPath;
   let collabDbPath;
   let audioStoragePath;
@@ -154,6 +155,7 @@ describe('[Server] index route integration', () => {
 
     const mod = await import('../../codex/server/index.js?test=index-route-integration');
     fastify = mod.fastify;
+    userPersistence = (await import('../../codex/server/persistence.adapter.js')).persistence;
     await fastify.ready();
   });
 
@@ -355,6 +357,120 @@ describe('[Server] index route integration', () => {
     expect(resetProgressionResponse.json().xp).toBe(0);
   });
 
+  it('queues verification mail and can resend it for unverified accounts', async () => {
+    const jar = createCookieJar();
+    const seed = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const username = `mail_${seed.replace(/[^a-z0-9]/gi, '').toLowerCase().slice(-12)}`;
+    const email = `${username}@test.local`;
+    const password = 'Password123!';
+
+    const registerToken = await getCsrfToken(jar);
+    const registerResponse = await requestWithJar(jar, {
+      method: 'POST',
+      url: '/auth/register',
+      headers: {
+        'content-type': 'application/json',
+        'x-csrf-token': registerToken,
+      },
+      payload: JSON.stringify({
+        username,
+        email,
+        password,
+        captchaId: 'test-id',
+        captchaAnswer: 'test-answer',
+      }),
+    });
+    expect(registerResponse.statusCode).toBe(201);
+
+    const initialUser = userPersistence.users.findByEmail(email);
+    const initialToken = initialUser.verificationToken;
+    const initialMessages = userPersistence.mail.getAll({ statuses: ['queued'] });
+    const verificationMessages = initialMessages.filter((message) => message.recipient === email && message.templateKey === 'verify-email');
+    expect(verificationMessages).toHaveLength(1);
+
+    const resendToken = await getCsrfToken(jar);
+    const resendResponse = await requestWithJar(jar, {
+      method: 'POST',
+      url: '/auth/resend-verification',
+      headers: {
+        'content-type': 'application/json',
+        'x-csrf-token': resendToken,
+      },
+      payload: JSON.stringify({ email }),
+    });
+    expect(resendResponse.statusCode).toBe(200);
+
+    const updatedUser = userPersistence.users.findByEmail(email);
+    expect(updatedUser.verificationToken).not.toBe(initialToken);
+    const updatedMessages = userPersistence.mail.getAll({ statuses: ['queued'] });
+    const resentMessages = updatedMessages.filter((message) => message.recipient === email && message.templateKey === 'verify-email');
+    expect(resentMessages).toHaveLength(2);
+  });
+
+  it('queues password reset mail and accepts the reset token', async () => {
+    const jar = createCookieJar();
+    const seed = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    const user = await registerAndLogin(jar, seed);
+    const persistedUser = userPersistence.users.findByEmail(user.email);
+    userPersistence.users.verifyUser(persistedUser.id);
+
+    const forgotToken = await getCsrfToken(jar);
+    const forgotResponse = await requestWithJar(jar, {
+      method: 'POST',
+      url: '/auth/forgot-password',
+      headers: {
+        'content-type': 'application/json',
+        'x-csrf-token': forgotToken,
+      },
+      payload: JSON.stringify({ email: user.email }),
+    });
+    expect(forgotResponse.statusCode).toBe(200);
+
+    const queuedReset = userPersistence.mail
+      .getAll({ statuses: ['queued'] })
+      .find((message) => message.recipient === user.email && message.templateKey === 'password-reset');
+    expect(queuedReset).toBeTruthy();
+
+    const resetUrlMatch = queuedReset.textBody.match(/https?:\/\/\S+/);
+    expect(resetUrlMatch).toBeTruthy();
+    const resetUrl = new URL(resetUrlMatch[0]);
+    const resetPasswordToken = resetUrl.searchParams.get('token');
+    expect(typeof resetPasswordToken).toBe('string');
+    expect(resetPasswordToken.length).toBeGreaterThan(20);
+
+    const resetCsrfToken = await getCsrfToken(jar);
+    const newPassword = 'ResetPassword123!';
+    const resetResponse = await requestWithJar(jar, {
+      method: 'POST',
+      url: '/auth/reset-password',
+      headers: {
+        'content-type': 'application/json',
+        'x-csrf-token': resetCsrfToken,
+      },
+      payload: JSON.stringify({
+        token: resetPasswordToken,
+        password: newPassword,
+      }),
+    });
+    expect(resetResponse.statusCode).toBe(200);
+
+    const loginJar = createCookieJar();
+    const loginCsrfToken = await getCsrfToken(loginJar);
+    const loginResponse = await requestWithJar(loginJar, {
+      method: 'POST',
+      url: '/auth/login',
+      headers: {
+        'content-type': 'application/json',
+        'x-csrf-token': loginCsrfToken,
+      },
+      payload: JSON.stringify({
+        username: user.username,
+        password: newPassword,
+      }),
+    });
+    expect(loginResponse.statusCode).toBe(200);
+  });
+
   it('enforces collab auth and allows authenticated collab status access', async () => {
     const unauthenticatedResponse = await fastify.inject({
       method: 'GET',
@@ -461,7 +577,9 @@ describe('[Server] index route integration', () => {
     expect(lookupResponse.statusCode).toBe(200);
     expect(lookupResponse.json().source).toBe('scholomance-local');
 
-    const metricsResponse = await fastify.inject({
+    const metricsJar = createCookieJar();
+    await registerAndLogin(metricsJar, `metrics_${Date.now()}_${Math.random().toString(16).slice(2)}`);
+    const metricsResponse = await requestWithJar(metricsJar, {
       method: 'GET',
       url: '/metrics',
     });

@@ -2,6 +2,8 @@
  * AgentStatus — Agent grid display (PixelBrain-inspired metric cards)
  */
 
+import { motion } from 'framer-motion';
+
 const STATUS_COLORS = {
     online: 'var(--color-collab-success, #40ff80)',
     busy: 'var(--color-collab-warning, #ffc040)',
@@ -18,15 +20,19 @@ const ROLE_LABELS = {
 export default function AgentStatus({ agents }) {
     if (!agents || agents.length === 0) {
         return (
-            <div className="agents-empty">
+            <motion.div 
+                className="agents-empty"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+            >
                 <h3 className="agents-empty-title">No Agents Registered</h3>
                 <p className="agents-empty-text">
-                    Register agents via CLI to begin collaboration.
+                    The ritual chamber is empty. Register agents via CLI to begin collaboration.
                 </p>
                 <code className="agents-empty-code">
                     node scripts/collab-client.js register --name &quot;Agent&quot; --role backend --capabilities node,fastify
                 </code>
-            </div>
+            </motion.div>
         );
     }
 
@@ -35,15 +41,37 @@ export default function AgentStatus({ agents }) {
     return (
         <div className="agents-view">
             <h3 className="agents-title">
-                Agents <span className="agents-count">({onlineCount}/{agents.length} online)</span>
+                Active Agents <span className="agents-count">({onlineCount}/{agents.length} online)</span>
             </h3>
-            <div className="agents-grid">
+            <motion.div 
+                className="agents-grid"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                    visible: {
+                        transition: {
+                            staggerChildren: 0.05
+                        }
+                    }
+                }}
+            >
                 {agents.map(agent => (
-                    <div key={agent.id} className="agent-card">
+                    <motion.div 
+                        key={agent.id} 
+                        className="agent-card"
+                        variants={{
+                            hidden: { opacity: 0, scale: 0.95 },
+                            visible: { opacity: 1, scale: 1 }
+                        }}
+                        whileHover={{ y: -2, borderColor: 'var(--color-collab-info)' }}
+                    >
                         <div className="agent-card__header">
                             <span
                                 className="agent-card__indicator"
-                                style={{ backgroundColor: STATUS_COLORS[agent.status] || STATUS_COLORS.offline }}
+                                style={{ 
+                                    backgroundColor: STATUS_COLORS[agent.status] || STATUS_COLORS.offline,
+                                    boxShadow: `0 0 8px ${STATUS_COLORS[agent.status] || STATUS_COLORS.offline}`
+                                }}
                                 aria-label={`Status: ${agent.status}`}
                             />
                             <span className="agent-card__name">{agent.name}</span>
@@ -65,9 +93,9 @@ export default function AgentStatus({ agents }) {
                                 <span className="task-id">{agent.current_task_id.slice(0, 8)}...</span>
                             </div>
                         )}
-                    </div>
+                    </motion.div>
                 ))}
-            </div>
+            </motion.div>
         </div>
     );
 }

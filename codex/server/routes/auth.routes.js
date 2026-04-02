@@ -33,6 +33,21 @@ const verifyEmailSchema = z.object({
     token: z.string()
 });
 
+const resendVerificationBodySchema = z.object({
+    email: z.string().email(),
+});
+
+const forgotPasswordBodySchema = z.object({
+    email: z.string().email(),
+});
+
+const resetPasswordBodySchema = z.object({
+    token: z.string().min(16),
+    password: passwordSchema,
+});
+
+const PASSWORD_RESET_TTL_MINUTES = 60;
+
 function toFastifySchema(zodSchema) {
     const schema = zodToJsonSchema(zodSchema, { target: 'draft-7' });
     if (schema && typeof schema === 'object' && '$schema' in schema) {
@@ -41,9 +56,34 @@ function toFastifySchema(zodSchema) {
     return schema;
 }
 
-const mailer = createMailerService(console);
+function createOpaqueToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
 
-export async function authRoutes(fastify, _opts) {
+function hashToken(token) {
+    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function getPasswordResetExpiryIso() {
+    return new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60_000).toISOString();
+}
+
+function isPasswordResetTokenExpired(user) {
+    const expiryMs = Date.parse(String(user?.recoveryTokenExpiry || ''));
+    return !Number.isFinite(expiryMs) || expiryMs <= Date.now();
+}
+
+export async function authRoutes(fastify, opts) {
+    const mailer = opts?.mailer || createMailerService(fastify.log, {
+        appBaseUrl: opts?.appBaseUrl,
+        appName: opts?.appName,
+    });
+    const publicAppUrl = String(
+        opts?.publicAppUrl ||
+        process.env.PUBLIC_APP_URL ||
+        process.env.VITE_PUBLIC_APP_URL ||
+        (process.env.NODE_ENV === 'production' ? 'http://localhost:3000' : 'http://localhost:5173')
+    ).replace(/\/+$/, '');
     
     // CAPTCHA Route
     fastify.get('/captcha', {
@@ -85,17 +125,21 @@ export async function authRoutes(fastify, _opts) {
 
             // 3. Create User with Verification Token
             const hashedPassword = await bcrypt.hash(password, 12);
-            const verificationToken = crypto.randomBytes(32).toString('hex');
+            const verificationToken = createOpaqueToken();
             
             persistence.users.createUser(username, email, hashedPassword, verificationToken);
 
             // 4. Send Verification Email
-            const verifyLink = `${process.env.VITE_API_BASE_URL || 'http://localhost:3000'}/auth/verify-email?token=${verificationToken}`;
-            await mailer.send({
+            mailer.queueTemplate('verify-email', {
                 to: email,
-                subject: 'Verify your Scholomance Account',
-                text: `Welcome to the Scholomance. Please verify your email by visiting: ${verifyLink}`,
-                html: `<p>Welcome to the Scholomance.</p><p>Please <a href="${verifyLink}">verify your email</a> to begin your studies.</p>`
+                data: {
+                    username,
+                    token: verificationToken,
+                },
+                metadata: {
+                    reason: 'registration_verification',
+                    username,
+                },
             });
 
             return reply.status(201).send({ message: 'Registration successful. Please check your email to verify your account.' });
@@ -146,8 +190,95 @@ export async function authRoutes(fastify, _opts) {
             persistence.users.verifyUser(user.id);
             
             // Redirect to frontend login page
-            return reply.redirect('/auth?verified=true');
+            return reply.redirect(`${publicAppUrl}/auth?verified=true`);
         }
+    });
+
+    fastify.post('/resend-verification', {
+        config: { rateLimit: { max: 5, timeWindow: '15 minutes' } },
+        schema: { body: toFastifySchema(resendVerificationBodySchema) },
+        handler: async (request, reply) => {
+            const { email } = request.body;
+            const user = persistence.users.findByEmail(email);
+
+            if (user && !user.verified) {
+                const verificationToken = createOpaqueToken();
+                persistence.users.setVerificationToken(user.id, verificationToken);
+                mailer.queueTemplate('verify-email', {
+                    to: user.email,
+                    data: {
+                        username: user.username,
+                        token: verificationToken,
+                    },
+                    metadata: {
+                        reason: 'resend_verification',
+                        userId: user.id,
+                    },
+                });
+            }
+
+            return reply.status(200).send({
+                message: 'If an unverified account exists for that email, a new verification message has been queued.',
+            });
+        },
+    });
+
+    fastify.post('/forgot-password', {
+        config: { rateLimit: { max: 5, timeWindow: '30 minutes' } },
+        schema: { body: toFastifySchema(forgotPasswordBodySchema) },
+        handler: async (request, reply) => {
+            const { email } = request.body;
+            const user = persistence.users.findByEmail(email);
+
+            if (user?.verified) {
+                const resetToken = createOpaqueToken();
+                const resetTokenHash = hashToken(resetToken);
+                const recoveryTokenExpiry = getPasswordResetExpiryIso();
+                persistence.users.setRecoveryToken(user.id, resetTokenHash, recoveryTokenExpiry);
+                mailer.queueTemplate('password-reset', {
+                    to: user.email,
+                    data: {
+                        username: user.username,
+                        token: resetToken,
+                        expiresInMinutes: PASSWORD_RESET_TTL_MINUTES,
+                    },
+                    metadata: {
+                        reason: 'forgot_password',
+                        userId: user.id,
+                    },
+                });
+            }
+
+            return reply.status(200).send({
+                message: 'If that email belongs to a verified account, a password reset message has been queued.',
+            });
+        },
+    });
+
+    fastify.get('/reset-password', {
+        schema: { querystring: toFastifySchema(verifyEmailSchema) },
+        handler: async (request, reply) => {
+            const { token } = request.query;
+            return reply.redirect(`${publicAppUrl}/auth?resetToken=${encodeURIComponent(token)}`);
+        },
+    });
+
+    fastify.post('/reset-password', {
+        config: { rateLimit: { max: 10, timeWindow: '30 minutes' } },
+        schema: { body: toFastifySchema(resetPasswordBodySchema) },
+        handler: async (request, reply) => {
+            const { token, password } = request.body;
+            const recoveryTokenHash = hashToken(token);
+            const user = persistence.users.findByRecoveryTokenHash(recoveryTokenHash);
+
+            if (!user || isPasswordResetTokenExpired(user)) {
+                return reply.status(400).send({ message: 'Invalid or expired reset token' });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 12);
+            persistence.users.updatePasswordHash(user.id, hashedPassword);
+            return reply.status(200).send({ message: 'Password reset successful. You can now log in.' });
+        },
     });
 
     // Logout
