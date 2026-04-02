@@ -4,9 +4,10 @@
  * Submits an animation intent to the AMP and returns the resolved motion.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { AnimationIntent, ResolvedMotionOutput } from '../../../codex/animation/contracts/animation.types.ts';
 import { runAnimationAmp } from '../../../codex/animation/amp/runAnimationAmp.ts';
+import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion.js';
 
 /**
  * Hook to submit an animation intent to the AMP
@@ -21,23 +22,38 @@ export function useAnimationIntent(
 ): ResolvedMotionOutput | null {
   const [motion, setMotion] = useState<ResolvedMotionOutput | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const prefersReducedMotion = usePrefersReducedMotion();
   
+  // Augment intent with accessibility constraints if not specified
+  const augmentedIntent = useMemo(() => {
+    if (!intent) return null;
+    
+    return {
+      ...intent,
+      constraints: {
+        reducedMotion: prefersReducedMotion,
+        ...intent.constraints,
+      }
+    };
+  }, [intent, prefersReducedMotion]);
+
   // Track current intent to avoid redundant runs
   const lastIntentRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (!intent || !enabled) {
+    if (!augmentedIntent || !enabled) {
       if (motion) setMotion(null);
       return;
     }
 
     // Simple hash to detect changes
     const intentHash = JSON.stringify({
-      targetId: intent.targetId,
-      preset: intent.preset,
-      trigger: intent.trigger,
-      state: intent.state,
-      bytecode: intent.bytecode
+      targetId: augmentedIntent.targetId,
+      preset: augmentedIntent.preset,
+      trigger: augmentedIntent.trigger,
+      state: augmentedIntent.state,
+      bytecode: augmentedIntent.bytecode,
+      constraints: augmentedIntent.constraints
     });
 
     if (intentHash === lastIntentRef.current && motion) {
@@ -51,7 +67,7 @@ export function useAnimationIntent(
     const processIntent = async () => {
       setIsProcessing(true);
       try {
-        const result = await runAnimationAmp(intent);
+        const result = await runAnimationAmp(augmentedIntent);
         if (isMounted) {
           setMotion(result);
         }
@@ -69,7 +85,7 @@ export function useAnimationIntent(
     return () => {
       isMounted = false;
     };
-  }, [intent, enabled]);
+  }, [augmentedIntent, enabled, motion]);
 
   return motion;
 }

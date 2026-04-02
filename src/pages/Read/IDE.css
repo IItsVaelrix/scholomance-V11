@@ -6,7 +6,7 @@
   --read-text-muted: var(--text-tertiary, #a89d80);
   --read-text-faint: var(--text-muted, #7a6f55);
   --editor-content-font-size: clamp(1.02rem, 1.2vw, 1.12rem);
-  --editor-content-line-height: 1.85;
+  --editor-content-line-height: 1.5;
   --editor-content-padding-y: var(--space-4, 1rem);
   --editor-content-padding-x: var(--space-5, 1.25rem);
   --editor-line-box: calc(var(--editor-content-font-size) * var(--editor-content-line-height));
@@ -699,17 +699,46 @@
 }
 
 .sidebar-section-title {
-  font-family: var(--font-mono, monospace);
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs, 0.75rem);
+  color: var(--read-text-faint);
   text-transform: uppercase;
-  letter-spacing: 0.18em;
-  color: hsla(43, 48%, 48%, 0.62);
-  margin: 0 0 var(--space-2) 0;
-  padding-bottom: var(--space-2);
-  border-bottom: 1px solid hsla(43, 48%, 48%, 0.13);
+  letter-spacing: 0.08em;
+  margin: 0 0 var(--space-2, 0.5rem) 0;
+  font-family: var(--font-mono);
+}
+
+.format-toolbar {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--space-2, 0.5rem);
+  justify-content: center;
+  padding: var(--space-2, 0.5rem);
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+.format-toolbar .toolbar-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  margin: 2px;
+}
+
+.format-toolbar {
+  gap: 0;
+}
+
+.format-toolbar .toolbar-btn {
+  margin: 0;
+  border-radius: 0;
+}
+
+.format-toolbar .toolbar-btn:first-child {
+  border-radius: var(--radius-sm, 0.25rem) 0 0 var(--radius-sm, 0.25rem);
+}
+
+.format-toolbar .toolbar-btn:last-child {
+  border-radius: 0 var(--radius-sm, 0.25rem) var(--radius-sm, 0.25rem) 0;
 }
 
 .sidebar-section-glyph {
@@ -1266,11 +1295,82 @@
   white-space: nowrap;
 }
 
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 0.25rem);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  background: rgba(10, 11, 18, 0.4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-above);
+}
+
+.toolbar-btn {
+  background: transparent;
+  border: 0;
+  color: var(--read-text-muted);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm, 0.25rem);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--read-text-strong);
+}
+
+.toolbar-btn .material-symbols-outlined {
+  font-size: 20px;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 var(--space-1);
+}
+
+.toolbar-spacer {
+  flex: 1;
+}
+
+.toolbar-btn--bytecode {
+  width: auto;
+  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  color: var(--read-accent);
+  background: rgba(101, 31, 255, 0.05);
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  border: 1px solid rgba(101, 31, 255, 0.1);
+}
+
+.toolbar-btn--bytecode:hover {
+  background: rgba(101, 31, 255, 0.12);
+  border-color: rgba(101, 31, 255, 0.25);
+  color: var(--read-accent-bright, #9d66ff);
+}
+
+.toolbar-btn--bytecode .material-symbols-outlined {
+  font-size: 16px;
+}
+
 .ide-layout-wrapper .editor-title-input,
 .ide-layout-wrapper .editor-title-display {
   width: 100%;
   margin: 0;
-  padding: 1% 1% var(--space-2, 0.5rem) 1%;
+  padding: var(--editor-content-padding-y) var(--editor-content-padding-x) var(--space-2, 0.5rem) var(--editor-content-padding-x);
   border: 0;
   border-bottom: 1px solid hsla(43, 48%, 48%, 0.18);
   background: transparent;
@@ -1383,6 +1483,26 @@
   box-sizing: border-box;
 }
 
+.ide-layout-wrapper .word-background-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.ide-layout-wrapper .editor-textarea--underlay {
+  z-index: 6;
+}
+
+.ide-layout-wrapper .word-background-layer > div {
+  position: relative;
+  min-height: 100%;
+}
+
 .ide-layout-wrapper .editor-body.read-only .editor-textarea-wrapper {
   min-height: 400px;
 }
@@ -1391,7 +1511,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 11;
+  z-index: var(--z-above);
   border-radius: inherit;
 }
 
@@ -1412,16 +1532,24 @@
 }
 
 .ide-layout-wrapper .truesight-line {
+  position: relative;
   transition: opacity 0.18s ease;
+}
+
+.ide-layout-wrapper .truesight-line span:not(.truesight-word):not(.grimoire-word) {
+  opacity: 0.4;
+  font-size: 0.85em;
 }
 
 .ide-layout-wrapper .editor-textarea-wrapper .editor-textarea,
 .ide-layout-wrapper .editor-textarea-wrapper .markdown-rendered,
-.ide-layout-wrapper .editor-textarea-wrapper .truesight-overlay {
+.ide-layout-wrapper .editor-textarea-wrapper .truesight-overlay,
+.ide-layout-wrapper .editor-textarea-wrapper .word-background-layer {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
+  box-sizing: border-box;
 }
 
 .ide-layout-wrapper .editor-textarea::-webkit-scrollbar,
@@ -1458,16 +1586,17 @@
   background: rgba(0, 0, 0, 0.05);
 }
 
+/* ─── Textarea & Overlay — Bytecode-driven typography ─────────────────────
+   Note: Typography properties (font, padding, spacing) are now driven by
+   useCursorSync hook. CSS provides fallbacks only.
+   ────────────────────────────────────────────────────────────────────────── */
+
 .ide-layout-wrapper .editor-textarea,
 .ide-layout-wrapper .markdown-rendered,
 .ide-layout-wrapper .truesight-overlay {
   border: 0;
   background: transparent;
   color: var(--read-text-strong);
-  padding: 1%;
-  font-family: var(--font-mono, "JetBrains Mono", "Fira Code", monospace);
-  font-size: var(--editor-content-font-size);
-  line-height: var(--editor-content-line-height);
   white-space: pre-wrap;
   overflow-wrap: break-word;
 }
@@ -1508,6 +1637,10 @@
   resize: none;
   overflow: auto;
   caret-color: var(--read-accent);
+  box-sizing: border-box;
+  tab-size: 2;
+  -moz-tab-size: 2;
+  -webkit-text-fill-color: currentColor;
 }
 
 .ide-layout-wrapper .editor-textarea--foreground {
@@ -1534,12 +1667,12 @@
 .ide-layout-wrapper .editor-textarea.truesight-transparent {
   color: transparent !important;
   -webkit-text-fill-color: transparent !important;
+  background: transparent !important;
   caret-color: var(--read-accent);
 }
 
 .ide-layout-wrapper .editor-textarea.truesight-transparent::selection {
-  background: rgba(101, 31, 255, 0.2);
-  color: transparent;
+  background: rgba(101, 31, 255, 0.3);
 }
 
 .ide-layout-wrapper .editor-textarea--hidden {
@@ -1585,9 +1718,13 @@
 }
 
 .ide-layout-wrapper .truesight-overlay {
-  z-index: 5;
+  z-index: var(--z-above);
+  opacity: 1;
   overflow: hidden;
   scrollbar-color: transparent transparent;
+  box-sizing: border-box;
+  tab-size: 2;
+  -moz-tab-size: 2;
 }
 
 .ide-layout-wrapper .truesight-overlay::-webkit-scrollbar {
@@ -1600,6 +1737,28 @@
 
 .ide-layout-wrapper .truesight-overlay--editing {
   pointer-events: none;
+  background: transparent;
+  color: transparent;
+}
+
+.ide-layout-wrapper .truesight-overlay--editing .truesight-line {
+  color: transparent;
+}
+
+.ide-layout-wrapper .truesight-overlay--editing.truesight-overlay--definitions-only .grimoire-word--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+  color: transparent;
+}
+
+.ide-layout-wrapper .truesight-overlay--editing .truesight-line span {
+  color: transparent !important;
+  opacity: 0 !important;
+}
+
+.ide-layout-wrapper .truesight-overlay--editing .grimoire-word--interactive {
+  pointer-events: auto;
+  cursor: pointer;
 }
 
 .ide-layout-wrapper .truesight-overlay--passive {
@@ -1611,6 +1770,22 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
+}
+
+.ide-layout-wrapper .truesight-overlay--read-only .truesight-word {
+  color: transparent !important;
+  opacity: 1 !important;
+}
+
+.ide-layout-wrapper .truesight-overlay--read-only .grimoire-word--interactive {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.ide-layout-wrapper .truesight-overlay--read-only .truesight-line span:not(.truesight-word):not(.grimoire-word) {
+  opacity: 0.4;
+  font-size: 0.85em;
+  vertical-align: baseline;
 }
 
 .ide-layout-wrapper .truesight-overlay--editing .truesight-line--highlighted {
@@ -1660,8 +1835,13 @@
   background: none;
   font: inherit;
   line-height: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
   cursor: text;
   user-select: text;
+  /* Blended font effect */
+  mix-blend-mode: screen;
+  text-shadow: 0 0 1px currentColor;
 }
 
 .ide-layout-wrapper .grimoire-word--interactive {
@@ -1670,10 +1850,8 @@
 }
 
 .ide-layout-wrapper .grimoire-word--grey {
-  color: #d0cdd8;
-  text-decoration: underline;
-  text-decoration-color: rgba(208, 205, 216, 0.3);
-  text-underline-offset: 3px;
+  color: var(--read-text-strong);
+  text-decoration: none;
 }
 
 .ide-layout-wrapper .grimoire-word--grey.grimoire-word--interactive:hover {
@@ -1695,13 +1873,15 @@
 .ide-layout-wrapper .truesight-word-token {
   display: inline;
   margin: 0;
-  padding: 0 0.08em;
+  padding: 0;
   border: 0;
   border-radius: 0.2em;
   background: none;
   color: inherit;
   font: inherit;
   line-height: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
   cursor: pointer;
 }
 
@@ -3319,6 +3499,12 @@
 .truesight-overlay--definitions-only .grimoire-word--interactive {
   pointer-events: auto;
   cursor: pointer;
+}
+
+.truesight-overlay--definitions-only .truesight-line span:not(.truesight-word):not(.grimoire-word) {
+  opacity: 0.4;
+  font-size: 0.85em;
+  vertical-align: baseline;
 }
 
 .truesight-overlay--definitions-only .grimoire-word--interactive:hover {

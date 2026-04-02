@@ -145,7 +145,7 @@ export function fnv1aHash(value) {
  * @param {string} source - Source code
  * @returns {Array} Recursion warnings
  */
-export function analyzeFileForRecursion(filePath, source) {
+function analyzeFileForRecursion(filePath, source) {
   const warnings = [];
   const moduleId = path.basename(filePath, path.extname(filePath));
   
@@ -458,7 +458,7 @@ function checkForBaseCase(callPath, functionName) {
  * @param {Array} warnings - Recursion warnings
  * @returns {Array} Recommendations
  */
-export function recommendCompartmentalization(warnings) {
+function recommendCompartmentalization(warnings) {
   const recommendations = [];
   
   // Group warnings by module

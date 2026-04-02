@@ -5,7 +5,7 @@
  * Presets provide default motion values for common patterns.
  */
 
-import { AnimationPreset } from '../../contracts/animation.types.ts';
+import { AnimationPreset } from '../contracts/animation.types.ts';
 
 // ─── Preset Definitions ─────────────────────────────────────────────────────
 

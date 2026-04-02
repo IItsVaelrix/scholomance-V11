@@ -30,14 +30,6 @@
   contain: layout style;
 }
 
-/* Brass gear dials — GPU accelerated rotation */
-.brass-gear-dial {
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
-  contain: layout style;
-}
-
 /* Arcane radio controls — GPU accelerated */
 .arcane-radio-control {
   transform: translateZ(0);
@@ -80,7 +72,6 @@
 @media (prefers-reduced-motion: reduce) {
   .nixie-tube,
   .nixie-digit,
-  .brass-gear-dial,
   .arcane-radio-control,
   .arcane-knob,
   .output-device-selector,
@@ -348,6 +339,14 @@
   border: none;
   cursor: pointer;
   transition: transform 0.1s, background 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.initiate-btn .material-symbols-outlined {
+  font-size: 1.2rem;
 }
 
 .initiate-btn:active {
@@ -938,14 +937,14 @@
   left: 50%;
   /* Vertical: radar y = 515/1080 = 47.7% of canvas height */
   top: 47.7%;
-  z-index: 10; /* Above Phaser canvas and portal */
+  z-index: 25; /* Above orb interaction (15) and Phaser canvas (1-10) */
   width: min(33rem, 46vw);
   /* translate(-50%, -50%) centers the element on that exact point */
   transform: translate(-50%, -50%);
   pointer-events: none;
 }
 
-/* Invisible click surface for the Orb — absolute top of the interaction stack */
+/* Invisible click surface for the Orb — interaction layer (below video player) */
 .orb-interaction-trigger {
   position: fixed;
   left: 50%;
@@ -958,7 +957,7 @@
   border-radius: 50%;
   pointer-events: auto;
   cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' fill='white' stroke='black' stroke-width='1'><path d='M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z'/></svg>") 16 16, pointer;
-  z-index: 5000;
+  z-index: 15; /* Below video player (25) but above console UI (10) */
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1863,7 +1862,7 @@
   background: radial-gradient(circle at 50% 47.7%, rgba(10, 15, 25, 0.8) 0%, rgba(3, 5, 10, 0.98) 100%);
   display: flex;
   flex-direction: column;
-  padding: 4rem 6rem;
+  padding: 2rem 4rem;
   overflow-y: auto;
   backdrop-filter: blur(10px);
 }
@@ -1874,13 +1873,17 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .station-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 4rem;
+  margin-bottom: 3rem;
+  flex-shrink: 0;
 }
 
 .back-btn {
@@ -1926,10 +1929,12 @@
 
 .station-focus {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 8rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
   align-items: center;
   flex: 1;
+  overflow: hidden;
+  position: relative;
 }
 
 .orb-centerpiece {
@@ -1937,8 +1942,17 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  /* Align with cockpit orb center at 47.7% */
-  margin-top: -2.3vh;
+  /* Perfectly centered in left column */
+  /* ORB ISOLATION: Create independent stacking context to prevent text bleed-through */
+  z-index: 10;
+  contain: layout paint style;
+  isolation: isolate;
+}
+
+/* Phaser canvas inside orb must be opaque to block underlying text */
+.orb-centerpiece canvas {
+  background: radial-gradient(circle at 50% 50%, rgba(4, 11, 18, 0.96) 0%, rgba(4, 7, 13, 0.98) 60%, rgba(0, 0, 0, 0.98) 100%);
+  box-shadow: 0 0 44px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .orb-ring-decoration {

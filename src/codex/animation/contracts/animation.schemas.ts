@@ -109,7 +109,7 @@ export const ProcessorTraceSchema = z.object({
   processorId: z.string(),
   stage: ProcessorStageSchema,
   changed: z.array(z.string()),
-  timestamp: z.number().int().positive(),
+  timestamp: z.number().nonnegative(),
 });
 
 // ─── Motion Working State Schema ────────────────────────────────────────────
@@ -131,7 +131,7 @@ export const FramerTransitionSchema = z.object({
     z.string(),
     z.tuple([z.number(), z.number(), z.number(), z.number()]), // cubic-bezier
   ]).optional(),
-  repeat: z.number().int().nonnegative().optional(),
+  repeat: z.union([z.number(), z.literal(Infinity)]).optional(),
   repeatType: z.enum(['loop', 'reverse', 'mirror']).optional(),
 });
 
@@ -164,7 +164,7 @@ export const ResolvedMotionOutputSchema = z.object({
   diagnostics: z.array(z.string()),
   trace: z.array(ProcessorTraceSchema),
   performance: z.object({
-    processingTimeMs: z.number().positive(),
+    processingTimeMs: z.number().nonnegative(),
     processorCount: z.number().int().nonnegative(),
     reducedMotion: z.boolean(),
     gpuAccelerated: z.boolean(),

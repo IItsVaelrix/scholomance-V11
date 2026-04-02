@@ -22,7 +22,6 @@ import { getSharedPhaserGame } from './AlchemicalLabBackground';
 import { getSchoolAudioConfig } from '../../lib/ambient/schoolAudio.config';
 import type { SignalChamberScene as SignalChamberSceneType } from './scenes/SignalChamberScene';
 import HolographicEmbed from './HolographicEmbed.jsx';
-import { useAnimationIntent } from '../../ui/animation/hooks/useAnimationIntent';
 
 interface SignalChamberConsoleProps {
   overrideSchoolId?: string;
@@ -57,30 +56,32 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
 
   const currentSchoolId = overrideSchoolId || rawSchoolId;
 
-  // ── Animation AMP Integration ──────────────────────────────────────────
+  // ── Animation AMP Integration — DISABLED for stability ──────────────────
 
-  const orbIntent = useMemo(() => ({
-    version: 'v1.0',
-    targetId: 'chamber-orb',
-    targetType: 'phaser' as const,
-    preset: isPlaying ? 'transmission-pulse' : 'orb-idle',
-    trigger: isPlaying ? 'audio' as const : 'idle' as const,
-    state: { signalLevel, isPlaying },
-    metadata: { scene: 'SignalChamber' }
-  }), [isPlaying, signalLevel]);
+  // const orbIntent = useMemo(() => ({
+  //   version: 'v1.0',
+  //   targetId: 'chamber-orb',
+  //   targetType: 'phaser' as const,
+  //   preset: isPlaying ? 'transmission-pulse' : 'orb-idle',
+  //   trigger: isPlaying ? 'audio' as const : 'idle' as const,
+  //   state: { signalLevel, isPlaying },
+  //   metadata: { scene: 'SignalChamber' }
+  // }), [isPlaying, signalLevel]);
 
-  const orbMotion = useAnimationIntent(orbIntent);
+  // const orbMotion = useAnimationIntent(orbIntent);
+  const orbMotion = null;
 
-  const consoleIntent = useMemo(() => ({
-    version: 'v1.0',
-    targetId: 'chamber-console',
-    targetType: 'phaser' as const,
-    preset: 'console-awaken',
-    trigger: 'mount' as const,
-    metadata: { scene: 'SignalChamber' }
-  }), []);
+  // const consoleIntent = useMemo(() => ({
+  //   version: 'v1.0',
+  //   targetId: 'chamber-console',
+  //   targetType: 'phaser' as const,
+  //   preset: 'console-awaken',
+  //   trigger: 'mount' as const,
+  //   metadata: { scene: 'SignalChamber' }
+  // }), []);
 
-  const consoleMotion = useAnimationIntent(consoleIntent);
+  // const consoleMotion = useAnimationIntent(consoleIntent);
+  const consoleMotion = null;
 
   const stations = useMemo(
     () =>
@@ -207,11 +208,11 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
       glyph:       currentStation?.glyph ?? '✦',
       stations,
       bpm,
-      // Pass AMP motion data to scene
-      orbMotion:   orbMotion?.values,
-      consoleMotion: consoleMotion?.values,
+      // AMP motion disabled
+      orbMotion:   null,
+      consoleMotion: null,
     });
-  }, [signalLevel, volume, isTuning, isPlaying, statusLabel, currentStation, currentSchoolId, stations, getBPM, orbMotion, consoleMotion]);
+  }, [signalLevel, volume, isTuning, isPlaying, statusLabel, currentStation, currentSchoolId, stations, getBPM]);
 
   // ── Accessibility: visually-hidden control layer ───────────────────────
   // Mirrors all Phaser-side interactive surfaces with real DOM controls.
@@ -229,6 +230,7 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
       <div className="signal-chamber-player-overlay">
         <HolographicEmbed
           trackUrl={currentTrackUrl}
+          trackId={currentStation?.id}
           title={currentStation?.name ?? 'No signal'}
           glyph={currentStation?.glyph ?? '✦'}
           schoolColor={currentStation?.color ?? '#2ddbde'}

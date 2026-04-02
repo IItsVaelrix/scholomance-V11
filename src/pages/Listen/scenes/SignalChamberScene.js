@@ -33,12 +33,18 @@ export class SignalChamberScene extends Phaser.Scene {
     this._needsVolSliderRedraw = true; this._needsSignalSliderRedraw = true;
     this._isCreated = false; this._sx = 1; this._sy = 1; this._ms = 1;
     this._bpm = 90; // Default BPM for rotation sync
+
+    // Interaction Callbacks
+    this.onPlayPause = null;
+    this.onVolumeChange = null;
+    this.onStationSelect = null;
+    this.onOrbClick = null;
   }
 
   create() {
     const W = this.scale.width, H = this.scale.height;
     this._sx = W / REF.W; this._sy = H / REF.H; this._ms = Math.min(this._sx, this._sy);
-    this.scene.settings.zIndex = 10;
+    this.scene.settings.zIndex = 100; // Higher than background (0) and static overlay (1)
     this._rtBg = this.add.renderTexture(0, 0, W, H).setDepth(0);
     this._rtScan = this.add.renderTexture(0, 0, W, H).setDepth(80);
     this._bakeBackground(W, H); this._bakeScanlines(W, H);
@@ -284,7 +290,11 @@ export class SignalChamberScene extends Phaser.Scene {
 
   updateState(data) {
     if (!this._isCreated) return;
-    if (data.schoolId !== undefined && data.schoolId !== this._schoolId) { this._schoolChanged = true; this._transitionAlpha = 0; this._schoolId = data.schoolId; }
+    if (data.schoolId !== undefined && data.schoolId !== this._schoolId) { 
+      this._schoolChanged = true; 
+      this._lastSwitchTime = performance.now();
+      this._schoolId = data.schoolId; 
+    }
     if (data.signalLevel !== undefined) { this._sig = data.signalLevel; this._needsSignalSliderRedraw = true; }
     if (data.volume !== undefined) { this._vol = data.volume; this._needsVolSliderRedraw = true; }
     if (data.bpm !== undefined) { this._bpm = data.bpm; }
@@ -297,7 +307,7 @@ export class SignalChamberScene extends Phaser.Scene {
     if (data.consoleMotion) this._consoleMotion = data.consoleMotion;
   }
 
-  update(time, delta) {
+  update(time, _delta) {
     if (!this._isCreated) return;
     
     // Use AMP motion if available, fallback to legacy bytecode
@@ -306,8 +316,14 @@ export class SignalChamberScene extends Phaser.Scene {
     const scale = this._orbMotion?.scale !== undefined ? this._orbMotion.scale : 1.0;
     
     const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms, bpm = this._bpm;
-    if (this._schoolChanged) { this._transitionAlpha = Math.min(1, this._transitionAlpha + delta * 0.0035); if (this._transitionAlpha >= 1) this._schoolChanged = false; }
-    const ta = this._transitionAlpha;
+    
+    // Absolute time transition
+    let ta = 1;
+    if (this._schoolChanged) {
+      const elapsed = performance.now() - (this._lastSwitchTime || 0);
+      ta = Math.min(1, elapsed / 350); 
+      if (ta >= 1) this._schoolChanged = false;
+    }
     
     // Modulate standby alpha with AMP glow
     const standbyAlpha = (this._isPlaying ? 0.6 : 0.25) * Math.max(0.1, glow) * ta;
@@ -336,9 +352,14 @@ export class SignalChamberScene extends Phaser.Scene {
     this._consGlow.setAlpha(consoleOpacity);
     this._consGlow.lineStyle(22, col, gA * 0.4).strokeRoundedRect(CONSOLE.x * this._sx - (CONSOLE.w * this._sx)/2, CONSOLE.y * this._sy - (CONSOLE.h * this._sy)/2, CONSOLE.w * this._sx, CONSOLE.h * this._sx, CONSOLE.cr * this._sx);
     
-    const newL = Phaser.Math.Linear(this._gaugeL_cur, sig, delta * 0.004), newR = Phaser.Math.Linear(this._gaugeR_cur, this._vol, delta * 0.004);
-    if (Math.abs(newL - this._gaugeL_prev) > 0.004) { this._redrawGaugeNeedle(this._gauLNeedle, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, newL, col); this._gaugeL_prev = newL; }
-    if (Math.abs(newR - this._gaugeR_prev) > 0.004) { this._redrawGaugeNeedle(this._gauRNeedle, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, newR, col); this._gaugeR_prev = newR; }
+    // Gauges: simple time-damped pursuit (Pseudo-simulation, but time-aware)
+    // We update cur values to prev for redraw check
+    const pursuit = 0.15; // fixed pursuit speed per frame (idealized 60fps)
+    const newL = this._gaugeL_cur + (sig - this._gaugeL_cur) * pursuit;
+    const newR = this._gaugeR_cur + (this._vol - this._gaugeR_cur) * pursuit;
+
+    if (Math.abs(newL - this._gaugeL_prev) > 0.002) { this._redrawGaugeNeedle(this._gauLNeedle, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, newL, col); this._gaugeL_prev = newL; }
+    if (Math.abs(newR - this._gaugeR_prev) > 0.002) { this._redrawGaugeNeedle(this._gauRNeedle, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, newR, col); this._gaugeR_prev = newR; }
     this._gaugeL_cur = newL; this._gaugeR_cur = newR;
     if (this._needsSignalSliderRedraw) { this._redrawSignalSlider(); this._needsSignalSliderRedraw = false; }
     if (this._needsVolSliderRedraw) { this._redrawVolSlider(); this._needsVolSliderRedraw = false; }

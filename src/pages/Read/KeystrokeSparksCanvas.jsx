@@ -55,7 +55,7 @@ export default function KeystrokeSparksCanvas({
         const H = el.offsetHeight || 600;
 
         const game = new Phaser.Game({
-          type:        Phaser.AUTO,
+          type:        Phaser.WEBGL,
           parent:      el,
           width:       W,
           height:      H,
@@ -65,6 +65,10 @@ export default function KeystrokeSparksCanvas({
           audio:       { noAudio: true },
           scale:       { mode: Phaser.Scale.RESIZE },
           banner:      false,
+          render: {
+            powerPreference: 'high-performance',
+            batchSize: 2048,
+          },
         });
 
         game.events.once('ready', () => {

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TextureSelector } from './TextureSelector';
 import { DuplicatePreviewGrid } from './DuplicatePreviewGrid';
-import { SCHOOLS } from '../../../../codex/core/constants/schools.js';
+import { SCHOOLS } from '../../../data/schools.js';
 
 export function DuplicateSection({ referenceFile, isProcessing, onProcessingChange }) {
   const [selectedTextures, setSelectedTextures] = useState(['parchment']);
@@ -75,7 +75,7 @@ export function DuplicateSection({ referenceFile, isProcessing, onProcessingChan
         />
 
         <div className="school-overlay-picker">
-          <label className="section-label telemetry-text">School Overlays</label>
+          <div className="section-label telemetry-text">School Overlays</div>
           <div className="school-grid-mini">
             {Object.keys(SCHOOLS).map(schoolId => (
               <button

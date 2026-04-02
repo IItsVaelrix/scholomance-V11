@@ -19,11 +19,12 @@ import {
 } from '../contracts/animation.types.ts';
 import {
   validateAnimationIntent,
-  validateMotionOutput,
   ANIMATION_ERROR_MESSAGES,
 } from '../contracts/animation.schemas.ts';
 import { buildMotionTrace } from '../diagnostics/buildMotionTrace.ts';
-import { encodeMotionBytecode } from '../bytecode/encodeMotionBytecode.ts';
+import { registerAllProcessors } from '../processors/registerAllProcessors.ts';
+import { normalizeAnimationIntent } from './normalizeAnimationIntent.ts';
+import { fuseMotionOutput } from './fuseMotionOutput.ts';
 
 // ─── Processor Registry ─────────────────────────────────────────────────────
 
@@ -102,70 +103,12 @@ const ampState: AmpState = {
  */
 export function initAnimationAmp(config: Partial<AnimationAmpConfig> = {}): void {
   ampState.config = { ...DEFAULT_AMP_CONFIG, ...config };
+  
+  // Register all available processors
+  registerAllProcessors();
+  
   ampState.isRunning = true;
   console.log('[AnimationAMP] Initialized with config:', ampState.config);
-}
-
-/**
- * Normalize animation intent into working state
- */
-function normalizeIntent(intent: AnimationIntent): MotionWorkingState {
-  const startTime = performance.now();
-  
-  // Apply preset defaults if preset specified
-  let workingState: MotionWorkingState = {
-    intent,
-    values: {
-      durationMs: 300,
-      delayMs: 0,
-      easing: 'ease-out',
-      translateX: 0,
-      translateY: 0,
-      scale: 1,
-      scaleX: 1,
-      scaleY: 1,
-      rotateDeg: 0,
-      opacity: 1,
-      glow: 0,
-      blur: 0,
-      loop: false,
-      phaseOffset: 0,
-      originX: 0.5,
-      originY: 0.5,
-    },
-    flags: {
-      interruptible: true,
-      reduced: false,
-      constrained: false,
-      gpuAccelerated: intent.constraints?.gpuAccelerate ?? true,
-      symmetryApplied: false,
-    },
-    diagnostics: [],
-    trace: [],
-  };
-  
-  // Load preset defaults if specified
-  if (intent.preset) {
-    const { getAnimationPreset } = await import('../presets/presetRegistry.ts');
-    const preset = getAnimationPreset(intent.preset);
-    if (preset) {
-      workingState.values = { ...workingState.values, ...preset.defaults };
-      workingState.flags = { ...workingState.flags, ...preset.flags };
-      workingState.diagnostics.push(`Preset applied: ${intent.preset}`);
-    } else {
-      workingState.diagnostics.push(`Preset not found: ${intent.preset}`);
-    }
-  }
-  
-  // Add normalize trace
-  workingState.trace.push({
-    processorId: 'amp.normalize',
-    stage: 'normalize',
-    changed: ['values', 'flags'],
-    timestamp: performance.now() - startTime,
-  });
-  
-  return workingState;
 }
 
 /**
@@ -177,30 +120,24 @@ async function runProcessorPipeline(
 ): Promise<MotionWorkingState> {
   const config = ampState.config;
   let state = { ...workingState };
-  
+  const pipelineStart = performance.now();
+
   // Limit processor count for performance
   const limitedProcessors = processors.slice(0, config.maxProcessors);
-  
+
   for (const processor of limitedProcessors) {
     const processorStart = performance.now();
-    
-    // Check frame budget
-    if (config.performanceMonitoring) {
-      const elapsed = processorStart - (state.trace.at(-1)?.timestamp ?? 0);
-      if (elapsed > config.frameBudgetMs) {
-        state.diagnostics.push(`Frame budget exceeded before ${processor.id}`);
-      }
-    }
-    
-    // Run processor with timeout
+
+    // Run processor (sync for simple processors, async for complex ones)
     try {
-      const result = await Promise.race([
-        processor.run(state),
-        new Promise<MotionWorkingState>((_, reject) =>
-          setTimeout(() => reject(new Error('Processor timeout')), config.processorTimeoutMs)
-        ),
-      ]);
+      const result = await processor.run(state);
       state = result;
+
+      // Check processor execution time
+      const processorTime = performance.now() - processorStart;
+      if (config.performanceMonitoring && processorTime > config.frameBudgetMs) {
+        state.diagnostics.push(`Processor ${processor.id} took ${processorTime.toFixed(2)}ms (budget: ${config.frameBudgetMs}ms)`);
+      }
     } catch (error) {
       state.diagnostics.push(`Processor ${processor.id} failed: ${(error as Error).message}`);
       if (config.debug) {
@@ -208,124 +145,17 @@ async function runProcessorPipeline(
       }
     }
   }
-  
-  return state;
-}
 
-/**
- * Fuse working state into resolved motion output
- */
-function fuseMotionOutput(workingState: MotionWorkingState): ResolvedMotionOutput {
-  const { intent, values, flags, diagnostics, trace } = workingState;
-  
-  // Fill in defaults for any missing values
-  const outputValues = {
-    durationMs: values.durationMs ?? 300,
-    delayMs: values.delayMs ?? 0,
-    easing: values.easing ?? 'ease-out',
-    translateX: values.translateX ?? 0,
-    translateY: values.translateY ?? 0,
-    scale: values.scale ?? 1,
-    scaleX: values.scaleX ?? values.scale ?? 1,
-    scaleY: values.scaleY ?? values.scale ?? 1,
-    rotateDeg: values.rotateDeg ?? 0,
-    opacity: values.opacity ?? 1,
-    glow: values.glow ?? 0,
-    blur: values.blur ?? 0,
-    loop: values.loop ?? false,
-    phaseOffset: values.phaseOffset ?? 0,
-    originX: values.originX ?? 0.5,
-    originY: values.originY ?? 0.5,
-  };
-  
-  // Determine renderer
-  const renderer = intent.targetType ?? 'framer';
-  
-  // Build output
-  const output: ResolvedMotionOutput = {
-    version: intent.version,
-    targetId: intent.targetId,
-    ok: true,
-    renderer,
-    values: outputValues,
-    diagnostics: [...diagnostics],
-    trace: [...trace],
-    performance: {
-      processingTimeMs: trace.at(-1)?.timestamp ?? 0,
-      processorCount: trace.length,
-      reducedMotion: flags.reduced ?? false,
-      gpuAccelerated: flags.gpuAccelerated ?? false,
-    },
-  };
-  
-  // Generate CSS variables for CSS adapter
-  output.cssVariables = {
-    '--anim-duration': `${outputValues.durationMs}ms`,
-    '--anim-delay': `${outputValues.delayMs}ms`,
-    '--anim-easing': outputValues.easing,
-    '--anim-translate-x': `${outputValues.translateX}px`,
-    '--anim-translate-y': `${outputValues.translateY}px`,
-    '--anim-scale': `${outputValues.scale}`,
-    '--anim-rotate': `${outputValues.rotateDeg}deg`,
-    '--anim-opacity': `${outputValues.opacity}`,
-    '--anim-glow': `${outputValues.glow ?? 0}`,
-    '--anim-origin-x': `${outputValues.originX * 100}%`,
-    '--anim-origin-y': `${outputValues.originY * 100}%`,
-  };
-  
-  // Generate Framer Motion transition config
-  output.framerTransition = {
-    duration: outputValues.durationMs / 1000,
-    delay: outputValues.delayMs / 1000,
-    ease: parseEasing(outputValues.easing),
-    repeat: outputValues.loop ? Infinity : 0,
-    repeatType: 'loop' as const,
-  };
-  
-  // Generate bytecode if enabled
-  if (ampState.config.bytecodeEnabled) {
-    output.bytecode = encodeMotionBytecode(output);
-  }
-  
-  // Validate output schema
-  const validation = validateMotionOutput(output);
-  if (!validation.success) {
-    output.ok = false;
-    output.diagnostics.push(`Output validation failed: ${validation.error.message}`);
-  }
-  
-  return output;
-}
-
-/**
- * Parse easing string into Framer Motion format
- */
-function parseEasing(easing: string): string | number[] {
-  // Named easings
-  const namedEasings: Record<string, string | number[]> = {
-    'linear': 'linear',
-    'ease': 'easeInOut',
-    'ease-in': 'easeIn',
-    'ease-out': 'easeOut',
-    'ease-in-out': 'easeInOut',
-    'spring': [0.25, 0.1, 0.25, 1.0],
-    'bounce': [0.68, -0.55, 0.265, 1.55],
-  };
-  
-  if (namedEasings[easing]) {
-    return namedEasings[easing];
-  }
-  
-  // Cubic bezier: cubic-bezier(0.4, 0, 0.2, 1)
-  const cubicMatch = easing.match(/cubic-bezier\(([^)]+)\)/);
-  if (cubicMatch) {
-    const points = cubicMatch[1].split(',').map(s => parseFloat(s.trim()));
-    if (points.length === 4 && points.every(p => !isNaN(p))) {
-      return points;
+  // Log total pipeline time
+  const totalTime = performance.now() - pipelineStart;
+  if (config.performanceMonitoring) {
+    state.diagnostics.push(`AMP pipeline completed in ${totalTime.toFixed(2)}ms`);
+    if (totalTime > config.frameBudgetMs * 2) {
+      state.diagnostics.push(`WARNING: Total AMP time (${totalTime.toFixed(2)}ms) exceeds frame budget`);
     }
   }
-  
-  return 'easeOut';
+
+  return state;
 }
 
 // ─── Public API ─────────────────────────────────────────────────────────────
@@ -357,7 +187,7 @@ export async function runAnimationAmp(intent: AnimationIntent): Promise<Resolved
   }
   
   // Normalize intent
-  let workingState = normalizeIntent(intent);
+  let workingState = await normalizeAnimationIntent(intent);
   
   // Select processors
   const processors = processorRegistry.selectForIntent(intent);
@@ -370,7 +200,7 @@ export async function runAnimationAmp(intent: AnimationIntent): Promise<Resolved
   workingState = await runProcessorPipeline(workingState, processors);
   
   // Fuse output
-  const output = fuseMotionOutput(workingState);
+  const output = fuseMotionOutput(workingState, ampState.config.bytecodeEnabled);
   
   // Add to active animations
   ampState.activeAnimations.set(intent.targetId, output);

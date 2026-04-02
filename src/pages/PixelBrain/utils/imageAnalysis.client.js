@@ -95,7 +95,8 @@ export function analyzeImageClientSide(file) {
       const offscreen = document.createElement('canvas');
       offscreen.width = w;
       offscreen.height = h;
-      const ctx = offscreen.getContext('2d');
+      // Use willReadFrequently for faster getImageData() readbacks
+      const ctx = offscreen.getContext('2d', { willReadFrequently: true });
       ctx.drawImage(img, 0, 0, w, h);
 
       const { data: pixelData } = ctx.getImageData(0, 0, w, h);

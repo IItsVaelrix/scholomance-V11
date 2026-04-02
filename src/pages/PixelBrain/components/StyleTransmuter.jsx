@@ -7,7 +7,7 @@
 import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { processorBridge } from '../../../lib/processor-bridge.js';
-import { SCHOOLS } from '../../../../codex/core/constants/schools.js';
+import { SCHOOLS } from '../../../data/schools.js';
 
 export function StyleTransmuter({ referenceFile, onTransmute, isProcessing }) {
   const [selectedSchool, setSelectedSchool] = useState('VOID');
@@ -29,7 +29,7 @@ export function StyleTransmuter({ referenceFile, onTransmute, isProcessing }) {
       
       // 2. Execute Transmutation via Bridge (Worker-safe)
       const result = await processorBridge.execute('pixel.transmute', {
-        buffer: Buffer.from(buffer),
+        buffer: new Uint8Array(buffer),
         mimetype: referenceFile.type,
         schoolId: selectedSchool,
         styleId: selectedStyle
@@ -51,7 +51,7 @@ export function StyleTransmuter({ referenceFile, onTransmute, isProcessing }) {
       <div className="transmuter-options">
         {/* School Dominions */}
         <div className="option-group">
-          <label>Target School Dominion</label>
+          <div className="section-label">Target School Dominion</div>
           <div className="school-grid-mini">
             {Object.keys(SCHOOLS).map(schoolId => (
               <button
@@ -68,7 +68,7 @@ export function StyleTransmuter({ referenceFile, onTransmute, isProcessing }) {
 
         {/* Retro Era Constraints */}
         <div className="option-group">
-          <label>Temporal Era Constraints</label>
+          <div className="section-label">Temporal Era Constraints</div>
           <div className="style-list">
             {ERA_STYLES.map(style => (
               <button

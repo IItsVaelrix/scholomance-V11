@@ -314,14 +314,12 @@ body::before {
   /* Glow Colors */
   --glow-color: var(--school-sonic-glow);
   
-  /* Z-Index Layers */
+  /* Z-Index Layers (VAELRIX LAW 10) */
   --z-background: -1;
   --z-base: 0;
-  --z-content: 1;
-  --z-overlay: 10;
-  --z-modal: 50;
-  --z-tooltip: 100;
-  --z-notification: 1000;
+  --z-above: 10;
+  --z-overlay: 100;
+  --z-system: 1000;
   
   /* Focus Ring */
   --focus-ring: 0 0 0 3px var(--school-sonic);

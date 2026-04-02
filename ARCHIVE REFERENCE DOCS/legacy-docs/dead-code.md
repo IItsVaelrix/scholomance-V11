@@ -1,0 +1,286 @@
+# Dead Code Report
+
+Generated at: 2026-03-31T20:34:02.227Z
+
+## Unreachable Files
+Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
+
+- [ ] src\lib\audioAdminApi.ts
+- [ ] src\lib\css\schoolStyles.js
+- [ ] src\lib\phonology\phoneticWeighting.js
+- [ ] src\lib\truesight\compiler\verseIRQueries.js
+- [ ] src\lib\workers\analysis.worker.js
+- [ ] src\lib\worldApi.js
+- [ ] src\pages\Listen\ArcaneBookshelfCanvas.jsx
+- [ ] src\pages\Listen\ArcaneKnob.tsx
+- [ ] src\pages\Listen\ArcaneRadio.tsx
+- [ ] src\pages\Listen\ArcaneShelfPanel.jsx
+- [ ] src\pages\Listen\BrassGearDial.jsx
+- [ ] src\pages\Listen\NixieTube.jsx
+- [ ] src\pages\Listen\scenes\ArcaneBookshelfScene.js
+- [ ] src\types\core\analysis.ts
+- [ ] src\types\core\combat.ts
+- [ ] src\types\core\judiciary.ts
+- [ ] src\types\core\lexical.ts
+- [ ] src\types\core\scoring.ts
+- [ ] src\types\core\scroll.ts
+- [ ] src\types\index.ts
+- [ ] src\types\lib\literary.ts
+- [ ] src\types\lib\phoneme.ts
+- [ ] src\types\lib\phonological.ts
+- [ ] src\types\lib\pls.ts
+- [ ] src\types\lib\rhyme.ts
+- [ ] src\types\runtime\runtime.ts
+- [ ] codex\core\pixelbrain\extensions\physics-extensions.js
+- [ ] codex\core\pixelbrain\extensions\style-extensions.js
+- [ ] codex\core\pixelbrain\image-to-semantic-bridge.js
+- [ ] codex\core\pixelbrain-phase3.js
+- [ ] codex\core\rhyme\dataset.js
+- [ ] codex\core\rhyme\generator.js
+- [ ] codex\core\rhyme\index.js
+- [ ] codex\core\rhyme\phonology.js
+- [ ] codex\core\rhyme\predictor.js
+- [ ] codex\core\rhyme\training.js
+- [ ] codex\core\rhyme\validator.js
+- [ ] codex\server\services\narrativeAMP.service.js
+- [ ] codex\server\services\rhyme-astrology\indexRepo.js
+- [ ] codex\server\services\rhyme-astrology\lexiconRepo.js
+- [ ] codex\services\adapters\index.js
+- [ ] codex\services\adapters\persistence.adapter.js
+- [ ] codex\services\adapters\transport.adapter.js
+- [ ] codex\services\token-graph\phonetic.repo.js
+
+## Potentially Unused Exports
+Symbols that are exported but not referenced in any other file. (Note: May include false positives for dynamic usage or entry point exports).
+
+- [ ] `BookIcon` in `src\components\Icons.jsx`
+- [ ] `ChevronsRightIcon` in `src\components\Icons.jsx`
+- [ ] `ChevronsLeftIcon` in `src\components\Icons.jsx`
+- [ ] `COLORS` in `src\data\library.js`
+- [ ] `SCHOOL_ANGLES` in `src\data\library.js`
+- [ ] `schoolToBadgeClass` in `src\data\library.js`
+- [ ] `XP_SOURCES` in `src\data\progression_constants.js`
+- [ ] `RHYME_SUBTYPES` in `src\data\rhymeScheme.patterns.js`
+- [ ] `DEFAULT_VOWEL_COLORS` in `src\data\schoolPalettes.js`
+- [ ] `SCHOOL_SKINS` in `src\data\schoolPalettes.js`
+- [ ] `SCHOOL_SKINS_LIGHT` in `src\data\schoolPalettes.js`
+- [ ] `getSchoolById` in `src\data\schools.js`
+- [ ] `isSchoolUnlocked` in `src\data\schools.js`
+- [ ] `getLockTier` in `src\data\schools.js`
+- [ ] `getNextSchool` in `src\data\schools.js`
+- [ ] `getSchoolAngle` in `src\data\schools.js`
+- [ ] `getSchoolBadgeClass` in `src\data\schools.js`
+- [ ] `getSonicStationTrackPool` in `src\data\sonicStationBuckets.js`
+- [ ] `emitXPEvent` in `src\hooks\useProgression.jsx`
+- [ ] `useXPEventListener` in `src\hooks\useProgression.jsx`
+- [ ] `onXPEvent` in `src\hooks\useProgression.jsx`
+- [ ] `AMBIENT_PLAYER_EVENTS` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `createPercussivePulseState` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `getPercussivePulseLevelFromWaveform` in `src\lib\ambient\ambientPlayer.service.js`
+- [ ] `lerpBytecodeAMP` in `src\lib\ambient\bytecodeAMP.js`
+- [ ] `getBPMRotationSpeed` in `src\lib\ambient\bytecodeAMP.js`
+- [ ] `getBPMRotationWithPhase` in `src\lib\ambient\bytecodeAMP.js`
+- [ ] `SCHOOL_AUDIO_CONFIG` in `src\lib\ambient\schoolAudio.config.js`
+- [ ] `AudioAdminErrorReason` in `src\lib\audioAdminApi.ts`
+- [ ] `AudioFilePayload` in `src\lib\audioAdminApi.ts`
+- [ ] `UploadAudioResponse` in `src\lib\audioAdminApi.ts`
+- [ ] `AudioAdminErrorPayload` in `src\lib\audioAdminApi.ts`
+- [ ] `normalizeAdminToken` in `src\lib\audioAdminApi.ts`
+- [ ] `buildAudioAdminHeaders` in `src\lib\audioAdminApi.ts`
+- [ ] `configureZodForCsp` in `src\lib\config\zod.config.js`
+- [ ] `generateSchoolCSSVariables` in `src\lib\css\schoolStyles.js`
+- [ ] `generateLockedSchoolStyles` in `src\lib\css\schoolStyles.js`
+- [ ] `isLikelyDynamicImportFailure` in `src\lib\lazyWithRetry.js`
+- [ ] `GENRES` in `src\lib\literaryClassifier.js`
+- [ ] `LITERARY_DEVICES` in `src\lib\literaryDevices.detector.js`
+- [ ] `detectEmotion` in `src\lib\literaryDevices.detector.js`
+- [ ] `getMusicProvider` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoEmbedUrl` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoSongId` in `src\lib\musicEmbeds.js`
+- [ ] `getSunoAudioUrl` in `src\lib\musicEmbeds.js`
+- [ ] `PATTERN_COLORS` in `src\lib\patternColor.js`
+- [ ] `ARPABET_CONSONANTS` in `src\lib\phonology\phoneme.constants.js`
+- [ ] `PhoneticWeightBalancer` in `src\lib\phonology\phoneticWeighting.js`
+- [ ] `weightBalancer` in `src\lib\phonology\phoneticWeighting.js`
+- [ ] `PHONOLOGICAL_PROCESS_RULES` in `src\lib\phonology\phonologicalProcesses.js`
+- [ ] `getDeviceId` in `src\lib\platform\wordCache.js`
+- [ ] `deriveFeatureAdjustedWeights` in `src\lib\pls\ranker.js`
+- [ ] `getXpForLevel` in `src\lib\progressionUtils.js`
+- [ ] `SyntaxAnalyzer` in `src\lib\syntax.layer.js`
+- [ ] `classifySyntaxToken` in `src\lib\syntax.layer.js`
+- [ ] `getSyntaxIdentityKey` in `src\lib\syntax.layer.js`
+- [ ] `getVerseIrColorProjection` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `buildVerseIrPalette` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `VERSE_IR_PCA_CHROMA_BASIS` in `src\lib\truesight\color\pcaChroma.js`
+- [ ] `TRUESIGHT_ANALYSIS_MODES` in `src\lib\truesight\compiler\analysisModes.js`
+- [ ] `VERSE_IR_VERSION` in `src\lib\truesight\compiler\compileVerseToIR.js`
+- [ ] `splitVerseLines` in `src\lib\truesight\compiler\compileVerseToIR.js`
+- [ ] `getTokensByIds` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getWindowsByIds` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getTokensByVowelFamily` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getTokensByRhymeTail` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getWindowsBySignature` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `getLineTokens` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `neighborsOf` in `src\lib\truesight\compiler\verseIRQueries.js`
+- [ ] `deserializeVerseIR` in `src\lib\truesight\compiler\verseIRSerialization.js`
+- [ ] `WORD_PATTERN` in `src\lib\wordTokenization.js`
+- [ ] `getSyntacticIntegrity` in `src\pages\Combat\components\Spellbook.jsx`
+- [ ] `ArcaneBookshelfCanvas` in `src\pages\Listen\ArcaneBookshelfCanvas.jsx`
+- [ ] `ArcaneRadio` in `src\pages\Listen\ArcaneRadio.tsx`
+- [ ] `ArcaneShelfPanel` in `src\pages\Listen\ArcaneShelfPanel.jsx`
+- [ ] `DocumentStats` in `src\types\core\analysis.ts`
+- [ ] `DocumentParsed` in `src\types\core\analysis.ts`
+- [ ] `JudiciaryLayer` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryHhmContext` in `src\types\core\judiciary.ts`
+- [ ] `JudiciarySyntaxContext` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryCandidate` in `src\types\core\judiciary.ts`
+- [ ] `JudiciaryResult` in `src\types\core\judiciary.ts`
+- [ ] `DiagnosticSeverity` in `src\types\core\scoring.ts`
+- [ ] `ScoringResult` in `src\types\core\scoring.ts`
+- [ ] `ScoringEngine` in `src\types\core\scoring.ts`
+- [ ] `LiteraryDeviceId` in `src\types\lib\literary.ts`
+- [ ] `LiteraryDevice` in `src\types\lib\literary.ts`
+- [ ] `Emotion` in `src\types\lib\literary.ts`
+- [ ] `MultiSyllableMatch` in `src\types\lib\phoneme.ts`
+- [ ] `PhonologicalProcessResult` in `src\types\lib\phonological.ts`
+- [ ] `CandidateArbiter` in `src\types\lib\pls.ts`
+- [ ] `RhymeType` in `src\types\lib\rhyme.ts`
+- [ ] `RhymeSubtype` in `src\types\lib\rhyme.ts`
+- [ ] `SyntaxGate` in `src\types\lib\rhyme.ts`
+- [ ] `SyntaxGatingStats` in `src\types\lib\rhyme.ts`
+- [ ] `CacheEntry` in `src\types\runtime\runtime.ts`
+- [ ] `EventCallback` in `src\types\runtime\runtime.ts`
+- [ ] `SCHOOL_EFFECTIVENESS` in `codex\core\combat.balance.js`
+- [ ] `STATUS_TIER_DEFINITIONS` in `codex\core\combat.balance.js`
+- [ ] `buildHeuristicCommentary` in `codex\core\commentary\commentary.builder.js`
+- [ ] `TEMPLATE_VOCAB` in `codex\core\commentary\phrase-bank.js`
+- [ ] `MODEL_CORPUS` in `codex\core\commentary\phrase-bank.js`
+- [ ] `abyssalResonanceHeuristic` in `codex\core\heuristics\abyssal_resonance.js`
+- [ ] `verseIRAmplifierHeuristic` in `codex\core\heuristics\verseir_amplifier.js`
+- [ ] `HiddenMarkovModel` in `codex\core\hmm.js`
+- [ ] `JudiciaryEngine` in `codex\core\judiciary.js`
+- [ ] `ABYSS_MIN_MULTIPLIER` in `codex\core\lexicon.abyss.js`
+- [ ] `ABYSS_MAX_MULTIPLIER` in `codex\core\lexicon.abyss.js`
+- [ ] `normalizeAbyssWord` in `codex\core\lexicon.abyss.js`
+- [ ] `getUnlockedSynergies` in `codex\core\nexus.registry.js`
+- [ ] `DOCTRINES` in `codex\core\opponent.engine.js`
+- [ ] `PhoneticMatcher` in `codex\core\phonetic_matcher.js`
+- [ ] `snapValueToPixelGrid` in `codex\core\pixelbrain\anti-alias-control.js`
+- [ ] `drawHandDrawnLine` in `codex\core\pixelbrain\anti-alias-control.js`
+- [ ] `encodeBytecodeError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `decodeBytecodeError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `getRecoveryHintsForError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createTypeMismatchError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createOutOfBoundsError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createCoordinateError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `createColorError` in `codex\core\pixelbrain\bytecode-error.js`
+- [ ] `evaluateFormula` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateFibonacciGrid` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateParametricCurve` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateGridProjection` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateEdgeTrace` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateFractalIteration` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `evaluateTemplateBased` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `applyTemplateConstraints` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `lerpFormulas` in `codex\core\pixelbrain\formula-to-coordinates.js`
+- [ ] `GEAR_GLIDE_CONFIG` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `createGearGlideState` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `updateGearGlide` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `formulaToPhaserRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getBPMRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getBPMRotationWithPulse` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `syncMultipleElements` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `getTimeForRotation` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `generateRotationKeyframes` in `codex\core\pixelbrain\gear-glide-amp.js`
+- [ ] `extractEdgePoints` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `fitParametricCurve` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `detectGridPattern` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `quantizeColorsToFormula` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `generateTemplateFromFormula` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `generateIdleAnimationConfig` in `codex\core\pixelbrain\image-to-bytecode-formula.js`
+- [ ] `generatePermutationTable` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `perlin2D` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `getTexturePalette` in `codex\core\pixelbrain\procedural-noise.js`
+- [ ] `normalizeDegrees` in `codex\core\pixelbrain\shared.js`
+- [ ] `snapToGrid` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `addAnchorPoint` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `removeAnchorPoint` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `createLayer` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `getCell` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `createFrame` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `getOnionSkins` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `importFromAseprite` in `codex\core\pixelbrain\template-grid-engine.js`
+- [ ] `RHYME_ASTROLOGY_API_VERSION` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_MODES` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_DEFAULTS` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_QUERY_LIMITS` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyQueryCompilerSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyQueryPatternSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyMatchSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyConstellationSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyDiagnosticsSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `rhymeAstrologyResultSchema` in `codex\core\rhyme-astrology\contracts.js`
+- [ ] `RHYME_ASTROLOGY_WEIGHTS` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `normalizeRhymeAstrologyWeights` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `buildWeightedScoreBreakdown` in `codex\core\rhyme-astrology\scoring.js`
+- [ ] `isVowelPhoneme` in `codex\core\rhyme-astrology\signatures.js`
+- [ ] `RHYME_ASTROLOGY_TYPES_VERSION` in `codex\core\rhyme-astrology\types.js`
+- [ ] `DEFAULT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
+- [ ] `COMBAT_SCORING_HEURISTICS` in `codex\core\scoring.defaults.js`
+- [ ] `getCombatScoringHeuristics` in `codex\core\scoring.defaults.js`
+- [ ] `MOOD_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `MATERIAL_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `STYLE_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `EFFECT_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `COMPOSITION_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `COLOR_CONSTRAINTS` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `entitiesToMathConstraints` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `constraintsToPixelBrainParams` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `getSymbolLibrary` in `codex\core\semantic\semantic-math-bridge.js`
+- [ ] `cadenceClosureWeight` in `codex\core\speaking\prosody.js`
+- [ ] `parseWeave` in `codex\core\spellweave.engine.js`
+- [ ] `createTokenizer` in `codex\core\tokenizer.js`
+- [ ] `parseNaturalLanguagePrompt` in `codex\core\verseir-amplifier\plugins\naturalLanguageAmp.js`
+- [ ] `DEFAULT_VERSEIR_AMPLIFIER_WEIGHT` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `resolveAmplifierDomains` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `estimateTierAmplifierRoute` in `codex\core\verseir-amplifier\shared.js`
+- [ ] `WORLD_ENTITY_KINDS` in `codex\core\world.entity.js`
+- [ ] `normalizeWorldEntityKind` in `codex\core\world.entity.js`
+- [ ] `inferWorldTags` in `codex\core\world.entity.js`
+- [ ] `inferWorldSchool` in `codex\core\world.entity.js`
+- [ ] `inferMudEntityType` in `codex\core\world.entity.js`
+- [ ] `inferMudRarity` in `codex\core\world.entity.js`
+- [ ] `buildWorldEntitySummary` in `codex\core\world.entity.js`
+- [ ] `hydrateFromStorage` in `codex\runtime\cache.js`
+- [ ] `deleteFromCache` in `codex\runtime\cache.js`
+- [ ] `clearAllListeners` in `codex\runtime\eventBus.js`
+- [ ] `WORD_LOOKUP_EVENTS` in `codex\runtime\pipeline.js`
+- [ ] `resetRateLimit` in `codex\runtime\rateLimit.js`
+- [ ] `requestWordLookup` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `clearWordLookupCache` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `getWordLookupCacheTTL` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `getWordLookupRateLimit` in `codex\runtime\wordLookupPipeline.js`
+- [ ] `readHeaderAsString` in `codex\server\audioAuth.js`
+- [ ] `secureTokenEquals` in `codex\server\audioAuth.js`
+- [ ] `OWNERSHIP_MAP` in `codex\server\collab\collab.pipelines.js`
+- [ ] `isPathAllowedForRole` in `codex\server\collab\collab.pipelines.js`
+- [ ] `AgentRole` in `codex\server\collab\collab.schemas.js`
+- [ ] `TaskStatus` in `codex\server\collab\collab.schemas.js`
+- [ ] `PipelineType` in `codex\server\collab\collab.schemas.js`
+- [ ] `MAX_PAGE_LIMIT` in `codex\server\collab\collab.schemas.js`
+- [ ] `PaginationQuerySchema` in `codex\server\collab\collab.schemas.js`
+- [ ] `PipelineRunStatus` in `codex\server\collab\collab.schemas.js`
+- [ ] `readSqlitePragmas` in `codex\server\db\sqlite.migrations.js`
+- [ ] `CaptchaService` in `codex\server\services\captcha.service.js`
+- [ ] `extractDominantColors` in `codex\server\services\imageAnalysis.service.js`
+- [ ] `analyzeComposition` in `codex\server\services\imageAnalysis.service.js`
+- [ ] `imageToSemanticParams` in `codex\server\services\imageAnalysis.service.js`
+- [ ] `ConsoleMailerService` in `codex\server\services\mailer.service.js`
+- [ ] `SendGridMailerService` in `codex\server\services\mailer.service.js`
+- [ ] `createNarrativeAMPService` in `codex\server\services\narrativeAMP.service.js`
+- [ ] `getPendingCount` in `codex\server\services\wordLookupCoalescer.js`
+- [ ] `RHYME_ASTROLOGY_ARTIFACT_FILES` in `codex\server\utils\rhymeAstrologyPaths.js`
+- [ ] `hasRhymeAstrologyArtifactBundle` in `codex\server\utils\rhymeAstrologyPaths.js`
+- [ ] `FreeDictionaryAdapter` in `codex\services\adapters\freeDictionary.adapter.js`
+- [ ] `createAdapterChain` in `codex\services\adapters\index.js`
+- [ ] `createTokenGraphPhoneticRepo` in `codex\services\token-graph\phonetic.repo.js`

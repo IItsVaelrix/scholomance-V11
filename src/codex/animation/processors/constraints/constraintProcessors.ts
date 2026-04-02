@@ -6,7 +6,6 @@
  */
 
 import { MotionProcessor, MotionWorkingState, AnimationIntent } from '../../contracts/animation.types.ts';
-import { usePrefersReducedMotion } from '../../../hooks/usePrefersReducedMotion';
 
 // ─── Reduced Motion Processor ───────────────────────────────────────────────
 
@@ -20,14 +19,16 @@ export const reducedMotionProcessor: MotionProcessor = {
   priority: 100,
   
   supports(intent: AnimationIntent): boolean {
-    return intent.constraints?.reducedMotion !== false;
+    // Always run this processor if constraints are present or if it's explicitly requested.
+    // It's safer to always run it to ensure defaults are checked.
+    return true; 
   },
   
   run(input: MotionWorkingState): MotionWorkingState {
     const state = { ...input };
-    const prefersReduced = usePrefersReducedMotion();
     
-    if (prefersReduced || state.intent.constraints?.reducedMotion) {
+    // Check if reduced motion is requested via intent constraints
+    if (state.intent.constraints?.reducedMotion) {
       state.diagnostics.push('Reduced motion applied');
       state.flags.reduced = true;
       state.flags.constrained = true;

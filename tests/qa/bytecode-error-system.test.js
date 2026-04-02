@@ -10,6 +10,7 @@ import {
   ERROR_CATEGORIES,
   ERROR_SEVERITY,
   ERROR_CODES,
+  MODULE_IDS,
   createTypeMismatchError,
   createOutOfBoundsError,
   decodeBytecodeError,

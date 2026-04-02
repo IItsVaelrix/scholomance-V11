@@ -1,11 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { SCHOOLS } from '../data/schools';
-
-/**
- * useSonicAnalysis — Centralized real-time audio detection.
- * Maps spectral energy to the 5 Schools of Scholomance.
- */
-import { useState, useEffect, useRef } from 'react';
 import { getAmbientPlayerService } from '../lib/ambient/ambientPlayer.service.js';
 
 /**

@@ -6,7 +6,7 @@ export function DuplicatePreviewGrid({ duplicates, onDownload }) {
 
   return (
     <div className="duplicate-preview-grid">
-      <label className="section-label telemetry-text">Generated Echoes</label>
+      <div className="section-label telemetry-text">Generated Echoes</div>
       <div className="duplicates-row">
         {duplicates.map((dup, index) => (
           <motion.div

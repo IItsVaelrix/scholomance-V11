@@ -7,7 +7,7 @@
     "dev": "vite",
     "dev:server": "node --env-file=.env codex/server/index.js",
     "dev:dict": "python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --port 8787",
-    "dev:all": "start /B npm run dev:dict && start /B npm run dev:server && vite",
+    "dev:all": "node -e \"const cmd = process.platform === 'win32' ? 'start /B npm run dev:dict && start /B npm run dev:server && vite' : 'npm run dev:dict & npm run dev:server & vite'; require('child_process').execSync(cmd, { stdio: 'inherit' });\"",
     "dev:full": "node --env-file=.env codex/server/index.js & vite",
     "build:corpus": "node scripts/generate_corpus.js",
     "build": "node scripts/generate-school-styles.js && npm run build:corpus && vite build",

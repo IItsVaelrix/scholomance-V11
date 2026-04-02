@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Z_BASE } from '../../data/stacking_tiers';
 import './IDE.css';
 
 export default function Gutter({
@@ -10,17 +11,28 @@ export default function Gutter({
 }) {
   const lines = useMemo(() => content ? content.split('\n') : [], [content]);
   
+  // Use a fallback for line height to prevent zero-division or collapsed rows
+  const safeLineHeight = Number.isFinite(lineHeightPx) && lineHeightPx > 0 ? lineHeightPx : 24;
+
   const alignedScrollTop = Math.round(Number.isFinite(scrollTop) ? Math.max(0, scrollTop) : 0);
   const trackStyle = alignedScrollTop > 0
     ? { transform: `translateY(-${alignedScrollTop}px)` }
     : undefined;
 
-  const rowStyle = Number.isFinite(lineHeightPx) && lineHeightPx > 0
-    ? { minHeight: `${lineHeightPx}px`, height: `${lineHeightPx}px` }
-    : undefined;
+  const rowStyle = { 
+    minHeight: `${safeLineHeight}px`, 
+    height: `${safeLineHeight}px` 
+  };
 
   return (
-    <div className="editor-gutter" style={{ height: viewportHeight }} aria-hidden="true">
+    <div 
+      className="editor-gutter" 
+      style={{ 
+        height: viewportHeight,
+        zIndex: Z_BASE 
+      }} 
+      aria-hidden="true"
+    >
       <div className="gutter-track" style={trackStyle}>
         {lines.map((_, i) => {
           const syllableCount = Number(lineCounts[i]) || 0;

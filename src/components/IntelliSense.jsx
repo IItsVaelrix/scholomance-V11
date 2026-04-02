@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { motion } from 'framer-motion';
+import { Z_SYSTEM } from '../data/stacking_tiers';
 
 const BADGE_ICONS = {
   RHYME: '\u266B',
@@ -93,7 +94,7 @@ const IntelliSense = memo(function IntelliSense({
         left: x,
         top: y,
         position: 'fixed',
-        zIndex: 9999,
+        zIndex: Z_SYSTEM,
         width: dropdownWidth,
         ...(size.height ? { height: size.height } : {}),
       }}

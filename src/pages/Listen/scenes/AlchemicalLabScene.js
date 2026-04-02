@@ -77,13 +77,11 @@ export class AlchemicalLabScene extends Phaser.Scene {
     this._glowGfx = this.add.graphics();
     this._ledGfx = this.add.graphics();
     this._vigGfx = this.add.graphics();
-    this._gearGfx = this.add.graphics().setDepth(2); // ✅ New: Dynamic Projected Gear
 
     // Build 2D elements
     this._drawBackground(W, H);
     this._drawArchStatic(W, H);
     this._createArchRotatingSprite(W, H); // GPU PENTAGRAM
-    this._createSonicGearSprite(W, H);    // Metallic Sonic Gear
     this._buildParticles(W, H);
     this._buildFrictionSparks(W, H);
     this._drawVignette(W, H);
@@ -95,10 +93,6 @@ export class AlchemicalLabScene extends Phaser.Scene {
     }
 
     this._isCreated = true;
-  }
-
-  _createSonicGearSprite(W, H) {
-    // Not used - gear is now drawn with simple 2D clock rotation
   }
 
   _buildFrictionSparks(W, H) {
@@ -226,6 +220,10 @@ export class AlchemicalLabScene extends Phaser.Scene {
   update(time, _delta) {
     if (!this._isCreated) return;
 
+    // ── Clear Dynamic Graphics ──
+    this._glowGfx.clear();
+    this._vigGfx.clear(); // Redraw vignette if needed, or keep static
+
     // ── Update Synchronized Bytecode AMP Signals ──
     const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER);
     const glow    = getBytecodeAMP(time, AMP_CHANNELS.GLOW);
@@ -242,12 +240,6 @@ export class AlchemicalLabScene extends Phaser.Scene {
       // Pentagram rotation (clock-smooth)
       this._sprites.archRot.setRotation(rotation).setAlpha(alpha).setTint(tint);
 
-      // Inner gear - same clock rotation, counter-rotating at fixed ratio
-      if (this._gearGfx) {
-        const gearRotation = -rotation * 1.5;
-        this._drawSimpleGear(cx, cy, gearRotation, alpha, tint);
-      }
-
       // Phonemic Pips (Yellow Lights in Bezel Sockets)
       if (this._bezelR) {
         for (let i = 0; i < 8; i++) {
@@ -260,39 +252,6 @@ export class AlchemicalLabScene extends Phaser.Scene {
         }
       }
     }
-  }
-
-  /**
-   * Simple 2D gear drawing - no perspective, just smooth clock rotation
-   */
-  _drawSimpleGear(cx, cy, rotation, alpha, tint) {
-    const g = this._gearGfx;
-    g.clear();
-
-    const gearR = this._archHexR * 0.52;
-
-    // Draw gear rim (simple circle)
-    g.lineStyle(4, tint, alpha * 0.6);
-    g.strokeCircle(cx, cy, gearR);
-
-    // Draw gear spokes (6 spokes, rotating)
-    for (let i = 0; i < 6; i++) {
-      const ang = rotation + (i / 6) * Math.PI * 2;
-      const innerR = gearR * 0.3;
-      const outerR = gearR * 0.9;
-      
-      g.lineStyle(3, tint, alpha * 0.4);
-      g.lineBetween(
-        cx + Math.cos(ang) * innerR,
-        cy + Math.sin(ang) * innerR,
-        cx + Math.cos(ang) * outerR,
-        cy + Math.sin(ang) * outerR
-      );
-    }
-
-    // Draw center hub
-    g.fillStyle(tint, alpha * 0.8);
-    g.fillCircle(cx, cy, gearR * 0.25);
   }
 
   updateState(data) {

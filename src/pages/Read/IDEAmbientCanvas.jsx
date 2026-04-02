@@ -39,7 +39,7 @@ export default function IDEAmbientCanvas({ schoolColor = '#c8a84b' }) {
         const H = el.offsetHeight || window.innerHeight;
 
         const game = new Phaser.Game({
-          type:        Phaser.AUTO,
+          type:        Phaser.WEBGL,
           parent:      el,
           width:       W,
           height:      H,
@@ -49,6 +49,10 @@ export default function IDEAmbientCanvas({ schoolColor = '#c8a84b' }) {
           audio:       { noAudio: true },
           scale:       { mode: Phaser.Scale.RESIZE },
           banner:      false,
+          render: {
+            powerPreference: 'high-performance',
+            batchSize: 4096,
+          },
         });
 
         game.events.once('ready', () => {

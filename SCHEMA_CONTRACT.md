@@ -3,13 +3,22 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.18** | Last updated: 2026-03-30
+**Version: 1.19** | Last updated: 2026-04-01
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
 
 ---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: Global UI Stacking Tiers
+- Version: 1.18 -> 1.19
+- Changed fields: Added `Z_BASE`, `Z_ABOVE`, `Z_OVERLAY`, `Z_SYSTEM` semantic constants.
+- Breaking: Yes (Prohibits hardcoded z-indexes per Law 10)
+- Claude impact: All components using hardcoded z-indexes must migrate to these semantic tiers.
+- Blackbox impact: Visual regression tests should validate that components remain in their assigned tiers.
 
 ## SCHEMA CHANGE NOTICE
 
@@ -87,6 +96,25 @@
 - This file is the active shared contract for schemas and runtime payloads.
 - If this file conflicts with anything under `ARCHIVE REFERENCE DOCS/`, this file and `VAELRIX_LAW.md` win.
 - If a shape is missing, escalate and have Codex publish it here before it spreads across multiple files.
+
+---
+
+## Global UI Constants
+
+These constants define mandatory semantic tiers for UI rendering.
+
+```ts
+/** 
+ * MANDATORY STACKING TIERS (VAELRIX LAW 10)
+ * Hardcoded z-indexes > 1 are prohibited.
+ */
+enum StackingTier {
+  Z_BASE    = 0,    // Standard page content, static backgrounds
+  Z_ABOVE   = 10,   // Elements floating above content (tooltips, small menus)
+  Z_OVERLAY = 100,  // Full-screen overlays, modals, intrusive selection screens
+  Z_SYSTEM  = 1000  // Critical system elements (toasts, debug badges, errors)
+}
+```
 
 ---
 

@@ -8,7 +8,11 @@
       "Bash(timeout *)",
       "WebSearch",
       "Bash(findstr *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(git log *)",
+      "Bash(xargs *)",
+      "Bash(mkdir *)",
+      "Bash(grep *)"
     ]
   },
   "$version": 3

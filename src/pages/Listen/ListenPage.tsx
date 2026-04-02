@@ -13,8 +13,6 @@ import { OutputDeviceSelector } from "./OutputDeviceSelector";
 import { ScholomanceStation } from "./ScholomanceStation";
 import { triggerHapticPulse, UI_HAPTICS } from "../../lib/platform/haptics";
 import "./ListenPage.css";
-import { useAnimationIntent } from "../../ui/animation/hooks/useAnimationIntent";
-import { motionToFramerProps } from "../../ui/animation/adapters/motionToFramerProps";
 
 /**
  * ListenPage — The Scholomance Resonance Chamber.
@@ -57,11 +55,11 @@ export default function ListenPage() {
   // Priority: Tuning Target > Detected School (Sonic) > Station Selection (Player)
   const activeStation = useMemo(() => {
     const id = (isTuning ? currentSchoolId : detectedSchoolId) || currentSchoolId || 'chrono';
-    const school = SCHOOLS[id] || Object.values(SCHOOLS)[0];
+    const school = (SCHOOLS as any)[id] || Object.values(SCHOOLS)[0];
     return { ...school, color: generateSchoolColor(id) };
   }, [detectedSchoolId, currentSchoolId, isTuning]);
 
-  // ── Animation AMP Integration ──────────────────────────────────────────
+  // ── Animation AMP Integration — DISABLED for stability ──────────────────
 
   const sidebarIntent = useMemo(() => ({
     version: 'v1.0',
@@ -71,8 +69,12 @@ export default function ListenPage() {
     constraints: { reducedMotion: prefersReducedMotion }
   }), [prefersReducedMotion]);
 
-  const sidebarMotion = useAnimationIntent(sidebarIntent);
-  const sidebarProps = motionToFramerProps(sidebarMotion || { ok: false } as any);
+  // const sidebarMotion = useAnimationIntent(sidebarIntent);
+  const sidebarProps = {
+    initial: { opacity: 0, x: 30 },
+    animate: { opacity: 1, x: 0 },
+    transition: { duration: 0.3 }
+  };
 
   const layerIntent = useMemo(() => ({
     version: 'v1.0',
@@ -82,8 +84,13 @@ export default function ListenPage() {
     constraints: { reducedMotion: prefersReducedMotion }
   }), [viewMode, prefersReducedMotion]);
 
-  const layerMotion = useAnimationIntent(layerIntent);
-  const layerProps = motionToFramerProps(layerMotion || { ok: false } as any);
+  // const layerMotion = useAnimationIntent(layerIntent);
+  const layerProps = {
+    initial: { opacity: 0, scale: 0.95 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.95 },
+    transition: { duration: 0.2 }
+  };
 
   // ── Entropy tracking — UI-only: punishes looping the same school ──────────
   const [entropyLevel, setEntropyLevel] = useState(0);
@@ -138,7 +145,7 @@ export default function ListenPage() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [togglePlayPause]);
+  }, [togglePlayPause, ensureContextRunning]);
 
   // Phoneme density warning with hysteresis to prevent flickering
   // Enters warning at 0.75, exits at 0.68 (7% hysteresis band)
@@ -154,7 +161,7 @@ export default function ListenPage() {
   const currentStation = useMemo(
     () => {
       const id = currentSchoolId || 'chrono';
-      const school = SCHOOLS[id] || Object.values(SCHOOLS)[0];
+      const school = (SCHOOLS as any)[id] || Object.values(SCHOOLS)[0];
       return { ...school, color: generateSchoolColor(id) };
     },
     [currentSchoolId]
@@ -168,9 +175,9 @@ export default function ListenPage() {
     if (!isPlaying && !isTuning) {
       void togglePlayPause();
     }
-    // Note: View mode switching disabled - keeping chamber view for continuous rotation
-    // setViewMode('STATION');
-  }, [isPlaying, isTuning, togglePlayPause]);
+    // Open Scholomance Station menu with sacred geometry sphere
+    setViewMode('STATION');
+  }, [isPlaying, isTuning, togglePlayPause, setViewMode]);
 
   return (
     <section
@@ -252,8 +259,9 @@ export default function ListenPage() {
               </nav>
 
               <div className="sidebar-footer">
-                <button className="initiate-btn" onClick={() => togglePlayPause()}>
-                  {isPlaying ? "HALT_SYNC" : "INIT_SYNC"}
+                <button className="initiate-btn" onClick={() => togglePlayPause()} aria-label={isPlaying ? "Pause audio" : "Play audio"}>
+                  <span className="material-symbols-outlined">{isPlaying ? "pause" : "play_arrow"}</span>
+                  <span>PLAYBACK_CONTROL</span>
                 </button>
               </div>
             </motion.aside>
@@ -342,7 +350,7 @@ export default function ListenPage() {
                       }}
                       onMouseDown={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const handleDrag = (moveEvent: MouseEvent) => {
+                        const handleDrag = (moveEvent: globalThis.MouseEvent) => {
                           const newValue = (moveEvent.clientX - rect.left) / rect.width;
                           setVolume(Math.max(0, Math.min(1, newValue)));
                         };
@@ -352,11 +360,11 @@ export default function ListenPage() {
                         };
                         document.addEventListener('mousemove', handleDrag);
                         document.addEventListener('mouseup', stopDrag);
-                        handleDrag(e);
+                        handleDrag(e.nativeEvent);
                       }}
                       onTouchStart={(e) => {
                         const rect = e.currentTarget.getBoundingClientRect();
-                        const handleTouch = (moveEvent: TouchEvent) => {
+                        const handleTouch = (moveEvent: globalThis.TouchEvent) => {
                           const newValue = (moveEvent.touches[0].clientX - rect.left) / rect.width;
                           setVolume(Math.max(0, Math.min(1, newValue)));
                         };
@@ -366,7 +374,7 @@ export default function ListenPage() {
                         };
                         document.addEventListener('touchmove', handleTouch, { passive: false });
                         document.addEventListener('touchend', stopTouch);
-                        handleTouch(e);
+                        handleTouch(e.nativeEvent);
                       }}
                     >
                       <div className="param-fill" style={{ width: `${volume * 100}%`, backgroundColor: 'var(--text-secondary)' }} />
@@ -447,19 +455,23 @@ export default function ListenPage() {
             </motion.aside>
           </motion.div>
         ) : (
-          <ScholomanceStation 
+          <div
             key="station-view"
-            activeStation={activeStation}
-            signalLevel={signalLevel}
-            isPlaying={isPlaying}
-            isTuning={isTuning}
-            onClose={() => setViewMode('CHAMBER')}
-            onSelectTrack={(url, schoolId) => {
-              void tuneToSchool(schoolId);
-              // In a real app, we'd also set the specific track URL 
-              // but the service currently picks a random track for the school.
-            }}
-          />
+            className="scholomance-station-wrapper"
+          >
+            <ScholomanceStation
+              activeStation={activeStation}
+              signalLevel={signalLevel}
+              isPlaying={isPlaying}
+              isTuning={isTuning}
+              onClose={() => setViewMode('CHAMBER')}
+              onSelectTrack={(url, schoolId) => {
+                void tuneToSchool(schoolId);
+                // In a real app, we'd also set the specific track URL
+                // but the service currently picks a random track for the school.
+              }}
+            />
+          </div>
         )}
       </AnimatePresence>
 

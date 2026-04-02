@@ -8,6 +8,7 @@ interface CrystalBallVisualizerProps {
   schoolColor: string;
   glyph: string;
   isTuning: boolean;
+  isPlaying?: boolean;
   schoolId?: string;
   size?: number;
 }
@@ -17,6 +18,7 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
   schoolColor,
   glyph,
   isTuning,
+  isPlaying = false,
   schoolId,
   size = 320,
 }) => {
@@ -32,14 +34,18 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
       if (!containerRef.current) return;
 
       game = new PhaserLib.Game({
-        type: PhaserLib.AUTO,
+        type: PhaserLib.WEBGL,
         width: size,
         height: size,
         parent: containerRef.current,
         transparent: true,
         antialias: true,
         scene: [CrystalBallScene],
-        fps: { target: 60 }, // Default to RAF for performance
+        fps: { target: 60 },
+        render: {
+          powerPreference: 'high-performance',
+          batchSize: 1024,
+        }
       });
 
       game.events.once('ready', () => {
@@ -47,7 +53,7 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
         sceneRef.current = scene;
         // Push initial state immediately
         const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
-        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId, bpm });
+        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm });
       });
 
       gameRef.current = game;
@@ -63,8 +69,8 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
 
   useEffect(() => {
     const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
-    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, schoolId, bpm });
-  }, [signalLevel, schoolColor, glyph, isTuning, schoolId]);
+    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm });
+  }, [signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId]);
 
   return (
     <div

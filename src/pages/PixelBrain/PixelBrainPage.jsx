@@ -17,6 +17,7 @@ import { ParameterSliders } from "./components/ParameterSliders.jsx";
 import { ExtensionSelector } from "./components/ExtensionSelector.jsx";
 import { ExportOptions } from "./components/ExportOptions.jsx";
 import { StatusDisplay } from "./components/StatusDisplay.jsx";
+import { DuplicateSection } from "./components/DuplicateSection.jsx";
 
 // Legacy components (keep for backward compatibility)
 import PixelBrainTerminal from "./PixelBrainTerminal.jsx";
@@ -26,7 +27,8 @@ import TemplateEditor from "./TemplateEditor.jsx";
 import { 
   generatePixelArtFromImage, 
   evaluateFormulaWithColor, 
-  parseErrorForAI 
+  parseErrorForAI,
+  formulaToBytecode
 } from "../../lib/pixelbrain.adapter.js";
 import { processorBridge } from "../../lib/processor-bridge.js";
 import { analyzeImageClientSide } from "./utils/imageAnalysis.client.js";

@@ -20,14 +20,15 @@ export function getSharedPhaserGame(): Phaser.Game | null {
  * - Subsequent: Shows cached image instantly, hydrates with Phaser in background
  */
 export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ signalLevel = 0 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const phaserRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const bgSceneRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    if (!containerRef.current || gameRef.current) return;
-    const el = containerRef.current;
+    if (!phaserRef.current || gameRef.current) return;
+    const el = phaserRef.current;
 
     // Load Phaser in background (non-blocking)
     const initBackground = async () => {
@@ -52,6 +53,8 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
         render: {
           pixelArt: false,
           antialias: true,
+          powerPreference: 'high-performance',
+          batchSize: 4096,
         },
       };
 
@@ -64,7 +67,8 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
         const bgScene = game.scene.getScene('AlchemicalLabScene');
         if (bgScene) {
           bgSceneRef.current = bgScene;
-          bgScene.scene.settings.zIndex = 0;
+          // In Phaser 3, zIndex is on the Scene's plugin or handled via Scene order,
+          // settings.zIndex is not a standard property. Using scene.bringToTop() or similar is preferred.
         }
 
         // Style the Phaser canvas
@@ -137,7 +141,7 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
 
   return (
     <div
-      ref={containerRef}
+      ref={rootRef}
       aria-hidden="true"
       className="alchemical-lab-background"
       style={{
@@ -148,14 +152,36 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
         overflow: 'hidden',
       }}
     >
-      {/* 
-        STATIC CSS BACKGROUND - Shows instantly on ALL visits
+      {/* Phaser canvas container - must be FIRST so it has lower stacking context */}
+      <div
+        className="alchemical-lab-phaser"
+        ref={phaserRef}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          opacity: isLoaded ? 1 : 0,
+          transition: 'opacity 0.3s ease',
+          zIndex: 2,
+          pointerEvents: 'auto',
+        }}
+      />
+
+      {/*
+        STATIC CSS BACKGROUND - Shows initially, then fades behind Phaser
         This is the LCP element - pure CSS, no JS required
       */}
-      <div className="alchemical-lab-static-bg" aria-hidden="true">
+      <div 
+        className="alchemical-lab-static-bg" 
+        aria-hidden="true"
+        style={{
+          opacity: isLoaded ? 0 : 1,
+          transition: 'opacity 0.3s ease',
+          zIndex: 1,
+        }}
+      >
         {/* Stone wall pattern */}
         <div className="alchemical-stone-wall" />
-        
+
         {/* Central arch portal */}
         <div className="alchemical-arch-portal">
           <div className="arch-ring arch-ring--outer" />
@@ -168,20 +194,10 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
             </svg>
           </div>
         </div>
-        
+
         {/* Vignette overlay */}
         <div className="alchemical-vignette" />
       </div>
-
-      {/* Phaser canvas container - loads in background */}
-      <div
-        className="alchemical-lab-phaser"
-        ref={containerRef}
-        style={{
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 0.3s ease',
-        }}
-      />
     </div>
   );
 };

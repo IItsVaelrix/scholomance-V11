@@ -403,6 +403,7 @@ describe('UI Stasis — Clickable Elements', () => {
       // World-Law: A failed spell does not freeze the hand that cast it.
       const error = new Error('Handler failed');
       const failingHandler = vi.fn(() => {
+        // We throw to simulate React component lifecycle error
         throw error;
       });
       
@@ -1495,8 +1496,10 @@ describe('UI Stasis — Accessibility Interactions', () => {
       const keyHandler = vi.fn();
       
       const { container } = render(
+        // eslint-disable-next-line jsx-a11y/no-static-element-interactions
         <div 
           onKeyDown={keyHandler}
+          // eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex
           tabIndex={0}
           data-testid="keyboard-nav"
         >
@@ -1748,6 +1751,7 @@ describe('UI Stasis — Real Component Integration', () => {
         };
         
         return (
+          // eslint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions
           <div
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}

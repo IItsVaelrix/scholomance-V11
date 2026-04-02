@@ -167,12 +167,13 @@ export const symmetryStaggerProcessor: MotionProcessor = {
         // Stagger from top to bottom or vice versa
         phaseOffset = staggerIndex * 50;
         break;
-        
-      case 'radial':
+
+      case 'radial': {
         // Stagger in radial pattern
         const total = staggerTotal ?? 8;
         phaseOffset = (staggerIndex / total) * (state.values.durationMs ?? 300);
         break;
+      }
     }
     
     state.values.phaseOffset = phaseOffset;

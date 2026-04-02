@@ -9,6 +9,8 @@ export default function ToolsSidebar({
   onToggleTruesight,
   isPredictive,
   onTogglePredictive,
+  mirrored,
+  onToggleMirrored,
   analysisMode,
   onModeChange,
   isAnalyzing,
@@ -17,10 +19,45 @@ export default function ToolsSidebar({
   selectedSchool,
   onSchoolChange,
   schoolList,
+  editorRef,
+  isEditable,
 }) {
+  const handleFormat = (type) => {
+    editorRef?.current?.applyFormat(type);
+  };
+
   return (
     <div className="tools-sidebar">
 
+      {/* ── Formatting Tools ── */}
+      {isEditable && (
+        <div className="sidebar-section">
+          <h3 className="sidebar-section-title">
+            <span className="sidebar-section-glyph" aria-hidden="true">✎</span>
+            Format
+          </h3>
+          <div className="format-toolbar">
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('heading')} title="Heading (##)">
+              <span className="material-symbols-outlined">title</span>
+            </button>
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('bold')} title="Bold (**)">
+              <span className="material-symbols-outlined">format_bold</span>
+            </button>
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('italic')} title="Italic (*)">
+              <span className="material-symbols-outlined">format_italic</span>
+            </button>
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('code')} title="Code (`)">
+              <span className="material-symbols-outlined">code</span>
+            </button>
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('bullet')} title="Bullet List (-)">
+              <span className="material-symbols-outlined">format_list_bulleted</span>
+            </button>
+            <button type="button" className="toolbar-btn" onClick={() => handleFormat('quote')} title="Quote (> )">
+              <span className="material-symbols-outlined">format_quote</span>
+            </button>
+          </div>
+        </div>
+      )}
       {/* ── Visual Skin ── */}
       <div className="sidebar-section">
         <h3 className="sidebar-section-title">
@@ -54,6 +91,21 @@ export default function ToolsSidebar({
           <span className="tool-icon"><EyeIcon /></span>
           <span className="tool-label">Truesight</span>
           <span className={`status-dot ${isTruesight ? 'on' : 'off'}`} aria-hidden="true" />
+        </button>
+        <button
+          className={`sidebar-tool-btn ${mirrored ? 'active' : ''}`}
+          onClick={onToggleMirrored}
+        >
+          <span className="tool-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 20, height: 20 }}>
+              <path d="M12 3v18" />
+              <path d="M5 8l-2 2 2 2" />
+              <path d="M19 8l2 2-2 2" />
+              <path d="M3 10h18" />
+            </svg>
+          </span>
+          <span className="tool-label">Symmetrical</span>
+          <span className={`status-dot ${mirrored ? 'on' : 'off'}`} aria-hidden="true" />
         </button>
         <button
           className={`sidebar-tool-btn ${isPredictive ? 'active' : ''}`}

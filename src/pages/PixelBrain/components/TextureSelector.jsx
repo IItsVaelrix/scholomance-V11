@@ -13,7 +13,7 @@ const TEXTURE_PRESETS = [
 export function TextureSelector({ selectedTextures, onToggleTexture }) {
   return (
     <div className="texture-selector">
-      <label className="section-label telemetry-text">Select Texture Overlays</label>
+      <div className="section-label telemetry-text">Select Texture Overlays</div>
       <div className="texture-grid">
         {TEXTURE_PRESETS.map((tex) => (
           <motion.button
