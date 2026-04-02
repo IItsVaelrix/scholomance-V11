@@ -8,9 +8,34 @@
 
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
 const COLLAB_BASE = process.env.COLLAB_URL || 'http://localhost:3000/collab';
+const COOKIE_FILE = process.env.COLLAB_COOKIE_FILE || '/tmp/scholomance_cookie.txt';
 
-// Simple cookie jar
+import fs from 'fs';
+
+// Simple cookie jar with file persistence
 let _sessionCookie = null;
+
+function loadCookie() {
+    try {
+        if (fs.existsSync(COOKIE_FILE)) {
+            _sessionCookie = fs.readFileSync(COOKIE_FILE, 'utf8').trim();
+        }
+    } catch (e) {
+        // Ignore errors
+    }
+}
+
+function saveCookie() {
+    try {
+        if (_sessionCookie) {
+            fs.writeFileSync(COOKIE_FILE, _sessionCookie, 'utf8');
+        }
+    } catch (e) {
+        // Ignore errors
+    }
+}
+
+loadCookie();
 
 async function apiFetch(path, options = {}, useCollabBase = false) {
     const base = useCollabBase ? COLLAB_BASE : API_BASE;
@@ -32,9 +57,11 @@ async function apiFetch(path, options = {}, useCollabBase = false) {
     // Capture session cookie from response
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) {
-        const match = setCookie.match(/connect\.sid=([^;]+)/);
+        // Match both connect.sid and scholomance.sid
+        const match = setCookie.match(/(connect|scholomance)\.sid=([^;]+)/);
         if (match) {
-            _sessionCookie = `connect.sid=${match[1]}`;
+            _sessionCookie = `${match[1]}.sid=${match[2]}`;
+            saveCookie();
         }
     }
     
@@ -91,6 +118,14 @@ async function getTasks(filters = {}) {
     return data;
 }
 
+async function sendHeartbeat(agentId, status = 'online', taskId = null) {
+    const data = await apiFetch(`/agents/${agentId}/heartbeat`, {
+        method: 'POST',
+        body: JSON.stringify({ status, current_task_id: taskId }),
+    }, true);
+    return data;
+}
+
 // Parse command line args
 function parseArgs(args) {
     const result = {};
@@ -121,6 +156,7 @@ Commands:
   status    - Get collab server status
   agents    - List all registered agents
   tasks     - List tasks
+  heartbeat - Send heartbeat to keep agent alive
   
 Options for 'connect':
   --agent-id <id>       Agent identifier (required)
@@ -129,6 +165,10 @@ Options for 'connect':
   --capabilities <caps> Comma-separated list of capabilities
   --username <user>     Username for login (default: test)
   --password <pass>     Password for login (default: password)
+  
+Options for 'heartbeat':
+  --agent-id <id>       Agent identifier (required)
+  --status <status>     Status: online, busy, offline (default: online)
 
 Examples:
   node scripts/connect-collab.js connect --agent-id qwen-coder --name "Qwen Coder" --role ui
@@ -188,6 +228,21 @@ Examples:
                 console.log('Tasks:\n');
                 const tasks = await getTasks(statusFilter ? { status: statusFilter } : {});
                 console.log(JSON.stringify(tasks, null, 2));
+                break;
+            }
+            
+            case 'heartbeat': {
+                const opts = parseArgs(args.slice(1));
+                const agentId = opts['agent-id'] || process.env.AGENT_ID;
+                if (!agentId) {
+                    console.error('Error: --agent-id is required');
+                    process.exit(1);
+                }
+                const status = opts.status || 'online';
+                console.log(`Sending heartbeat for "${agentId}" (status: ${status})...`);
+                const result = await sendHeartbeat(agentId, status);
+                console.log('✓ Heartbeat sent');
+                console.log(JSON.stringify(result, null, 2));
                 break;
             }
             

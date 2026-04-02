@@ -15,9 +15,9 @@ import {
 
 const METRIC_CONFIG = {
   agents: {
-    label: 'Total Agents',
+    label: 'Agent Presence',
     icon: MetricsIcon,
-    format: (value) => `${value.online}/${value.total} online`
+    format: (value) => `${value.connected} live / ${value.disconnected} down`
   },
   tasks: {
     label: 'Active Tasks',

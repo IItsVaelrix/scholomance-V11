@@ -19,7 +19,9 @@
       "Bash(head *)",
       "Bash(echo *)",
       "Bash(mv *)",
-      "Bash(curl *)"
+      "Bash(curl *)",
+      "Bash(rm *)",
+      "Bash(sqlite3 *)"
     ]
   },
   "$version": 3

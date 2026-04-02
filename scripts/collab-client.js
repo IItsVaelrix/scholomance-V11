@@ -16,14 +16,46 @@
  *   await client.register('Claude (Opus)', 'ui', ['jsx', 'css']);
  */
 
+import fs from 'fs';
+
 const BASE_URL = process.env.COLLAB_URL || 'http://localhost:3000/collab';
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const COOKIE_FILE = process.env.COLLAB_COOKIE_FILE || '/tmp/scholomance_cookie.txt';
 
 // Cookie jar for session management (Node.js fetch doesn't handle cookies automatically)
 let _sessionCookie = null;
 
-async function collabFetch(path, agentId, options = {}) {
-    const url = `${BASE_URL}${path}`;
+function loadCookie() {
+    try {
+        if (fs.existsSync(COOKIE_FILE)) {
+            _sessionCookie = fs.readFileSync(COOKIE_FILE, 'utf8').trim() || null;
+        }
+    } catch {
+        // Ignore cookie read failures.
+    }
+}
+
+function saveCookie() {
+    try {
+        if (_sessionCookie) {
+            fs.writeFileSync(COOKIE_FILE, _sessionCookie, 'utf8');
+        }
+    } catch {
+        // Ignore cookie persistence failures.
+    }
+}
+
+function captureSessionCookie(response) {
+    const setCookie = response.headers.get('set-cookie');
+    if (!setCookie) return;
+    const match = setCookie.match(/(connect|scholomance)\.sid=([^;]+)/);
+    if (!match) return;
+    _sessionCookie = `${match[1]}.sid=${match[2]}`;
+    saveCookie();
+}
+
+async function apiFetch(baseUrl, path, agentId, options = {}) {
+    const url = `${baseUrl}${path}`;
     const headers = {
         'Content-Type': 'application/json',
         ...(agentId ? { 'X-Agent-ID': agentId } : {}),
@@ -37,17 +69,10 @@ async function collabFetch(path, agentId, options = {}) {
         ...options,
         headers,
     });
-    // Capture session cookie from response
-    const setCookie = res.headers.get('set-cookie');
-    if (setCookie) {
-        const match = setCookie.match(/connect\.sid=([^;]+)/);
-        if (match) {
-            _sessionCookie = `connect.sid=${match[1]}`;
-        }
-    }
+    captureSessionCookie(res);
     const data = await res.json();
     if (!res.ok) {
-        const err = new Error(data.error || `HTTP ${res.status}`);
+        const err = new Error(data.message || data.error || `HTTP ${res.status}`);
         err.status = res.status;
         err.data = data;
         throw err;
@@ -55,40 +80,28 @@ async function collabFetch(path, agentId, options = {}) {
     return data;
 }
 
+loadCookie();
+
+async function collabFetch(path, agentId, options = {}) {
+    return apiFetch(BASE_URL, path, agentId, options);
+}
+
+async function authFetch(path, options = {}) {
+    return apiFetch(API_BASE, path, null, options);
+}
+
 export async function login(username, password) {
-    // Get CSRF token
-    const csrfRes = await fetch(`${API_BASE}/auth/csrf-token`, { credentials: 'include' });
-    const csrfData = await csrfRes.json();
+    const csrfData = await authFetch('/auth/csrf-token');
     const csrfToken = csrfData.token;
-    
-    // Login
-    const loginRes = await fetch(`${API_BASE}/auth/login`, {
+
+    return authFetch('/auth/login', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
             'x-csrf-token': csrfToken,
         },
         body: JSON.stringify({ username, password }),
-        credentials: 'include',
     });
-    
-    // Capture session cookie
-    const setCookie = loginRes.headers.get('set-cookie');
-    if (setCookie) {
-        const match = setCookie.match(/connect\.sid=([^;]+)/);
-        if (match) {
-            _sessionCookie = `connect.sid=${match[1]}`;
-        }
-    }
-    
-    const data = await loginRes.json();
-    if (!loginRes.ok) {
-        const err = new Error(data.message || 'Login failed');
-        err.status = loginRes.status;
-        err.data = data;
-        throw err;
-    }
-    return data;
 }
 
 export function createCollabClient(agentId) {

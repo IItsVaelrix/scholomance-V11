@@ -23,7 +23,35 @@ import ActivityFeed from './ActivityFeed.jsx';
 
 import './CollabPage.css';
 
-const POLL_INTERVAL = 15000; // 15s — calm, not rushed
+const VISIBLE_POLL_INTERVAL = 5000;
+const HIDDEN_POLL_INTERVAL = 20000;
+const LIVE_CLOCK_INTERVAL = 1000;
+const AGENT_STALE_MS = 5 * 60 * 1000;
+
+function parseAgentLastSeen(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return null;
+    const normalized = raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`;
+    const parsed = Date.parse(normalized);
+    return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getAgentConnectionState(agent, nowMs) {
+    const status = String(agent?.status || 'offline').toLowerCase();
+    const lastSeenMs = parseAgentLastSeen(agent?.last_seen);
+    const isStale = !lastSeenMs || (nowMs - lastSeenMs) > AGENT_STALE_MS;
+
+    if (status === 'offline' || isStale) {
+        return 'disconnected';
+    }
+    if (status === 'busy') {
+        return 'busy';
+    }
+    if (status === 'idle') {
+        return 'idle';
+    }
+    return 'connected';
+}
 
 // Zod schemas (enhanced from original)
 const AgentSchema = z.object({
@@ -33,6 +61,7 @@ const AgentSchema = z.object({
     role: z.string(),
     capabilities: z.array(z.string()),
     current_task_id: z.string().nullable().optional(),
+    last_seen: z.string().optional(),
 }).passthrough();
 
 const TaskSchema = z.object({
@@ -93,6 +122,7 @@ export default function CollabPage() {
     const [conflict, setConflict] = useState(null);
     const [error, setError] = useState(null);
     const [lastRefresh, setLastRefresh] = useState(null);
+    const [nowMs, setNowMs] = useState(() => Date.now());
     
     // Drawer state
     const [selectedTask, setSelectedTask] = useState(null);
@@ -121,8 +151,10 @@ export default function CollabPage() {
     const canvasRef = useRef(null);
 
     // Refresh all data
-    const refresh = useCallback(async () => {
-        setStatus('syncing');
+    const refresh = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) {
+            setStatus('syncing');
+        }
         setError(null);
         setConflict(null);
 
@@ -147,7 +179,11 @@ export default function CollabPage() {
             if (activityParsed.success) setActivity(activityParsed.data);
             if (locksParsed.success) setLocks(locksParsed.data);
 
-            setStatus('ready');
+            if (silent) {
+                setStatus(prev => (prev === 'error' ? 'ready' : prev));
+            } else {
+                setStatus('ready');
+            }
             setLastRefresh(new Date());
         } catch (err) {
             setError('Cannot reach collab server. Is it running?');
@@ -157,10 +193,50 @@ export default function CollabPage() {
 
     // Polling effect
     useEffect(() => {
-        refresh();
-        const interval = setInterval(refresh, POLL_INTERVAL);
-        return () => clearInterval(interval);
+        let intervalId = null;
+
+        const schedulePolling = () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            const intervalMs =
+                typeof document !== 'undefined' && document.visibilityState === 'hidden'
+                    ? HIDDEN_POLL_INTERVAL
+                    : VISIBLE_POLL_INTERVAL;
+            intervalId = setInterval(() => {
+                void refresh({ silent: true });
+            }, intervalMs);
+        };
+
+        const handleVisibilityChange = () => {
+            void refresh({ silent: true });
+            schedulePolling();
+        };
+
+        const handleWindowFocus = () => {
+            void refresh({ silent: true });
+        };
+
+        void refresh();
+        schedulePolling();
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('focus', handleWindowFocus);
+
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('focus', handleWindowFocus);
+        };
     }, [refresh]);
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            setNowMs(Date.now());
+        }, LIVE_CLOCK_INTERVAL);
+        return () => clearInterval(intervalId);
+    }, []);
 
     // Handle filter change
     const handleFilterChange = useCallback((key, value) => {
@@ -306,10 +382,22 @@ export default function CollabPage() {
     }, [newPipelineType, refresh]);
 
     // Compute metrics for Overview tab
+    const agentPresence = agents.map(agent => ({
+        ...agent,
+        connectionState: getAgentConnectionState(agent, nowMs),
+    }));
+    const connectedAgents = agentPresence.filter(agent => agent.connectionState !== 'disconnected');
+    const disconnectedAgents = agentPresence.filter(agent => agent.connectionState === 'disconnected');
+    const busyAgents = agentPresence.filter(agent => agent.connectionState === 'busy');
+    const idleAgents = agentPresence.filter(agent => agent.connectionState === 'idle');
+
     const metrics = {
         agents: {
-            total: agents.length,
-            online: agents.filter(a => a.status !== 'offline').length,
+            total: agentPresence.length,
+            connected: connectedAgents.length,
+            disconnected: disconnectedAgents.length,
+            busy: busyAgents.length,
+            idle: idleAgents.length,
         },
         tasks: {
             total: tasks.length,
@@ -375,7 +463,7 @@ export default function CollabPage() {
             case 'agents':
                 return (
                     <div className="viewport-content viewport-content--agents">
-                        <AgentStatus agents={agents} />
+                        <AgentStatus agents={agents} nowMs={nowMs} />
                     </div>
                 );
             
@@ -431,7 +519,7 @@ export default function CollabPage() {
                 </div>
                 <div className="topbar-right">
                     <span className="topbar-agents-online">
-                        {metrics.agents.online}/{metrics.agents.total} AGENTS ONLINE
+                        {metrics.agents.connected} CONNECTED / {metrics.agents.disconnected} DISCONNECTED
                     </span>
                     <button
                         className="topbar-btn"
@@ -512,7 +600,7 @@ export default function CollabPage() {
                             )}
                             {activeTab === 'agents' && (
                                 <p className="context-text">
-                                    Agents are registered via CLI. Status updates via heartbeat every 30s.
+                                    Agent presence refreshes every 5 seconds while visible. Without heartbeat, an agent falls cold after 5 minutes.
                                 </p>
                             )}
                             {activeTab === 'pipelines' && (
@@ -578,8 +666,16 @@ export default function CollabPage() {
                         <div className="telemetry-header">LIVE METRICS</div>
                         <div className="telemetry-metrics">
                             <div className="telemetry-row">
-                                <span className="telemetry-label">Agents</span>
-                                <span className="telemetry-value">{metrics.agents.online}/{metrics.agents.total}</span>
+                                <span className="telemetry-label">Connected</span>
+                                <span className="telemetry-value">{metrics.agents.connected}</span>
+                            </div>
+                            <div className="telemetry-row">
+                                <span className="telemetry-label">Disconnected</span>
+                                <span className="telemetry-value telemetry-value--dim">{metrics.agents.disconnected}</span>
+                            </div>
+                            <div className="telemetry-row">
+                                <span className="telemetry-label">Busy</span>
+                                <span className="telemetry-value">{metrics.agents.busy}</span>
                             </div>
                             <div className="telemetry-row">
                                 <span className="telemetry-label">Active Tasks</span>
@@ -634,7 +730,7 @@ export default function CollabPage() {
                             </button>
                         </div>
                     </div>
-                </aside>
+                </motion.aside>
             </div>
 
             {/* Task Detail Drawer */}

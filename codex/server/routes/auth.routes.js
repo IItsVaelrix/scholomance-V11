@@ -6,7 +6,11 @@ import crypto from 'crypto';
 import { persistence } from '../persistence.adapter.js';
 import { createMailerService } from '../services/mailer.service.js';
 import { captchaService } from '../services/captcha.service.js';
-import { LEXICON_GUEST_SESSION_KEY } from '../auth-pre-handler.js';
+import {
+    ensureDevSessionUser,
+    isDevAuthBypassed,
+    LEXICON_GUEST_SESSION_KEY,
+} from '../auth-pre-handler.js';
 
 // Password policy: At least 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special char
 const passwordSchema = z.string()
@@ -84,6 +88,14 @@ export async function authRoutes(fastify, opts) {
         process.env.VITE_PUBLIC_APP_URL ||
         (process.env.NODE_ENV === 'production' ? 'http://localhost:3000' : 'http://localhost:5173')
     ).replace(/\/+$/, '');
+    const shouldBypassAuth = isDevAuthBypassed();
+
+    async function ensureDevelopmentUser(request) {
+        if (!shouldBypassAuth) {
+            return request.session?.user ?? null;
+        }
+        return ensureDevSessionUser(request);
+    }
     
     // CAPTCHA Route
     fastify.get('/captcha', {
@@ -151,6 +163,14 @@ export async function authRoutes(fastify, opts) {
         config: { rateLimit: { max: 10, timeWindow: '10 minutes' } },
         schema: { body: toFastifySchema(loginBodySchema) },
         handler: async (request, reply) => {
+            if (shouldBypassAuth) {
+                const devUser = await ensureDevelopmentUser(request);
+                return reply.status(200).send({
+                    message: 'Development auth bypass active.',
+                    user: devUser,
+                });
+            }
+
             const { username, password } = request.body;
             const user = persistence.users.findByUsername(username);
             
@@ -284,6 +304,14 @@ export async function authRoutes(fastify, opts) {
     // Logout
     fastify.post('/logout', {
         handler: async (request, reply) => {
+            if (shouldBypassAuth) {
+                const devUser = await ensureDevelopmentUser(request);
+                return reply.status(200).send({
+                    message: 'Development auth bypass active; logout skipped.',
+                    user: devUser,
+                });
+            }
+
             await request.session.destroy();
             reply.clearCookie('scholomance.sid', { path: '/' });
             return reply.status(200).send({ message: 'Logged out successfully' });
@@ -292,6 +320,10 @@ export async function authRoutes(fastify, opts) {
 
     // Me
     fastify.get('/me', async (request, reply) => {
+        if (!request.session.user && shouldBypassAuth) {
+            await ensureDevelopmentUser(request);
+        }
+
         if (!request.session.user) {
             reply.status(401).send({ message: 'Not authenticated' });
             return;
@@ -320,8 +352,12 @@ export async function authRoutes(fastify, opts) {
                 return reply.status(500).send({ message: 'Session initialization failed' });
             }
 
-            if (!request.session.user) {
+            if (shouldBypassAuth) {
+                await ensureDevelopmentUser(request);
+            } else if (!request.session.user) {
                 request.session[LEXICON_GUEST_SESSION_KEY] = true;
+            } else {
+                request.session[LEXICON_GUEST_SESSION_KEY] = false;
             }
             
             const sessionInitMs = Date.now() - start;

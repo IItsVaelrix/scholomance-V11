@@ -89,7 +89,7 @@ export function AuthProvider({ children }) {
       // Fetch CSRF first to ensure session is initialized on the server
       await fetchCsrfToken();
       // Then check if the user is authenticated
-      await checkMe();
+      await checkMe({ force: true });
     };
     initAuth();
   }, [checkMe, fetchCsrfToken]);
@@ -143,8 +143,7 @@ export function AuthProvider({ children }) {
       headers: { 'x-csrf-token': token },
       credentials: 'include'
     });
-    setSessionHint(false);
-    setUser(null);
+    await checkMe({ force: true });
   };
 
   return (
