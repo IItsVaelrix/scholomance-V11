@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { MailerAdapter } from '../../../mailer.adapter.js';
 import { persistence } from '../persistence.adapter.js';
 import { renderEmailTemplate } from './emailTemplates.service.js';
+import { createSmtpProviderConfigFromEnv, SmtpMailerAdapter } from './smtp.client.js';
 
 const DEFAULT_FROM_EMAIL = 'noreply@scholomance.ai';
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -132,6 +133,7 @@ export class ResendMailerAdapter extends MailerAdapter {
 function createProviderAdapter(logger) {
   const provider = normalizeProviderName(
     process.env.MAIL_PROVIDER ||
+    (process.env.SMTP_HOST ? 'smtp' : '') ||
     (process.env.RESEND_API_KEY ? 'resend' : '') ||
     (process.env.SENDGRID_API_KEY ? 'sendgrid' : '') ||
     'console'
@@ -139,6 +141,16 @@ function createProviderAdapter(logger) {
   const fromEmail = process.env.EMAIL_FROM || DEFAULT_FROM_EMAIL;
 
   switch (provider) {
+    case 'smtp': {
+      const smtpConfig = createSmtpProviderConfigFromEnv();
+      return {
+        provider,
+        adapter: new SmtpMailerAdapter({
+          ...smtpConfig,
+          fromEmail: smtpConfig.fromEmail || fromEmail,
+        }),
+      };
+    }
     case 'resend':
       return { provider, adapter: new ResendMailerAdapter(process.env.RESEND_API_KEY, fromEmail) };
     case 'sendgrid':
