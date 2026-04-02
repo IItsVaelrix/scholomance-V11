@@ -165,7 +165,7 @@ export default function HolographicEmbed({
   trackUrl,
   trackId,
   title,
-  glyph,
+  glyph: _glyph,
   schoolColor = '#2ddbde',
   isPlaying = false,
   isTuning = false,

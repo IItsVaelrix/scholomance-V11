@@ -1,8 +1,4 @@
 import { normalizeVowelFamily } from '../../phonology/vowelFamily.js';
-import {
-  buildVerseIrColorCentroid,
-  scoreVerseIrColorAlignment,
-} from '../../truesight/color/pcaChroma.js';
 import { resolvePlsVerseIRState } from '../verseIRBridge.js';
 
 const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -10,6 +6,46 @@ const clamp01 = (value) => Math.min(1, Math.max(0, value));
 function resolveColorFamily(value) {
   const raw = String(value || '').trim().toUpperCase();
   return raw || normalizeVowelFamily(value || '');
+}
+
+// Inline centroid builder (replaces missing buildVerseIrColorCentroid)
+function buildVerseIrColorCentroid(weightedFamilies) {
+  if (!weightedFamilies || weightedFamilies.length === 0) return null;
+  
+  const totalWeight = weightedFamilies.reduce((sum, { weight }) => sum + weight, 0);
+  if (totalWeight <= 0) return null;
+  
+  // Simple centroid: weighted average of family indices
+  const familyIndexMap = new Map([
+    ['IY', 0], ['IH', 1], ['EH', 2], ['AE', 3],
+    ['AA', 4], ['AO', 5], ['UH', 6], ['UW', 7],
+    ['AH', 8], ['ER', 9], ['EY', 10], ['AY', 11],
+    ['OY', 12], ['AW', 13], ['OW', 14], ['UX', 15]
+  ]);
+  
+  let weightedSum = 0;
+  for (const { family, weight } of weightedFamilies) {
+    const idx = familyIndexMap.get(family) ?? 0;
+    weightedSum += idx * weight;
+  }
+  
+  return weightedSum / totalWeight;
+}
+
+// Inline alignment scorer (replaces missing scoreVerseIrColorAlignment)
+function scoreVerseIrColorAlignment(candidateFamily, centroid) {
+  const familyIndexMap = new Map([
+    ['IY', 0], ['IH', 1], ['EH', 2], ['AE', 3],
+    ['AA', 4], ['AO', 5], ['UH', 6], ['UW', 7],
+    ['AH', 8], ['ER', 9], ['EY', 10], ['AY', 11],
+    ['OY', 12], ['AW', 13], ['OW', 14], ['UX', 15]
+  ]);
+  
+  const candidateIdx = familyIndexMap.get(candidateFamily) ?? 0;
+  const distance = Math.abs(candidateIdx - centroid);
+  const maxDistance = 15;
+  
+  return 1 - (distance / maxDistance);
 }
 
 /**

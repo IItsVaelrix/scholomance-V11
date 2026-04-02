@@ -12,14 +12,14 @@
  * @param {Object} options - { width, height, blendMode, opacity }
  * @returns {Uint8ClampedArray} Textured image data
  */
-export function applyTexture(basePixels, texturePixels, { width, height, blendMode = 'multiply', opacity = 0.7 }) {
+export function applyTexture(basePixels, texturePixels, { width: _width, height: _height, blendMode = 'multiply', opacity = 0.7 }) {
   const result = new Uint8ClampedArray(basePixels.length);
   
   for (let i = 0; i < basePixels.length; i += 4) {
     const r1 = basePixels[i];
     const g1 = basePixels[i + 1];
     const b1 = basePixels[i + 2];
-    const a1 = basePixels[i + 3] / 255;
+    const _a1 = basePixels[i + 3] / 255;
 
     const r2 = texturePixels[i];
     const g2 = texturePixels[i + 1];

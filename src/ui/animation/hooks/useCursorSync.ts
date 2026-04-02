@@ -7,7 +7,7 @@
  * Uses computed styles from a reference element to ensure pixel-perfect alignment.
  */
 
-import { useMemo, useRef, useLayoutEffect, useState } from 'react';
+import { useMemo } from 'react';
 
 export interface CursorSyncBlueprint {
   fontFamily: string;

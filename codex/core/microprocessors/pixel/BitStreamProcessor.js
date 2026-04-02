@@ -113,9 +113,9 @@ async function decodePNG(buffer) {
   const height = buffer.readUInt32BE(20);
   const bitDepth = buffer[24];
   const colorType = buffer[25];
-  const compressionMethod = buffer[26];
-  const filterMethod = buffer[27];
-  const interlaceMethod = buffer[28];
+  const _compressionMethod = buffer[26];
+  const _filterMethod = buffer[27];
+  const _interlaceMethod = buffer[28];
 
   console.log('[PNG Decoder] IHDR parsed:', { width, height, bitDepth, colorType });
 

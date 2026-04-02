@@ -15,7 +15,7 @@ import { clamp01, createAmplifierResult, createAmplifierDiagnostic } from '../sh
 import { LEXICAL_VISUAL_DB } from '../../semantic/visual-extractor.js';
 import { nluToPixelBrainParams } from '../../semantic/semantic-math-bridge.js';
 import { verseIRMicroprocessors } from '../../microprocessors/index.js';
-import { tokenize, INTENT_KEYWORDS, STYLE_KEYWORDS, INTENT_TYPES, ENTITY_TYPES } from '../../microprocessors/nlu/constants.js';
+import { tokenize, INTENT_KEYWORDS, STYLE_KEYWORDS } from '../../microprocessors/nlu/constants.js';
 
 const ID = 'natural_language_amp';
 const LABEL = 'Natural Language Understanding AMP';

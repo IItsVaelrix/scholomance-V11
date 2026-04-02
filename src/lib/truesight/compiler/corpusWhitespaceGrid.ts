@@ -15,7 +15,7 @@
  * 4. Apply symmetry transforms using formula: x' = (2 * axisX) - x - (w - 1)
  */
 
-import { WORD_PATTERN, WORD_REGEX_GLOBAL, WORD_TOKEN_REGEX } from '../../../lib/wordTokenization';
+import { WORD_TOKEN_REGEX } from '../../../lib/wordTokenization';
 
 const SPACING_FACTOR = 0.15; // Maximum adjustment for common words (15%)
 const MIN_CONFIDENCE = 0.3; // Minimum confidence for rare words
@@ -74,7 +74,7 @@ export async function loadCorpusFrequencies(): Promise<Map<string, number>> {
       const freqMap = new Map<string, number>();
       
       if (Array.isArray(words)) {
-        words.forEach((word, index) => {
+        words.forEach((word, _index) => {
           if (word && typeof word === 'string') {
             const normalized = word.toLowerCase().trim();
             if (normalized) {
@@ -132,17 +132,27 @@ export function getSpacingConfidence(
 export function measureTextWidth(
   text: string, 
   fontFamily: string, 
-  fontSize: string
+  fontSize: string,
+  options: { fontStyle?: string; fontWeight?: string; dpr?: number } = {}
 ): number {
   const canvas = document.createElement('canvas');
+  const dpr = options.dpr || (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
   const ctx = canvas.getContext('2d');
   
   if (!ctx) return 0;
   
-  ctx.font = `${fontSize} ${fontFamily}`;
+  const fontStyle = options.fontStyle || 'normal';
+  const fontWeight = options.fontWeight || '400';
+
+  // Parse font size and scale by DPR
+  const fontSizeNum = parseFloat(fontSize) || 16;
+  const fontSizeUnit = fontSize.replace(/[\d.]/g, '') || 'px';
+  const scaledSize = fontSizeUnit === 'px' ? `${fontSizeNum * dpr}${fontSizeUnit}` : fontSize;
+
+  ctx.font = `${fontStyle} ${fontWeight} ${scaledSize} ${fontFamily}`;
   const metrics = ctx.measureText(text);
   
-  return metrics.width;
+  return metrics.width / dpr;
 }
 
 /**
@@ -198,9 +208,9 @@ export function buildCorpusAdaptiveGrid(
   const measurementMap = new Map<string, CorpusTokenMeasurement>();
   let totalWidth = originX;
   let totalCols = 0;
-  
+
   let totalFreq = 0;
-  let uniqueWords = new Set<string>();
+  const uniqueWords = new Set<string>();
   
   for (const m of measurements) {
     measurementMap.set(m.token, m);

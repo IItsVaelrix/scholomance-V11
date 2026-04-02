@@ -5,8 +5,6 @@
  * Generates linguistic heatmaps from image substrates.
  */
 
-import { VOWEL_FAMILY_TO_SCHOOL } from '../../core/constants/schools.js';
-
 /**
  * Map image regions to phoneme families
  * @param {Uint8ClampedArray} pixelData - Raw pixel data
@@ -25,7 +23,7 @@ export function mapImageToPhonemes(pixelData, { width, height }) {
       // 2. Map stats to phoneme characteristics
       // High contrast/entropy -> Plosive (consonant-like)
       // Smooth/high brightness -> Vowel-like
-      const phonemeType = region.entropy > 0.4 ? 'consonant' : 'vowel';
+      const _phonemeType = region.entropy > 0.4 ? 'consonant' : 'vowel';
       
       // 3. Assign thermal values based on phoneme "weight"
       const thermalValue = region.entropy * 0.7 + region.brightness * 0.3;

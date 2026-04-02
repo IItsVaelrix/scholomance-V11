@@ -1,4 +1,4 @@
-import { CanonicalDimensionSpec, FitMode, AnchorMode, SnapMode } from '../../pixelbrain/dimension-formula-compiler';
+import { CanonicalDimensionSpec } from '../../pixelbrain/dimension-formula-compiler';
 
 export type AnimationTrigger =
   | 'mount'

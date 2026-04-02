@@ -8,15 +8,6 @@
 import Phaser from 'phaser';
 import { getBytecodeAMP, AMP_CHANNELS, getRotationAtTime } from '../../../lib/ambient/bytecodeAMP';
 
-// Dynamic Phaser loader - prevents blocking initial bundle
-let _PhaserLib = null;
-async function getPhaser() {
-  if (!_PhaserLib) {
-    _PhaserLib = Phaser;
-  }
-  return _PhaserLib;
-}
-
 // ══════════════════════════════════════════════════════════════════════════
 // MODULE-LEVEL CACHED TEXTURES (pre-baked, shared across all instances)
 // ══════════════════════════════════════════════════════════════════════════

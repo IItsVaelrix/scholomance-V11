@@ -2,34 +2,11 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect, useCallback, useRef, useTransition } from "react";
 import { LINKS } from "../../data/library";
-import { useTheme } from "../../hooks/useTheme.jsx";
 import { useAuth } from "../../hooks/useAuth.jsx";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { preloadRoute } from "../../lib/routes.js";
 
 import { triggerHapticPulse, UI_HAPTICS } from "../../lib/platform/haptics.js";
-
-const SunIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="5"/>
-    <line x1="12" y1="1" x2="12" y2="3"/>
-    <line x1="12" y1="21" x2="12" y2="23"/>
-    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-    <line x1="1" y1="12" x2="3" y2="12"/>
-    <line x1="21" y1="12" x2="23" y2="12"/>
-    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-       stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-  </svg>
-);
 
 function normalizeAdminList(rawValue) {
   return String(rawValue || "")
@@ -71,12 +48,9 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [navigatingPath, setNavigatingPath] = useState(null);
   const navTimeoutRef = useRef(null);
-  const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const canAccessCollab = isAdminUser(user);
-  const nextThemeLabel = theme === "dark" ? "light" : "dark";
-  const ThemeIcon = theme === "dark" ? SunIcon : MoonIcon;
+  const canAccessCollab = import.meta.env.DEV;
   const navLinks = LINKS.filter((link) => link.id !== "collab" || canAccessCollab);
 
   const allLinks = [
@@ -189,18 +163,7 @@ export default function Navigation() {
               </div>
             ))}
           </div>
-
           <div className="nav-controls">
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={toggleTheme}
-              aria-label={`Switch to ${nextThemeLabel} mode`}
-              title={`Switch to ${nextThemeLabel} mode`}
-            >
-              <ThemeIcon />
-            </button>
-
             {/* Mobile menu button */}
             <button
               className="nav-toggle"
@@ -293,18 +256,6 @@ export default function Navigation() {
                     </motion.div>
                   );
                 })}
-              </div>
-
-              <div className="nav-mobile-footer">
-                <button
-                  type="button"
-                  className="nav-mobile-theme-btn"
-                  onClick={toggleTheme}
-                  aria-label={`Switch to ${nextThemeLabel} mode`}
-                >
-                  <ThemeIcon />
-                  Switch to {nextThemeLabel}
-                </button>
               </div>
             </motion.div>
           </motion.div>

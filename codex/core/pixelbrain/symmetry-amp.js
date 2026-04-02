@@ -375,7 +375,7 @@ function pixelsMatch(data, idx1, idx2, tolerance = 30) {
   const dr = Math.abs(data[idx1] - data[idx2]);
   const dg = Math.abs(data[idx1 + 1] - data[idx2 + 1]);
   const db = Math.abs(data[idx1 + 2] - data[idx2 + 2]);
-  const da = Math.abs(data[idx1 + 3] - data[idx2 + 3]);
+  const _da = Math.abs(data[idx1 + 3] - data[idx2 + 3]);
 
   if ((data[idx1 + 3] < 128) !== (data[idx2 + 3] < 128)) {
     return false;
@@ -444,12 +444,12 @@ export function applySymmetryToLattice(lattice, symmetry) {
     return lattice;
   }
 
-  const { cols, rows, cellSize, cells } = lattice;
+  const { cols, rows, cells } = lattice;
   const newCells = new Map(cells);
 
   switch (symmetry.type) {
     case 'vertical': {
-      const midCol = cols / 2;
+      const _midCol = cols / 2;
       cells.forEach((cell) => {
         const mirrorCol = Math.floor((cols - 1) - cell.col);
         const mirrorKey = `${mirrorCol},${cell.row}`;
@@ -465,7 +465,7 @@ export function applySymmetryToLattice(lattice, symmetry) {
       break;
     }
     case 'horizontal': {
-      const midRow = rows / 2;
+      const _midRow = rows / 2;
       cells.forEach((cell) => {
         const mirrorRow = Math.floor((rows - 1) - cell.row);
         const mirrorKey = `${cell.col},${mirrorRow}`;
@@ -481,8 +481,8 @@ export function applySymmetryToLattice(lattice, symmetry) {
       break;
     }
     case 'radial': {
-      const centerX = cols / 2;
-      const centerY = rows / 2;
+      const _centerX = cols / 2;
+      const _centerY = rows / 2;
       cells.forEach((cell) => {
         const mirrors = [
           { col: Math.floor((cols - 1) - cell.col), row: cell.row },

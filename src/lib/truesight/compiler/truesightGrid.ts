@@ -13,6 +13,8 @@ export interface GridTopology {
   cellHeight: number;   // line-height in px
   originX: number;      // padding-left in px
   originY: number;      // padding-top in px
+  tabSize: number;
+  adaptiveScale: number;
 }
 
 export interface GridCoordinate {
@@ -33,15 +35,19 @@ export function computeGridTopology(element: HTMLElement | null): GridTopology |
   
   const styles = window.getComputedStyle(element);
   const fontSize = parseFloat(styles.fontSize) || 16;
-  const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.5;
+  // Use line-height 1.9 per Vaelrix Law
+  const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.9;
   const paddingLeft = parseFloat(styles.paddingLeft) || 0;
   const paddingTop = parseFloat(styles.paddingTop) || 0;
+  const tabSize = parseInt(styles.tabSize || '2', 10) || 2;
   
   return {
     cellWidth: fontSize,
     cellHeight: lineHeight,
     originX: paddingLeft,
     originY: paddingTop,
+    tabSize,
+    adaptiveScale: 1.0, // Default to 1.0 for standard grid
   };
 }
 
@@ -112,10 +118,11 @@ export function gridToPixels(coord: GridCoordinate, topology: GridTopology): {
   width: number;
   height: number;
 } {
+  const slotWidth = topology.cellWidth * topology.adaptiveScale;
   return {
-    left: topology.originX + (coord.x * topology.cellWidth),
+    left: topology.originX + (coord.x * slotWidth),
     top: topology.originY + (coord.y * topology.cellHeight),
-    width: coord.length * topology.cellWidth,
+    width: coord.length * slotWidth,
     height: topology.cellHeight,
   };
 }

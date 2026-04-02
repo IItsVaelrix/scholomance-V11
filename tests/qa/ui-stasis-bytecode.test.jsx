@@ -22,11 +22,10 @@
  * linguistic law violation.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import {
   BytecodeError,
   ERROR_CATEGORIES,
@@ -53,7 +52,7 @@ const MODULE_IDS_EXTENDED = {
  * World-Law: A button that does not answer touch violates the Law of Response.
  * The glyph hangs suspended, neither accepting nor rejecting the player's intent.
  */
-function createClickStasisError(elementId, expectedState, actualState, context = {}) {
+function _createClickStasisError(elementId, expectedState, actualState, context = {}) {
   return new BytecodeError(
     ERROR_CATEGORIES.UI_STASIS,
     ERROR_SEVERITY.CRIT,
@@ -281,7 +280,7 @@ function monitorAnimationFrames(callback, maxFrames = 60) {
 /**
  * Tracks event listener count on a target
  */
-function trackEventListenerCount(target, eventType) {
+function _trackEventListenerCount(target, eventType) {
   const listeners = new Set();
   
   const originalAdd = target.addEventListener;
@@ -793,7 +792,7 @@ describe('UI Stasis — Animation Lifecycle', () => {
       expect(spinner.style.display).toBe('none');
       
       // Animation should be paused or removed
-      const hiddenAnimation = getComputedStyle(spinner).animationName;
+      const _hiddenAnimation = getComputedStyle(spinner).animationName;
       // Note: CSS may still report animation even when hidden
       // The key is that it doesn't cause stasis
     });
@@ -857,7 +856,7 @@ describe('UI Stasis — Animation Lifecycle', () => {
       const results = loops.map(loop => loop.stop());
       
       // All loops should have processed frames
-      results.forEach((result, index) => {
+      results.forEach((result, _index) => {
         expect(result.frameCount).toBeGreaterThan(0);
       });
     });
@@ -1136,12 +1135,12 @@ describe('UI Stasis — Race Conditions', () => {
     it('should handle rapid state updates without tearing', async () => {
       // World-Law: Rapid incantations should not cause the glyph to display 
       // intermediate, incorrect forms. The final state must be true.
-      let renderCount = 0;
+      let _renderCount = 0;
       const renders = [];
       
       const StateComponent = () => {
         const [count, setCount] = useState(0);
-        renderCount++;
+        _renderCount++;
         renders.push(count);
         
         return (
@@ -1845,7 +1844,7 @@ describe('UI Stasis — Real Component Integration', () => {
       
       const textarea = container.querySelector('[data-testid="sync-textarea"]');
       const overlay = container.querySelector('[data-testid="sync-overlay"]');
-      const scrollContainer = container.querySelector('[data-testid="scroll-container"]');
+      const _scrollContainer = container.querySelector('[data-testid="scroll-container"]');
       
       // Set up scroll sync
       textarea.addEventListener('scroll', () => {
@@ -1987,13 +1986,13 @@ describe('UI Stasis — Performance Benchmarks', () => {
       let callbackDuration = 0;
 
       const rafPromise = new Promise((resolve) => {
-        requestAnimationFrame((timestamp) => {
+        requestAnimationFrame((_timestamp) => {
           const start = performance.now();
 
           // Simulate some work
-          let sum = 0;
+          let _sum = 0;
           for (let i = 0; i < 1000; i++) {
-            sum += i;
+            _sum += i;
           }
 
           callbackDuration = performance.now() - start;

@@ -98,8 +98,8 @@ export function compileBlueprint(
 
 function compileToCSS(
   blueprint: AnimationBlueprintV1,
-  errors: DiagnosticEntry[],
-  warnings: DiagnosticEntry[]
+  _errors: DiagnosticEntry[],
+  _warnings: DiagnosticEntry[]
 ): CSSMotionPayload {
   const variables: Record<string, string | number> = {};
   
@@ -222,8 +222,8 @@ function generateCSSKeyframes(blueprint: AnimationBlueprintV1): Array<{ offset: 
 
 function compileToPhaser(
   blueprint: AnimationBlueprintV1,
-  errors: DiagnosticEntry[],
-  warnings: DiagnosticEntry[]
+  _errors: DiagnosticEntry[],
+  _warnings: DiagnosticEntry[]
 ): PhaserMotionPayload {
   const config: Record<string, unknown> = {
     duration: blueprint.durationMs,
@@ -297,8 +297,8 @@ function easingToPhaser(easing: AnimationBlueprintV1["easing"]): string {
 
 function compileToPixelBrain(
   blueprint: AnimationBlueprintV1,
-  errors: DiagnosticEntry[],
-  warnings: DiagnosticEntry[]
+  _errors: DiagnosticEntry[],
+  _warnings: DiagnosticEntry[]
 ): PixelBrainFormulaPayload {
   // Generate mathematical formula from envelopes
   const formula = generatePixelBrainFormula(blueprint);
@@ -368,8 +368,8 @@ function generatePixelBrainCoordinates(blueprint: AnimationBlueprintV1): Array<{
 
 function compileToBytecode(
   blueprint: AnimationBlueprintV1,
-  errors: DiagnosticEntry[],
-  warnings: DiagnosticEntry[]
+  _errors: DiagnosticEntry[],
+  _warnings: DiagnosticEntry[]
 ): MotionBytecodeArtifact {
   const instructions: Array<{ op: string; params: Record<string, string | number | boolean> }> = [];
 

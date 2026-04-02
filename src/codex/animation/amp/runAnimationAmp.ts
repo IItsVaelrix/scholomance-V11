@@ -167,8 +167,6 @@ async function runProcessorPipeline(
  * @returns Resolved motion output for renderer
  */
 export async function runAnimationAmp(intent: AnimationIntent): Promise<ResolvedMotionOutput> {
-  const startTime = performance.now();
-  
   // Validate intent
   const validation = validateAnimationIntent(intent);
   if (!validation.success) {

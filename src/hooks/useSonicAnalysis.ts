@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { SCHOOLS } from '../data/schools';
 import { getAmbientPlayerService } from '../lib/ambient/ambientPlayer.service.js';
 
 /**

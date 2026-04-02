@@ -48,7 +48,6 @@ import {
   BytecodeAdapter,
   AdapterRegistry,
   BackendAdapter,
-  AdapterApplyOptions,
   AdapterApplyResult,
 } from "./adapters/backendAdapters.ts";
 

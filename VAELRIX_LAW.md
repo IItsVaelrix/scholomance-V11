@@ -77,7 +77,68 @@ Exception: Performance-critical loops may use mutation with explicit
 
 All stacking contexts must derive from semantic constants defined in `SCHEMA_CONTRACT.md` (e.g., `Z_BASE`, `Z_ABOVE`, `Z_OVERLAY`, `Z_SYSTEM`). Agents must ensure the render layer adheres to these tiers to prevent "layer drift" where interaction surfaces become occluded. If a new tier is required, it must be proposed via an escalation.
 
-### 9. Law Evolution Is Mandatory
+### 11. Scholomance Encyclopedia — Bug Fix Documentation
+
+**All bug fixes must be documented in the Scholomance Encyclopedia upon Angel's command.**
+
+When Angel issues the command **"BUG REPORT AUDIT"**, the agent responsible for the fix must:
+
+1. **Reference the Scholomance Encyclopedia** using the bytecode search code: `SCHOL-ENC-BYKE-SEARCH`
+2. **Create or update an entry** in `docs/scholomance-encyclopedia/` with:
+   - Bug description and impact
+   - Root cause analysis
+   - Step-by-step thought process that led to the solution
+   - Code changes made (files, lines, rationale)
+   - Testing performed
+   - Lessons learned
+
+**Format:**
+```markdown
+# BUG-[YYYY-MM-DD]-[SHORT_NAME]
+
+## Bytecode Search Code
+`SCHOL-ENC-BYKE-SEARCH-[BUG_CODE]`
+
+## Bug Description
+[What was broken, how it manifested, user impact]
+
+## Root Cause
+[Technical explanation of why the bug occurred]
+
+## Thought Process
+[Step-by-step reasoning:
+  1. First observation that led to hypothesis
+  2. Investigation path taken
+  3. Dead ends encountered
+  4. Breakthrough moment
+  5. Solution derived]
+
+## Changes Made
+| File | Lines Changed | Rationale |
+|------|---------------|-----------|
+| `path/to/file.js` | 45-67 | [why this change] |
+
+## Testing
+[How the fix was verified]
+
+## Lessons Learned
+[What this teaches us about the system]
+```
+
+**Why This Exists:**
+
+The Scholomance Encyclopedia is the living memory of the codebase. Every bug fixed is knowledge gained. Documentation is not optional — it is the bridge between fixing one bug and preventing a thousand future bugs.
+
+**When Angel says "BUG REPORT AUDIT", you will:**
+1. Stop current work
+2. Open the relevant bug report
+3. Trace the fix you implemented
+4. Write the encyclopedia entry
+5. Commit with the bytecode search code in the message
+
+**No fix is complete without its story.**
+
+### 12. Law Evolution Is Mandatory
 
 **Any agent reading this document MUST evaluate whether the law itself requires updating.**
 
@@ -115,6 +176,41 @@ This law is not scripture. It is **engineered constraint**. Like any engineered 
 - Practice reveals better formulations
 
 **An agent that reads this law and does not evaluate it is violating Law 9.**
+
+### 13. PDR Archive Is Mandatory
+
+**All Product Design Requirements (PDRs) must be stored in `docs/PDR-archive/`.**
+
+No PDR document may remain in the repository root or any location outside the designated archive.
+
+**When creating a new PDR:**
+
+1. Write the PDR using the standard template in `docs/PDR-archive/README.md`
+2. Save the file directly to `docs/PDR-archive/[feature_name]_pdr.md`
+3. Update the archive index `docs/PDR-archive/README.md` with the new PDR entry
+4. Classify status: `Draft` | `Approved` | `In Progress` | `Implemented` | `Archived`
+
+**When discovering a PDR outside the archive:**
+
+1. Move it immediately to `docs/PDR-archive/`
+2. Update the archive index if not already listed
+3. Never leave PDRs in root or scattered directories
+
+**Why This Exists:**
+
+PDRs are architectural artifacts — they define major features before implementation. Scattered PDRs become:
+- Lost or forgotten
+- Outdated without notice
+- Impossible to audit as a collection
+- Difficult to reference in onboarding
+
+Centralized archive ensures:
+- All agents can find the complete PDR catalog
+- Status tracking (Draft → Implemented) is visible
+- Historical PDRs are preserved, not deleted
+- Architecture decisions are auditable
+
+**Related:** Scholomance Encyclopedia (`docs/scholomance-encyclopedia/`) documents bug fixes and architecture proposals post-implementation. PDRs document features pre-implementation.
 
 ---
 
@@ -780,6 +876,33 @@ Intent → Normalize → Processors → Fuse → Output → Adapter (CSS/Phaser/
 
 ---
 
+## Online Reference Resources
+
+**Mandatory bookmarks for all agents.** These resources provide essential reference data for bytecode-to-pixel conversions and typographic measurements.
+
+| Resource | Purpose | URL |
+|----------|---------|-----|
+| **Points vs Pixels Calculator** | Interactive reference for converting typographic points to screen pixels at various DPIs. Essential for bytecode mathematical conversion when calculating glyph positioning and grid-fitting. | https://reeddesign.co.uk/test/points-pixels.html |
+| **Google Fonts** | Web font library with metric data. Use for cross-platform font consistency (Crimson Pro = Georgia alternative for Linux). | https://fonts.google.com |
+| **Can I Use** | Browser compatibility reference for CSS properties and APIs. | https://caniuse.com |
+| **MDN Web Docs** | Authoritative reference for web APIs including Canvas `measureText()`, font properties, and text rendering. | https://developer.mozilla.org |
+
+**Why Points vs Pixels Matters:**
+
+When implementing bytecode-driven typography:
+- **1 point = 1/72 inch** (typographic standard)
+- **Pixels vary by DPI**: 96 DPI (Windows), 72 DPI (macOS legacy), device-specific (mobile)
+- **Device Pixel Ratio (DPR)**: `window.devicePixelRatio` converts CSS pixels to device pixels
+- **Formula**: `pixels = points × (DPI / 72) × DPR`
+
+Use the Points vs Pixels calculator to verify:
+- Font size conversions (e.g., 12pt @ 96 DPI = 16px)
+- Line height calculations
+- Character width measurements
+- Grid cell dimensions for bytecode positioning
+
+---
+
 ## Version Log
 
 | Version | Date | Change |
@@ -791,6 +914,9 @@ Intent → Normalize → Processors → Fuse → Output → Adapter (CSS/Phaser/
 | 1.4 | 2026-04-01 | Added Law 10: "Stacking Sovereignty" — z-index must use semantic constants. Added `ENGINEERING_RULEBOOK.md` — mandatory QA gates for all code changes |
 | 1.5 | 2026-04-01 | Added immutability clause to Law 8. Added dependency whitelisting rule to ENGINEERING_RULEBOOK.md |
 | 1.6 | 2026-04-01 | Added "Agent Tool Reference" — comprehensive inventory of all hooks, utilities, services, and components. Mandatory reference for all agents to prevent parallel pattern invention |
+| 1.7 | 2026-04-02 | Added Law 11: "Scholomance Encyclopedia — Bug Fix Documentation" — mandates documentation of all bug fixes with bytecode search codes upon Angel's "BUG REPORT AUDIT" command. Renumbered subsequent laws |
+| 1.8 | 2026-04-02 | Added "Online Reference Resources" section — mandatory bookmarks for bytecode-to-pixel conversions, typography measurements, and web API references. Added Points vs Pixels calculator for DPI/DPR calculations |
+| 1.9 | 2026-04-02 | Added Law 13: "PDR Archive Is Mandatory" — all Product Design Requirements must be stored in `docs/PDR-archive/`. Scattered PDRs prohibited |
 
 ---
 

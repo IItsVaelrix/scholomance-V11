@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { runAnimationAmp, initAnimationAmp, getActiveAnimation } from '../../../src/codex/animation/amp/runAnimationAmp.ts';
-import { AnimationIntent, ResolvedMotionOutput } from '../../../src/codex/animation/contracts/animation.types.ts';
+import { AnimationIntent } from '../../../src/codex/animation/contracts/animation.types.ts';
 
 describe('Animation AMP Core', () => {
   beforeEach(() => {

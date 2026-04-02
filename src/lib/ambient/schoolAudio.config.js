@@ -1,5 +1,5 @@
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
-import { getDefaultSonicStationTrackUrl, pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
+import { pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
 
 function getPrimaryTrackUrl(schoolId) {
   return pickRandomSonicStationTrack({ schoolId }) || null;

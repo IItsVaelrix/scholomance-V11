@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { generatePixelArtFromImage } from '../../../codex/core/pixelbrain/image-to-pixel-art.js';
-import { parseBytecodeToFormula, formulaToBytecode } from '../../../codex/core/pixelbrain/image-to-bytecode-formula.js';
+import { parseBytecodeToFormula } from '../../../codex/core/pixelbrain/image-to-bytecode-formula.js';
 import { evaluateFormulaWithColor } from '../../../codex/core/pixelbrain/formula-to-coordinates.js';
 
 // Correctly Mock Worker class

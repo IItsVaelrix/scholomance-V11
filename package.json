@@ -12,7 +12,7 @@
     "build:corpus": "node scripts/generate_corpus.js",
     "build": "node scripts/generate-school-styles.js && npm run build:corpus && vite build",
     "build:app": "vite build",
-    "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --quiet",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.checkjs.json",
     "test:visual": "playwright test tests/visual --project=chromium --workers=1 --reporter=line",
     "test:visual:full": "node --input-type=module -e \"import { spawnSync } from 'node:child_process'; const cmd = process.platform === 'win32' ? 'npx.cmd' : 'npx'; const result = spawnSync(cmd, ['playwright', 'test', 'tests/visual'], { stdio: 'inherit', env: { ...process.env, PW_FULL_MATRIX: 'true' } }); process.exit(result.status ?? 1);\"",

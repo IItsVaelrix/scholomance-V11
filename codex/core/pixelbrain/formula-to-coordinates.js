@@ -63,7 +63,7 @@ export function evaluateFormula(formula, canvasSize, time = 0) {
 /**
  * Evaluate Fibonacci subdivision grid
  */
-export function evaluateFibonacciGrid(formula, canvasSize, time = 0) {
+export function evaluateFibonacciGrid(formula, canvasSize, _time = 0) {
   const { iterations = 6, scale = 1 } = formula.parameters || formula;
   const coordinates = [];
   
@@ -114,7 +114,7 @@ export function evaluateParametricCurve(formula, canvasSize, time = 0) {
     cx = canvasSize.width / 2,
     cy = canvasSize.height / 2,
     a = 50,
-    b = 0.1,
+    b: _b = 0.1,
     c = 0,
     n = 64,
   } = parameters || {};
@@ -225,12 +225,12 @@ export function evaluateGridProjection(formula, canvasSize, time = 0) {
 /**
  * Evaluate edge trace formula
  */
-export function evaluateEdgeTrace(formula, canvasSize, time = 0) {
+export function evaluateEdgeTrace(formula, canvasSize, _time = 0) {
   const { tracePath = [] } = formula;
   if (tracePath.length === 0) return [];
 
   const totalPoints = tracePath.length;
-  const speed = 0.02;
+  const _speed = 0.02;
 
   return tracePath.map((p, index) => ({
     x: roundTo(p.x, 1),
@@ -299,7 +299,7 @@ export function evaluateFractalIteration(formula, canvasSize, time = 0) {
 /**
  * Evaluate template-based formula
  */
-export function evaluateTemplateBased(formula, template, canvasSize, time = 0) {
+export function evaluateTemplateBased(formula, template, canvasSize, _time = 0) {
   const { anchorPoints = [], symmetryAxes = [] } = template || {};
   const coordinates = anchorPoints.map((anchor, index) => ({
     x: roundTo(anchor.x, 1),

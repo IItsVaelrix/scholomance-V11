@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { triggerHapticPulse, UI_HAPTICS } from '../../lib/platform/haptics';
 import { transmuteToSigil, generateSigilFile } from '../../lib/career/transmuter';

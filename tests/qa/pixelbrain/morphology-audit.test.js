@@ -13,7 +13,7 @@ import {
 
 describe('PixelBrain — Morphology Audit', () => {
 
-  const canvasSize = { width: 160, height: 144 };
+  const _canvasSize = { width: 160, height: 144 };
 
   describe('Parametric Scale Stability', () => {
     it('prevents generating microscopic orbs from small clusters', () => {

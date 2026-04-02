@@ -68,9 +68,6 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
   //   metadata: { scene: 'SignalChamber' }
   // }), [isPlaying, signalLevel]);
 
-  // const orbMotion = useAnimationIntent(orbIntent);
-  const orbMotion = null;
-
   // const consoleIntent = useMemo(() => ({
   //   version: 'v1.0',
   //   targetId: 'chamber-console',
@@ -79,9 +76,6 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
   //   trigger: 'mount' as const,
   //   metadata: { scene: 'SignalChamber' }
   // }), []);
-
-  // const consoleMotion = useAnimationIntent(consoleIntent);
-  const consoleMotion = null;
 
   const stations = useMemo(
     () =>

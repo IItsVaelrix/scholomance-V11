@@ -932,11 +932,6 @@
   box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="light"] .word-tooltip-mobile-sheet {
-  background: #ffffff;
-  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.12);
-}
-
 .word-tooltip-mobile-header {
   display: flex;
   align-items: center;

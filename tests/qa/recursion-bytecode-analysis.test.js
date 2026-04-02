@@ -394,7 +394,7 @@ function containsReturn(node) {
  * Check for base case in recursive function
  * Looks for: if/return patterns, ternary operators, logical AND/OR guards
  */
-function checkForBaseCase(callPath, functionName) {
+function checkForBaseCase(callPath, _functionName) {
   let current = callPath.parent;
   let foundBaseCase = false;
   let foundEarlyReturn = false;

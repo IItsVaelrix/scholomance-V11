@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import type Phaser from 'phaser';
 import { CrystalBallScene } from './scenes/CrystalBallScene';
 import { getAmbientPlayerService } from '../../lib/ambient/ambientPlayer.service.js';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion.js';
 
 interface CrystalBallVisualizerProps {
   signalLevel: number;
@@ -25,6 +26,7 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
   const sceneRef = useRef<CrystalBallScene | null>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   useEffect(() => {
     let game: Phaser.Game | null = null;
@@ -53,7 +55,7 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
         sceneRef.current = scene;
         // Push initial state immediately
         const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
-        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm });
+        scene?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm, reducedMotion: prefersReducedMotion });
       });
 
       gameRef.current = game;
@@ -69,14 +71,14 @@ export const CrystalBallVisualizer: React.FC<CrystalBallVisualizerProps> = ({
 
   useEffect(() => {
     const bpm = getAmbientPlayerService()?.getBPM?.() || 90;
-    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm });
-  }, [signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId]);
+    sceneRef.current?.updateState({ signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, bpm, reducedMotion: prefersReducedMotion });
+  }, [signalLevel, schoolColor, glyph, isTuning, isPlaying, schoolId, prefersReducedMotion]);
 
   return (
     <div
       ref={containerRef}
       className="crystal-ball-container"
-      style={{ width: size, height: size, borderRadius: '50%', overflow: 'hidden' }}
+      style={{ width: size, height: size, position: 'relative', overflow: 'visible' }}
     />
   );
 };

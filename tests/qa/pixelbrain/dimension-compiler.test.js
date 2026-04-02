@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DimensionCompiler, DimensionRuntime, DimensionCompileError, DimensionErrorCode, detectDeviceClass, detectOrientation } from '../../../codex/core/pixelbrain/dimension-formula-compiler';
+import { DimensionCompiler, DimensionRuntime, DimensionCompileError, detectDeviceClass, detectOrientation } from '../../../codex/core/pixelbrain/dimension-formula-compiler';
 
 describe('PixelBrain — Dimension Formula Compiler', () => {
   const compiler = new DimensionCompiler();

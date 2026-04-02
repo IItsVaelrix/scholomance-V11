@@ -16,7 +16,7 @@ import { evaluateFormulaWithColor } from '../../../codex/core/pixelbrain/formula
 import { parseErrorForAI } from '../../../src/lib/pixelbrain.adapter.js';
 
 // Test context helper
-const createTestContext = (testName, testSuite = 'PixelBrain Upload') => ({
+const _createTestContext = (testName, testSuite = 'PixelBrain Upload') => ({
   testName,
   testFile: 'upload-bytecode-errors.test.js',
   testSuite,
@@ -24,7 +24,7 @@ const createTestContext = (testName, testSuite = 'PixelBrain Upload') => ({
 
 describe('PixelBrain Upload Bytecode Errors', () => {
   describe('PNG Decoder Error Handling', () => {
-    const testSuite = 'PNG Decoder';
+    const _testSuite = 'PNG Decoder';
 
     it('rejects empty buffer', async () => {
       const emptyBuffer = Buffer.alloc(0);
@@ -133,7 +133,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('BMP Decoder Error Handling', () => {
-    const testSuite = 'BMP Decoder';
+    const _testSuite = 'BMP Decoder';
 
     it('rejects BMP with corrupted header (too short)', async () => {
       const shortBuffer = Buffer.alloc(30);
@@ -172,7 +172,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Resampler Error Handling', () => {
-    const testSuite = 'Substrate Resampler';
+    const _testSuite = 'Substrate Resampler';
 
     it('handles zero target dimensions gracefully', () => {
       const pixelData = new Uint8ClampedArray(100 * 100 * 4);
@@ -212,7 +212,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Bytecode Generation Error Handling', () => {
-    const testSuite = 'Bytecode Generation';
+    const _testSuite = 'Bytecode Generation';
 
     // Note: Full integration tests require worker environment
     // These tests focus on pure function behavior
@@ -239,7 +239,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Bytecode Parsing Error Handling', () => {
-    const testSuite = 'Bytecode Parsing';
+    const _testSuite = 'Bytecode Parsing';
 
     it('rejects invalid bytecode prefix', () => {
       expect(() => parseBytecodeToFormula('0xG_INVALID')).toThrow();
@@ -278,7 +278,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Formula Evaluation Error Handling', () => {
-    const testSuite = 'Formula Evaluation';
+    const _testSuite = 'Formula Evaluation';
 
     it('handles missing color gracefully', () => {
       const formula = {
@@ -325,7 +325,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Error Parser Integration', () => {
-    const testSuite = 'Error Parser';
+    const _testSuite = 'Error Parser';
 
     it('parses error message', () => {
       const error = 'Network timeout';
@@ -355,7 +355,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   });
 
   describe('Integration: Full Pipeline Errors', () => {
-    const testSuite = 'Pipeline Integration';
+    const _testSuite = 'Pipeline Integration';
 
     it('fails gracefully on corrupted image data', () => {
       const corruptedAnalysis = {

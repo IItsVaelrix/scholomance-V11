@@ -20,7 +20,6 @@ import {
 import {
   QATestError,
   assertEqual,
-  assertTrue,
   assertInRange,
   assertType,
   assertThrowsBytecode,

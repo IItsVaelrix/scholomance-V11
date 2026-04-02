@@ -10,16 +10,14 @@ import {
   Cpu, 
   AlertTriangle, 
   Info,
-  Terminal,
-  Zap
+  Terminal
 } from 'lucide-react';
 import { 
   getAllActiveAnimations, 
   getAmpStatus 
 } from '../../../codex/animation/amp/runAnimationAmp.ts';
 import { 
-  ResolvedMotionOutput,
-  ProcessorStage
+  ResolvedMotionOutput
 } from '../../../codex/animation/contracts/animation.types.ts';
 import './MotionInspector.css';
 

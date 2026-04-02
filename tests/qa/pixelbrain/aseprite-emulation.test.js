@@ -6,7 +6,7 @@
  *          and aesthetic line physics.
  */
 
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { 
   generatePixelArtFromImage,
   generateSilhouetteFromImage,
@@ -20,8 +20,7 @@ import {
 } from '../../../codex/core/pixelbrain/template-grid-engine.js';
 import { 
   drawPixelatedLine,
-  drawHandDrawnLine,
-  snapToPixelGrid 
+  drawHandDrawnLine
 } from '../../../codex/core/pixelbrain/anti-alias-control.js';
 import { GOLDEN_RATIO } from '../../../codex/core/pixelbrain/shared.js';
 

@@ -314,27 +314,4 @@
   }
 }
 
-[data-theme="light"] .heuristic-score-panel {
-  --metrics-ink: #221f17;
-  --metrics-muted: #6a604f;
-  --metrics-soft: #3a3428;
-  --metrics-brass: #7f5f2d;
-  --metrics-line: rgba(127, 95, 45, 0.26);
-  --metrics-line-soft: rgba(127, 95, 45, 0.18);
-  --metrics-sheet: linear-gradient(180deg, rgba(249, 244, 231, 0.96), rgba(241, 233, 214, 0.97));
-  box-shadow: 0 10px 24px rgba(56, 45, 27, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
 
-[data-theme="light"] .heuristic-item {
-  background: rgba(255, 252, 244, 0.78);
-}
-
-[data-theme="light"] .heuristic-bar {
-  background: rgba(93, 77, 46, 0.12);
-  border-color: rgba(93, 77, 46, 0.2);
-}
-
-[data-theme="light"] .heuristic-fill {
-  background: linear-gradient(90deg, #8a6428, #4e7688);
-  box-shadow: 0 0 8px rgba(78, 118, 136, 0.2);
-}

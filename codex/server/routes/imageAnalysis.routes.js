@@ -4,7 +4,6 @@
  * POST /api/image/analyze - Upload and analyze reference image
  */
 
-import { analyzeReferenceImage } from '../services/imageAnalysis.service.js';
 import { generateTexturedDuplicates, getDuplicatePath } from '../services/imageDuplication.service.js';
 import fs from 'fs';
 
@@ -21,14 +20,14 @@ export async function imageAnalysisRoutes(app) {
       },
     },
     // ... rest of schema
-  }, async (request, reply) => {
+  }, async (_request, _reply) => {
     // ... existing implementation
   });
 
   // Simple JSON-based endpoint for base64 images
   app.post('/analyze/base64', {
     // ... existing implementation
-  }, async (request, reply) => {
+  }, async (_request, _reply) => {
     // ... existing implementation
   });
 

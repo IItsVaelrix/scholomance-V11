@@ -95,7 +95,7 @@ function buildPaletteFromQuantized(quantizedColors, schoolId) {
   }];
 }
 
-function applyRetroStyleToCoordinates(coords, styleId, canvas) {
+function applyRetroStyleToCoordinates(coords, styleId, _canvas) {
   if (styleId === 'gameboy') {
     // Force coordinates to 2x2 blocks for that chunky GB feel
     return coords.map(c => ({

@@ -29,6 +29,8 @@
  * ──────────────────────────────────────────────────────────────────────────
  */
 
+import { getVisemeStyles } from "../../lib/truesight/color/visemeMapping.js";
+
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
 /**
@@ -49,7 +51,8 @@ export function decodeBytecode(bytecode, { reducedMotion = false, theme = "dark"
     glowIntensity,
     saturationBoost,
     syllableDepth,
-    isAnchor
+    isAnchor,
+    biophysical // Biophysical metrics from VerseIRChromaEngine
   } = bytecode;
 
   if (effectClass === "INERT") {
@@ -60,10 +63,14 @@ export function decodeBytecode(bytecode, { reducedMotion = false, theme = "dark"
   const finalGlow = clamp01((reducedMotion ? glowIntensity * 0.5 : glowIntensity) * intensityScale);
   const finalSaturation = clamp01(saturationBoost);
 
+  // Viseme-to-CSS Mapping (for TrueSight rhymes only)
+  const visemeStyles = getVisemeStyles(biophysical, isAnchor);
+
   const style = {
     "--vb-glow-intensity": finalGlow,
     "--vb-saturation-boost": finalSaturation,
     "--vb-syllable-depth": syllableDepth,
+    ...visemeStyles
   };
 
   const classes = [`vb-effect--${effectClass.toLowerCase()}`];

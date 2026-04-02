@@ -152,7 +152,7 @@ export function roundTo(val, precision) {
 
 // --- LATTICE GRID ENGINE EXPORTS ---
 
-export function generateLatticeGrid(analysis) {
+export async function generateLatticeGrid(analysis) {
   return codexGenerateLatticeGrid(analysis);
 }
 

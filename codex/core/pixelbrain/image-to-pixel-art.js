@@ -5,7 +5,6 @@
  * This module traces shapes, extracts features, and maps them to PixelBrain's coordinate system.
  */
 
-import { clamp01, roundTo } from './shared.js';
 import { snapToPixelGrid } from './anti-alias-control.js';
 import { analyzeImageToFormula, formulaToBytecode } from './image-to-bytecode-formula.js';
 import { processorBridge } from '../../../src/lib/processor-bridge.js';
@@ -27,14 +26,14 @@ import { processorBridge } from '../../../src/lib/processor-bridge.js';
  * @returns {Promise<Object>} PixelBrain-compatible result
  */
 export async function generatePixelArtFromImage(imageAnalysis, canvasSize, extension = null) {
-  const { colors, composition, semanticParams, pixelData, dimensions } = imageAnalysis;
+  const { colors, composition, semanticParams: _semanticParams, pixelData, dimensions } = imageAnalysis;
   
   // 1. Extract mathematical formula from image
   const formula = analyzeImageToFormula(imageAnalysis);
   const bytecode = formulaToBytecode(formula);
 
   // 2. Build palette from image colors
-  const palettes = buildPaletteFromImageColors(colors, semanticParams);
+  const palettes = buildPaletteFromImageColors(colors);
   
   // 3. Generate coordinates from image features
   // FIX: If coordinates were already extracted (e.g. by a WebWorker), use them!
@@ -114,7 +113,7 @@ export function transcribeFullPixelData(pixelData, dimensions, canvasSize) {
 /**
  * Build palette from image colors
  */
-function buildPaletteFromImageColors(colors, semanticParams) {
+function buildPaletteFromImageColors(colors) {
   if (!colors || colors.length === 0) {
     return [];
   }

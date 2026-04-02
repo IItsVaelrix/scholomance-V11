@@ -12,10 +12,9 @@ import {
   CodeIcon 
 } from "../../../components/Icons.jsx";
 
-export function FormulaEditor({ formula, onUpdate, onRegenerate, onValidate }) {
+export function FormulaEditor({ formula, onUpdate, onRegenerate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [localParams, setLocalParams] = useState(formula?.coordinateFormula?.parameters || {});
 
   const handleCopy = useCallback(async () => {
     if (formula?.bytecode) {
@@ -28,7 +27,6 @@ export function FormulaEditor({ formula, onUpdate, onRegenerate, onValidate }) {
   const handleParamChange = useCallback((key, value) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue)) {
-      setLocalParams(prev => ({ ...prev, [key]: numValue }));
       onUpdate?.({
         ...formula,
         coordinateFormula: {

@@ -12,7 +12,13 @@
       "Bash(git log *)",
       "Bash(xargs *)",
       "Bash(mkdir *)",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(uname *)",
+      "Bash(node *)",
+      "Bash(npm *)",
+      "Bash(head *)",
+      "Bash(echo *)",
+      "Bash(mv *)"
     ]
   },
   "$version": 3

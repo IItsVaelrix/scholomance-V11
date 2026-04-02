@@ -6,7 +6,6 @@
  */
 
 import { SCHOOLS } from '../../constants/schools.js';
-import { roundTo } from '../../pixelbrain/shared.js';
 
 /**
  * Quantize colors to nearest school affinity

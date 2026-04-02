@@ -1,76 +1,21 @@
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, forwardRef, useImperativeHandle, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAnimationIntent } from "../../ui/animation/hooks/useAnimationIntent";
-import { motionToCssVars } from "../../ui/animation/adapters/motionToCssVars";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useColorCodex } from "../../hooks/useColorCodex.js";
 import IntelliSense from "../../components/IntelliSense.jsx";
-import { computeGridTopology, compileTokensToGrid, gridToPixels } from "../../lib/truesight/compiler/truesightGrid";
-import { computeAdaptiveGridTopology, compileAdaptiveGrid, getAdaptiveTokenWidth } from "../../lib/truesight/compiler/adaptiveWhitespaceGrid";
+import { computeGridTopology } from "../../lib/truesight/compiler/truesightGrid";
+import { computeAdaptiveGridTopology, buildTruesightOverlayLines } from "../../lib/truesight/compiler/adaptiveWhitespaceGrid";
 import { loadCorpusFrequencies } from "../../lib/truesight/compiler/corpusWhitespaceGrid";
 import { ViewportChannel } from "../../lib/truesight/compiler/viewportBytecode";
 import Gutter from "./Gutter.jsx";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
-import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
+import { WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { decodeBytecode } from "./bytecodeRenderer.js";
+import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 
 const MAX_CONTENT_LENGTH = 50000;
-const CONTENT_DEBOUNCE_MS = 300;
-const MIN_EDITOR_HEIGHT = 0;
 const DEFAULT_LINE_HEIGHT = 24;
-const MARKDOWN_FORMATS = {
-  heading: { prefix: "## ", suffix: "", lineStart: true },
-  bold: { prefix: "**", suffix: "**", lineStart: false },
-  italic: { prefix: "*", suffix: "*", lineStart: false },
-  code: { prefix: "`", suffix: "`", lineStart: false },
-  bullet: { prefix: "- ", suffix: "", lineStart: true },
-  number: { prefix: "1. ", suffix: "", lineStart: true },
-  quote: { prefix: "> ", suffix: "", lineStart: true },
-};
-
-function buildOverlayLines(content) {
-  const rawLines = String(content || "").split("\n");
-  const lines = [];
-  const allTokens = [];
-
-  for (let lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
-    const lineText = rawLines[lineIndex];
-    const tokens = [];
-    let wordIndex = 0;
-
-    // Basic syntax detection
-    let lineType = "normal";
-    if (lineText.startsWith("#")) {
-      lineType = "heading";
-    } else if (lineText.startsWith("- ") || lineText.startsWith("* ")) {
-      lineType = "list-item";
-    }
-
-    for (const match of lineText.matchAll(LINE_TOKEN_REGEX)) {
-      const token = match[0];
-      const localStart = match.index ?? 0;  // Position WITHIN lineText
-      const localEnd = localStart + token.length;
-      const isWord = WORD_TOKEN_REGEX.test(token);
-      const tokenData = {
-        token,
-        localStart,  // Line-relative position
-        localEnd,
-        lineIndex,
-        wordIndex: isWord ? wordIndex : null,
-      };
-      tokens.push(tokenData);
-      allTokens.push(tokenData);
-      if (isWord) {
-        wordIndex += 1;
-      }
-    }
-
-    lines.push({ lineIndex, lineText, tokens, lineType });
-  }
-
-  return { lines, allTokens };
-}
 
 function normalizeWordToken(token) {
   return String(token || "")
@@ -132,56 +77,6 @@ function findSyntaxTokenForCursor(syntaxLayer, lineNumber, targetWordIndex, targ
   return lineTokens[lineTokens.length - 1];
 }
 
-function resolveSyntaxContextForCursor({
-  syntaxLayer,
-  content,
-  cursorOffset,
-  prefix,
-  currentLineWords,
-}) {
-  if (!syntaxLayer || typeof syntaxLayer !== "object") return null;
-
-  const beforeCursor = String(content || "").slice(0, Math.max(0, toFiniteInt(cursorOffset, 0)));
-  const lineNumber = Math.max(0, beforeCursor.split("\n").length - 1);
-  const targetWordIndex = Math.max(0, Array.isArray(currentLineWords) ? currentLineWords.length : 0);
-  const targetCharStart = prefix ? Math.max(0, toFiniteInt(cursorOffset, 0) - prefix.length) : -1;
-
-  const syntaxToken = findSyntaxTokenForCursor(
-    syntaxLayer,
-    lineNumber,
-    targetWordIndex,
-    targetCharStart
-  );
-  if (!syntaxToken) return null;
-
-  const role = String(syntaxToken.role || "content");
-  const lineRole = String(
-    syntaxToken.lineRole || (targetWordIndex === 0 ? "line_start" : "line_mid")
-  );
-  const stressRole = String(syntaxToken.stressRole || "unknown");
-  const rhymePolicy = String(syntaxToken.rhymePolicy || (role === "function" ? "allow_weak" : "allow"));
-
-  const context = { role, lineRole, stressRole, rhymePolicy };
-  const tokenHhm = syntaxToken?.hhm && typeof syntaxToken.hhm === "object" ? syntaxToken.hhm : null;
-  const summaryHhm = syntaxLayer?.hhm && typeof syntaxLayer.hhm === "object" ? syntaxLayer.hhm : null;
-
-  if (tokenHhm || summaryHhm) {
-    context.hhm = {
-      tokenWeight: Number(tokenHhm?.tokenWeight) || 1,
-      logicOrder: Array.isArray(tokenHhm?.logicOrder)
-        ? tokenHhm.logicOrder
-        : (Array.isArray(summaryHhm?.logicOrder) ? summaryHhm.logicOrder : []),
-      stageWeights: tokenHhm?.stageWeights || summaryHhm?.stageWeights || null,
-      stageScores: tokenHhm?.stageScores || null,
-      dictionarySources: Array.isArray(summaryHhm?.dictionarySources)
-        ? summaryHhm.dictionarySources
-        : [],
-    };
-  }
-
-  return context;
-}
-
 // Common function words that don't carry meaningful phonemic weight for analysis.
 // These stay default/white in Truesight to reduce visual noise and let content words pop.
 const STOP_WORDS = new Set([
@@ -203,6 +98,143 @@ const STOP_WORDS = new Set([
   "WHAT", "WHEN", "WHERE", "WHO", "HOW", "WHICH",
   "ABOUT", "JUST", "VERY", "TOO", "ALSO",
 ]);
+
+/**
+ * Resolves a word token at the given character offset.
+ * Uses the syntaxLayer if available, otherwise falls back to regex tokenization.
+ */
+function resolveWordTokenAtOffset(cursorOffset, syntaxLayer, content) {
+  if (!syntaxLayer || typeof syntaxLayer !== "object") {
+    // Fallback: basic tokenization from content
+    const beforeCursor = String(content || "").slice(0, Math.max(0, cursorOffset));
+    const lines = beforeCursor.split("\n");
+    const lineNumber = Math.max(0, lines.length - 1);
+    const currentLineText = lines[lines.length - 1] || "";
+    const words = currentLineText.match(WORD_TOKEN_REGEX) || [];
+    const targetWordIndex = words.length;
+    
+    return {
+      lineNumber,
+      wordIndex: targetWordIndex,
+      charStart: beforeCursor.length,
+      charEnd: beforeCursor.length,
+      token: words[targetWordIndex - 1] || "",
+    };
+  }
+
+  // Use syntax layer for precise token resolution
+  const beforeCursor = String(content || "").slice(0, Math.max(0, cursorOffset));
+  const linesBefore = beforeCursor.split("\n");
+  const lineNumber = Math.max(0, linesBefore.length - 1);
+  const currentLineText = linesBefore[linesBefore.length - 1] || "";
+  const words = currentLineText.match(WORD_TOKEN_REGEX) || [];
+  const targetWordIndex = words.length;
+
+  const syntaxToken = findSyntaxTokenForCursor(
+    syntaxLayer,
+    lineNumber,
+    targetWordIndex,
+    cursorOffset
+  );
+
+  if (syntaxToken) {
+    return {
+      ...syntaxToken,
+      lineNumber: toFiniteInt(syntaxToken?.lineNumber, lineNumber),
+      wordIndex: toFiniteInt(syntaxToken?.wordIndex, targetWordIndex),
+      charStart: toFiniteInt(syntaxToken?.charStart, cursorOffset),
+      charEnd: toFiniteInt(syntaxToken?.charEnd, cursorOffset),
+    };
+  }
+
+  // Fallback
+  return {
+    lineNumber,
+    wordIndex: targetWordIndex,
+    charStart: cursorOffset,
+    charEnd: cursorOffset,
+    token: "",
+  };
+}
+
+/**
+ * Builds a word activation payload from a token entry.
+ */
+function buildWordPayloadFromToken(tokenEntry) {
+  if (!tokenEntry) return null;
+
+  const rawToken = tokenEntry.token || "";
+  const normalizedWord = normalizeWordToken(rawToken);
+  const vowelFamily = tokenEntry.vowelFamily || null;
+  const school = vowelFamily ? VOWEL_FAMILY_TO_SCHOOL[normalizeVowelFamily(vowelFamily)] : null;
+
+  return {
+    word: rawToken,
+    normalizedWord,
+    charStart: toFiniteInt(tokenEntry?.charStart, -1),
+    charEnd: toFiniteInt(tokenEntry?.charEnd, -1),
+    lineNumber: toFiniteInt(tokenEntry?.lineNumber, -1),
+    wordIndex: toFiniteInt(tokenEntry?.wordIndex, -1),
+    vowelFamily,
+    school,
+    analysis: tokenEntry.analysis || null,
+    bytecode: tokenEntry.visualBytecode || tokenEntry.trueVisionBytecode || null,
+  };
+}
+
+/**
+ * Emits a word activation event via the onWordActivate callback.
+ */
+function emitWordActivation(trigger, wordPayload, anchorRect, onWordActivate) {
+  if (!onWordActivate || !wordPayload) return;
+
+  const activation = {
+    trigger,
+    ...wordPayload,
+    anchorRect,
+  };
+
+  onWordActivate(activation);
+}
+
+/**
+ * Determines if a word should be colored based on bytecode and context.
+ * Used when useColorCodex hook is not available.
+ */
+function shouldColorWordHook(charStart, normalizedWord, vowelFamily, bytecodeByCharStart, analysisMode, activeConnections) {
+  const isStopWord = STOP_WORDS.has(normalizedWord);
+  const entry = bytecodeByCharStart?.get(charStart);
+  const bytecode = entry?.bytecode;
+
+  // PixelBrain/VoidEcho modes bypass typical stop-word filters for structural analysis
+  const isAMPMode = analysisMode === "pixelbrain_transverse" || analysisMode === "void_echo";
+
+  if (!bytecode) {
+    if ((analysisMode === "vowel" || isAMPMode) && !isStopWord) {
+      return !!vowelFamily;
+    }
+    return false;
+  }
+
+  if (bytecode.effectClass === "INERT" && !isAMPMode) {
+    return false;
+  }
+
+  if (analysisMode === "vowel" || isAMPMode) {
+    return !isStopWord || isAMPMode; // AMP modes color everything
+  }
+
+  const isRhymeMode = analysisMode === "rhyme" || (analysisMode === "none" && activeConnections?.length > 0);
+
+  if (isRhymeMode) {
+    if (isStopWord) {
+      return false;
+    }
+    return bytecode.glowIntensity > 0 || bytecode.effectClass !== "INERT";
+  }
+
+  return bytecode.glowIntensity > 0 || bytecode.effectClass !== "INERT";
+}
 
 
 // Cached styles to avoid layout thrashing during animation frames
@@ -263,7 +295,6 @@ function getCursorCoordsFromTextarea(textarea, mirrored = false, topology = null
 }
 
 const ScrollEditor = forwardRef(function ScrollEditor({
-  documentIdentity = "new",
   initialTitle = "",
   initialContent = "",
   onSave,
@@ -272,34 +303,26 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   disabled = false,
   isTruesight = false,
   isPredictive = false,
-  predict,
-  getCompletions,
-  checkSpelling,
-  getSpellingSuggestions,
-  predictorReady = false,
   onContentChange,
-  onTitleChange,
   analyzedWords = new Map(),
   analyzedWordsByIdentity = new Map(),
   analyzedWordsByCharStart = new Map(),
   activeConnections = [],
   lineSyllableCounts = [],
-  plsPhoneticFeatures = null,
   highlightedLines = [],
   pinnedLines = null,
   syntaxLayer = null,
   analysisMode = 'none',
-  theme = 'dark',
   onWordActivate,
   onCursorChange,
   onScrollChange,
   mirrored = false,
+  vowelColors = {},
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
   const [contentForOverlay, setContentForOverlay] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_HEIGHT);
   const [scrollTop, setScrollTop] = useState(0);
   const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
   const [intellisenseSuggestions, setIntellisenseSuggestions] = useState([]);
@@ -307,15 +330,11 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [ghostData, setGhostData] = useState(null);   // { sortedLines, initialYMap }
   const [isGhostPinned, setIsGhostPinned] = useState(false);
   const [intellisenseIndex, setIntellisenseIndex] = useState(0);
-  const [intellisensePos, setIntellisensePos] = useState({ x: 0, y: 0 });
-  const [cursorVersion, setCursorVersion] = useState(0);
   const textareaRef = useRef(null);
-  const truesightOverlayRef = useRef(null);
   const wordBackgroundLayerRef = useRef(null);
   const markdownRef = useRef(null);
   const isReadOnlyTruesight = isTruesight && !isEditable;
   const isReadOnlyPlain = !isTruesight && !isEditable;
-  const documentIdentityRef = useRef(documentIdentity);
 
   // Bytecode-driven viewport integration
   const [viewportState, setViewportState] = useState(() => ViewportChannel.getState());
@@ -349,14 +368,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const updateTypography = useCallback(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
-    
+
     const styles = window.getComputedStyle(wrapper);
     const topology = computeGridTopology(wrapper);
-    
+
     // Collect sample tokens from content for adaptive measurement
     const sampleTokens = content?.split(/\s+/).slice(0, 10) || [];
     const adaptiveTopo = computeAdaptiveGridTopology(wrapper, sampleTokens);
-    
+
     setComputedTypography({
       fontFamily: styles.fontFamily,
       fontSize: styles.fontSize,
@@ -367,12 +386,14 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       paddingRight: styles.paddingRight,
       paddingBottom: styles.paddingBottom,
       paddingLeft: styles.paddingLeft,
+      fontStyle: styles.fontStyle,
+      fontWeight: styles.fontWeight,
     });
-    
+
     if (topology) {
       setGridTopology(topology);
     }
-    
+
     if (adaptiveTopo) {
       setAdaptiveTopology(adaptiveTopo);
       if (adaptiveTopo.baseCellHeight) {
@@ -390,7 +411,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     updateTypography();
     
     // Adaptive: watch for CSS variable changes via ResizeObserver
-    // (CSS variable changes often trigger layout recalcs)
     const observer = new ResizeObserver(() => {
       updateTypography();
     });
@@ -449,6 +469,54 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  const reducedMotion = usePrefersReducedMotion();
+  const { theme: activeTheme } = useTheme();
+
+  const containerWidth = useMemo(() => {
+    if (adaptiveTopology && adaptiveTopology.totalWidth > 0) {
+      return adaptiveTopology.totalWidth;
+    }
+    return 800;
+  }, [adaptiveTopology]);
+
+  const { lines: overlayLines, allTokens: allOverlayTokens } = useMemo(
+    () => adaptiveTopology ? buildTruesightOverlayLines(contentForOverlay, containerWidth, adaptiveTopology) : { lines: [], allTokens: [] },
+    [contentForOverlay, containerWidth, adaptiveTopology]
+  );
+
+  const derivedAnalyzedWordsByCharStart = useMemo(() => {
+    const map = new Map();
+    if (analyzedWordsByCharStart instanceof Map) {
+      for (const [charStart, analysis] of analyzedWordsByCharStart.entries()) {
+        map.set(Number(charStart), analysis);
+      }
+    }
+    return map;
+  }, [analyzedWordsByCharStart]);
+
+  const allowLegacyWordFallback = true;
+
+  const highlightedLinesSet = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(highlightedLines)) {
+      for (const lineIndex of highlightedLines) {
+        set.add(Number(lineIndex));
+      }
+    }
+    return set;
+  }, [highlightedLines]);
+
+  const { bytecodeByCharStart } = useColorCodex(
+    Array.from(analyzedWordsByIdentity.values()).map((analysis) => ({
+      charStart: analysis.charStart,
+      visualBytecode: analysis.visualBytecode || analysis.trueVisionBytecode,
+      vowelFamily: analysis.vowelFamily,
+    })),
+    activeConnections,
+    syntaxLayer,
+    { analysisMode }
+  );
+
   const getViewportNode = useCallback(() => {
     if (isReadOnlyTruesight) return wordBackgroundLayerRef.current;
     if (isReadOnlyPlain) return markdownRef.current;
@@ -466,14 +534,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const peers = [textareaRef.current, wordBackgroundLayerRef.current, markdownRef.current];
     for (const node of peers) {
       if (!node || node === source) continue;
-
-      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) {
-        node.scrollTop = nextTop;
-      }
-
-      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) {
-        node.scrollLeft = nextLeft;
-      }
+      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) node.scrollTop = nextTop;
+      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) node.scrollLeft = nextLeft;
     }
   }, [onScrollChange]);
 
@@ -481,14 +543,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     if (isReadOnlyPlain) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
   }, [isReadOnlyPlain, syncScrollPosition]);
 
   const handleOverlayScroll = useCallback(() => {
     const layer = wordBackgroundLayerRef.current;
     if (!layer) return;
-
     syncScrollPosition(layer.scrollTop, layer.scrollLeft, layer);
   }, [syncScrollPosition]);
 
@@ -496,14 +556,12 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     if (!isReadOnlyPlain) return;
     const markdown = markdownRef.current;
     if (!markdown) return;
-
     syncScrollPosition(markdown.scrollTop, markdown.scrollLeft, markdown);
   }, [isReadOnlyPlain, syncScrollPosition]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
     setIsSaving(true);
-
     try {
       await onSave?.(title, content);
     } finally {
@@ -511,7 +569,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [content, title, onSave]);
 
-  // Capture ghost positions synchronously before scroll animation starts
   useLayoutEffect(() => {
     if (pinnedLines && pinnedLines.length > 0) {
       const sorted = [...pinnedLines].sort((a, b) => a - b);
@@ -529,28 +586,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const jumpToLine = useCallback((lineNum) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     const lines = content.split('\n');
     let offset = 0;
     for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
       offset += lines[i].length + 1;
     }
-
     if (isEditable) {
       textarea.focus();
       textarea.setSelectionRange(offset, offset);
     }
-
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
     const viewport = getViewportNode();
     const nextTop = Math.max(0, (lineNum - 1) * lineHeight);
-
     if (viewport) {
       viewport.scrollTop = nextTop;
       syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
       return;
     }
-
     textarea.scrollTop = nextTop;
     syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
   }, [content, getViewportNode, isEditable, syncScrollPosition]);
@@ -558,7 +610,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const scrollTo = useCallback((y) => {
     const viewport = getViewportNode();
     if (!viewport) return;
-
     viewport.scrollTop = y;
     syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
   }, [getViewportNode, syncScrollPosition]);
@@ -566,16 +617,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const scrollToTopSmooth = useCallback(() => {
     const viewport = getViewportNode();
     if (!viewport) return;
-    
-    // Use native smooth scroll if available for better GPU/browser optimization
     if ('scrollBehavior' in document.documentElement.style) {
       viewport.scrollTo({ top: 0, behavior: 'smooth' });
-      // We still need to sync peers during the animation, but the browser
-      // will handle the heavy lifting of the viewport itself.
-      // A one-shot sync after animation might be needed if scroll events don't fire fast enough.
       return;
     }
-
     const start = viewport.scrollTop;
     if (start === 0) return;
     const duration = 320;
@@ -583,7 +628,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const step = (now) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      const ease = 1 - Math.pow(1 - t, 3);
       viewport.scrollTop = start * (1 - ease);
       syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
       if (t < 1) requestAnimationFrame(step);
@@ -591,7 +636,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     requestAnimationFrame(step);
   }, [getViewportNode, syncScrollPosition]);
 
-  // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
     save: handleSave,
     jumpToLine,
@@ -599,13 +643,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     scrollToTopSmooth,
     replaceContent(newContent) {
       setContent(newContent);
+      setContentForOverlay(newContent);
       onContentChange?.(newContent);
     },
     get clientHeight() { return getViewportNode()?.clientHeight || 0; },
     get scrollHeight() { return getViewportNode()?.scrollHeight || 0; },
   }), [getViewportNode, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
 
-  // Accept an IntelliSense suggestion: replace partial word and insert
   const handleAcceptSuggestion = useCallback((token) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -613,7 +657,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const textBefore = content.substring(0, pos);
     const textAfter = content.substring(pos);
     const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
-
     let newContent, newCursorPos;
     if (lastWordMatch) {
       const before = content.substring(0, lastWordMatch.index);
@@ -623,11 +666,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       newContent = textBefore + token + ' ' + textAfter;
       newCursorPos = pos + token.length + 1;
     }
-
     setContent(newContent);
+    setContentForOverlay(newContent);
     onContentChange?.(newContent);
     setIntellisenseSuggestions([]);
-
     requestAnimationFrame(() => {
       textarea.focus();
       textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -636,7 +678,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
   const handleKeyDown = useCallback(
     (e) => {
-      // IntelliSense navigation
       if (intellisenseSuggestions.length > 0) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -659,7 +700,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           return;
         }
       }
-
       if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         handleSave();
@@ -677,7 +717,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const line = lines.length;
     const col = lines[lines.length - 1].length + 1;
     onCursorChange?.({ line, col, offset: pos });
-    setCursorVersion(v => v + 1);
   }, [onCursorChange]);
 
   const handleCursorChange = useCallback((event) => {
@@ -687,17 +726,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const handleTextareaClick = useCallback((event) => {
     const textarea = event.currentTarget;
     emitCursorChange(textarea);
-
-    if (!isEditable || !onWordActivate || textarea.selectionStart !== textarea.selectionEnd) {
-      return;
-    }
-
-    const tokenEntry = resolveWordTokenAtOffset(textarea.selectionStart);
+    if (!onWordActivate || textarea.selectionStart !== textarea.selectionEnd) return;
+    const tokenEntry = resolveWordTokenAtOffset(textarea.selectionStart, syntaxLayer, content);
     const wordPayload = buildWordPayloadFromToken(tokenEntry);
-    if (!wordPayload) {
-      return;
-    }
-
+    if (!wordPayload) return;
     const caretCoords = getCursorCoordsFromTextarea(textarea, mirrored, adaptiveTopology);
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || DEFAULT_LINE_HEIGHT;
     emitWordActivation("pin", wordPayload, {
@@ -713,32 +745,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       clientY: Number.isFinite(event.clientY) ? event.clientY : caretCoords.y,
       detail: event.detail,
       source: "pointer",
-    });
-  }, [
-    buildWordPayloadFromToken,
-    emitCursorChange,
-    emitWordActivation,
-    isEditable,
-    onWordActivate,
-    resolveWordTokenAtOffset,
-    adaptiveTopology,
-    mirrored,
-  ]);
+    }, onWordActivate);
+  }, [content, emitCursorChange, mirrored, onWordActivate, adaptiveTopology, syntaxLayer]);
 
   const handleContentChange = useCallback((event) => {
     const nextValue = event.target.value;
     if (nextValue.length > MAX_CONTENT_LENGTH) {
-      setContent(nextValue.slice(0, MAX_CONTENT_LENGTH));
+      const truncated = nextValue.slice(0, MAX_CONTENT_LENGTH);
+      setContent(truncated);
+      setContentForOverlay(truncated);
       return;
     }
     setContent(nextValue);
-    setCursorVersion(v => v + 1);
     emitCursorChange(event.target);
-
-    requestAnimationFrame(() => {
-      setContentForOverlay(nextValue);
-    });
+    setContentForOverlay(nextValue);
   }, [emitCursorChange]);
+
+  const containerHeight = viewportState?.height || 800;
 
   return (
     <motion.div
@@ -785,8 +808,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               className="toolbar-btn toolbar-btn--bytecode" 
               onClick={() => {
                 const bytecode = allOverlayTokens.map(t => t.token).join(' ');
-                navigator.clipboard.writeText(bytecode).then(() => {
-                });
+                navigator.clipboard.writeText(bytecode);
               }} 
               title="Copy Bytecode Stream"
             >
@@ -799,17 +821,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
 
       <div className={`editor-body ${!isEditable ? "read-only" : ""}`}>
         <Gutter
-          content={content}
+          overlayLines={overlayLines}
           lineCounts={lineSyllableCounts}
           scrollTop={scrollTop}
-          viewportHeight={editorHeight}
+          viewportHeight={containerHeight}
           lineHeightPx={lineHeightPx}
         />
-        <div
-          ref={wrapperRef}
-          className="editor-textarea-wrapper"
-        >
-          {/* Read-only plain display — mirrors textarea white-space: pre-wrap exactly */}
+        <div ref={wrapperRef} className="editor-textarea-wrapper">
           {!isEditable && !isTruesight && (
             <div
               ref={markdownRef}
@@ -820,14 +838,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               {content}
             </div>
           )}
-          {lineFocusMaskGradient && (
-            <div
-              className="line-focus-mask"
-              style={{ background: lineFocusMaskGradient }}
-              aria-hidden="true"
-            />
-          )}
-          {/* Word background layer - sits behind textarea, renders colored words for Truesight */}
           {isTruesight && (
             <div
               ref={wordBackgroundLayerRef}
@@ -837,26 +847,17 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               onScroll={handleOverlayScroll}
             >
               <div>
-                {overlayLines.map(({ lineIndex: li, lineText, tokens, lineType }) => {
+                {overlayLines.map(({ lineIndex: li, rawLineIndex, tokens, lineType }) => {
                   const isGroupActive = highlightedLinesSet.size > 0;
-                  const isHighlighted = highlightedLinesSet.has(li);
+                  const isHighlighted = highlightedLinesSet.has(rawLineIndex);
                   const isLineDimmed = (isGroupActive && !isHighlighted) || isGhostPinned;
-
-                  const adaptiveCoords = adaptiveTopology ? compileAdaptiveGrid([{
-                    lineIndex: li,
-                    lineText,
-                    tokens: tokens.map(t => ({
-                      token: t.token,
-                      localStart: t.localStart,
-                    })),
-                  }], adaptiveTopology, { mirrored }) : null;
 
                   return (
                     <div
                       key={li}
                       className={`truesight-line truesight-line--${lineType}${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
                     >
-                      {tokens.map(({ token, localStart, localEnd, lineIndex, wordIndex }, tokenIdx) => {
+                      {tokens.map(({ token, localStart, localEnd, lineIndex, wordIndex, x: tokenX, width: tokenWidth }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
                         const clean = isWord ? token.toUpperCase() : "";
                         const charStart = localStart;
@@ -870,9 +871,8 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           )
                           : null;
 
-                        const adaptiveCoord = adaptiveCoords?.[tokenIdx] || null;
-                        const pixelWidth = adaptiveCoord ? adaptiveCoord.pixelWidth : (adaptiveTopology ? getAdaptiveTokenWidth(token, adaptiveTopology) : null);
-                        const pixelX = adaptiveCoord ? adaptiveCoord.x : 0;
+                        const pixelX = tokenX || 0;
+                        const pixelWidth = tokenWidth || null;
 
                         const commonStyle = {
                           position: 'absolute',
@@ -882,56 +882,49 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         };
 
                         if (!isWord) {
-                          return (
-                            <span
-                              key={localStart}
-                              style={{
-                                ...commonStyle,
-                                pointerEvents: 'none',
-                              }}
-                            >
-                              {token}
-                            </span>
-                          );
+                          return <span key={localStart} style={{ ...commonStyle, pointerEvents: 'none' }}>{token}</span>;
                         }
 
-                        const isStopWord = STOP_WORDS.has(clean);
-                        const rawVowelFamily = analysis?.vowelFamily;
-                        const wordVowelFamily = analysis
-                          ? normalizeVowelFamily(rawVowelFamily)
-                          : null;
-                        
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis?.vowelFamily) : null;
                         const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
-                        
                         const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
-                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
-
-                        const decoded = bytecode && shouldColor
-                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
-                          : null;
-
-                        const color = decoded?.color || null;
+                        const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
+                        const color = decoded?.color || (wordVowelFamily ? vowelColors[wordVowelFamily] : null);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordStyle = {
                           ...commonStyle,
                           color: color || undefined,
                           ...(decoded?.style || {}),
-                          pointerEvents: 'none',
-                          ...(isLineHighlighted ? highlightStyle : {}),
+                          pointerEvents: 'auto',
+                          cursor: 'pointer',
+                          ...(isLineHighlighted ? { backgroundColor: 'rgba(101, 31, 255, 0.13)', borderRadius: '0.5rem' } : {}),
                         };
 
                         return (
                           <span
                             key={localStart}
+                            role="button"
+                            tabIndex={0}
                             className={[
                               'truesight-word',
-                              shouldColor ? 'grimoire-word' : 'grimoire-word--grey',
+                              (shouldColor || wordVowelFamily) ? 'grimoire-word' : 'grimoire-word--grey',
                               decoded?.className || '',
                               isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                             ].filter(Boolean).join(' ')}
                             style={wordStyle}
+                            onClick={() => {
+                              if (analysis) {
+                                onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
                           >
                             {token}
                           </span>
@@ -943,16 +936,13 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               </div>
             </div>
           )}
-          {/* Textarea: visible when editing, or in read-only+Truesight for overlay sync */}
           <textarea
             id="scroll-content"
             ref={textareaRef}
             className={`editor-textarea ${isTruesight ? "truesight-transparent editor-textarea--underlay" : "editor-textarea--foreground"} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""} ${isReadOnlyTruesight ? "editor-textarea--read-only-truesight" : ""}`}
             style={cursorSync?.textareaStyles}
             aria-hidden={isTruesight && !isEditable && !!onWordActivate}
-            placeholder={isEditable
-              ? "Inscribe thy verses upon this sacred parchment..."
-              : ""}
+            placeholder={isEditable ? "Inscribe thy verses upon this sacred parchment..." : ""}
             value={content}
             onChange={handleContentChange}
             onKeyDown={isEditable ? handleKeyDown : undefined}
@@ -968,75 +958,65 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             aria-label={`Scroll content: ${title || "Untitled"}`}
           />
 
-          {/* Ghost layer: pinned lines fly to top on pair select */}
           {isTruesight && ghostData && (
             <div className="truesight-ghost-layer" aria-hidden="true">
               <AnimatePresence onExitComplete={() => setGhostData(null)}>
                 {isGhostPinned && ghostData.sortedLines.map((li, i) => {
-                  const lineData = overlayLines[li];
+                  const lineData = overlayLines.find(l => l.rawLineIndex === li);
                   if (!lineData) return null;
                   const initialY = ghostData.initialYMap.get(li) ?? 0;
                   const targetY = 8 + i * (lineHeightPx + 4);
                   return (
                     <motion.div
                       key={`ghost-${li}`}
-                      className={`truesight-line truesight-line--${lineData.lineType} truesight-line--highlighted truesight-ghost-line`}
+                      className="truesight-line truesight-line--highlighted truesight-ghost-line"
                       initial={{ y: initialY, opacity: 0.6, scale: 0.98 }}
                       animate={{ y: targetY, opacity: 1, scale: 1 }}
                       exit={{ y: initialY, opacity: 0, scale: 0.98 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 140,
-                        damping: 20,
-                        mass: 0.8,
-                        restDelta: 0.001
-                      }}
-                      style={{
-                        willChange: "transform, opacity",
-                        contain: "layout paint style"
-                      }}
+                      transition={{ type: "spring", stiffness: 140, damping: 20, mass: 0.8, restDelta: 0.001 }}
+                      style={{ willChange: "transform, opacity", contain: "layout paint style" }}
                     >
-                      {lineData.tokens.map(({ token, start: charStart, lineIndex, wordIndex }) => {
+                      {lineData.tokens.map(({ token, localStart, localEnd, wordIndex }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
-                        if (!isWord) return <span key={charStart}>{token}</span>;
-
+                        if (!isWord) return <span key={localStart}>{token}</span>;
                         const clean = token.toUpperCase();
-                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+                        const charStart = localStart;
+                        const charEnd = localEnd;
+                        const identityKey = `${li}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
                         const analysis = analyzedWordsByIdentity.get(identityKey)
                           || derivedAnalyzedWordsByCharStart.get(charStart)
                           || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
-                        const rawVowelFamily = analysis?.vowelFamily;
-                        const wordVowelFamily = analysis ? normalizeVowelFamily(rawVowelFamily) : null;
-                        
-                        // Get bytecode from analysis (authoritative source from Codex)
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis?.vowelFamily) : null;
                         const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
-                        
-                        // Determine if word should be colored using bytecode-native logic
                         const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
-                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
-
-                        // Decode bytecode into CSS classes and custom properties
-                        const decoded = bytecode && shouldColor
-                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
-                          : null;
-
-                        // Color from bytecode is authoritative
-                        const color = decoded?.color || null;
-                        const isMultiSyllable = shouldColor && (decoded?.syllableDepth >= 2);
-                        const isRichMultiSyllable = shouldColor && (decoded?.syllableDepth >= 3);
+                        const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
+                        const color = decoded?.color || (wordVowelFamily ? vowelColors[wordVowelFamily] : null);
+                        const isMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 2);
+                        const isRichMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 3);
 
                         return (
                           <span
                             key={charStart}
+                            role="button"
+                            tabIndex={0}
                             className={[
                               "truesight-word",
-                              shouldColor ? "grimoire-word" : "grimoire-word--grey",
+                              (shouldColor || wordVowelFamily) ? "grimoire-word" : "grimoire-word--grey",
                               decoded?.className || "",
                               isMultiSyllable ? "word--multi-rhyme" : "",
                               isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
-                            style={{ color: color || undefined, ...(decoded?.style || {}) }}
+                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: 'auto', cursor: 'pointer' }}
+                            onClick={() => {
+                              if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
                           >
                             {token}
                           </span>
@@ -1056,7 +1036,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           <IntelliSense
             suggestions={intellisenseSuggestions}
             selectedIndex={intellisenseIndex}
-            position={intellisensePos}
+            position={{ x: 0, y: 0 }}
             onAccept={handleAcceptSuggestion}
             onHover={setIntellisenseIndex}
             ghostLine={intellisenseSuggestions[intellisenseIndex]?.ghostLine || null}

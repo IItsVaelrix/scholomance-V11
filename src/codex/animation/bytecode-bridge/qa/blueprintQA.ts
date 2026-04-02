@@ -8,8 +8,6 @@
 import {
   AnimationBlueprintV1,
   CompiledAnimationOutput,
-  SymmetrySpec,
-  EnvelopeSpec,
   TransformSpec,
 } from "../contracts/blueprint.types.ts";
 
@@ -603,8 +601,6 @@ export function assertBackendParity(
   tolerance: { timing?: number; values?: number } = {}
 ): AssertionResult {
   const timingTolerance = tolerance.timing ?? 5; // 5ms
-  const valuesTolerance = tolerance.values ?? 0.01; // 1%
-  
   const bp1 = output1.blueprint;
   const bp2 = output2.blueprint;
   

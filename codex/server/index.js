@@ -135,7 +135,7 @@ const FRONTEND_DIST_PATH = path.join(PROJECT_ROOT, 'dist');
 const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_PATH, 'index.html');
 const PUBLIC_PATH = path.join(PROJECT_ROOT, 'public');
 const TRUST_PROXY = parseTrustProxyEnv();
-const ENABLE_COLLAB_API = parseBooleanEnv('ENABLE_COLLAB_API', !IS_PRODUCTION);
+const ENABLE_COLLAB_API = !IS_PRODUCTION;
 const ENABLE_RHYME_ASTROLOGY = parseBooleanEnv('ENABLE_RHYME_ASTROLOGY', false);
 const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
     ? path.resolve(process.env.AUDIO_STORAGE_PATH) 

@@ -111,6 +111,72 @@
   box-shadow: 0 0 40px rgba(0, 255, 65, 0.1);
 }
 
+.verse-seed-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(0, 255, 65, 0.22);
+  background: linear-gradient(180deg, rgba(0, 255, 65, 0.08), rgba(0, 0, 0, 0.5));
+}
+
+.pixelbrain-verse-input {
+  width: 100%;
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid rgba(0, 255, 65, 0.28);
+  background: rgba(0, 0, 0, 0.88);
+  color: var(--color-matrix-green);
+  padding: 10px;
+  font-size: 20px;
+  line-height: 1.4;
+}
+
+.pixelbrain-verse-input::placeholder {
+  color: rgba(0, 255, 65, 0.4);
+}
+
+.pixelbrain-verse-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pixelbrain-verse-btn {
+  width: 100%;
+}
+
+.pixelbrain-verse-status {
+  min-height: 2.8em;
+  line-height: 1.2;
+  color: rgba(0, 255, 65, 0.84);
+}
+
+.pixelbrain-pls-shell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pixelbrain-pls-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgba(0, 255, 65, 0.28);
+  background: rgba(0, 0, 0, 0.76);
+  color: var(--color-matrix-green);
+  font-family: var(--font-matrix-header);
+  font-size: 13px;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.pixelbrain-pls-chip:hover {
+  background: rgba(0, 255, 65, 0.14);
+}
+
 .transmute-ignite-btn {
   background: var(--color-matrix-chrome-light);
   border: 2px outset #fff;

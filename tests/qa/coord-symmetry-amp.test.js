@@ -11,7 +11,6 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  runCoordSymmetryAmp,
   verticalMirror,
   horizontalMirror,
   radialRotate,

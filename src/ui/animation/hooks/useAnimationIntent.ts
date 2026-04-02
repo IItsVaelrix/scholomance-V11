@@ -21,7 +21,6 @@ export function useAnimationIntent(
   enabled: boolean = true
 ): ResolvedMotionOutput | null {
   const [motion, setMotion] = useState<ResolvedMotionOutput | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const prefersReducedMotion = usePrefersReducedMotion();
   
   // Augment intent with accessibility constraints if not specified
@@ -65,7 +64,6 @@ export function useAnimationIntent(
     let isMounted = true;
     
     const processIntent = async () => {
-      setIsProcessing(true);
       try {
         const result = await runAnimationAmp(augmentedIntent);
         if (isMounted) {
@@ -73,10 +71,6 @@ export function useAnimationIntent(
         }
       } catch (error) {
         console.error('[useAnimationIntent] AMP Error:', error);
-      } finally {
-        if (isMounted) {
-          setIsProcessing(false);
-        }
       }
     };
 

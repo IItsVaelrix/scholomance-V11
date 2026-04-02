@@ -1,3 +1,7 @@
+/**
+ * ActivityFeed — Chronological activity timeline
+ */
+
 const ACTION_LABELS = {
     agent_registered: 'registered',
     task_created: 'created task',
@@ -11,6 +15,7 @@ const ACTION_LABELS = {
 };
 
 function formatTime(dateStr) {
+    if (!dateStr) return 'unknown';
     const date = new Date(dateStr + 'Z');
     const now = new Date();
     const diffMs = now - date;
@@ -24,20 +29,21 @@ function formatTime(dateStr) {
 }
 
 export default function ActivityFeed({ activity }) {
-    if (!activity.length) {
+    if (!activity || activity.length === 0) {
         return (
-            <div className="collab-card">
-                <h2 className="collab-card__title">Activity</h2>
-                <p className="collab-card__empty">No activity yet.</p>
-                <p className="collab-card__hint">Create a task or send an agent heartbeat to start the event stream.</p>
+            <div className="activity-empty">
+                <h3 className="activity-empty-title">No Activity Yet</h3>
+                <p className="activity-empty-text">
+                    Create a task or send an agent heartbeat to start the event stream.
+                </p>
             </div>
         );
     }
 
     return (
-        <div className="collab-card">
-            <h2 className="collab-card__title">Activity</h2>
-            <div className="activity-feed">
+        <div className="activity-view">
+            <h3 className="activity-title">Activity Feed</h3>
+            <div className="activity-timeline">
                 {activity.map(entry => (
                     <div key={entry.id} className="activity-entry">
                         <span className="activity-entry__agent">{entry.agent_id || 'system'}</span>

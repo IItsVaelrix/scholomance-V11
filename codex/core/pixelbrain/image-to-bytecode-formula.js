@@ -112,9 +112,9 @@ export function extractEdgePoints(pixelData, width, height) {
 
       // Compute gradient magnitude
       const leftIdx = (y * width + (x - 1)) * 4;
-      const rightIdx = (y * width + (x + 1)) * 4;
+      const _rightIdx = (y * width + (x + 1)) * 4;
       const topIdx = ((y - 1) * width + x) * 4;
-      const bottomIdx = ((y + 1) * width + x) * 4;
+      const _bottomIdx = ((y + 1) * width + x) * 4;
 
       const gx = Math.abs(pixelData[idx] - pixelData[leftIdx]) +
                  Math.abs(pixelData[idx + 1] - pixelData[leftIdx + 1]) +
@@ -304,7 +304,7 @@ function findCommonGaps(sortedCoords) {
 /**
  * Detect grid type (rectangular, isometric, hexagonal)
  */
-function detectGridType(points, cellSize) {
+function detectGridType(points, _cellSize) {
   // Simple heuristic: check angle distribution
   if (points.length < 3) return GRID_TYPES.RECTANGULAR;
 

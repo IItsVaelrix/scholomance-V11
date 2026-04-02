@@ -6,7 +6,7 @@
 
 // Minimal worker implementation for build compatibility
 self.onmessage = function(event) {
-  const { type, data } = event.data;
+  const { type } = event.data;
   
   switch (type) {
     case 'analyze':

@@ -14,7 +14,7 @@ export const timeCurveProcessor: MotionProcessor = {
   stage: 'timing',
   priority: 50,
   
-  supports(intent: AnimationIntent): boolean {
+  supports(_intent: AnimationIntent): boolean {
     return true; // Always apply timing
   },
   

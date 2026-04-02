@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { TextureSelector } from './TextureSelector';
 import { DuplicatePreviewGrid } from './DuplicatePreviewGrid';
@@ -8,7 +8,6 @@ export function DuplicateSection({ referenceFile, isProcessing, onProcessingChan
   const [selectedTextures, setSelectedTextures] = useState(['parchment']);
   const [selectedSchools, setSelectedSchools] = useState([]);
   const [duplicates, setDuplicates] = useState([]);
-  const [blendMode, setBlendMode] = useState('multiply');
   const [opacity, setOpacity] = useState(0.7);
 
   const toggleTexture = useCallback((id) => {
@@ -32,7 +31,7 @@ export function DuplicateSection({ referenceFile, isProcessing, onProcessingChan
       formData.append('image', referenceFile);
       formData.append('textures', JSON.stringify(selectedTextures));
       formData.append('schools', JSON.stringify(selectedSchools));
-      formData.append('blendMode', blendMode);
+      formData.append('blendMode', 'multiply');
       formData.append('opacity', opacity.toString());
       formData.append('count', '5');
 
@@ -50,7 +49,7 @@ export function DuplicateSection({ referenceFile, isProcessing, onProcessingChan
     } finally {
       onProcessingChange(false);
     }
-  }, [referenceFile, selectedTextures, selectedSchools, blendMode, opacity, onProcessingChange]);
+  }, [referenceFile, selectedTextures, selectedSchools, opacity, onProcessingChange]);
 
   const handleDownload = useCallback((dup) => {
     const link = document.createElement('a');

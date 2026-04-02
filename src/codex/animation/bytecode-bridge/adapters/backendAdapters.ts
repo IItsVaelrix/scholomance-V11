@@ -221,7 +221,7 @@ export const PhaserAdapter = {
 
       // Create tween
       if (gameObject.scene?.tweens) {
-        const tween = gameObject.scene.tweens.add(tweenConfig);
+        gameObject.scene.tweens.add(tweenConfig);
         
         return {
           success: true,
@@ -291,7 +291,7 @@ export const PixelBrainAdapter = {
     const errors: DiagnosticEntry[] = [];
     const warnings: DiagnosticEntry[] = [];
     
-    const { targetElement, payload } = options;
+    const { payload } = options;
     const pbPayload = payload as PixelBrainFormulaPayload;
 
     // PixelBrain execution would integrate with the existing PixelBrain runtime
@@ -299,7 +299,7 @@ export const PixelBrainAdapter = {
     
     try {
       // Parse and execute formula
-      const formulaResult = executePixelBrainFormula(pbPayload.formula);
+      executePixelBrainFormula(pbPayload.formula);
       
       // Apply symmetry transforms if specified
       if (pbPayload.symmetry) {
@@ -330,7 +330,7 @@ export const PixelBrainAdapter = {
     }
   },
 
-  supports(feature: string): boolean {
+  supports(_feature: string): boolean {
     return this.capabilities.supportedTransforms.includes(feature) ||
            this.capabilities.supportedEasings.includes(feature) ||
            this.capabilities.supportedEnvelopes.includes(feature);
@@ -403,7 +403,7 @@ export const BytecodeAdapter = {
     }
   },
 
-  supports(feature: string): boolean {
+  supports(_feature: string): boolean {
     return true; // Bytecode is the universal format
   },
 };

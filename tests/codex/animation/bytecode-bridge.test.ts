@@ -9,7 +9,6 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   parseBlueprintBlock,
   extractBlueprintBlocks,
-  parseBlueprintsFromDocument,
 } from "../../../src/codex/animation/bytecode-bridge/parser/blueprintParser";
 
 import {

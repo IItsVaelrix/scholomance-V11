@@ -353,7 +353,7 @@ function resolveOverlaps(coordinates, policy) {
   
   const result = [];
   
-  byPosition.forEach((coords, key) => {
+  byPosition.forEach((coords, _key) => {
     if (coords.length === 1) {
       result.push(coords[0]);
       return;

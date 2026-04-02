@@ -301,7 +301,7 @@ export const style16Bit = {
  * Scanlines, curvature, phosphor glow
  */
 export const styleCRT = Object.assign(
-  function(payload, context) {
+  function(payload, _context) {
     return {
       ...payload,
       // No coordinate changes for CRT

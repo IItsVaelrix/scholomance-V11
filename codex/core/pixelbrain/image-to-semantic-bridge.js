@@ -5,7 +5,7 @@
  * Converts visual features into parameters that Layer 1 can reason about.
  */
 
-import { clamp01, roundTo } from './shared.js';
+import { clamp01 } from './shared.js';
 
 /**
  * Convert image analysis to PixelBrain semantic parameters
@@ -15,7 +15,7 @@ import { clamp01, roundTo } from './shared.js';
 export function imageToPixelBrainParams(analysis) {
   if (!analysis) return null;
   
-  const { composition, colors, dimensions } = analysis;
+  const { composition, colors, dimensions: _dimensions } = analysis;
   
   // Map brightness to material
   const brightness = composition?.brightnessNormalized || 0.5;

@@ -43,13 +43,6 @@ export default function ListenPage() {
 
   // ── View Mode: CHAMBER (Cockpit) vs STATION (Orb Focus) ─────────────
   const [viewMode, setViewMode] = useState<'CHAMBER' | 'STATION'>('CHAMBER');
-  const [hasVisitedStation, setHasVisitedStation] = useState(false);
-
-  useEffect(() => {
-    if (viewMode === 'STATION') {
-      setHasVisitedStation(true);
-    }
-  }, [viewMode]);
 
   // Derive the station currently "Painting" the UI
   // Priority: Tuning Target > Detected School (Sonic) > Station Selection (Player)
@@ -61,28 +54,11 @@ export default function ListenPage() {
 
   // ── Animation AMP Integration — DISABLED for stability ──────────────────
 
-  const sidebarIntent = useMemo(() => ({
-    version: 'v1.0',
-    targetId: 'listen-sidebar',
-    preset: 'ritual-panel-enter',
-    trigger: 'mount' as const,
-    constraints: { reducedMotion: prefersReducedMotion }
-  }), [prefersReducedMotion]);
-
-  // const sidebarMotion = useAnimationIntent(sidebarIntent);
   const sidebarProps = {
     initial: { opacity: 0, x: 30 },
     animate: { opacity: 1, x: 0 },
     transition: { duration: 0.3 }
   };
-
-  const layerIntent = useMemo(() => ({
-    version: 'v1.0',
-    targetId: 'view-layer',
-    preset: viewMode === 'CHAMBER' ? 'console-awaken' : 'station-select',
-    trigger: 'state-change' as const,
-    constraints: { reducedMotion: prefersReducedMotion }
-  }), [viewMode, prefersReducedMotion]);
 
   // const layerMotion = useAnimationIntent(layerIntent);
   const layerProps = {

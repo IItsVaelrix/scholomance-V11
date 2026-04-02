@@ -18,7 +18,7 @@ export const reducedMotionProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 100,
   
-  supports(intent: AnimationIntent): boolean {
+  supports(_intent: AnimationIntent): boolean {
     // Always run this processor if constraints are present or if it's explicitly requested.
     // It's safer to always run it to ensure defaults are checked.
     return true; 
@@ -124,7 +124,7 @@ export const deviceProfileProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 90,
   
-  supports(intent: AnimationIntent): boolean {
+  supports(_intent: AnimationIntent): boolean {
     return intent.constraints?.deviceClass !== undefined;
   },
   
@@ -184,7 +184,7 @@ export const performanceCapProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 85,
   
-  supports(intent: AnimationIntent): boolean {
+  supports(_intent: AnimationIntent): boolean {
     return intent.constraints?.maxFps !== undefined || intent.constraints?.maxDurationMs !== undefined;
   },
   
@@ -235,7 +235,7 @@ export const boundsConstraintProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 80,
   
-  supports(intent: AnimationIntent): boolean {
+  supports(_intent: AnimationIntent): boolean {
     return true; // Always apply bounds
   },
   

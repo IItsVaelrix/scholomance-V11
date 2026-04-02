@@ -1,11 +1,7 @@
-import { useEffect, useRef, useState, useCallback, useLayoutEffect, useMemo } from "react";
+import { useEffect, useRef, useState, useCallback, useLayoutEffect } from "react";
 import { motion } from "framer-motion";
 import { useCurrentSong } from "../../hooks/useCurrentSong.jsx";
-import {
-  getBytecodeAMP,
-  AMP_CHANNELS,
-} from "../../lib/ambient/bytecodeAMP.js";
-import { decodeBytecode } from "../Read/bytecodeRenderer.js";
+import { getBytecodeAMP, AMP_CHANNELS } from "../../lib/ambient/bytecodeAMP.js";
 import "./WatchPage.css";
 
 // ─── Bytecode Video Processor ────────────────────────────────────────────────
@@ -165,8 +161,6 @@ function useBytecodeVideoProcessor(isPlaying, currentSong, videoElementRef) {
       // Generate VisualBytecode from real audio data
       const timeMs = performance.now();
       const flicker = getBytecodeAMP(timeMs, AMP_CHANNELS.FLICKER);
-      const pulse = getBytecodeAMP(timeMs, AMP_CHANNELS.PULSE);
-      const glow = getBytecodeAMP(timeMs, AMP_CHANNELS.GLOW);
 
       // Map audio features to bytecode properties
       const hue = 240 + (spectralCentroid / 5000) * 60; // Shift hue based on brightness

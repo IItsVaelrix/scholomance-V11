@@ -240,7 +240,7 @@ export class SignalChamberScene extends Phaser.Scene {
     this._drawGaugeFace(this._gauRFace, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, col);
   }
 
-  _drawGaugeFace(gfx, cx_ref, cy_ref, r_ref, col) {
+  _drawGaugeFace(gfx, cx_ref, cy_ref, r_ref, _col) {
     const ms = this._ms, cx = cx_ref * this._sx, cy = cy_ref * this._sy, r = r_ref * ms;
     gfx.fillStyle(0x080808, 1); gfx.fillCircle(cx, cy, r);
     gfx.lineStyle(2.5, 0x1c1c1c, 1); gfx.strokeCircle(cx, cy, r);
@@ -274,7 +274,7 @@ export class SignalChamberScene extends Phaser.Scene {
   }
 
   _redrawVolSlider() {
-    const sx = this._sx, sy = this._sy, ms = this._ms, cx = VOL_SLD.x * sx, cy = VOL_SLD.y * sy, w = VOL_SLD.w * sx, h = VOL_SLD.h * sy;
+    const sx = this._sx, sy = this._sy, _ms = this._ms, cx = VOL_SLD.x * sx, cy = VOL_SLD.y * sy, w = VOL_SLD.w * sx, h = VOL_SLD.h * sy;
     this._volFill.clear(); this._volFill.fillStyle(PAL.dimGold, 0.55); this._volFill.fillRoundedRect(cx - w/2, cy - h/2, w * this._vol, h, h/2);
   }
 
@@ -315,7 +315,7 @@ export class SignalChamberScene extends Phaser.Scene {
     const glow = this._orbMotion?.glow !== undefined ? this._orbMotion.glow : getBytecodeAMP(time, AMP_CHANNELS.GLOW);
     const scale = this._orbMotion?.scale !== undefined ? this._orbMotion.scale : 1.0;
     
-    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms, bpm = this._bpm;
+    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, _ms = this._ms, bpm = this._bpm;
     
     // Absolute time transition
     let ta = 1;
