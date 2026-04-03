@@ -16,8 +16,20 @@ function bootstrapEnv() {
       const trimmed = line.trim();
       if (trimmed && !trimmed.startsWith('#')) {
         const [key, ...rest] = trimmed.split('=');
-        if (key && !process.env[key.trim()]) {
-          process.env[key.trim()] = rest.join('=').trim();
+        const k = key.trim();
+        let v = rest.join('=').trim();
+
+        // Sanitize absolute paths that look like local dev paths
+        if (v.includes('/home/deck/Downloads/scholomance-V11')) {
+          v = v.replace('/home/deck/Downloads/scholomance-V11', '/app');
+          // If it's a known database path, use /var/data if available
+          if (v.endsWith('.sqlite')) {
+            v = v.replace('/app', '/var/data');
+          }
+        }
+
+        if (k && !process.env[k]) {
+          process.env[k] = v;
         }
       }
     });
@@ -48,28 +60,36 @@ async function sync() {
     .filter(line => line.trim() && !line.startsWith('#'))
     .map(line => {
       const [key, ...rest] = line.split('=');
-      return { key: key.trim(), value: rest.join('=').trim() };
+      const k = key.trim();
+      let v = rest.join('=').trim();
+
+      // Sanitize absolute paths for Render parity
+      if (v.includes('/home/deck/Downloads/scholomance-V11')) {
+        v = v.replace('/home/deck/Downloads/scholomance-V11', '/app');
+        if (v.endsWith('.sqlite')) {
+          v = v.replace('/app', '/var/data');
+        }
+      }
+
+      return { key: k, value: v };
     });
 
   console.log(`🚀 Syncing ${envVars.length} environment variables to Render...`);
 
   try {
     const response = await fetch(`https://api.render.com/v1/services/${SERVICE_ID}/env-vars`, {
-      method: 'PUT', // PUT replaces all env vars for the service
+      method: 'PUT',
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Authorization': `Bearer ${API_KEY}`
       },
-      body: JSON.stringify(envVars.map(v => ({
-        key: v.key,
-        value: v.value
-      })))
+      body: JSON.stringify(envVars)
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`Render API error: ${JSON.stringify(errorData)}`);
+      throw new Error(`Render API responded with ${response.status}: ${JSON.stringify(errorData)}`);
     }
 
     console.log('✅ Successfully synchronized environment variables to Render.');

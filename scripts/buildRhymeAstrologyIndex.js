@@ -8,6 +8,7 @@ import {
 } from '../codex/core/rhyme-astrology/signatures.js';
 import { buildConstellationClusters } from '../codex/core/rhyme-astrology/clustering.js';
 import { scoreNodeSimilarity } from '../codex/core/rhyme-astrology/similarity.js';
+import { resolveDatabasePath } from '../codex/server/utils/pathResolution.js';
 
 const TOKEN_REGEX = /[a-z]+(?:'[a-z]+)*/g;
 
@@ -54,14 +55,6 @@ function tokenize(text) {
 
 function normalizeToken(value) {
   return String(value || '').trim().toLowerCase();
-}
-
-function resolveDbPath(envName, fallbackFile) {
-  const raw = process.env[envName];
-  if (typeof raw === 'string' && raw.trim()) {
-    return path.resolve(raw.trim());
-  }
-  return path.resolve(process.cwd(), fallbackFile);
 }
 
 function resolveOutputDir() {
@@ -940,8 +933,14 @@ function buildGutenbergEmotionPriors({
 async function main() {
   const totalStart = nowMs();
 
-  const dictPath = resolveDbPath('SCHOLOMANCE_DICT_PATH', 'scholomance_dict.sqlite');
-  const corpusPath = resolveDbPath('SCHOLOMANCE_CORPUS_PATH', 'scholomance_corpus.sqlite');
+  const dictPath = resolveDatabasePath(
+    process.env.SCHOLOMANCE_DICT_PATH,
+    'scholomance_dict.sqlite'
+  );
+  const corpusPath = resolveDatabasePath(
+    process.env.SCHOLOMANCE_CORPUS_PATH,
+    'scholomance_corpus.sqlite'
+  );
   const outputDir = resolveOutputDir();
   const targetLexiconSize = parsePositiveInteger(
     process.env.RHYME_ASTROLOGY_TARGET_LEXICON,

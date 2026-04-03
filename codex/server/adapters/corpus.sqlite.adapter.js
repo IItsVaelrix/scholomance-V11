@@ -1,21 +1,7 @@
 import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import path from 'path';
-
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-function resolveDbPath(dbPath) {
-  if (typeof dbPath !== 'string' || !dbPath.trim()) return null;
-  const resolved = path.resolve(dbPath.trim());
-  
-  // In production, if the env path is an absolute path that doesn't exist,
-  // it's likely a synced local dev path. Fallback to /var/data.
-  if (IS_PRODUCTION && path.isAbsolute(resolved) && !existsSync(resolved)) {
-    const prodPath = path.join('/var/data', path.basename(resolved));
-    if (existsSync(prodPath)) return prodPath;
-  }
-  return resolved;
-}
+import { resolveDatabasePath } from '../utils/pathResolution.js';
 
 /**
  * Adapter for the Scholomance Super Corpus SQLite database.
@@ -23,7 +9,7 @@ function resolveDbPath(dbPath) {
  */
 export function createCorpusAdapter(dbPath, options = {}) {
   const logger = options.log ?? console;
-  const resolvedPath = resolveDbPath(dbPath);
+  const resolvedPath = resolveDatabasePath(dbPath, 'scholomance_corpus.sqlite');
 
   let db = null;
   let stmts = null;
@@ -114,11 +100,12 @@ export function createCorpusAdapter(dbPath, options = {}) {
   };
 }
 
-function createEmptyAdapter() {
+function createEmptyAdapter(resolvedPath, logger) {
+  const logWait = () => logger.warn?.(`[CorpusAdapter] Corpus DB not ready at ${resolvedPath}. Corpus routes will return empty results.`);
   return {
-    searchSentences: () => [],
-    getSentenceContext: () => [],
+    searchSentences() { logWait(); return []; },
+    getSentenceContext() { logWait(); return []; },
     close: () => {},
-    __unsafe: { connected: false, dbPath: null }
+    __unsafe: { connected: false, dbPath: resolvedPath }
   };
 }

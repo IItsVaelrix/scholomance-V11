@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import path from 'path';
+import { resolveDatabasePath } from '../utils/pathResolution.js';
 
 const DEFAULT_LOOKUP_LIMIT = 5;
 const DEFAULT_SEARCH_LIMIT = 20;
@@ -82,53 +83,30 @@ function sanitizeFtsQuery(raw) {
   return normalized;
 }
 
-function createEmptyAdapter() {
+function createEmptyAdapter(resolvedPath, logger) {
   const emptyRhyme = Object.freeze({ family: null, words: [] });
+  const logWait = () => logger.warn?.(`[LexiconAdapter] Dictionary DB not ready at ${resolvedPath}. Lexicon routes will return empty results.`);
+  
   return {
-    lookupWord() {
-      return [];
-    },
-    lookupRhymes() {
-      return emptyRhyme;
-    },
-    batchLookupFamilies() {
-      return {};
-    },
-    batchValidateWords() {
-      return [];
-    },
-    searchEntries() {
-      return [];
-    },
-    suggestEntries() {
-      return [];
-    },
+    lookupWord() { logWait(); return []; },
+    lookupRhymes() { logWait(); return emptyRhyme; },
+    batchLookupFamilies() { logWait(); return {}; },
+    batchValidateWords() { logWait(); return []; },
+    searchEntries() { logWait(); return []; },
+    suggestEntries() { logWait(); return []; },
+    lookupSynonyms() { logWait(); return []; },
+    lookupAntonyms() { logWait(); return []; },
     close() {},
     __unsafe: {
       connected: false,
-      dbPath: null,
+      dbPath: resolvedPath,
     },
   };
 }
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-function resolveDbPath(dbPath) {
-  if (typeof dbPath !== 'string' || !dbPath.trim()) return null;
-  const resolved = path.resolve(dbPath.trim());
-  
-  // In production, if the env path is an absolute path that doesn't exist,
-  // it's likely a synced local dev path. Fallback to /var/data.
-  if (IS_PRODUCTION && path.isAbsolute(resolved) && !existsSync(resolved)) {
-    const prodPath = path.join('/var/data', path.basename(resolved));
-    if (existsSync(prodPath)) return prodPath;
-  }
-  return resolved;
-}
-
 export function createLexiconAdapter(dbPath, options = {}) {
   const logger = options.log ?? console;
-  const resolvedPath = resolveDbPath(dbPath);
+  const resolvedPath = resolveDatabasePath(dbPath, 'scholomance_dict.sqlite');
 
   let db = null;
   let stmts = null;
@@ -323,6 +301,23 @@ export function createLexiconAdapter(dbPath, options = {}) {
       headword: row.headword,
       pos: row.pos,
     }));
+  }
+
+  function sanitizeLemmaRows(rows, word, limit = 20) {
+    const boundedLimit = toBoundedLimit(limit, 20);
+    const target = normalizeWord(word);
+    const seen = new Set();
+    const out = [];
+    for (const row of rows) {
+      const lemma = typeof row?.lemma === 'string' ? row.lemma.trim() : '';
+      if (!lemma) continue;
+      const lower = lemma.toLowerCase();
+      if (lower === target || seen.has(lower)) continue;
+      seen.add(lower);
+      out.push(lemma);
+      if (out.length >= boundedLimit) break;
+    }
+    return out;
   }
 
   function close() {

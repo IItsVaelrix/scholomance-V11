@@ -601,12 +601,18 @@ def main() -> None:
     args = ap.parse_args()
 
     if not os.path.exists(args.cmu_path):
-        print(f"CMU dict not found at: {args.cmu_path}")
-        print("Run 'npm install' to install the cmudict package first.")
+        print(f"ERROR: CMU dict not found at: {args.cmu_path}")
+        print(f"Current working directory: {os.getcwd()}")
+        print(f"Directory contents of node_modules/cmudict/lib/cmu/:")
+        try:
+            print(os.listdir(os.path.dirname(args.cmu_path)))
+        except Exception as e:
+            print(f"  Could not list dir: {e}")
         sys.exit(1)
 
     if not os.path.exists(args.oewn_path):
-        print(f"OEWN XML not found at: {args.oewn_path}")
+        print(f"ERROR: OEWN XML not found at: {args.oewn_path}")
+        print(f"Current working directory: {os.getcwd()}")
         sys.exit(1)
 
     conn = init_db(args.db, overwrite=args.overwrite)

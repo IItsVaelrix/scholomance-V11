@@ -3,32 +3,17 @@ import { fileURLToPath } from 'node:url';
 import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 
+import { resolveDatabasePath } from '../utils/pathResolution.js';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-
-function resolveDefaultCorpusDbPath() {
-  const envPath = process.env.SCHOLOMANCE_CORPUS_PATH || process.env.CORPUS_DB_PATH;
-  if (typeof envPath === 'string' && envPath.trim()) {
-    const resolved = path.resolve(envPath.trim());
-    // In production, if the env path is an absolute path that doesn't exist, 
-    // it's likely a synced local dev path. Fallback to /var/data.
-    if (IS_PRODUCTION && path.isAbsolute(resolved) && !existsSync(resolved)) {
-      const prodPath = path.join('/var/data', path.basename(resolved));
-      if (existsSync(prodPath)) return prodPath;
-    }
-    return resolved;
-  }
-  
-  const defaultProd = path.join('/var/data', 'scholomance_corpus.sqlite');
-  if (IS_PRODUCTION && existsSync(defaultProd)) return defaultProd;
-  
-  return path.join(PROJECT_ROOT, 'scholomance_corpus.sqlite');
-}
 
 export function createCorpusService(options = {}) {
-  const targetPath = options.dbPath ? path.resolve(options.dbPath) : resolveDefaultCorpusDbPath();
+  const targetPath = resolveDatabasePath(
+    options.dbPath || process.env.SCHOLOMANCE_CORPUS_PATH || process.env.CORPUS_DB_PATH,
+    'scholomance_corpus.sqlite'
+  );
   const log = options.log || console;
   
   let db = null;

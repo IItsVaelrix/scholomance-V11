@@ -1,20 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
+import { resolveDatabasePath } from '../codex/server/utils/pathResolution.js';
 
 const DEFAULT_TARGET_LEXICON_SIZE = 50000;
 const TOKEN_REGEX = /[a-z]+(?:'[a-z]+)*/g;
 
 function tokenize(text) {
   return String(text || '').toLowerCase().match(TOKEN_REGEX) || [];
-}
-
-function resolveDbPath(envName, fallbackFile) {
-  const raw = process.env[envName];
-  if (typeof raw === 'string' && raw.trim().length > 0) {
-    return path.resolve(raw.trim());
-  }
-  return path.resolve(process.cwd(), fallbackFile);
 }
 
 function countRows(db, tableName) {
@@ -156,8 +149,14 @@ function buildPhase0Summary({
 }
 
 function main() {
-  const dictPath = resolveDbPath('SCHOLOMANCE_DICT_PATH', 'scholomance_dict.sqlite');
-  const corpusPath = resolveDbPath('SCHOLOMANCE_CORPUS_PATH', 'scholomance_corpus.sqlite');
+  const dictPath = resolveDatabasePath(
+    process.env.SCHOLOMANCE_DICT_PATH,
+    'scholomance_dict.sqlite'
+  );
+  const corpusPath = resolveDatabasePath(
+    process.env.SCHOLOMANCE_CORPUS_PATH,
+    'scholomance_corpus.sqlite'
+  );
   const targetLexiconSize = Number(process.env.RHYME_ASTROLOGY_TARGET_LEXICON || DEFAULT_TARGET_LEXICON_SIZE);
   let hasErrors = false;
 
