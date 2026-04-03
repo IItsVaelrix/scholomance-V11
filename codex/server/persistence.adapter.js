@@ -80,10 +80,8 @@ const USER_MIGRATIONS = [
     version: 5,
     name: 'add_email_verification',
     up(database) {
-      database.exec(`
-        ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0;
-        ALTER TABLE users ADD COLUMN verificationToken TEXT;
-      `);
+      addSqliteColumnIfMissing(database, 'users', 'verified', 'verified INTEGER DEFAULT 0');
+      addSqliteColumnIfMissing(database, 'users', 'verificationToken', 'verificationToken TEXT');
     },
   },
   {
@@ -149,9 +147,7 @@ const USER_MIGRATIONS = [
     version: 9,
     name: 'add_scroll_submission_timestamp',
     up(database) {
-      database.exec(`
-        ALTER TABLE scrolls ADD COLUMN submittedAt DATETIME;
-      `);
+      addSqliteColumnIfMissing(database, 'scrolls', 'submittedAt', 'submittedAt DATETIME');
     },
   },
   {
@@ -197,6 +193,26 @@ let dbState = {
   pragmas: null,
 };
 let isClosed = false;
+
+function escapeSqliteIdentifier(identifier) {
+  return String(identifier || '').replaceAll('"', '""');
+}
+
+function hasSqliteColumn(database, tableName, columnName) {
+  const safeTableName = escapeSqliteIdentifier(tableName);
+  const columns = database.prepare(`PRAGMA table_info("${safeTableName}")`).all();
+  return columns.some((column) => column.name === columnName);
+}
+
+function addSqliteColumnIfMissing(database, tableName, columnName, columnDefinition) {
+  if (hasSqliteColumn(database, tableName, columnName)) {
+    return false;
+  }
+
+  const safeTableName = escapeSqliteIdentifier(tableName);
+  database.exec(`ALTER TABLE "${safeTableName}" ADD COLUMN ${columnDefinition};`);
+  return true;
+}
 
 function parseJsonObject(value) {
   if (!value || typeof value !== 'string') return {};
