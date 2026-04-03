@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node -e \"const cmd = process.platform === 'win32' ? 'start /B npm run dev:server && vite' : 'npm run dev:server & vite'; require('child_process').execSync(cmd, { stdio: 'inherit' });\"",
     "dev:server": "node --env-file=.env codex/server/index.js",
     "dev:dict": "python scripts/serve_scholomance_dict.py --db scholomance_dict.sqlite --port 8787",
     "dev:all": "node -e \"const cmd = process.platform === 'win32' ? 'start /B npm run dev:dict && start /B npm run dev:server && vite' : 'npm run dev:dict & npm run dev:server & vite'; require('child_process').execSync(cmd, { stdio: 'inherit' });\"",
