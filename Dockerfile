@@ -14,22 +14,39 @@ RUN npm ci
 COPY . .
 
 # --- Build dictionary and corpus at image-build time ---
-# Split into separate RUN layers so we can see which step fails in logs.
-RUN curl -fL "https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz" -o /app/english-wordnet-2025.xml.gz
+# Attempts to download OEWN and build fresh DBs. If this fails (network
+# issues, GitHub rate limits), we fall back to pre-existing local DBs.
+RUN mkdir -p /app/data
 
-RUN mkdir -p /app/data \
-    && python3 scripts/build_scholomance_dict.py --db /app/data/scholomance_dict.sqlite --oewn_path /app/english-wordnet-2025.xml.gz --overwrite
+RUN ( \
+    curl -fL "https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz" -o /app/english-wordnet-2025.xml.gz \
+    && python3 scripts/build_scholomance_dict.py --db /app/data/scholomance_dict.sqlite --oewn_path /app/english-wordnet-2025.xml.gz --overwrite \
+    && python3 scripts/build_super_corpus.py --db /app/data/scholomance_corpus.sqlite --dict /app/data/scholomance_dict.sqlite --overwrite \
+    && rm -f /app/english-wordnet-2025.xml.gz \
+) || echo "Dictionary build failed — will fall back to pre-existing local DBs"
 
-RUN python3 scripts/build_super_corpus.py --db /app/data/scholomance_corpus.sqlite --dict /app/data/scholomance_dict.sqlite --overwrite
+# Fallback: if Docker build produced no DBs (curl failed, etc.), use the
+# pre-built local copies that ship with the repo.
+RUN test -s /app/data/scholomance_dict.sqlite || cp /app/scholomance_dict.sqlite /app/data/scholomance_dict.sqlite
+RUN test -s /app/data/scholomance_corpus.sqlite || cp /app/scholomance_corpus.sqlite /app/data/scholomance_corpus.sqlite
 
-RUN rm -f /app/english-wordnet-2025.xml.gz
+# Verify DBs exist
+RUN test -s /app/data/scholomance_dict.sqlite && test -s /app/data/scholomance_corpus.sqlite \
+    || (echo "ERROR: No dictionary/corpus DBs available (build failed and no fallback)." && exit 1)
 
+# --- App build ---
 RUN npm run build
 RUN npm prune --omit=dev
 
 # --- Runtime stage ---
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
+
+# curl needed by ritual-init.js if it needs to download OEWN at runtime
+RUN apt-get update && apt-get install -y \
+    curl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0

@@ -12,4 +12,5 @@ coverage
 dict_data
 *.sqlite
 nul
+!scholomance_dict.sqlite
 !scholomance_corpus.sqlite
