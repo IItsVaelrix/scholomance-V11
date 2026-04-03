@@ -120,8 +120,11 @@ async function main() {
       // 4. Rhyme Astrology artifact initialization
       if (ENABLE_RHYME_ASTROLOGY) {
         if (!RHYME_ASTROLOGY_READY()) {
-          console.log(`[RITUAL] Rhyme Astrology artifacts missing. Building into ${RHYME_ASTROLOGY_PATHS.outputDir}...`);
-          try {
+          if (!existsSync(dictPath)) {
+            console.error('[RITUAL] FATAL: Rhyme Astrology build skipped — Dictionary DB missing.');
+            console.error(`[RITUAL]   Expected: ${dictPath}`);
+            console.error('[RITUAL]   Rebuild the Docker image or seed /var/data manually.');
+          } else try {
             mkdirSync(RHYME_ASTROLOGY_PATHS.outputDir, { recursive: true });
             await runCommand(process.execPath, ['scripts/buildRhymeAstrologyIndex.js'], {
               env: {
