@@ -353,7 +353,7 @@ function resolveOverlaps(coordinates, policy) {
   
   const result = [];
   
-  byPosition.forEach((coords, key) => {
+  byPosition.forEach((coords, _key) => {
     if (coords.length === 1) {
       result.push(coords[0]);
       return;
@@ -361,24 +361,27 @@ function resolveOverlaps(coordinates, policy) {
     
     // Multiple coords at same position — apply policy
     switch (policy) {
-      case 'prefer-original':
+      case 'prefer-original': {
         const original = coords.find(c => c.symmetrySource === 'original');
         result.push(original || coords[0]);
         break;
-        
-      case 'prefer-transformed':
+      }
+
+      case 'prefer-transformed': {
         const transformed = coords.find(c => c.symmetrySource !== 'original');
         result.push(transformed || coords[0]);
         break;
-        
-      case 'max-emphasis':
-        const maxEmphasis = coords.reduce((a, b) => 
+      }
+
+      case 'max-emphasis': {
+        const maxEmphasis = coords.reduce((a, b) =>
           a.emphasis > b.emphasis ? a : b
         );
         result.push(maxEmphasis);
         break;
-        
-      case 'blend':
+      }
+
+      case 'blend': {
         // Average colors and max emphasis
         const avgColor = blendColors(coords.map(c => c.color));
         const maxEmp = Math.max(...coords.map(c => c.emphasis));
@@ -389,7 +392,8 @@ function resolveOverlaps(coordinates, policy) {
           symmetrySource: 'blended',
         });
         break;
-        
+      }
+
       default:
         result.push(coords[0]);
     }

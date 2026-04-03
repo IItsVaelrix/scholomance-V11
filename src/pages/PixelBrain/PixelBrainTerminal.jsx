@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import { FormulaLibrary } from "./FormulaLibrary";
 import { formulaToBytecode } from "../../lib/pixelbrain.adapter";

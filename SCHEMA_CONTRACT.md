@@ -3,13 +3,31 @@
 
 ## Living Document - Owned by Codex, Read by All Agents
 
-**Version: 1.18** | Last updated: 2026-03-30
+**Version: 1.20** | Last updated: 2026-04-03
 
 > Bump the version on every schema change.
 > Notify Claude for UI-consumed field changes.
 > Notify Blackbox for fixture and regression-test changes.
 
 ---
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: Collab assignment preflight contract
+- Version: 1.19 -> 1.20
+- Changed fields: added `TaskAssignmentPreflightConflict` and `TaskAssignmentPreflightResponse`; documented `GET /collab/tasks/:id/preflight`
+- Breaking: no
+- Claude impact: Collab assignment UI can rely on a real backend preflight response instead of fallback optimistic copy
+- Blackbox impact: collab route, service, and UI fixtures can assert clean assignment, ownership-override, and lock-conflict preflight states
+
+## SCHEMA CHANGE NOTICE
+
+- Schema: Global UI Stacking Tiers
+- Version: 1.18 -> 1.19
+- Changed fields: Added `Z_BASE`, `Z_ABOVE`, `Z_OVERLAY`, `Z_SYSTEM` semantic constants.
+- Breaking: Yes (Prohibits hardcoded z-indexes per Law 10)
+- Claude impact: All components using hardcoded z-indexes must migrate to these semantic tiers.
+- Blackbox impact: Visual regression tests should validate that components remain in their assigned tiers.
 
 ## SCHEMA CHANGE NOTICE
 
@@ -87,6 +105,25 @@
 - This file is the active shared contract for schemas and runtime payloads.
 - If this file conflicts with anything under `ARCHIVE REFERENCE DOCS/`, this file and `VAELRIX_LAW.md` win.
 - If a shape is missing, escalate and have Codex publish it here before it spreads across multiple files.
+
+---
+
+## Global UI Constants
+
+These constants define mandatory semantic tiers for UI rendering.
+
+```ts
+/** 
+ * MANDATORY STACKING TIERS (VAELRIX LAW 10)
+ * Hardcoded z-indexes > 1 are prohibited.
+ */
+enum StackingTier {
+  Z_BASE    = 0,    // Standard page content, static backgrounds
+  Z_ABOVE   = 10,   // Elements floating above content (tooltips, small menus)
+  Z_OVERLAY = 100,  // Full-screen overlays, modals, intrusive selection screens
+  Z_SYSTEM  = 1000  // Critical system elements (toasts, debug badges, errors)
+}
+```
 
 ---
 
@@ -904,6 +941,26 @@ interface InspectWorldEntityActionResponse {
   performedAt: string;
 }
 
+interface TaskAssignmentPreflightConflict {
+  kind: "ownership" | "lock";
+  file: string;
+  reason: string;
+  owner_role?: "ui" | "backend" | "qa" | null;
+  assigned_role?: "ui" | "backend" | "qa" | null;
+  locked_by?: string | null;
+  task_id?: string | null;
+}
+
+interface TaskAssignmentPreflightResponse {
+  valid: boolean;
+  requires_override: boolean;
+  info: string | null;
+  error: string | null;
+  warnings: string[];
+  conflicts: TaskAssignmentPreflightConflict[];
+  checked_at: string; // ISO-8601 timestamp
+}
+
 interface CombatScoreRequest {
   scrollText: string;
   weave?: string;
@@ -1240,6 +1297,22 @@ Until these are implemented in the runtime, no UI or test should assume they exi
 ## Implemented HTTP Contracts
 
 ```ts
+GET /collab/tasks/:id/preflight
+
+query params:
+  agent_id: string
+
+response body: TaskAssignmentPreflightResponse
+```
+
+Notes:
+- This is the authoritative assignment compatibility check used by the Collab task drawer before `POST /collab/tasks/:id/assign`.
+- `valid = true` means the current assignment can proceed without override.
+- `requires_override = true` means ownership boundaries are crossed but no active file lock blocks the assignment.
+- Lock conflicts are always blocking and surface in `conflicts` with `kind: "lock"`.
+- `checked_at` is an ISO-8601 timestamp describing when the control plane evaluated the task against the selected agent.
+
+```ts
 POST /api/combat/score
 
 request body: CombatScoreRequest
@@ -1392,6 +1465,8 @@ Backward compatible until: [date or "immediate breaking change"]
 | 1.16 | 2026-03-29 | Added VerseIR TrueVision travelling-wave payloads plus formalized token visual/trueVision bytecodes | no |
 | 1.17 | 2026-03-29 | Added VerseIR-native `narrativeAMP` panel-analysis payloads and documented `oracle` as a compatibility alias during migration | no |
 | 1.18 | 2026-03-30 | Added optional VerseIR amplifier `pixelBrain` payloads for the Phase 1 token-bytecode, coordinate, and palette bridge | no |
+| 1.19 | 2026-04-01 | Added semantic global UI stacking tiers and documented the Law 10 migration requirement | no |
+| 1.20 | 2026-04-03 | Added the Collab assignment preflight response shape and documented `GET /collab/tasks/:id/preflight` | no |
 
 ---
 

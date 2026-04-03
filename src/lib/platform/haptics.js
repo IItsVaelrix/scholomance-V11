@@ -19,7 +19,7 @@ export async function triggerHapticPulse({ duration = 10, intensity = 0.5 } = {}
   const durationMs = Array.isArray(duration) ? duration.reduce((a, b) => a + b, 0) : duration;
 
   // 1. Mobile / Web Standard (Vibration API) - supports patterns
-  if (IS_HANDHELD_HAPTICS_SUPPORTED) {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
     try {
       navigator.vibrate(duration);
     } catch (e) {
@@ -28,13 +28,13 @@ export async function triggerHapticPulse({ duration = 10, intensity = 0.5 } = {}
   }
 
   // 2. Handhelds / Controllers (Gamepad API) - only supports single duration
-  if (IS_GAMEPAD_HAPTICS_SUPPORTED) {
+  if (typeof navigator !== 'undefined' && 'getGamepads' in navigator) {
     try {
       const gamepads = navigator.getGamepads();
       if (!gamepads) return;
       
       for (const gp of gamepads) {
-        if (!gp) continue;
+        if (!gp || !gp.connected) continue;
 
         // Modern vibrationEffect (Chromium / Steam Deck / Handhelds)
         if (gp.vibrationEffect?.playEffect) {

@@ -50,37 +50,19 @@ const SCHOOL_COLOR_ANCHORS = Object.freeze({
 });
 
 const DEFAULT_SCHOOL_HSL = Object.freeze({ h: 174, s: 42, l: 46 });
-const MAX_CENTROID_DISTANCE = Math.sqrt(8);
-
 const THEME_SCALARS = Object.freeze({
-  dark: Object.freeze({
-    huePc1: 6,
-    huePc2: 4,
-    saturationRadius: 10,
-    saturationPc1: 2,
-    saturationPc2Dampen: 3,
-    lightnessPc1: 4,
-    lightnessPc2: 18,
-    lightnessOffset: 0,
-    minSaturation: 12,
-    maxSaturation: 86,
-    minLightness: 18,
-    maxLightness: 84,
-  }),
-  light: Object.freeze({
-    huePc1: 5,
-    huePc2: 3,
-    saturationRadius: 7,
-    saturationPc1: 1.5,
-    saturationPc2Dampen: 2.5,
-    lightnessPc1: 3.5,
-    lightnessPc2: 16,
-    lightnessOffset: -18,
-    minSaturation: 10,
-    maxSaturation: 78,
-    minLightness: 14,
-    maxLightness: 70,
-  }),
+  huePc1: 6,
+  huePc2: 4,
+  saturationRadius: 10,
+  saturationPc1: 2,
+  saturationPc2Dampen: 3,
+  lightnessPc1: 4,
+  lightnessPc2: 18,
+  lightnessOffset: 0,
+  minSaturation: 12,
+  maxSaturation: 86,
+  minLightness: 18,
+  maxLightness: 84,
 });
 
 function clamp(value, min, max) {
@@ -267,54 +249,7 @@ function resolveBaseHsl(schoolKey) {
   return DEFAULT_SCHOOL_HSL;
 }
 
-function resolveThemeConfig(theme) {
-  return THEME_SCALARS[theme === 'light' ? 'light' : 'dark'];
-}
-
-export function getVerseIrColorProjection(family) {
-  const resolvedFamily = resolveProjectionFamily(family);
-  return resolvedFamily ? (PCA_BASIS.projections[resolvedFamily] || null) : null;
-}
-
-export function buildVerseIrColorCentroid(entries = []) {
-  let totalWeight = 0;
-  let centroidPc1 = 0;
-  let centroidPc2 = 0;
-
-  (Array.isArray(entries) ? entries : []).forEach((entry) => {
-    const family = typeof entry === 'string' ? entry : entry?.family;
-    const weight = typeof entry === 'string' ? 1 : Number(entry?.weight) || 0;
-    const projection = getVerseIrColorProjection(family);
-    if (!projection || weight <= 0) return;
-    totalWeight += weight;
-    centroidPc1 += projection.pc1 * weight;
-    centroidPc2 += projection.pc2 * weight;
-  });
-
-  if (totalWeight <= 0) {
-    return null;
-  }
-
-  const pc1 = centroidPc1 / totalWeight;
-  const pc2 = centroidPc2 / totalWeight;
-
-  return Object.freeze({
-    pc1: round(pc1),
-    pc2: round(pc2),
-    radius: round(clamp(Math.hypot(pc1, pc2) / Math.sqrt(2), 0, 1)),
-    totalWeight: round(totalWeight),
-  });
-}
-
-export function scoreVerseIrColorAlignment(family, centroid) {
-  const projection = getVerseIrColorProjection(family);
-  if (!projection || !centroid) return 0;
-
-  const distance = Math.hypot(projection.pc1 - centroid.pc1, projection.pc2 - centroid.pc2);
-  return round(clamp(1 - (distance / MAX_CENTROID_DISTANCE), 0, 1));
-}
-
-export function resolveVerseIrColor(family, schoolId = null, options = {}) {
+export function resolveVerseIrColor(family, schoolId = null, _options = {}) {
   const resolvedFamily = resolveProjectionFamily(family);
   if (!resolvedFamily) {
     return Object.freeze({
@@ -331,7 +266,7 @@ export function resolveVerseIrColor(family, schoolId = null, options = {}) {
   const baseHsl = resolveBaseHsl(schoolKey);
   const anchorFamily = SCHOOL_COLOR_ANCHORS[schoolKey] || resolvedFamily;
   const anchorProjection = getVerseIrColorProjection(anchorFamily) || projection;
-  const themeConfig = resolveThemeConfig(options?.theme);
+  const themeConfig = THEME_SCALARS;
 
   const deltaPc1 = projection.pc1 - anchorProjection.pc1;
   const deltaPc2 = projection.pc2 - anchorProjection.pc2;
@@ -368,12 +303,18 @@ export function resolveVerseIrColor(family, schoolId = null, options = {}) {
   });
 }
 
-export function buildVerseIrPalette(schoolId = 'DEFAULT', theme = 'dark') {
+export function buildVerseIrPalette(schoolId = 'DEFAULT') {
   const palette = {};
   VERSE_IR_PALETTE_FAMILIES.forEach((family) => {
-    palette[family] = resolveVerseIrColor(family, schoolId, { theme }).hex;
+    palette[family] = resolveVerseIrColor(family, schoolId).hex;
   });
   return Object.freeze(palette);
+}
+
+export function getVerseIrColorProjection(family) {
+  const resolvedFamily = resolveProjectionFamily(family);
+  if (!resolvedFamily) return null;
+  return PCA_BASIS.projections[resolvedFamily] || null;
 }
 
 export const VERSE_IR_PCA_CHROMA_BASIS = PCA_BASIS;

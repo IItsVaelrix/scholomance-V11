@@ -17,7 +17,7 @@
  */
 
 import { processorBridge } from '../../../src/lib/processor-bridge.js';
-import { applySymmetryToLattice, generateSymmetryOverlay } from './symmetry-amp.js';
+import { generateSymmetryOverlay } from './symmetry-amp.js';
 
 /**
  * LATTICE CONSTANTS — Spatial bytecode registers
@@ -40,12 +40,12 @@ const LATTICE_CONSTANTS = {
  * @param {Object} imageAnalysis - Backend analysis result
  * @returns {Object} Lattice grid with symmetry applied
  */
-export function generateLatticeGrid(imageAnalysis) {
+export async function generateLatticeGrid(imageAnalysis) {
   const { pixelData, dimensions } = imageAnalysis;
   const { width: srcW, height: srcH } = dimensions;
 
   // ── STEP 1: DETECT SYMMETRY via Microprocessor ─────────────────────────────
-  const symmetryResult = processorBridge.execute('amp.symmetry', {
+  const symmetryResult = await processorBridge.execute('amp.symmetry', {
     assetId: 'upload_' + Date.now(),
     sourceType: 'image',
     pixelData,
@@ -114,7 +114,7 @@ export function generateLatticeGrid(imageAnalysis) {
 
   // ── STEP 6: APPLY COORDINATE SYMMETRY via Microprocessor ───────────────────
   if (symmetry && symmetry.significant && symmetry.type !== 'none') {
-    const coordSymmetryResult = processorBridge.execute('amp.coord-symmetry', {
+    const coordSymmetryResult = await processorBridge.execute('amp.coord-symmetry', {
       assetId: 'upload_' + Date.now(),
       coordinates: Array.from(lattice.cells.values()).map(c => ({
         x: c.col * cellSize,
@@ -145,7 +145,7 @@ export function generateLatticeGrid(imageAnalysis) {
     };
 
     // Add transformed coordinates to lattice cells
-    coordSymmetryResult.coordinates.forEach((coord, idx) => {
+    coordSymmetryResult.coordinates.forEach((coord, _idx) => {
       const col = Math.round(coord.x / cellSize);
       const row = Math.round(coord.y / cellSize);
       transformedLattice.cells.set(`${col},${row}`, {

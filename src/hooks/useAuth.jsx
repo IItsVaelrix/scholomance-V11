@@ -85,8 +85,21 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    checkMe();
-    fetchCsrfToken();
+    let mounted = true;
+    const initAuth = async () => {
+      // 1. Fetch CSRF first to ensure session is initialized on the server
+      const token = await fetchCsrfToken();
+      if (!mounted) return;
+
+      // 2. Small delay to allow cookie to be processed by browser
+      await new Promise(resolve => setTimeout(resolve, 50));
+      if (!mounted) return;
+
+      // 3. Then check if the user is authenticated
+      await checkMe({ force: true });
+    };
+    initAuth();
+    return () => { mounted = false; };
   }, [checkMe, fetchCsrfToken]);
 
   const login = async (username, password) => {
@@ -138,8 +151,7 @@ export function AuthProvider({ children }) {
       headers: { 'x-csrf-token': token },
       credentials: 'include'
     });
-    setSessionHint(false);
-    setUser(null);
+    await checkMe({ force: true });
   };
 
   return (

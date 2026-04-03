@@ -41,6 +41,12 @@
     inset 0 0 40px rgba(0, 0, 0, 0.6);
   overflow: hidden;
   transition: box-shadow 0.6s ease, background 0.6s ease;
+  
+  /* GPU Acceleration */
+  contain: layout paint style;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: box-shadow, background;
 }
 
 /* Circuit trace pattern overlay */
@@ -774,62 +780,4 @@
   }
 }
 
-/* ── Light theme overrides ──────────────────────────────────────────────── */
-[data-theme="light"] .arcane-radio {
-  background:
-    radial-gradient(ellipse 70% 50% at 50% 10%, rgba(201,162,39,0.06) 0%, transparent 60%),
-    linear-gradient(180deg, #f9f7f0 0%, #f2eede 100%);
-  border-color: rgba(139, 107, 35, 0.4);
-  box-shadow:
-    0 30px 80px rgba(100, 80, 20, 0.2),
-    0 0 40px rgba(201,162,39,0.1),
-    inset 0 1px 0 rgba(255,255,255,0.9);
-}
 
-[data-theme="light"] .arcane-radio::after {
-  background-image:
-    repeating-linear-gradient(90deg, rgba(139,107,35,0.04) 0px, transparent 1px, transparent 48px, rgba(139,107,35,0.03) 48px, transparent 49px),
-    repeating-linear-gradient(0deg, rgba(139,107,35,0.04) 0px, transparent 1px, transparent 48px, rgba(139,107,35,0.03) 48px, transparent 49px);
-}
-
-[data-theme="light"] .arcane-panel {
-  background: rgba(255,252,244,0.92);
-  border-color: rgba(139,107,35,0.2);
-  box-shadow: 0 4px 16px rgba(100,80,20,0.1), inset 0 1px 0 rgba(255,255,255,0.9);
-}
-
-[data-theme="light"] .arcane-readout {
-  background: rgba(255,252,244,0.8);
-  border-color: rgba(139,107,35,0.15);
-}
-
-[data-theme="light"] .arcane-t-btn {
-  background: radial-gradient(circle at 40% 35%, #fff8e8, #f5edd8);
-  border-color: rgba(139,107,35,0.35);
-  color: rgba(139,107,35,0.9);
-  box-shadow: 0 4px 12px rgba(100,80,20,0.15);
-}
-
-[data-theme="light"] .arcane-station-card {
-  background: rgba(255,252,244,0.85);
-  border-color: rgba(139,107,35,0.15);
-  color: rgba(30,20,5,0.7);
-}
-
-[data-theme="light"] .arcane-station-card.is-active {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--station-color) 8%, #fff8e8), #fff8e8);
-}
-
-[data-theme="light"] .arcane-lab-title {
-  color: rgba(139,107,35,0.9);
-}
-
-[data-theme="light"] .arcane-oscilloscope-canvas {
-  background: rgba(255,252,244,0.6);
-  border-color: rgba(139,107,35,0.15);
-}
-
-[data-theme="light"] .arcane-corner::before,
-[data-theme="light"] .arcane-corner::after {
-  background: rgba(139,107,35,0.55);
-}

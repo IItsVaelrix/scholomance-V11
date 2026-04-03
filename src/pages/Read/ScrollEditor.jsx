@@ -3,65 +3,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "../../hooks/useTheme.jsx";
 import { useColorCodex } from "../../hooks/useColorCodex.js";
 import IntelliSense from "../../components/IntelliSense.jsx";
+import { computeGridTopology } from "../../lib/truesight/compiler/truesightGrid";
+import { computeAdaptiveGridTopology, buildTruesightOverlayLines } from "../../lib/truesight/compiler/adaptiveWhitespaceGrid";
+import { loadCorpusFrequencies } from "../../lib/truesight/compiler/corpusWhitespaceGrid";
+import { ViewportChannel } from "../../lib/truesight/compiler/viewportBytecode";
 import Gutter from "./Gutter.jsx";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
-import { LINE_TOKEN_REGEX, WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
+import { WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { decodeBytecode } from "./bytecodeRenderer.js";
+import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
 
 const MAX_CONTENT_LENGTH = 50000;
-const CONTENT_DEBOUNCE_MS = 300;
-const MIN_EDITOR_HEIGHT = 0;
-const DEFAULT_LINE_HEIGHT = 28;
-const MARKDOWN_FORMATS = {
-  heading: { prefix: "## ", suffix: "", lineStart: true },
-  bullet: { prefix: "- ", suffix: "", lineStart: true },
-  number: { prefix: "1. ", suffix: "", lineStart: true },
-  quote: { prefix: "> ", suffix: "", lineStart: true },
-};
-
-function buildOverlayLines(content) {
-  const rawLines = String(content || "").split("\n");
-  const lines = [];
-  const allTokens = [];
-  let documentOffset = 0;
-
-  for (let lineIndex = 0; lineIndex < rawLines.length; lineIndex += 1) {
-    const lineText = rawLines[lineIndex];
-    const tokens = [];
-    let wordIndex = 0;
-
-    // Basic syntax detection
-    let lineType = "normal";
-    if (lineText.startsWith("#")) {
-      lineType = "heading";
-    } else if (lineText.startsWith("- ") || lineText.startsWith("* ")) {
-      lineType = "list-item";
-    }
-
-    for (const match of lineText.matchAll(LINE_TOKEN_REGEX)) {
-      const token = match[0];
-      const localStart = match.index ?? 0;
-      const isWord = WORD_TOKEN_REGEX.test(token);
-      const tokenData = {
-        token,
-        start: documentOffset + localStart,
-        lineIndex,
-        wordIndex: isWord ? wordIndex : null,
-      };
-      tokens.push(tokenData);
-      allTokens.push(tokenData);
-      if (isWord) {
-        wordIndex += 1;
-      }
-    }
-
-    lines.push({ lineIndex, tokens, lineType });
-    documentOffset += lineText.length + 1;
-  }
-
-  return { lines, allTokens };
-}
+const DEFAULT_LINE_HEIGHT = 24;
 
 function normalizeWordToken(token) {
   return String(token || "")
@@ -123,56 +77,6 @@ function findSyntaxTokenForCursor(syntaxLayer, lineNumber, targetWordIndex, targ
   return lineTokens[lineTokens.length - 1];
 }
 
-function resolveSyntaxContextForCursor({
-  syntaxLayer,
-  content,
-  cursorOffset,
-  prefix,
-  currentLineWords,
-}) {
-  if (!syntaxLayer || typeof syntaxLayer !== "object") return null;
-
-  const beforeCursor = String(content || "").slice(0, Math.max(0, toFiniteInt(cursorOffset, 0)));
-  const lineNumber = Math.max(0, beforeCursor.split("\n").length - 1);
-  const targetWordIndex = Math.max(0, Array.isArray(currentLineWords) ? currentLineWords.length : 0);
-  const targetCharStart = prefix ? Math.max(0, toFiniteInt(cursorOffset, 0) - prefix.length) : -1;
-
-  const syntaxToken = findSyntaxTokenForCursor(
-    syntaxLayer,
-    lineNumber,
-    targetWordIndex,
-    targetCharStart
-  );
-  if (!syntaxToken) return null;
-
-  const role = String(syntaxToken.role || "content");
-  const lineRole = String(
-    syntaxToken.lineRole || (targetWordIndex === 0 ? "line_start" : "line_mid")
-  );
-  const stressRole = String(syntaxToken.stressRole || "unknown");
-  const rhymePolicy = String(syntaxToken.rhymePolicy || (role === "function" ? "allow_weak" : "allow"));
-
-  const context = { role, lineRole, stressRole, rhymePolicy };
-  const tokenHhm = syntaxToken?.hhm && typeof syntaxToken.hhm === "object" ? syntaxToken.hhm : null;
-  const summaryHhm = syntaxLayer?.hhm && typeof syntaxLayer.hhm === "object" ? syntaxLayer.hhm : null;
-
-  if (tokenHhm || summaryHhm) {
-    context.hhm = {
-      tokenWeight: Number(tokenHhm?.tokenWeight) || 1,
-      logicOrder: Array.isArray(tokenHhm?.logicOrder)
-        ? tokenHhm.logicOrder
-        : (Array.isArray(summaryHhm?.logicOrder) ? summaryHhm.logicOrder : []),
-      stageWeights: tokenHhm?.stageWeights || summaryHhm?.stageWeights || null,
-      stageScores: tokenHhm?.stageScores || null,
-      dictionarySources: Array.isArray(summaryHhm?.dictionarySources)
-        ? summaryHhm.dictionarySources
-        : [],
-    };
-  }
-
-  return context;
-}
-
 // Common function words that don't carry meaningful phonemic weight for analysis.
 // These stay default/white in Truesight to reduce visual noise and let content words pop.
 const STOP_WORDS = new Set([
@@ -195,36 +99,202 @@ const STOP_WORDS = new Set([
   "ABOUT", "JUST", "VERY", "TOO", "ALSO",
 ]);
 
+/**
+ * Resolves a word token at the given character offset.
+ * Uses the syntaxLayer if available, otherwise falls back to regex tokenization.
+ */
+function resolveWordTokenAtOffset(cursorOffset, syntaxLayer, content) {
+  if (!syntaxLayer || typeof syntaxLayer !== "object") {
+    // Fallback: basic tokenization from content
+    const beforeCursor = String(content || "").slice(0, Math.max(0, cursorOffset));
+    const lines = beforeCursor.split("\n");
+    const lineNumber = Math.max(0, lines.length - 1);
+    const currentLineText = lines[lines.length - 1] || "";
+    const words = currentLineText.match(WORD_TOKEN_REGEX) || [];
+    const targetWordIndex = words.length;
+    
+    return {
+      lineNumber,
+      wordIndex: targetWordIndex,
+      charStart: beforeCursor.length,
+      charEnd: beforeCursor.length,
+      token: words[targetWordIndex - 1] || "",
+    };
+  }
 
-// Compute cursor pixel position in a textarea.
-// Uses canvas text measurement for accurate results with proportional fonts (Georgia serif).
-function getCursorCoordsFromTextarea(textarea) {
+  // Use syntax layer for precise token resolution
+  const beforeCursor = String(content || "").slice(0, Math.max(0, cursorOffset));
+  const linesBefore = beforeCursor.split("\n");
+  const lineNumber = Math.max(0, linesBefore.length - 1);
+  const currentLineText = linesBefore[linesBefore.length - 1] || "";
+  const words = currentLineText.match(WORD_TOKEN_REGEX) || [];
+  const targetWordIndex = words.length;
+
+  const syntaxToken = findSyntaxTokenForCursor(
+    syntaxLayer,
+    lineNumber,
+    targetWordIndex,
+    cursorOffset
+  );
+
+  if (syntaxToken) {
+    return {
+      ...syntaxToken,
+      lineNumber: toFiniteInt(syntaxToken?.lineNumber, lineNumber),
+      wordIndex: toFiniteInt(syntaxToken?.wordIndex, targetWordIndex),
+      charStart: toFiniteInt(syntaxToken?.charStart, cursorOffset),
+      charEnd: toFiniteInt(syntaxToken?.charEnd, cursorOffset),
+    };
+  }
+
+  // Fallback
+  return {
+    lineNumber,
+    wordIndex: targetWordIndex,
+    charStart: cursorOffset,
+    charEnd: cursorOffset,
+    token: "",
+  };
+}
+
+/**
+ * Builds a word activation payload from a token entry.
+ */
+function buildWordPayloadFromToken(tokenEntry) {
+  if (!tokenEntry) return null;
+
+  const rawToken = tokenEntry.token || "";
+  const normalizedWord = normalizeWordToken(rawToken);
+  const vowelFamily = tokenEntry.vowelFamily || null;
+  const school = vowelFamily ? VOWEL_FAMILY_TO_SCHOOL[normalizeVowelFamily(vowelFamily)] : null;
+
+  return {
+    word: rawToken,
+    normalizedWord,
+    charStart: toFiniteInt(tokenEntry?.charStart, -1),
+    charEnd: toFiniteInt(tokenEntry?.charEnd, -1),
+    lineNumber: toFiniteInt(tokenEntry?.lineNumber, -1),
+    wordIndex: toFiniteInt(tokenEntry?.wordIndex, -1),
+    vowelFamily,
+    school,
+    analysis: tokenEntry.analysis || null,
+    bytecode: tokenEntry.visualBytecode || tokenEntry.trueVisionBytecode || null,
+  };
+}
+
+/**
+ * Emits a word activation event via the onWordActivate callback.
+ */
+function emitWordActivation(trigger, wordPayload, anchorRect, onWordActivate) {
+  if (!onWordActivate || !wordPayload) return;
+
+  const activation = {
+    trigger,
+    ...wordPayload,
+    anchorRect,
+  };
+
+  onWordActivate(activation);
+}
+
+/**
+ * Determines if a word should be colored based on bytecode and context.
+ * Used when useColorCodex hook is not available.
+ */
+function shouldColorWordHook(charStart, normalizedWord, vowelFamily, bytecodeByCharStart, analysisMode, activeConnections) {
+  const isStopWord = STOP_WORDS.has(normalizedWord);
+  const entry = bytecodeByCharStart?.get(charStart);
+  const bytecode = entry?.bytecode;
+
+  // PixelBrain/VoidEcho modes bypass typical stop-word filters for structural analysis
+  const isAMPMode = analysisMode === "pixelbrain_transverse" || analysisMode === "void_echo";
+
+  if (!bytecode) {
+    if ((analysisMode === "vowel" || isAMPMode) && !isStopWord) {
+      return !!vowelFamily;
+    }
+    return false;
+  }
+
+  if (bytecode.effectClass === "INERT" && !isAMPMode) {
+    return false;
+  }
+
+  if (analysisMode === "vowel" || isAMPMode) {
+    return !isStopWord || isAMPMode; // AMP modes color everything
+  }
+
+  const isRhymeMode = analysisMode === "rhyme" || (analysisMode === "none" && activeConnections?.length > 0);
+
+  if (isRhymeMode) {
+    if (isStopWord) {
+      return false;
+    }
+    return bytecode.glowIntensity > 0 || bytecode.effectClass !== "INERT";
+  }
+
+  return bytecode.glowIntensity > 0 || bytecode.effectClass !== "INERT";
+}
+
+
+// Cached styles to avoid layout thrashing during animation frames
+let cachedEditorStyles = null;
+
+function getCursorCoordsFromTextarea(textarea, mirrored = false, topology = null) {
   if (!textarea) return { x: 0, y: 0 };
-  const style = window.getComputedStyle(textarea);
-  const lineHeight = parseFloat(style.lineHeight) || DEFAULT_LINE_HEIGHT;
-  const rect = textarea.getBoundingClientRect();
-  const paddingLeft = parseFloat(style.paddingLeft) || 0;
-  const paddingTop = parseFloat(style.paddingTop) || 0;
+  
+  // Use cached styles if available to avoid getComputedStyle layout thrashing
+  if (!cachedEditorStyles) {
+    const s = window.getComputedStyle(textarea);
+    cachedEditorStyles = {
+      fontSize: parseFloat(s.fontSize) || 16,
+      lineHeightStr: s.lineHeight,
+      fontWeight: s.fontWeight,
+      fontFamily: s.fontFamily,
+      paddingLeft: parseFloat(s.paddingLeft) || 0,
+      paddingTop: parseFloat(s.paddingTop) || 0,
+    };
+    
+    // Auto-clear cache after 5 seconds or on resize
+    setTimeout(() => { cachedEditorStyles = null; }, 5000);
+  }
 
+  const { fontSize, lineHeightStr, fontWeight, fontFamily, paddingLeft, paddingTop } = cachedEditorStyles;
+  let lineHeight = parseFloat(lineHeightStr);
+  
+  if (!lineHeightStr.includes('px') && lineHeight < 10) {
+    lineHeight = lineHeight * fontSize;
+  }
+  if (isNaN(lineHeight)) lineHeight = fontSize * 1.5;
+
+  const rect = textarea.getBoundingClientRect();
   const pos = textarea.selectionStart;
   const text = textarea.value.substring(0, pos);
   const lines = text.split('\n');
   const lineNum = lines.length - 1;
-  const currentLineText = lines[lines.length - 1];
+  const currentLineText = lines[lineNum];
 
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
-  ctx.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  ctx.font = `${fontWeight} ${fontSize}px ${fontFamily}`;
   const textWidth = ctx.measureText(currentLineText).width;
 
+  let x = paddingLeft + textWidth;
+
+  // Apply mirroring if enabled
+  if (mirrored && topology) {
+    // For a single point (the caret), we use the point mirror formula: x' = (totalWidth - x)
+    // We base it on the topology content width
+    x = topology.totalWidth - x;
+  }
+
   return {
-    x: rect.left + paddingLeft + textWidth,
-    y: rect.top + paddingTop + (lineNum + 1) * lineHeight - textarea.scrollTop,
+    x: rect.left + x,
+    y: rect.top + paddingTop + (lineNum * lineHeight) + (lineHeight * 0.8) - textarea.scrollTop,
   };
 }
 
 const ScrollEditor = forwardRef(function ScrollEditor({
-  documentIdentity = "new",
   initialTitle = "",
   initialContent = "",
   onSave,
@@ -233,32 +303,26 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   disabled = false,
   isTruesight = false,
   isPredictive = false,
-  predict,
-  getCompletions,
-  checkSpelling,
-  getSpellingSuggestions,
-  predictorReady = false,
   onContentChange,
-  onTitleChange,
   analyzedWords = new Map(),
   analyzedWordsByIdentity = new Map(),
   analyzedWordsByCharStart = new Map(),
   activeConnections = [],
   lineSyllableCounts = [],
-  plsPhoneticFeatures = null,
   highlightedLines = [],
   pinnedLines = null,
   syntaxLayer = null,
   analysisMode = 'none',
-  theme = 'dark',
   onWordActivate,
   onCursorChange,
   onScrollChange,
+  mirrored = false,
+  vowelColors = {},
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
+  const [contentForOverlay, setContentForOverlay] = useState(initialContent);
   const [isSaving, setIsSaving] = useState(false);
-  const [editorHeight, setEditorHeight] = useState(MIN_EDITOR_HEIGHT);
   const [scrollTop, setScrollTop] = useState(0);
   const [lineHeightPx, setLineHeightPx] = useState(DEFAULT_LINE_HEIGHT);
   const [intellisenseSuggestions, setIntellisenseSuggestions] = useState([]);
@@ -266,17 +330,209 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [ghostData, setGhostData] = useState(null);   // { sortedLines, initialYMap }
   const [isGhostPinned, setIsGhostPinned] = useState(false);
   const [intellisenseIndex, setIntellisenseIndex] = useState(0);
-  const [intellisensePos, setIntellisensePos] = useState({ x: 0, y: 0 });
-  const [cursorVersion, setCursorVersion] = useState(0);
   const textareaRef = useRef(null);
-  const truesightOverlayRef = useRef(null);
+  const wordBackgroundLayerRef = useRef(null);
   const markdownRef = useRef(null);
   const isReadOnlyTruesight = isTruesight && !isEditable;
   const isReadOnlyPlain = !isTruesight && !isEditable;
-  const documentIdentityRef = useRef(documentIdentity);
+
+  // Bytecode-driven viewport integration
+  const [viewportState, setViewportState] = useState(() => ViewportChannel.getState());
+  
+  // Subscribe to viewport bytecode channel
+  useEffect(() => {
+    const unsubscribe = ViewportChannel.bind('scroll-editor', (vp) => {
+      setViewportState(vp);
+    });
+    
+    return unsubscribe;
+  }, []);
+  
+  // Load corpus for CEAG (Corpus-Enhanced Adaptive Grid)
+  useEffect(() => {
+    loadCorpusFrequencies().then(freq => {
+      if (freq.size > 0) {
+        console.log(`[ScrollEditor] CEAG loaded ${freq.size} corpus words`);
+      }
+    });
+  }, []);
+  
+  // Bytecode-driven cursor alignment
+  // Adaptive grid topology that updates on resize/CSS variable changes
+  const wrapperRef = useRef(null);
+  const [computedTypography, setComputedTypography] = useState(null);
+  const [gridTopology, setGridTopology] = useState(null);
+  const [adaptiveTopology, setAdaptiveTopology] = useState(null);
+  
+  // Compute typography and grid topology from wrapper's computed styles
+  const updateTypography = useCallback(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    if (process.env.NODE_ENV === 'test') {
+      console.log(`[ScrollEditor] updateTypography: ${wrapper.clientWidth}x${wrapper.clientHeight}, content: ${content?.length}`);
+    }
+
+    const styles = window.getComputedStyle(wrapper);
+    const topology = computeGridTopology(wrapper);
+
+    // Collect sample tokens from content for adaptive measurement
+    const sampleTokens = content?.split(/\s+/).slice(0, 10) || [];
+    const adaptiveTopo = computeAdaptiveGridTopology(wrapper, sampleTokens);
+
+    setComputedTypography({
+      fontFamily: styles.fontFamily,
+      fontSize: styles.fontSize,
+      lineHeight: styles.lineHeight,
+      letterSpacing: styles.letterSpacing,
+      wordSpacing: styles.wordSpacing,
+      paddingTop: styles.paddingTop,
+      paddingRight: styles.paddingRight,
+      paddingBottom: styles.paddingBottom,
+      paddingLeft: styles.paddingLeft,
+      fontStyle: styles.fontStyle,
+      fontWeight: styles.fontWeight,
+    });
+
+    if (topology) {
+      setGridTopology(topology);
+    }
+
+    if (adaptiveTopo) {
+      setAdaptiveTopology(adaptiveTopo);
+      if (adaptiveTopo.baseCellHeight) {
+        setLineHeightPx(adaptiveTopo.baseCellHeight);
+      }
+    }
+  }, [content]);
+  
+  // Initial capture + adaptive updates via ResizeObserver
+  useLayoutEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    
+    // Initial computation
+    updateTypography();
+    
+    // Adaptive: watch for CSS variable changes via ResizeObserver
+    const observer = new ResizeObserver(() => {
+      updateTypography();
+    });
+    
+    observer.observe(wrapper);
+    
+    return () => {
+      observer.disconnect();
+    };
+  }, [updateTypography]);
+  
+  const cursorSync = useMemo(() => {
+    if (!computedTypography || !gridTopology) return null;
+    
+    return {
+      textareaStyles: {
+        fontFamily: computedTypography.fontFamily,
+        fontSize: computedTypography.fontSize,
+        lineHeight: computedTypography.lineHeight,
+        letterSpacing: computedTypography.letterSpacing,
+        wordSpacing: computedTypography.wordSpacing,
+        paddingTop: computedTypography.paddingTop,
+        paddingRight: computedTypography.paddingRight,
+        paddingBottom: computedTypography.paddingBottom,
+        paddingLeft: computedTypography.paddingLeft,
+        tabSize: 2,
+        MozTabSize: 2,
+        boxSizing: 'border-box',
+        WebkitTextFillColor: 'currentColor',
+        resize: 'none',
+        overflow: 'auto',
+      },
+      overlayStyles: {
+        fontFamily: computedTypography.fontFamily,
+        fontSize: computedTypography.fontSize,
+        lineHeight: computedTypography.lineHeight,
+        letterSpacing: computedTypography.letterSpacing,
+        wordSpacing: computedTypography.wordSpacing,
+        paddingTop: computedTypography.paddingTop,
+        paddingRight: computedTypography.paddingRight,
+        paddingBottom: computedTypography.paddingBottom,
+        paddingLeft: computedTypography.paddingLeft,
+        tabSize: 2,
+        MozTabSize: 2,
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+        pointerEvents: 'none',
+      },
+      gridTopology,
+    };
+  }, [computedTypography, gridTopology]);
+
+  useEffect(() => {
+    let resizeTimer;
+    const handleResize = () => { 
+      cachedEditorStyles = null;
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        updateTypography();
+      }, 100);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+    };
+  }, [updateTypography]);
+
+  const reducedMotion = usePrefersReducedMotion();
+  const { theme: activeTheme } = useTheme();
+
+  const containerWidth = useMemo(() => {
+    if (adaptiveTopology && adaptiveTopology.totalWidth > 0) {
+      return adaptiveTopology.totalWidth;
+    }
+    return 800;
+  }, [adaptiveTopology]);
+
+  const { lines: overlayLines, allTokens: allOverlayTokens } = useMemo(
+    () => adaptiveTopology ? buildTruesightOverlayLines(contentForOverlay, containerWidth, adaptiveTopology) : { lines: [], allTokens: [] },
+    [contentForOverlay, containerWidth, adaptiveTopology]
+  );
+
+  const derivedAnalyzedWordsByCharStart = useMemo(() => {
+    const map = new Map();
+    if (analyzedWordsByCharStart instanceof Map) {
+      for (const [charStart, analysis] of analyzedWordsByCharStart.entries()) {
+        map.set(Number(charStart), analysis);
+      }
+    }
+    return map;
+  }, [analyzedWordsByCharStart]);
+
+  const allowLegacyWordFallback = true;
+
+  const highlightedLinesSet = useMemo(() => {
+    const set = new Set();
+    if (Array.isArray(highlightedLines)) {
+      for (const lineIndex of highlightedLines) {
+        set.add(Number(lineIndex));
+      }
+    }
+    return set;
+  }, [highlightedLines]);
+
+  const { bytecodeByCharStart } = useColorCodex(
+    Array.from(analyzedWordsByIdentity.values()).map((analysis) => ({
+      charStart: analysis.charStart,
+      visualBytecode: analysis.visualBytecode || analysis.trueVisionBytecode,
+      vowelFamily: analysis.vowelFamily,
+    })),
+    activeConnections,
+    syntaxLayer,
+    { analysisMode }
+  );
 
   const getViewportNode = useCallback(() => {
-    if (isReadOnlyTruesight) return truesightOverlayRef.current;
+    if (isReadOnlyTruesight) return wordBackgroundLayerRef.current;
     if (isReadOnlyPlain) return markdownRef.current;
     return textareaRef.current;
   }, [isReadOnlyPlain, isReadOnlyTruesight]);
@@ -289,582 +545,37 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     setScrollTop((prev) => (Math.abs(prev - nextTop) > 1 ? nextTop : prev));
     onScrollChange?.(nextTop);
 
-    const peers = [textareaRef.current, truesightOverlayRef.current, markdownRef.current];
+    const peers = [textareaRef.current, wordBackgroundLayerRef.current, markdownRef.current];
     for (const node of peers) {
       if (!node || node === source) continue;
-
-      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) {
-        node.scrollTop = nextTop;
-      }
-
-      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) {
-        node.scrollLeft = nextLeft;
-      }
+      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) node.scrollTop = nextTop;
+      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) node.scrollLeft = nextLeft;
     }
   }, [onScrollChange]);
 
-  // IntelliSense: PLS-powered completions with rhyme, meter, color awareness
-  useEffect(() => {
-    if (!isPredictive || !predictorReady) {
-      setIntellisenseSuggestions(prev => prev.length === 0 ? prev : []);
-      return;
-    }
-    let cancelled = false;
-
-    const addBasicPredictions = (prefix, prevWord, seenTokens, finalResults) => {
-      const basicResults = prefix
-        ? (predict?.(prefix, prevWord, 10) || [])
-        : (predict?.(null, prevWord, 10) || []);
-
-      for (const token of basicResults) {
-        const normalizedToken = String(token || '').trim().toLowerCase();
-        if (!normalizedToken || seenTokens.has(normalizedToken)) continue;
-        seenTokens.add(normalizedToken);
-        finalResults.push({
-          token: normalizedToken,
-          type: 'prediction',
-          score: 0.45,
-          isRhyme: false,
-          badges: [],
-          ghostLine: null,
-        });
-      }
-    };
-
-    const frame = requestAnimationFrame(() => {
-      const textarea = textareaRef.current;
-      if (!textarea || cancelled) return;
-
-      void (async () => {
-        const pos = textarea.selectionStart;
-        const textBefore = content.substring(0, pos);
-        const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
-        const isAfterSpace = pos > 0 && content.charAt(pos - 1) === ' ';
-
-        let prefix = '';
-        let prevWord = null;
-
-        if (lastWordMatch && lastWordMatch[1].length >= 1) {
-          prefix = lastWordMatch[1];
-          const beforePrefix = textBefore.slice(0, textBefore.length - prefix.length);
-          const wordsBeforePrefix = beforePrefix.match(/[a-zA-Z']+/g);
-          if (wordsBeforePrefix?.length > 0) {
-            prevWord = wordsBeforePrefix[wordsBeforePrefix.length - 1];
-          }
-        } else if (isAfterSpace) {
-          const words = textBefore.match(/[a-zA-Z']+/g);
-          if (words?.length > 0) prevWord = words[words.length - 1];
-        }
-
-        // If neither typing nor after space, nothing to suggest
-        if (!prefix && !prevWord) {
-          if (!cancelled) setIntellisenseSuggestions([]);
-          return;
-        }
-
-        // Build PLS context from cursor state
-        const lines = textBefore.split('\n');
-        const currentLineText = lines[lines.length - 1] || '';
-        const currentLineWords = (currentLineText.match(/[a-zA-Z']+/g) || [])
-          .map(w => w.replace(/^[^A-Za-z']+|[^A-Za-z']+$/g, ''))
-          .filter(Boolean);
-        // Remove the prefix (in-progress word) from current line words
-        if (prefix && currentLineWords.length > 0) {
-          const lastCLW = currentLineWords[currentLineWords.length - 1];
-          if (lastCLW.toLowerCase() === prefix.toLowerCase()) currentLineWords.pop();
-        }
-
-        let prevLineEndWord = null;
-        for (let i = lines.length - 2; i >= 0; i--) {
-          const lineText = lines[i].trim();
-          if (!lineText) continue;
-          const lineWords = lineText.match(/[a-zA-Z']+/g);
-          if (lineWords?.length > 0) {
-            prevLineEndWord = lineWords[lineWords.length - 1];
-            break;
-          }
-        }
-
-        // Gather prior line syllable counts for meter inference
-        const priorLineSyllableCounts = [];
-        if (lineSyllableCounts?.length > 0) {
-          const currentLineIndex = lines.length - 1;
-          for (let i = Math.max(0, currentLineIndex - 4); i < currentLineIndex; i++) {
-            if (lineSyllableCounts[i]) priorLineSyllableCounts.push(lineSyllableCounts[i]);
-          }
-        }
-
-        const plsContext = {
-          prefix,
-          prevWord,
-          prevLineEndWord,
-          currentLineWords,
-          targetSyllableCount: null,
-          priorLineSyllableCounts,
-          plsPhoneticFeatures,
-          syntaxContext: resolveSyntaxContextForCursor({
-            syntaxLayer,
-            content,
-            cursorOffset: pos,
-            prefix,
-            currentLineWords,
-          }),
-        };
-
-        // Collect results: PLS completions + spellcheck corrections
-        const finalResults = [];
-        const seenTokens = new Set();
-
-        // 1. Spelling corrections (highest priority)
-        if (prefix && checkSpelling) {
-          const isSpelledCorrectly = await checkSpelling(prefix);
-          if (cancelled) return;
-
-          if (!isSpelledCorrectly) {
-            const spellingSuggestions = await (getSpellingSuggestions?.(prefix, prevWord, 5) || []);
-            if (cancelled) return;
-
-            (Array.isArray(spellingSuggestions) ? spellingSuggestions : []).forEach((suggestion) => {
-              const normalizedSuggestion = String(suggestion || '').trim().toLowerCase();
-              if (!normalizedSuggestion || seenTokens.has(normalizedSuggestion)) return;
-              seenTokens.add(normalizedSuggestion);
-              finalResults.push({
-                token: normalizedSuggestion,
-                type: 'correction',
-                score: 1.08,
-                isRhyme: false,
-                badges: [],
-                ghostLine: null,
-              });
-            });
-          }
-        }
-
-        // 2. PLS completions (rhyme, meter, color-aware)
-        if (getCompletions) {
-          try {
-            const plsResults = await getCompletions(plsContext, { limit: 10 });
-            for (const result of (Array.isArray(plsResults) ? plsResults : [])) {
-              const normalizedToken = String(result?.token || '').trim().toLowerCase();
-              if (!normalizedToken || seenTokens.has(normalizedToken)) continue;
-              const badges = Array.isArray(result.badges) ? result.badges : [];
-              seenTokens.add(normalizedToken);
-              finalResults.push({
-                token: normalizedToken,
-                type: 'prediction',
-                score: Number(result.score) || 0,
-                isRhyme: badges.includes('RHYME'),
-                badges,
-                ghostLine: result.ghostLine,
-                scores: result.scores,
-              });
-            }
-          } catch (_error) {
-            addBasicPredictions(prefix, prevWord, seenTokens, finalResults);
-          }
-        } else {
-          // Fallback to basic predict if PLS not available
-          addBasicPredictions(prefix, prevWord, seenTokens, finalResults);
-        }
-
-        if (cancelled) return;
-        const ranked = [...finalResults].sort((a, b) => {
-          const scoreA = Number(a?.score) || 0;
-          const scoreB = Number(b?.score) || 0;
-          if (scoreB !== scoreA) return scoreB - scoreA;
-          if (a.type !== b.type) return a.type === 'correction' ? -1 : 1;
-          return String(a?.token || '').localeCompare(String(b?.token || ''));
-        });
-        const sliced = ranked.slice(0, 7);
-        setIntellisenseSuggestions(sliced);
-        setIntellisenseIndex(0);
-        if (sliced.length > 0) {
-          setIntellisensePos(getCursorCoordsFromTextarea(textarea));
-        }
-      })();
-    });
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-    };
-  }, [content, cursorVersion, isPredictive, predictorReady, predict, getCompletions, checkSpelling, getSpellingSuggestions, lineSyllableCounts, plsPhoneticFeatures, syntaxLayer]);
-
-  // Accept an IntelliSense suggestion: replace partial word and insert
-  const handleAcceptSuggestion = useCallback((token) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const pos = textarea.selectionStart;
-    const textBefore = content.substring(0, pos);
-    const textAfter = content.substring(pos);
-    const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
-
-    let newContent, newCursorPos;
-    if (lastWordMatch) {
-      const before = content.substring(0, lastWordMatch.index);
-      newContent = before + token + ' ' + textAfter;
-      newCursorPos = lastWordMatch.index + token.length + 1;
-    } else {
-      newContent = textBefore + token + ' ' + textAfter;
-      newCursorPos = pos + token.length + 1;
-    }
-
-    setContent(newContent);
-    onContentChange?.(newContent);
-    setIntellisenseSuggestions([]);
-
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    });
-  }, [content, onContentChange]);
-
-  // Buffer of extra lines rendered above/below the viewport.
-  // Kept at 20 (not 10) to absorb wrapped-line drift: logical line N sits lower
-  // than N * lineHeightPx when prior lines wrap, so a larger buffer prevents
-  // the windowed content from popping in visibly at the edges.
-  const BUFFER = 20;
-
-  const { overlayLines, allOverlayTokens } = useMemo(() => {
-    const perfStart = performance.now();
-    const result = buildOverlayLines(content);
-    const perfEnd = performance.now();
-    if (perfEnd - perfStart > 4) {
-      console.warn(`[PERF] buildOverlayLines: ${(perfEnd - perfStart).toFixed(2)}ms`);
-    }
-    return { overlayLines: result.lines, allOverlayTokens: result.allTokens };
-  }, [content]);
-
-  // Virtualization windowing
-  const _visibleRange = useMemo(() => {
-    // Always compute visible range — overlay renders in both Truesight and definition-only mode
-    
-    const startIdx = Math.max(0, Math.floor(scrollTop / lineHeightPx) - BUFFER);
-    const endIdx = Math.min(
-      overlayLines.length, 
-      Math.ceil((scrollTop + editorHeight) / lineHeightPx) + BUFFER
-    );
-    
-    return { start: startIdx, end: endIdx };
-  }, [scrollTop, editorHeight, overlayLines.length, lineHeightPx]);
-
-  const { theme: effectiveTheme } = useTheme();
-  const activeTheme = theme || effectiveTheme;
-  const reducedMotion = usePrefersReducedMotion();
-
-  const allowLegacyWordFallback = useMemo(() => (
-    analyzedWordsByIdentity.size === 0 && analyzedWordsByCharStart.size === 0
-  ), [analyzedWordsByIdentity, analyzedWordsByCharStart]);
-
-  const derivedAnalyzedWordsByCharStart = useMemo(() => {
-    const derived = new Map(analyzedWordsByCharStart);
-
-    for (const { token, start, lineIndex, wordIndex } of allOverlayTokens) {
-      if (!WORD_TOKEN_REGEX.test(token) || derived.has(start)) continue;
-      const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${start}`;
-      const nw = normalizeWordToken(token);
-      const fromIdentity = analyzedWordsByIdentity.get(identityKey);
-      if (fromIdentity) {
-        derived.set(start, { ...fromIdentity, charStart: start, normalizedWord: fromIdentity.normalizedWord || nw });
-        continue;
-      }
-      if (!allowLegacyWordFallback) continue;
-      const fromWord = analyzedWords.get(nw);
-      if (fromWord) {
-        derived.set(start, { ...fromWord, charStart: start, normalizedWord: fromWord.normalizedWord || nw });
-      }
-    }
-
-    return derived;
-  }, [
-    analyzedWords,
-    analyzedWordsByCharStart,
-    analyzedWordsByIdentity,
-    allowLegacyWordFallback,
-    allOverlayTokens,
-  ]);
-
-  // Bytecode-native color logic via useColorCodex hook
-  // Consumes visualBytecode from wordAnalyses (produced by Codex VerseIR amplifier)
-  const { shouldColorWord: shouldColorWordHook } = useColorCodex(
-    Array.from(derivedAnalyzedWordsByCharStart.values()),
-    activeConnections,
-    syntaxLayer,
-    { analysisMode }
-  );
-
-  // Build color activation context from active connections.
-  // 1) Color direct connected words.
-  // Pre-compute Set for O(1) highlighted line lookups (Fix 1)
-  const highlightedLinesSet = useMemo(() => new Set(highlightedLines || []), [highlightedLines]);
-
-  const lineFocusMaskGradient = useMemo(() => {
-    if (!highlightedLinesSet.size || isTruesight) return null;
-    const sorted = [...highlightedLinesSet].sort((a, b) => a - b);
-    const stops = [];
-    let lastEnd = 0;
-    for (const li of sorted) {
-      const top = Math.max(0, li * lineHeightPx - scrollTop);
-      const bottom = top + lineHeightPx;
-      if (top > lastEnd) {
-        stops.push(`var(--editor-bg, #0d0d14) ${lastEnd}px`, `var(--editor-bg, #0d0d14) ${top}px`);
-      }
-      stops.push(`transparent ${top}px`, `transparent ${bottom}px`);
-      lastEnd = bottom;
-    }
-    stops.push(`var(--editor-bg, #0d0d14) ${lastEnd}px`, `var(--editor-bg, #0d0d14) 100%`);
-    return `linear-gradient(to bottom, ${stops.join(', ')})`;
-  }, [highlightedLinesSet, isTruesight, scrollTop, lineHeightPx]);
-
-  const buildWordPayloadFromToken = useCallback((tokenEntry) => {
-    const token = String(tokenEntry?.token || "");
-    if (!WORD_TOKEN_REGEX.test(token)) return null;
-
-    const lineIndex = Number(tokenEntry?.lineIndex);
-    const wordIndex = Number(tokenEntry?.wordIndex);
-    const charStart = Number(tokenEntry?.start);
-    if (!Number.isInteger(lineIndex) || !Number.isInteger(charStart)) {
-      return null;
-    }
-
-    const clean = token.toUpperCase();
-    const charEnd = charStart + token.length;
-    const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
-    const analysis = (
-      analyzedWordsByIdentity.get(identityKey) ||
-      derivedAnalyzedWordsByCharStart.get(charStart) ||
-      (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
-    );
-
-    return {
-      word: token,
-      normalizedWord: clean,
-      lineIndex,
-      wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
-      charStart,
-      charEnd,
-      vowelFamily: normalizeVowelFamily(analysis?.vowelFamily) || null,
-      isStopWord: STOP_WORDS.has(clean),
-    };
-  }, [
-    analyzedWords,
-    analyzedWordsByIdentity,
-    allowLegacyWordFallback,
-    derivedAnalyzedWordsByCharStart,
-  ]);
-
-  const resolveWordTokenAtOffset = useCallback((offset) => {
-    const candidateOffsets = [Number(offset), Number(offset) - 1]
-      .filter((value) => Number.isInteger(value) && value >= 0);
-
-    for (const candidateOffset of candidateOffsets) {
-      const match = allOverlayTokens.find((tokenEntry) => {
-        if (!WORD_TOKEN_REGEX.test(tokenEntry?.token || "")) return false;
-        const start = Number(tokenEntry?.start);
-        const end = start + String(tokenEntry?.token || "").length;
-        return candidateOffset >= start && candidateOffset < end;
-      });
-      if (match) return match;
-    }
-
-    return null;
-  }, [allOverlayTokens]);
-
-  const emitWordActivation = useCallback((trigger, payload, event) => {
-    if (!onWordActivate || !payload) return;
-
-    const rect = event?.currentTarget?.getBoundingClientRect?.() || event?.anchorRect || null;
-    const source = typeof event?.source === "string"
-      ? event.source
-      : (trigger === "pin" && Number(event?.detail) === 0 ? "keyboard" : "pointer");
-    onWordActivate({
-      ...payload,
-      trigger,
-      source,
-      anchorRect: rect
-        ? {
-          left: rect.left,
-          top: rect.top,
-          right: rect.right,
-          bottom: rect.bottom,
-          width: rect.width,
-          height: rect.height,
-        }
-        : null,
-      clientX: Number.isFinite(event?.clientX) ? event.clientX : null,
-      clientY: Number.isFinite(event?.clientY) ? event.clientY : null,
-    });
-  }, [onWordActivate]);
-
-  // Apply formatting to selected text
-  const applyFormat = useCallback((type) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    // Use DOM value directly to avoid race conditions with React state
-    const value = textarea.value;
-    const selected = value.substring(start, end);
-
-    const fmt = MARKDOWN_FORMATS[type];
-    if (!fmt) return;
-
-    let newContent;
-    let newCursorPos;
-
-    if (fmt.lineStart) {
-      // Line-start formats (headings, lists) — toggle: remove prefix if already present
-      const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-      if (value.slice(lineStart).startsWith(fmt.prefix)) {
-        newContent = value.slice(0, lineStart) + value.slice(lineStart + fmt.prefix.length);
-        newCursorPos = Math.max(lineStart, end - fmt.prefix.length);
-      } else {
-        newContent = value.slice(0, lineStart) + fmt.prefix + value.slice(lineStart);
-        newCursorPos = end + fmt.prefix.length;
-      }
-    } else {
-      // Wrap selection
-      newContent = value.slice(0, start) + fmt.prefix + selected + fmt.suffix + value.slice(end);
-      newCursorPos = end + fmt.prefix.length + fmt.suffix.length;
-    }
-
-    setContent(newContent);
-
-    // Restore cursor position
-    requestAnimationFrame(() => {
-      textarea.focus();
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
-    });
-  }, []);
-
-  useEffect(() => {
-    if (isEditable) return;
-    setTitle(initialTitle);
-    setContent(initialContent);
-  }, [initialTitle, initialContent, isEditable]);
-
-  useEffect(() => {
-    if (documentIdentity === documentIdentityRef.current) {
-      return;
-    }
-
-    documentIdentityRef.current = documentIdentity;
-    scrollTopRef.current = 0;
-    setScrollTop(0);
-    setTitle(initialTitle);
-    setContent(initialContent);
-    setIsSaving(false);
-    setIntellisenseSuggestions([]);
-    setIntellisenseIndex(0);
-    setGhostData(null);
-    setIsGhostPinned(false);
-
-    requestAnimationFrame(() => {
-      const viewport = getViewportNode();
-      if (!viewport) return;
-
-      viewport.scrollTop = 0;
-      viewport.scrollLeft = 0;
-      syncScrollPosition(0, 0, viewport);
-    });
-  }, [documentIdentity, getViewportNode, initialContent, initialTitle, syncScrollPosition]);
-
-  useEffect(() => {
-    const textarea = textareaRef.current;
-    if (!textarea || typeof ResizeObserver === 'undefined') return undefined;
-
-    const measureLineHeight = () => {
-      const computed = window.getComputedStyle(textarea);
-      const lh = parseFloat(computed.lineHeight);
-      if (lh && Number.isFinite(lh) && lh > 0) {
-        setLineHeightPx(lh);
-      }
-    };
-
-    measureLineHeight();
-
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setEditorHeight(entry.contentRect.height);
-      }
-      measureLineHeight();
-    });
-
-    ro.observe(textarea);
-    return () => ro.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!onContentChange) return undefined;
-    const timeoutId = window.setTimeout(() => {
-      onContentChange(content);
-    }, CONTENT_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [content, onContentChange]);
-
-  useEffect(() => {
-    onTitleChange?.(title);
-  }, [title, onTitleChange]);
-
-  useEffect(() => {
-    if (textareaRef.current && isEditable && !initialContent) {
-      textareaRef.current.focus();
-    }
-  }, [isEditable, initialContent]);
-
-  useLayoutEffect(() => {
-    const viewport = getViewportNode();
-    if (!viewport) return;
-
-    const persistedTop = Math.max(0, scrollTopRef.current);
-    if (Math.abs((viewport.scrollTop ?? 0) - persistedTop) > 1) {
-      viewport.scrollTop = persistedTop;
-    }
-
-    syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
-  }, [getViewportNode, syncScrollPosition]);
-
-  useEffect(() => {
-    const viewport = getViewportNode();
-    if (!viewport) return;
-
-    const maxScrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
-    if (viewport.scrollTop > maxScrollTop) {
-      viewport.scrollTop = maxScrollTop;
-    }
-
-    syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
-  }, [content, editorHeight, getViewportNode, syncScrollPosition]);
-
   const handleTextareaScroll = useCallback(() => {
-    if (isReadOnlyPlain || isReadOnlyTruesight) return;
+    if (isReadOnlyPlain) return;
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
-  }, [isReadOnlyPlain, isReadOnlyTruesight, syncScrollPosition]);
+  }, [isReadOnlyPlain, syncScrollPosition]);
 
   const handleOverlayScroll = useCallback(() => {
-    if (!isReadOnlyTruesight) return;
-    const overlay = truesightOverlayRef.current;
-    if (!overlay) return;
-
-    syncScrollPosition(overlay.scrollTop, overlay.scrollLeft, overlay);
-  }, [isReadOnlyTruesight, syncScrollPosition]);
+    const layer = wordBackgroundLayerRef.current;
+    if (!layer) return;
+    syncScrollPosition(layer.scrollTop, layer.scrollLeft, layer);
+  }, [syncScrollPosition]);
 
   const handleMarkdownScroll = useCallback(() => {
     if (!isReadOnlyPlain) return;
     const markdown = markdownRef.current;
     if (!markdown) return;
-
     syncScrollPosition(markdown.scrollTop, markdown.scrollLeft, markdown);
   }, [isReadOnlyPlain, syncScrollPosition]);
 
   const handleSave = useCallback(async () => {
     if (!content.trim()) return;
     setIsSaving(true);
-
     try {
       await onSave?.(title, content);
     } finally {
@@ -872,7 +583,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     }
   }, [content, title, onSave]);
 
-  // Capture ghost positions synchronously before scroll animation starts
   useLayoutEffect(() => {
     if (pinnedLines && pinnedLines.length > 0) {
       const sorted = [...pinnedLines].sort((a, b) => a - b);
@@ -890,28 +600,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const jumpToLine = useCallback((lineNum) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
-
     const lines = content.split('\n');
     let offset = 0;
     for (let i = 0; i < Math.min(lineNum - 1, lines.length); i++) {
       offset += lines[i].length + 1;
     }
-
     if (isEditable) {
       textarea.focus();
       textarea.setSelectionRange(offset, offset);
     }
-
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight);
     const viewport = getViewportNode();
     const nextTop = Math.max(0, (lineNum - 1) * lineHeight);
-
     if (viewport) {
       viewport.scrollTop = nextTop;
       syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
       return;
     }
-
     textarea.scrollTop = nextTop;
     syncScrollPosition(textarea.scrollTop, textarea.scrollLeft, textarea);
   }, [content, getViewportNode, isEditable, syncScrollPosition]);
@@ -919,7 +624,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const scrollTo = useCallback((y) => {
     const viewport = getViewportNode();
     if (!viewport) return;
-
     viewport.scrollTop = y;
     syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
   }, [getViewportNode, syncScrollPosition]);
@@ -927,6 +631,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const scrollToTopSmooth = useCallback(() => {
     const viewport = getViewportNode();
     if (!viewport) return;
+    if ('scrollBehavior' in document.documentElement.style) {
+      viewport.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     const start = viewport.scrollTop;
     if (start === 0) return;
     const duration = 320;
@@ -934,7 +642,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const step = (now) => {
       const elapsed = now - startTime;
       const t = Math.min(elapsed / duration, 1);
-      const ease = 1 - Math.pow(1 - t, 3); // cubic ease-out
+      const ease = 1 - Math.pow(1 - t, 3);
       viewport.scrollTop = start * (1 - ease);
       syncScrollPosition(viewport.scrollTop, viewport.scrollLeft, viewport);
       if (t < 1) requestAnimationFrame(step);
@@ -942,24 +650,48 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     requestAnimationFrame(step);
   }, [getViewportNode, syncScrollPosition]);
 
-  // Expose editor controls to parent toolbar.
   useImperativeHandle(ref, () => ({
-    applyFormat,
     save: handleSave,
     jumpToLine,
     scrollTo,
     scrollToTopSmooth,
     replaceContent(newContent) {
       setContent(newContent);
+      setContentForOverlay(newContent);
       onContentChange?.(newContent);
     },
     get clientHeight() { return getViewportNode()?.clientHeight || 0; },
     get scrollHeight() { return getViewportNode()?.scrollHeight || 0; },
-  }), [applyFormat, getViewportNode, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
+  }), [getViewportNode, handleSave, jumpToLine, scrollTo, scrollToTopSmooth, onContentChange]);
+
+  const handleAcceptSuggestion = useCallback((token) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const pos = textarea.selectionStart;
+    const textBefore = content.substring(0, pos);
+    const textAfter = content.substring(pos);
+    const lastWordMatch = textBefore.match(/([a-zA-Z']+)$/);
+    let newContent, newCursorPos;
+    if (lastWordMatch) {
+      const before = content.substring(0, lastWordMatch.index);
+      newContent = before + token + ' ' + textAfter;
+      newCursorPos = lastWordMatch.index + token.length + 1;
+    } else {
+      newContent = textBefore + token + ' ' + textAfter;
+      newCursorPos = pos + token.length + 1;
+    }
+    setContent(newContent);
+    setContentForOverlay(newContent);
+    onContentChange?.(newContent);
+    setIntellisenseSuggestions([]);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }, [content, onContentChange]);
 
   const handleKeyDown = useCallback(
     (e) => {
-      // IntelliSense navigation
       if (intellisenseSuggestions.length > 0) {
         if (e.key === 'ArrowDown') {
           e.preventDefault();
@@ -973,7 +705,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         }
         if (e.key === 'Tab' || e.key === 'Enter') {
           e.preventDefault();
-          handleAcceptSuggestion(intellisenseSuggestions[intellisenseIndex].token);
+          handleAcceptSuggestion(intellisenseSuggestions[intellisenseIndex]?.token);
           return;
         }
         if (e.key === 'Escape') {
@@ -982,7 +714,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           return;
         }
       }
-
       if (e.key === "s" && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         handleSave();
@@ -1000,7 +731,6 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const line = lines.length;
     const col = lines[lines.length - 1].length + 1;
     onCursorChange?.({ line, col, offset: pos });
-    setCursorVersion(v => v + 1);
   }, [onCursorChange]);
 
   const handleCursorChange = useCallback((event) => {
@@ -1010,18 +740,11 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const handleTextareaClick = useCallback((event) => {
     const textarea = event.currentTarget;
     emitCursorChange(textarea);
-
-    if (!isEditable || !onWordActivate || textarea.selectionStart !== textarea.selectionEnd) {
-      return;
-    }
-
-    const tokenEntry = resolveWordTokenAtOffset(textarea.selectionStart);
+    if (!onWordActivate || textarea.selectionStart !== textarea.selectionEnd) return;
+    const tokenEntry = resolveWordTokenAtOffset(textarea.selectionStart, syntaxLayer, content);
     const wordPayload = buildWordPayloadFromToken(tokenEntry);
-    if (!wordPayload) {
-      return;
-    }
-
-    const caretCoords = getCursorCoordsFromTextarea(textarea);
+    if (!wordPayload) return;
+    const caretCoords = getCursorCoordsFromTextarea(textarea, mirrored, adaptiveTopology);
     const lineHeight = parseFloat(window.getComputedStyle(textarea).lineHeight) || DEFAULT_LINE_HEIGHT;
     emitWordActivation("pin", wordPayload, {
       anchorRect: {
@@ -1036,26 +759,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
       clientY: Number.isFinite(event.clientY) ? event.clientY : caretCoords.y,
       detail: event.detail,
       source: "pointer",
-    });
-  }, [
-    buildWordPayloadFromToken,
-    emitCursorChange,
-    emitWordActivation,
-    isEditable,
-    onWordActivate,
-    resolveWordTokenAtOffset,
-  ]);
+    }, onWordActivate);
+  }, [content, emitCursorChange, mirrored, onWordActivate, adaptiveTopology, syntaxLayer]);
 
   const handleContentChange = useCallback((event) => {
     const nextValue = event.target.value;
     if (nextValue.length > MAX_CONTENT_LENGTH) {
-      setContent(nextValue.slice(0, MAX_CONTENT_LENGTH));
+      const truncated = nextValue.slice(0, MAX_CONTENT_LENGTH);
+      setContent(truncated);
+      setContentForOverlay(truncated);
       return;
     }
     setContent(nextValue);
-    setCursorVersion(v => v + 1);
     emitCursorChange(event.target);
+    setContentForOverlay(nextValue);
   }, [emitCursorChange]);
+
+  const containerHeight = viewportState?.height || 800;
 
   return (
     <motion.div
@@ -1094,20 +814,34 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         ) : (
           <h2 className="editor-title-display">{title || "Untitled Scroll"}</h2>
         )}
+
+        {isEditable && (
+          <div className="editor-toolbar">
+            <button 
+              type="button" 
+              className="toolbar-btn toolbar-btn--bytecode" 
+              onClick={() => {
+                const bytecode = allOverlayTokens.map(t => t.token).join(' ');
+                navigator.clipboard.writeText(bytecode);
+              }} 
+              title="Copy Bytecode Stream"
+            >
+              <span className="material-symbols-outlined">data_object</span>
+              <span className="btn-label">COPY_BYTECODE</span>
+            </button>
+          </div>
+        )}
       </div>
 
       <div className={`editor-body ${!isEditable ? "read-only" : ""}`}>
         <Gutter
-          content={content}
+          overlayLines={overlayLines}
           lineCounts={lineSyllableCounts}
           scrollTop={scrollTop}
-          viewportHeight={editorHeight}
+          viewportHeight={containerHeight}
           lineHeightPx={lineHeightPx}
         />
-        <div
-          className="editor-textarea-wrapper"
-        >
-          {/* Read-only plain display — mirrors textarea white-space: pre-wrap exactly */}
+        <div ref={wrapperRef} className="editor-textarea-wrapper">
           {!isEditable && !isTruesight && (
             <div
               ref={markdownRef}
@@ -1118,22 +852,112 @@ const ScrollEditor = forwardRef(function ScrollEditor({
               {content}
             </div>
           )}
-          {lineFocusMaskGradient && (
+          {isTruesight && (
             <div
-              className="line-focus-mask"
-              style={{ background: lineFocusMaskGradient }}
+              ref={wordBackgroundLayerRef}
+              className="word-background-layer"
+              style={cursorSync?.overlayStyles}
               aria-hidden="true"
-            />
+              onScroll={handleOverlayScroll}
+            >
+              <div>
+                {overlayLines.map(({ lineIndex: li, rawLineIndex, tokens, lineType }) => {
+                  const isGroupActive = highlightedLinesSet.size > 0;
+                  const isHighlighted = highlightedLinesSet.has(rawLineIndex);
+                  const isLineDimmed = (isGroupActive && !isHighlighted) || isGhostPinned;
+
+                  return (
+                    <div
+                      key={li}
+                      className={`truesight-line truesight-line--${lineType}${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
+                    >
+                      {tokens.map(({ token, localStart, localEnd, lineIndex, wordIndex, x: tokenX, width: tokenWidth }) => {
+                        const isWord = WORD_TOKEN_REGEX.test(token);
+                        const clean = isWord ? token.toUpperCase() : "";
+                        const charStart = localStart;
+                        const charEnd = localEnd;
+                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+                        const analysis = isWord
+                          ? (
+                            analyzedWordsByIdentity.get(identityKey) ||
+                            derivedAnalyzedWordsByCharStart.get(charStart) ||
+                            (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
+                          )
+                          : null;
+
+                        const pixelX = tokenX || 0;
+                        const pixelWidth = tokenWidth || null;
+
+                        const commonStyle = {
+                          position: 'absolute',
+                          left: `${pixelX}px`,
+                          width: pixelWidth ? `${pixelWidth}px` : 'auto',
+                          whiteSpace: 'pre',
+                        };
+
+                        if (!isWord) {
+                          return <span key={localStart} style={{ ...commonStyle, pointerEvents: 'none' }}>{token}</span>;
+                        }
+
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis?.vowelFamily) : null;
+                        const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
+                        const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
+                          : false;
+                        const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
+                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
+                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
+
+                        const wordStyle = {
+                          ...commonStyle,
+                          color: color || undefined,
+                          ...(decoded?.style || {}),
+                          pointerEvents: 'auto',
+                          cursor: 'pointer',
+                          ...(isLineHighlighted ? { backgroundColor: 'rgba(101, 31, 255, 0.13)', borderRadius: '0.5rem' } : {}),
+                        };
+
+                        return (
+                          <span
+                            key={localStart}
+                            role="button"
+                            tabIndex={0}
+                            data-char-start={charStart}
+                            className={[
+                              'truesight-word',
+                              shouldColor ? 'grimoire-word' : 'grimoire-word--grey',
+                              decoded?.className || '',
+                              isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
+                            ].filter(Boolean).join(' ')}
+                            style={wordStyle}
+                            onClick={() => {
+                              if (analysis) {
+                                onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
+                          >
+                            {token}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
-          {/* Textarea: visible when editing, or in read-only+Truesight for overlay sync */}
           <textarea
             id="scroll-content"
             ref={textareaRef}
             className={`editor-textarea ${isTruesight ? "truesight-transparent editor-textarea--underlay" : "editor-textarea--foreground"} ${!isEditable && !isTruesight ? "editor-textarea--hidden" : ""} ${isReadOnlyTruesight ? "editor-textarea--read-only-truesight" : ""}`}
+            style={cursorSync?.textareaStyles}
             aria-hidden={isTruesight && !isEditable && !!onWordActivate}
-            placeholder={isEditable
-              ? "Inscribe thy verses upon this sacred parchment..."
-              : ""}
+            placeholder={isEditable ? "Inscribe thy verses upon this sacred parchment..." : ""}
             value={content}
             onChange={handleContentChange}
             onKeyDown={isEditable ? handleKeyDown : undefined}
@@ -1148,195 +972,66 @@ const ScrollEditor = forwardRef(function ScrollEditor({
             aria-required={isEditable}
             aria-label={`Scroll content: ${title || "Untitled"}`}
           />
-          <div
-              key={`overlay-${isTruesight}`}
-              ref={truesightOverlayRef}
-              className={`truesight-overlay ${isEditable ? "truesight-overlay--editing" : ""}${!isTruesight ? " truesight-overlay--definitions-only" : ""}${isReadOnlyTruesight ? " truesight-overlay--read-only" : " truesight-overlay--passive"}`}
-              aria-hidden={isEditable || !onWordActivate}
-              aria-label={isReadOnlyTruesight ? `Truesight content: ${title || "Untitled"}` : undefined}
-              onScroll={handleOverlayScroll}
-              role={isReadOnlyTruesight ? "region" : undefined}
-              tabIndex={isReadOnlyTruesight ? 0 : -1}
-            >
-              <div>
-                {overlayLines.map(({ lineIndex: li, tokens, lineType }) => {
-                  const isGroupActive = highlightedLinesSet.size > 0;
-                  const isHighlighted = highlightedLinesSet.has(li);
-                  const isLineDimmed = (isGroupActive && !isHighlighted) || isGhostPinned;
 
-                  return (
-                    <div
-                      key={li}
-                      className={`truesight-line truesight-line--${lineType}${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
-                    >
-                      {tokens.map(({ token, start, lineIndex, wordIndex }) => {
-                        const isWord = WORD_TOKEN_REGEX.test(token);
-                        const clean = isWord ? token.toUpperCase() : "";
-                        const charStart = start;
-                        const charEnd = charStart + token.length;
-                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
-                        const analysis = isWord
-                          ? (
-                            analyzedWordsByIdentity.get(identityKey) ||
-                            derivedAnalyzedWordsByCharStart.get(charStart) ||
-                            (allowLegacyWordFallback ? analyzedWords.get(clean) : null)
-                          )
-                          : null;
-
-                        if (!isWord) {
-                          return <span key={start} style={{ pointerEvents: 'none' }}>{token}</span>;
-                        }
-
-                        const isStopWord = STOP_WORDS.has(clean);
-                        const rawVowelFamily = analysis?.vowelFamily;
-                        const wordVowelFamily = analysis
-                          ? normalizeVowelFamily(rawVowelFamily)
-                          : null;
-                        
-                        // Get bytecode from analysis (authoritative source from Codex)
-                        const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
-                        
-                        // Determine if word should be colored using bytecode-native logic
-                        const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
-                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
-                          : false;
-
-                        // Decode bytecode into CSS classes and custom properties
-                        const decoded = bytecode && shouldColor
-                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
-                          : null;
-
-                        // Color from bytecode is authoritative — no legacy fallbacks
-                        const color = decoded?.color || null;
-                        const isLineHighlighted = highlightedLinesSet.has(lineIndex);
-
-                        const wordPayload = buildWordPayloadFromToken({
-                          token,
-                          start,
-                          lineIndex,
-                          wordIndex,
-                        }) || {
-                          word: token,
-                          normalizedWord: clean,
-                          lineIndex,
-                          wordIndex: Number.isInteger(wordIndex) ? wordIndex : -1,
-                          charStart,
-                          charEnd,
-                          vowelFamily: shouldColor ? (wordVowelFamily || null) : null,
-                          isStopWord,
-                        };
-
-                        const wordClassName = [
-                          'truesight-word',
-                          shouldColor ? 'grimoire-word' : 'grimoire-word--grey',
-                          decoded?.className || '',
-                          isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
-                        ].filter(Boolean).join(' ');
-
-                        if (!onWordActivate) {
-                          return (
-                            <span
-                              key={start}
-                              className={wordClassName}
-                              style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
-                              data-char-start={charStart}
-                            >
-                              {token}
-                            </span>
-                          );
-                        }
-
-                        return (
-                          <button
-                            key={start}
-                            type="button"
-                            className={`${wordClassName} grimoire-word--interactive`}
-                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: isEditable ? 'none' : 'auto' }}
-                            data-char-start={charStart}
-                            data-line-index={lineIndex}
-                            data-word-index={wordIndex}
-                            aria-label={token}
-                            onClick={(event) => emitWordActivation("pin", wordPayload, event)}
-                          >
-                            {token}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-          {/* Ghost layer: pinned lines fly to top on pair select */}
           {isTruesight && ghostData && (
             <div className="truesight-ghost-layer" aria-hidden="true">
               <AnimatePresence onExitComplete={() => setGhostData(null)}>
                 {isGhostPinned && ghostData.sortedLines.map((li, i) => {
-                  const lineData = overlayLines[li];
+                  const lineData = overlayLines.find(l => l.rawLineIndex === li);
                   if (!lineData) return null;
                   const initialY = ghostData.initialYMap.get(li) ?? 0;
                   const targetY = 8 + i * (lineHeightPx + 4);
                   return (
                     <motion.div
                       key={`ghost-${li}`}
-                      className={`truesight-line truesight-line--${lineData.lineType} truesight-line--highlighted truesight-ghost-line`}
+                      className="truesight-line truesight-line--highlighted truesight-ghost-line"
                       initial={{ y: initialY, opacity: 0.6, scale: 0.98 }}
                       animate={{ y: targetY, opacity: 1, scale: 1 }}
                       exit={{ y: initialY, opacity: 0, scale: 0.98 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 140,
-                        damping: 20,
-                        mass: 0.8,
-                        restDelta: 0.001
-                      }}
-                      style={{
-                        willChange: "transform, opacity",
-                        contain: "layout paint style"
-                      }}
+                      transition={{ type: "spring", stiffness: 140, damping: 20, mass: 0.8, restDelta: 0.001 }}
+                      style={{ willChange: "transform, opacity", contain: "layout paint style" }}
                     >
-                      {lineData.tokens.map(({ token, start: charStart, lineIndex, wordIndex }) => {
+                      {lineData.tokens.map(({ token, localStart, localEnd, wordIndex }) => {
                         const isWord = WORD_TOKEN_REGEX.test(token);
-                        if (!isWord) return <span key={charStart}>{token}</span>;
-
+                        if (!isWord) return <span key={localStart}>{token}</span>;
                         const clean = token.toUpperCase();
-                        const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
+                        const charStart = localStart;
+                        const charEnd = localEnd;
+                        const identityKey = `${li}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
                         const analysis = analyzedWordsByIdentity.get(identityKey)
                           || derivedAnalyzedWordsByCharStart.get(charStart)
                           || (allowLegacyWordFallback ? analyzedWords.get(clean) : null);
-                        const rawVowelFamily = analysis?.vowelFamily;
-                        const wordVowelFamily = analysis ? normalizeVowelFamily(rawVowelFamily) : null;
-                        
-                        // Get bytecode from analysis (authoritative source from Codex)
+                        const wordVowelFamily = analysis ? normalizeVowelFamily(analysis?.vowelFamily) : null;
                         const bytecode = analysis?.visualBytecode || analysis?.trueVisionBytecode || null;
-                        
-                        // Determine if word should be colored using bytecode-native logic
                         const shouldColor = bytecode && bytecode.effectClass !== 'INERT'
-                          ? shouldColorWordHook(charStart, clean, wordVowelFamily)
+                          ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
-
-                        // Decode bytecode into CSS classes and custom properties
-                        const decoded = bytecode && shouldColor
-                          ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme })
-                          : null;
-
-                        // Color from bytecode is authoritative
-                        const color = decoded?.color || null;
-                        const isMultiSyllable = shouldColor && (decoded?.syllableDepth >= 2);
-                        const isRichMultiSyllable = shouldColor && (decoded?.syllableDepth >= 3);
+                        const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
+                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
+                        const isMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 2);
+                        const isRichMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 3);
 
                         return (
                           <span
                             key={charStart}
+                            role="button"
+                            tabIndex={0}
                             className={[
                               "truesight-word",
-                              shouldColor ? "grimoire-word" : "grimoire-word--grey",
+                              (shouldColor || wordVowelFamily) ? "grimoire-word" : "grimoire-word--grey",
                               decoded?.className || "",
                               isMultiSyllable ? "word--multi-rhyme" : "",
                               isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
-                            style={{ color: color || undefined, ...(decoded?.style || {}) }}
+                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: 'auto', cursor: 'pointer' }}
+                            onClick={() => {
+                              if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              }
+                            }}
                           >
                             {token}
                           </span>
@@ -1356,7 +1051,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           <IntelliSense
             suggestions={intellisenseSuggestions}
             selectedIndex={intellisenseIndex}
-            position={intellisensePos}
+            position={{ x: 0, y: 0 }}
             onAccept={handleAcceptSuggestion}
             onHover={setIntellisenseIndex}
             ghostLine={intellisenseSuggestions[intellisenseIndex]?.ghostLine || null}

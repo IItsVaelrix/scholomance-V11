@@ -6,34 +6,30 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "../../hooks/useTheme.jsx";
+import { usePredictor } from "../../hooks/usePredictor.js";
+import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 
 // New components
 import { UploadSection } from "./components/UploadSection.jsx";
 import { AnalysisResults } from "./components/AnalysisResults.jsx";
-import { FormulaEditor } from "./components/FormulaEditor.jsx";
 import { StyleTransmuter } from "./components/StyleTransmuter.jsx";
 import { ParameterSliders } from "./components/ParameterSliders.jsx";
 import { ExtensionSelector } from "./components/ExtensionSelector.jsx";
-import { ExportOptions } from "./components/ExportOptions.jsx";
 import { StatusDisplay } from "./components/StatusDisplay.jsx";
+import { DuplicateSection } from "./components/DuplicateSection.jsx";
 
-// Legacy components (keep for backward compatibility)
 import PixelBrainTerminal from "./PixelBrainTerminal.jsx";
-import TemplateEditor from "./TemplateEditor.jsx";
 
 // Core logic
 import { 
   generatePixelArtFromImage, 
   evaluateFormulaWithColor, 
-  parseErrorForAI 
+  formulaToBytecode
 } from "../../lib/pixelbrain.adapter.js";
 import { processorBridge } from "../../lib/processor-bridge.js";
 import { analyzeImageClientSide } from "./utils/imageAnalysis.client.js";
 
 import "./PixelBrainPage.css";
-
-const SCHOOLS = ['SONIC', 'PSYCHIC', 'ALCHEMY', 'WILL', 'VOID'];
 
 // Map slider keys to formula keys
 const PARAM_MAP = {
@@ -52,11 +48,92 @@ const REVERSE_PARAM_MAP = Object.entries(PARAM_MAP).reduce((acc, [k, v]) => {
   return acc;
 }, {});
 
+const TOKEN_PATTERN = /[A-Za-z']+/g;
+const DEFAULT_PIXEL_CANVAS = Object.freeze({ width: 160, height: 144, gridSize: 1 });
+
+function extractLineTokens(line) {
+  return String(line || '').match(TOKEN_PATTERN) || [];
+}
+
+function buildPlsContext(text, analysis, plsPhoneticFeatures) {
+  const lines = String(text || '').split(/\r?\n/);
+  const currentLineRaw = lines.at(-1) || '';
+  const currentLineTokens = extractLineTokens(currentLineRaw);
+  const endsWithPartialToken = /[A-Za-z']$/.test(currentLineRaw);
+  const prefix = endsWithPartialToken ? (currentLineTokens.at(-1) || '') : '';
+  const completedCurrentLineWords = endsWithPartialToken
+    ? currentLineTokens.slice(0, -1)
+    : currentLineTokens;
+
+  let prevLineEndWord = null;
+  for (let index = lines.length - 2; index >= 0; index -= 1) {
+    const lineTokens = extractLineTokens(lines[index]);
+    if (lineTokens.length > 0) {
+      prevLineEndWord = lineTokens.at(-1) || null;
+      break;
+    }
+  }
+
+  const lineSyllableCounts = Array.isArray(analysis?.lineSyllableCounts)
+    ? analysis.lineSyllableCounts.map((value) => Number(value) || 0)
+    : [];
+
+  return {
+    prefix,
+    prevWord: completedCurrentLineWords.at(-1) || null,
+    prevLineEndWord,
+    currentLineWords: completedCurrentLineWords,
+    targetSyllableCount: lineSyllableCounts.at(-1) || null,
+    priorLineSyllableCounts: lineSyllableCounts.slice(0, -1),
+    plsPhoneticFeatures,
+  };
+}
+
+function spliceSuggestionIntoVerse(text, suggestion) {
+  const baseText = String(text || '');
+  const nextToken = String(suggestion || '').trim();
+  if (!nextToken) return baseText;
+
+  const partialMatch = baseText.match(/([A-Za-z']+)$/);
+  if (partialMatch) {
+    return `${baseText.slice(0, -partialMatch[1].length)}${nextToken} `;
+  }
+
+  if (!baseText) return `${nextToken} `;
+  if (/\s$/.test(baseText)) return `${baseText}${nextToken} `;
+  return `${baseText} ${nextToken} `;
+}
+
+function describeVerseAmplifier(verseAmplifier) {
+  if (!verseAmplifier || typeof verseAmplifier !== 'object') {
+    return 'PLS awaits a stable line ending.';
+  }
+
+  const dominantTier = String(verseAmplifier.dominantTier || 'DORMANT').toUpperCase();
+  const dominantArchetype = String(verseAmplifier?.dominantArchetype?.label || '').trim();
+  const trueVisionBand = String(verseAmplifier?.trueVision?.dominantBand?.label || '').trim();
+  const confidence = Math.round((Number(verseAmplifier?.trueVision?.confidence) || 0) * 100);
+
+  if (dominantArchetype) {
+    return `${dominantTier} resonance leans toward ${dominantArchetype}.${trueVisionBand ? ` TrueVision tracks ${trueVisionBand} at ${confidence}% confidence.` : ''}`;
+  }
+
+  return `${dominantTier} resonance is present.${trueVisionBand ? ` TrueVision tracks ${trueVisionBand} at ${confidence}% confidence.` : ''}`;
+}
+
 export default function PixelBrainPage() {
-  const { theme } = useTheme();
+  const { getCompletions, isReady: isPredictorReady } = usePredictor();
+  const {
+    analysis: verseAnalysis,
+    scoreData: verseScoreData,
+    rhymeAstrology,
+    analyzeDocument,
+    isAnalyzing: isVerseAnalyzing,
+    error: verseAnalysisError,
+  } = usePanelAnalysis();
   
   // State
-  const [activeSchool, setActiveSchool] = useState('VOID');
+  const [activeSchool] = useState('VOID');
   const [referenceImage, setReferenceImage] = useState(null);
   const [imageAnalysis, setImageAnalysis] = useState(null);
   const [formula, setFormula] = useState(null);
@@ -68,8 +145,16 @@ export default function PixelBrainPage() {
   const [error, setError] = useState(null);
   const [showTerminal, setShowTerminal] = useState(false);
   const [leftTab, setLeftTab] = useState('upload'); // 'upload' or 'transmute'
+  const [verseText, setVerseText] = useState('');
+  const [plsSuggestions, setPlsSuggestions] = useState([]);
+  const [pixelCanvas, setPixelCanvas] = useState(DEFAULT_PIXEL_CANVAS);
   
   const canvasRef = useRef(null);
+
+  const bridgedPlsFeatures = verseScoreData?.plsPhoneticFeatures || rhymeAstrology?.features || null;
+  const verseAmplifier = verseAnalysis?.verseIRAmplifier || null;
+  const versePixelBrainPayload = verseAmplifier?.pixelBrain || null;
+  const amplifierExplanation = describeVerseAmplifier(verseAmplifier);
 
   // Sync parameters state from formula
   useEffect(() => {
@@ -150,6 +235,7 @@ export default function PixelBrainPage() {
       } catch { /* server unavailable — client analysis is sufficient */ }
 
       setImageAnalysis(analysis);
+      setPixelCanvas(DEFAULT_PIXEL_CANVAS);
       setStatus('generating');
 
       // Step 3: Background edge trace (non-fatal — generatePixelArtFromImage
@@ -170,6 +256,7 @@ export default function PixelBrainPage() {
       setFormula(result.formula);
       setCoordinates(result.coordinates ?? []);
       setPalettes(result.palettes ?? []);
+      setPixelCanvas(DEFAULT_PIXEL_CANVAS);
       setStatus('ready');
 
     } catch (err) {
@@ -184,33 +271,10 @@ export default function PixelBrainPage() {
   const handleTransmuteResult = useCallback((result) => {
     setCoordinates(result.coordinates);
     setPalettes(result.palettes);
+    setPixelCanvas(DEFAULT_PIXEL_CANVAS);
     // Note: Transmuter returns canvas info, we could update page canvas state here
     setStatus('ready');
   }, []);
-
-  // Generate result from image
-  const regenerateFromImage = useCallback(async () => {
-    if (!imageAnalysis) return;
-    
-    try {
-      setStatus('generating');
-      
-      const result = await generatePixelArtFromImage(
-        imageAnalysis, 
-        { width: 160, height: 144, gridSize: 1 },
-        extensions.length > 0 ? extensions[0] : null
-      );
-      
-      setFormula(result.formula);
-      setCoordinates(result.coordinates);
-      setPalettes(result.palettes);
-      
-      setStatus('ready');
-    } catch (err) {
-      setError(err.message || 'Generation failed');
-      setStatus('error');
-    }
-  }, [imageAnalysis, extensions]);
 
   // Handle export
   const handleExport = useCallback(async (presetKey) => {
@@ -275,10 +339,62 @@ export default function PixelBrainPage() {
     setFormula(null);
     setCoordinates([]);
     setPalettes([]);
+    setPixelCanvas(DEFAULT_PIXEL_CANVAS);
     setParameters({});
     setStatus('idle');
     setError(null);
   }, []);
+
+  const handleApplySuggestion = useCallback((suggestion) => {
+    setVerseText((current) => spliceSuggestionIntoVerse(current, suggestion));
+  }, []);
+
+  const handleSynthesizeFromVerse = useCallback(() => {
+    if (!versePixelBrainPayload) {
+      setError(verseAnalysisError || 'VerseIR amplifier did not emit PixelBrain payload.');
+      setStatus('error');
+      return;
+    }
+
+    setReferenceImage(null);
+    setImageAnalysis(null);
+    setFormula(null);
+    setCoordinates(Array.isArray(versePixelBrainPayload.coordinates) ? versePixelBrainPayload.coordinates : []);
+    setPalettes(Array.isArray(versePixelBrainPayload.palettes) ? versePixelBrainPayload.palettes : []);
+    setPixelCanvas(versePixelBrainPayload.canvas || DEFAULT_PIXEL_CANVAS);
+    setStatus('ready');
+    setError(null);
+  }, [verseAnalysisError, versePixelBrainPayload]);
+
+  useEffect(() => {
+    analyzeDocument(verseText);
+  }, [analyzeDocument, verseText]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function loadSuggestions() {
+      if (!isPredictorReady || !verseText.trim()) {
+        if (!isCancelled) setPlsSuggestions([]);
+        return;
+      }
+
+      const completions = await getCompletions(
+        buildPlsContext(verseText, verseAnalysis, bridgedPlsFeatures),
+        { limit: 6 }
+      );
+
+      if (!isCancelled) {
+        setPlsSuggestions(Array.isArray(completions) ? completions : []);
+      }
+    }
+
+    void loadSuggestions();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [bridgedPlsFeatures, getCompletions, isPredictorReady, verseAnalysis, verseText]);
 
   // Render canvas preview — flat 2D only, no Z transforms
   useEffect(() => {
@@ -288,8 +404,8 @@ export default function PixelBrainPage() {
     const ctx = canvas.getContext('2d');
 
     // Use detected source dimensions (no arbitrary standard)
-    const srcW = imageAnalysis?.dimensions?.width || 32;
-    const srcH = imageAnalysis?.dimensions?.height || 32;
+    const srcW = imageAnalysis?.dimensions?.width || pixelCanvas?.width || 32;
+    const srcH = imageAnalysis?.dimensions?.height || pixelCanvas?.height || 32;
 
     // Calculate scale to fit canvas while preserving aspect ratio
     const scale = Math.min(canvas.width / srcW, canvas.height / srcH) * 0.85;
@@ -350,94 +466,145 @@ export default function PixelBrainPage() {
         ctx.fillRect(px, py, Math.max(1, scale), Math.max(1, scale));
       });
     }
-  }, [coordinates, imageAnalysis]);
+  }, [coordinates, imageAnalysis, pixelCanvas]);
+
+  const terminalAnalysisResult = imageAnalysis ? {
+    ...imageAnalysis,
+    coordinates,
+    palettes,
+    formula,
+    canvas: { width: 160, height: 144, gridSize: 1 },
+    referenceImage,
+  } : versePixelBrainPayload ? {
+    ...versePixelBrainPayload,
+    coordinates,
+    palettes,
+    formula,
+    canvas: pixelCanvas,
+    referenceImage: null,
+  } : null;
 
   return (
     <div className="pixelbrain-page">
-      {/* Top Bar */}
-      <header className="pixelbrain-topbar">
+      {/* Surgical Matrix Topbar */}
+      <div className="pixelbrain-topbar">
         <div className="topbar-left">
-          <h1 className="topbar-title">PixelBrain</h1>
-          <span className="topbar-subtitle">Arcane Asset Generation</span>
+          <span className="topbar-title">PIXELBRAIN // VOID_ECHO v1.1</span>
+          <span className="telemetry-text">[STATUS: {status.toUpperCase()}] [MODE: TRANSMUTATION]</span>
         </div>
-        
-        <div className="topbar-center">
-          <div className="school-selector">
-            {SCHOOLS.map(school => (
-              <button
-                key={school}
-                className={`school-btn ${activeSchool === school ? 'is-active' : ''}`}
-                onClick={() => setActiveSchool(school)}
-                data-school={school.toLowerCase()}
-              >
-                {school}
-              </button>
-            ))}
-          </div>
-        </div>
-        
         <div className="topbar-right">
+          <span className="telemetry-text">0x{Math.random().toString(16).slice(2, 10).toUpperCase()}</span>
           <button
-            className="btn btn-ghost"
+            className="telemetry-text"
+            style={{ background: 'none', border: '1px solid #444', padding: '2px 8px', marginLeft: '12px', cursor: 'pointer' }}
             onClick={() => setShowTerminal(!showTerminal)}
           >
-            {showTerminal ? 'Hide Terminal' : 'Show Terminal'}
+            {showTerminal ? 'HIDE_TERMINAL' : 'SHOW_TERMINAL'}
           </button>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="pixelbrain-main">
-        {/* Left Panel */}
+      <div className="pixelbrain-main">
+        {/* Left Sidebar: Controls */}
         <aside className="pixelbrain-panel pixelbrain-panel--left">
           <div className="panel-tabs">
             <button 
               className={`tab-btn ${leftTab === 'upload' ? 'active' : ''}`}
               onClick={() => setLeftTab('upload')}
             >
-              Analysis
+              UPLINK
             </button>
             <button 
               className={`tab-btn ${leftTab === 'transmute' ? 'active' : ''}`}
               onClick={() => setLeftTab('transmute')}
             >
-              Void Echo
+              MATRIX
+            </button>
+            <button 
+              className={`tab-btn ${leftTab === 'echo' ? 'active' : ''}`}
+              onClick={() => setLeftTab('echo')}
+            >
+              ECHO
             </button>
           </div>
 
-          {leftTab === 'upload' ? (
-            <>
-              <UploadSection
-                onImageUpload={handleImageUpload}
-                analysis={imageAnalysis}
-                onClear={handleClear}
-                uploadError={error}
+          <div className="tab-content">
+            {leftTab === 'upload' && (
+              <>
+                <div className="verse-seed-panel">
+                  <div className="section-header">
+                    <span className="telemetry-text">VERSEIR UPLINK</span>
+                  </div>
+                  <label className="section-label telemetry-text" htmlFor="pixelbrain-verse-seed">
+                    Seed verse for PLS and VerseIR amplification
+                  </label>
+                  <textarea
+                    id="pixelbrain-verse-seed"
+                    className="pixelbrain-verse-input telemetry-text"
+                    value={verseText}
+                    onChange={(event) => setVerseText(event.target.value)}
+                    placeholder="write the verse that should collapse into lattice..."
+                    aria-label="Verse seed input for PixelBrain"
+                  />
+                  <div className="pixelbrain-verse-toolbar">
+                    <button
+                      className="transmute-ignite-btn pixelbrain-verse-btn"
+                      onClick={handleSynthesizeFromVerse}
+                      disabled={!versePixelBrainPayload || isVerseAnalyzing}
+                    >
+                      {isVerseAnalyzing ? 'AMPLIFYING_VERSE...' : 'SYNTHESIZE_VERSE_LATTICE'}
+                    </button>
+                    <span className="telemetry-text pixelbrain-verse-status">
+                      {verseAnalysisError
+                        ? `VERSEIR ERROR: ${verseAnalysisError}`
+                        : amplifierExplanation}
+                    </span>
+                  </div>
+                  {plsSuggestions.length > 0 && (
+                    <div className="pixelbrain-pls-shell" aria-label="PLS suggestions">
+                      {plsSuggestions.map((candidate) => (
+                        <button
+                          key={`${candidate.token}-${candidate.score}`}
+                          className="pixelbrain-pls-chip"
+                          onClick={() => handleApplySuggestion(candidate.token)}
+                          type="button"
+                        >
+                          <span>{candidate.token}</span>
+                          <span>{Math.round((Number(candidate.score) || 0) * 100)}%</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <UploadSection
+                  onImageUpload={handleImageUpload}
+                  analysis={imageAnalysis}
+                  onClear={handleClear}
+                  uploadError={error}
+                />
+                {imageAnalysis && (
+                  <AnalysisResults analysis={imageAnalysis} />
+                )}
+              </>
+            )}
+            {leftTab === 'transmute' && (
+              <StyleTransmuter 
+                referenceFile={referenceImage?.file}
+                onTransmute={handleTransmuteResult}
+                isProcessing={status === 'analyzing'}
               />
-
-              {imageAnalysis && (
-                <AnalysisResults analysis={imageAnalysis} />
-              )}
-            </>
-          ) : (
-            <StyleTransmuter
-              referenceFile={referenceImage?.file}
-              onTransmute={handleTransmuteResult}
-              isProcessing={status === 'analyzing'}
-            />
-          )}
-
-          {/* Lattice Grid Editor — for Aseprite export */}
-          {formula && imageAnalysis && (
-            <TemplateEditor
-              initialFormula={formula}
-              initialImage={imageAnalysis}
-              onExport={handleExport}
-              onFormulaChange={setFormula}
-            />
-          )}
+            )}
+            {leftTab === 'echo' && (
+              <DuplicateSection 
+                referenceFile={referenceImage?.file}
+                isProcessing={status === 'generating'}
+                onProcessingChange={(p) => setStatus(p ? 'generating' : 'ready')}
+              />
+            )}
+          </div>
         </aside>
 
-        {/* Center Panel */}
+        {/* Center: Viewport */}
         <section className="pixelbrain-panel pixelbrain-panel--center">
           <div className="canvas-container">
             <canvas
@@ -445,19 +612,31 @@ export default function PixelBrainPage() {
               className="preview-canvas"
               width={800}
               height={600}
-              aria-label="Asset preview"
             />
           </div>
 
           <StatusDisplay
             status={status}
             error={error}
-            bytecode={error ? parseErrorForAI(error)?.bytecode : null}
           />
         </section>
 
-        {/* Right Panel */}
+        {/* Right Sidebar: Telemetry & Compiler */}
         <aside className="pixelbrain-panel pixelbrain-panel--right">
+          <div className="section-header">
+            <span className="telemetry-text">LATTICE COMPILER</span>
+          </div>
+          
+          <div className="bytecode-terminal">
+            <div className="terminal-header telemetry-text">0xF_SYNTAX_STREAM</div>
+            <textarea 
+              className="terminal-textarea telemetry-text"
+              style={{ width: '100%', height: '120px', background: '#000', border: '1px solid #333', color: '#00FF41', padding: '8px', fontSize: '12px' }}
+              value={formula ? formulaToBytecode(formula) : "AWAITING_TRANSMUTATION..."}
+              readOnly
+            />
+          </div>
+
           <ParameterSliders
             parameters={parameters}
             onChange={handleParameterChange}
@@ -469,16 +648,15 @@ export default function PixelBrainPage() {
             onChange={setExtensions}
           />
           
-          {coordinates.length > 0 && (
-            <ExportOptions
-              onExport={handleExport}
-              formula={formula}
-              coordinates={coordinates}
-              palettes={palettes}
-            />
-          )}
+          <button 
+            className="transmute-ignite-btn"
+            onClick={() => handleExport('FORMULA')}
+            disabled={!formula}
+          >
+            EXECUTE_BURN_TO_LATTICE
+          </button>
         </aside>
-      </main>
+      </div>
 
       {/* Terminal Overlay */}
       <AnimatePresence>
@@ -490,20 +668,8 @@ export default function PixelBrainPage() {
             exit={{ opacity: 0 }}
           >
             <PixelBrainTerminal
-              mode={imageAnalysis ? "result" : "input"}
-              analysisResult={imageAnalysis ? {
-                ...imageAnalysis,
-                coordinates,
-                palettes,
-                formula,
-                canvas: { width: 160, height: 144, gridSize: 1 },
-                tokenCount: coordinates.length,
-                activeTokenCount: coordinates.length,
-                paletteCount: palettes.length,
-                dominantAxis: imageAnalysis.composition?.dominantAxis,
-                dominantSymmetry: imageAnalysis.composition?.hasSymmetry ? imageAnalysis.composition.symmetryType : 'none',
-                referenceImage: { preview: imageAnalysis.preview, analysis: imageAnalysis }
-              } : null}
+              mode={terminalAnalysisResult ? "result" : "input"}
+              analysisResult={terminalAnalysisResult}
               onClose={() => setShowTerminal(false)}
             />
           </motion.div>

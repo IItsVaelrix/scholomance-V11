@@ -11,15 +11,12 @@
  * @see codex/core/pixelbrain/image-to-pixel-art.js
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import fs from 'fs';
+import { describe, it, expect } from 'vitest';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT = path.resolve(__dirname, '../../..');
-
 // Mock export presets from ExportOptions.jsx
 const EXPORT_PRESETS = {
   GODOT: {
@@ -58,7 +55,7 @@ const EXPORT_PRESETS = {
 describe('PixelBrain Aseprite Export QA', () => {
   describe('Export Preset Contract Validation', () => {
     it('should have valid preset structure', () => {
-      for (const [key, preset] of Object.entries(EXPORT_PRESETS)) {
+      for (const [_key, preset] of Object.entries(EXPORT_PRESETS)) {
         expect(preset).toHaveProperty('name');
         expect(preset).toHaveProperty('format');
         expect(preset).toHaveProperty('scale');

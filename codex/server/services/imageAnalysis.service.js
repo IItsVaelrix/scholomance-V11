@@ -130,7 +130,7 @@ function analyzeComposition(pixelData, width, height) {
     if (grayscale[i] > maxBrightness) maxBrightness = grayscale[i];
   }
   const contrast = maxBrightness - minBrightness;
-  const brightnessRatio = lightPixels / Math.max(1, darkPixels);
+  const _brightnessRatio = lightPixels / Math.max(1, darkPixels);
 
   // Simple edge detection (sobel-like gradients)
   const horizontalEdges = detectHorizontalEdges(grayscale, width, height);

@@ -14,11 +14,9 @@ import {
   createTypeMismatchError,
   createOutOfBoundsError,
   createExtensionError,
-  createHookError,
   createCoordinateError,
   createColorError,
   decodeBytecodeError,
-  parseErrorForAI,
 } from '../../../codex/core/pixelbrain/bytecode-error.js';
 
 // ─── Test Result Classifications ─────────────────────────────────────────────

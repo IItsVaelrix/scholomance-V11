@@ -49,26 +49,30 @@ export function TemplateEditor({
   useEffect(() => {
     if (lattice || !initialImage || !initialFormula) return;
 
-    // Generate lattice from pixel data
-    const newLattice = generateLatticeGrid(initialImage);
-    
-    // ALSO populate from formula coordinates (the canonical bytecode source)
-    if (initialFormula.coordinates && initialFormula.coordinates.length > 0) {
-      initialFormula.coordinates.forEach(coord => {
-        // Formula coordinates are in pixel space - convert to cell space
-        const cellCol = Math.floor((coord.snappedX || coord.x) / newLattice.cellSize);
-        const cellRow = Math.floor((coord.snappedY || coord.y) / newLattice.cellSize);
-        
-        // Paint cell with formula color
-        paintCell(newLattice, cellCol, cellRow, coord.color || '#ffffff');
-      });
-    }
-    
-    setLattice(newLattice);
+    async function init() {
+      // Generate lattice from pixel data
+      const newLattice = await generateLatticeGrid(initialImage);
 
-    const analyzedFormula = analyzeImageToFormula(initialImage);
-    setFormula(analyzedFormula);
-    setFormulaParams(analyzedFormula.coordinateFormula?.parameters || analyzedFormula.parameters || {});
+      // ALSO populate from formula coordinates (the canonical bytecode source)
+      if (initialFormula.coordinates && initialFormula.coordinates.length > 0) {
+        initialFormula.coordinates.forEach(coord => {
+          // Formula coordinates are in pixel space - convert to cell space
+          const cellCol = Math.floor((coord.snappedX || coord.x) / newLattice.cellSize);
+          const cellRow = Math.floor((coord.snappedY || coord.y) / newLattice.cellSize);
+
+          // Paint cell with formula color
+          paintCell(newLattice, cellCol, cellRow, coord.color || '#ffffff');
+        });
+      }
+
+      setLattice(newLattice);
+
+      const analyzedFormula = analyzeImageToFormula(initialImage);
+      setFormula(analyzedFormula);
+      setFormulaParams(analyzedFormula.coordinateFormula?.parameters || analyzedFormula.parameters || {});
+    }
+
+    init();
   }, [initialImage, initialFormula, lattice]);
 
   // Render lattice

@@ -1,5 +1,5 @@
 import { SCHOOLS, generateSchoolColor } from "../../data/schools";
-import { getDefaultSonicStationTrackUrl, pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
+import { pickRandomSonicStationTrack } from "../../data/sonicStationBuckets";
 
 function getPrimaryTrackUrl(schoolId) {
   return pickRandomSonicStationTrack({ schoolId }) || null;
@@ -28,9 +28,13 @@ export function getRandomizedStationTrackUrl(schoolId, { excludeUrl = null } = {
   return pickRandomSonicStationTrack({ schoolId, excludeUrl }) || config?.trackUrl || null;
 }
 
-export function getPlayableSchoolIds(_unlockedSchools = []) {
+export function getPlayableSchoolIds(unlockedSchools = []) {
+  const ids = Array.isArray(unlockedSchools) ? unlockedSchools : [];
+  // Ensure SONIC is always available as a base station
+  const baseSchools = ids.length === 0 ? ['SONIC'] : ids;
+  
   return Object.values(SCHOOL_AUDIO_CONFIG)
-    .filter((config) => Boolean(config?.trackUrl))
+    .filter((config) => baseSchools.includes(config.schoolId) && Boolean(config?.trackUrl))
     .map((config) => config.schoolId);
 }
 

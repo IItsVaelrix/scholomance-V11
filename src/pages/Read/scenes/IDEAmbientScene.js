@@ -50,18 +50,17 @@ export function buildAmbientScene(Phaser) {
 
       for (let i = 0; i < 12; i++) {
         const baseAlpha = Math.random() * 0.055 + 0.012;
-        const obj = this.add.image(
-          Math.random() * this._W,
-          Math.random() * this._H,
-          'iamb-dot'
-        )
+        const startX = Math.random() * this._W;
+        const startY = Math.random() * this._H;
+        
+        const obj = this.add.image(startX, startY, 'iamb-dot')
           .setAlpha(baseAlpha)
           .setScale(Math.random() * 0.85 + 0.2)
           .setTint(this._color)
           .setDepth(1)
           .setBlendMode('ADD');
 
-        // Slow breathing alpha tween per mote
+        // Slow breathing alpha tween per mote (Phaser tweens are absolute-time managed)
         this.tweens.add({
           targets: obj,
           alpha: { from: baseAlpha * 0.25, to: baseAlpha * 1.7 },
@@ -74,20 +73,32 @@ export function buildAmbientScene(Phaser) {
 
         this._motes.push({
           obj,
-          vy: -(Math.random() * 0.2 + 0.04),
-          vx: (Math.random() - 0.5) * 0.1,
+          startX,
+          startY,
+          // Absolute velocity in pixels per second
+          vxp: (Math.random() - 0.5) * 8,
+          vyp: -(Math.random() * 15 + 5),
         });
       }
     }
 
-    update() {
-      // Drift motes upward and wrap vertically
+    update(time) {
+      const t = time * 0.001; // absolute time in seconds
+      const padding = 20;
+      const boundsW = this._W + padding * 2;
+      const boundsH = this._H + padding * 2;
+
       for (const m of this._motes) {
-        m.obj.x += m.vx;
-        m.obj.y += m.vy;
-        if (m.obj.y < -10)               m.obj.y = this._H + 10;
-        if (m.obj.x < -10)               m.obj.x = this._W + 10;
-        else if (m.obj.x > this._W + 10) m.obj.x = -10;
+        // Position = (Start + Velocity * Time) mod Bounds
+        // We use absolute time to ensure determinism and frame-rate independence.
+        let x = (m.startX + padding + m.vxp * t) % boundsW;
+        let y = (m.startY + padding + m.vyp * t) % boundsH;
+        
+        // Handle negative modulo for wrapping
+        if (x < 0) x += boundsW;
+        if (y < 0) y += boundsH;
+
+        m.obj.setPosition(x - padding, y - padding);
       }
     }
 

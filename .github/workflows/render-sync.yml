@@ -1,0 +1,32 @@
+name: Sync Secrets to Render
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.env.example' # Example: sync when the template changes
+      - 'scripts/sync-render-secrets.js'
+      - '.github/workflows/render-sync.yml'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Create .env from GitHub Secrets
+        run: |
+          echo "${{ secrets.ENV_FILE_CONTENT }}" > .env
+
+      - name: Run Sync Script
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          RENDER_SERVICE_ID: ${{ secrets.RENDER_SERVICE_ID }}
+        run: node scripts/sync-render-secrets.js

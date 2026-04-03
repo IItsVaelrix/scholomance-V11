@@ -1,7 +1,7 @@
 import { ENTITY_TYPES } from './constants.js';
 import { LEXICAL_VISUAL_DB } from '../../semantic/visual-extractor.js';
 
-export function mapEntitiesToSemanticParameters({ entities, intent }) {
+export function mapEntitiesToSemanticParameters({ entities, intent: _intent }) {
   const params = {
     surface: {
       material: 'stone',

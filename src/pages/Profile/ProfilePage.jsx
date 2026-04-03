@@ -1,13 +1,15 @@
 import { motion } from "framer-motion";
 import { useAuth } from "../../hooks/useAuth";
 import { useProgression } from "../../hooks/useProgression.jsx";
+import { useScrolls } from "../../hooks/useScrolls.jsx";
 import { SCHOOLS } from "../../data/schools";
 import { getTierForLevel } from "../../lib/progressionUtils";
 import "./ProfilePage.css";
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const { progression, levelInfo } = useProgression();
+  const { progression, levelInfo, nexus } = useProgression();
+  const { scrollCount } = useScrolls();
 
   if (!user || !progression) return null;
 
@@ -15,12 +17,39 @@ export default function ProfilePage() {
   const nextLevelXp = levelInfo.nextLevelXp;
   const xpProgress = ((progression.xp - levelInfo.currentLevelXp) / (nextLevelXp - levelInfo.currentLevelXp)) * 100;
 
-  // Achievement Skeleton
+  // Real achievement logic
+  const totalWordsDiscovered = Object.keys(nexus?.discoveredWords || {}).length;
+  const allSchoolsUnlocked = progression.unlockedSchools.length >= Object.keys(SCHOOLS).length;
+
   const achievements = [
-    { id: "first_word", title: "First Word", desc: "Save your first scroll.", icon: "📜", unlocked: true },
-    { id: "rhymer", title: "Rhyme Weaver", desc: "Create 50 rhymes.", icon: "🎵", unlocked: false },
-    { id: "polyglot", title: "Polyglot", desc: "Unlock all schools.", icon: "🌈", unlocked: false },
-    { id: "master", title: "Master of Arts", desc: "Reach Level 50.", icon: "👑", unlocked: false },
+    { 
+      id: "first_word", 
+      title: "First Word", 
+      desc: "Save your first scroll.", 
+      icon: "📜", 
+      unlocked: scrollCount > 0 
+    },
+    { 
+      id: "polyglot", 
+      title: "Polyglot", 
+      desc: "Unlock all schools.", 
+      icon: "🌈", 
+      unlocked: allSchoolsUnlocked 
+    },
+    { 
+      id: "scholar", 
+      title: "Scholar", 
+      desc: "Discover 10 unique words.", 
+      icon: "🧠", 
+      unlocked: totalWordsDiscovered >= 10 
+    },
+    { 
+      id: "master", 
+      title: "Master of Arts", 
+      desc: "Reach Level 50.", 
+      icon: "👑", 
+      unlocked: levelInfo.level >= 50 
+    },
   ];
 
   return (
@@ -48,15 +77,15 @@ export default function ProfilePage() {
           <div className="stats-grid">
             <div className="stat-box">
               <span className="stat-label">Scrolls</span>
-              <span className="stat-value">0</span> {/* Todo: Connect to real count */}
+              <span className="stat-value">{scrollCount}</span>
             </div>
             <div className="stat-box">
-              <span className="stat-label">Streak</span>
-              <span className="stat-value">1</span>
+              <span className="stat-label">Words</span>
+              <span className="stat-value">{totalWordsDiscovered}</span>
             </div>
             <div className="stat-box">
-              <span className="stat-label">Rank</span>
-              <span className="stat-value">#--</span>
+              <span className="stat-label">Schools</span>
+              <span className="stat-value">{progression.unlockedSchools.length}</span>
             </div>
           </div>
         </motion.div>

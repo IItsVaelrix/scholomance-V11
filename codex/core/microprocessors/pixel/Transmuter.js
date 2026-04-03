@@ -6,11 +6,13 @@
  */
 
 import { verseIRMicroprocessors } from '../index.js';
+import { analyzeImageToFormula, formulaToBytecode } from '../../pixelbrain/image-to-bytecode-formula.js';
+import { mapImageToPhonemes } from '../../pixelbrain/phoneme-mapping.js';
 
 /**
  * Transmute external AI art into Scholomance variants
  * @param {Object} payload - { buffer, mimetype, schoolId, styleId, targetSize }
- * @returns {Object} { coordinates, palettes, canvas, schoolId, styleId }
+ * @returns {Object} { coordinates, palettes, canvas, schoolId, styleId, formula, bytecode, heatmap }
  */
 export async function transmuteAIArt({ buffer, mimetype, schoolId, styleId, targetSize = { width: 160, height: 144 } }) {
   // 1. Normalization: Raw Buffer -> Standardized Substrate
@@ -50,20 +52,36 @@ export async function transmuteAIArt({ buffer, mimetype, schoolId, styleId, targ
     source: 'transmutation'
   }));
 
-  // 4. Stylistic Encoding: Apply retro era filter if requested
+  // 4. Stylistic Encoding: Apply retro era filter
   let finalCoordinates = transmutedCoordinates;
-  if (styleId) {
-    // Note: STYLE_EXTENSIONS currently operate on buffers in some contexts, 
-    // but here we apply coordinate-level stylistic changes.
+  if (styleId && styleId !== 'none') {
     finalCoordinates = applyRetroStyleToCoordinates(transmutedCoordinates, styleId, workingDims);
   }
+
+  // 5. Bytecode Ignition: Generate 0xF formula from transmuted result
+  // We simulate an analysis object for the formula engine
+  const simulatedAnalysis = {
+    pixelData: normalizedPixels,
+    dimensions: workingDims,
+    colors: quantizedColors.map(q => ({ hex: q.quantized, percentage: 0 })),
+    composition: { edgeDensity: baseCoordinates.length / (workingDims.width * workingDims.height), hasSymmetry: false }
+  };
+  
+  const formula = analyzeImageToFormula(simulatedAnalysis);
+  const bytecode = formulaToBytecode(formula);
+
+  // 6. Phoneme Heat-Mapping
+  const heatmap = mapImageToPhonemes(normalizedPixels, workingDims);
 
   return {
     coordinates: finalCoordinates,
     palettes: buildPaletteFromQuantized(quantizedColors, schoolId),
     canvas: { ...workingDims, gridSize: 1 },
     schoolId,
-    styleId
+    styleId,
+    formula,
+    bytecode,
+    heatmap
   };
 }
 
@@ -77,7 +95,7 @@ function buildPaletteFromQuantized(quantizedColors, schoolId) {
   }];
 }
 
-function applyRetroStyleToCoordinates(coords, styleId, canvas) {
+function applyRetroStyleToCoordinates(coords, styleId, _canvas) {
   if (styleId === 'gameboy') {
     // Force coordinates to 2x2 blocks for that chunky GB feel
     return coords.map(c => ({

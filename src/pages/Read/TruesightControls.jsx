@@ -8,6 +8,8 @@ export const ANALYSIS_MODES = {
   RHYME: 'rhyme',
   ANALYZE: 'analyze',
   ASTROLOGY: 'astrology',
+  PIXELBRAIN: 'pixelbrain_transverse',
+  VOIDECHO: 'void_echo',
 };
 
 /**

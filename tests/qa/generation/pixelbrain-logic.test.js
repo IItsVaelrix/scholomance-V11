@@ -21,8 +21,9 @@ import {
 describe('PixelBrain Core Logic QA', () => {
   const mockAnalysis = {
     dimensions: {
-      original: { width: 100, height: 100, format: 'png' },
-      analyzed: { width: 50, height: 50 }
+      width: 50,
+      height: 50,
+      format: 'png'
     },
     colors: [
       { hex: '#FF0000', rgb: [255, 0, 0], percentage: 60 },
@@ -87,9 +88,9 @@ describe('PixelBrain Core Logic QA', () => {
   });
 
   describe('Pixel Art Generation', () => {
-    it('should generate coordinates and formula from analysis', () => {
+    it('should generate coordinates and formula from analysis', async () => {
       const canvasSize = { width: 160, height: 144, gridSize: 1 };
-      const result = generatePixelArtFromImage(mockAnalysis, canvasSize);
+      const result = await generatePixelArtFromImage(mockAnalysis, canvasSize);
       
       expect(result).toBeDefined();
       expect(result.coordinates.length).toBeGreaterThan(0);
@@ -98,9 +99,9 @@ describe('PixelBrain Core Logic QA', () => {
       expect(result.bytecode).toMatch(/^0xF/);
     });
 
-    it('should scale coordinates to fit canvas', () => {
+    it('should scale coordinates to fit canvas', async () => {
       const canvasSize = { width: 160, height: 144, gridSize: 1 };
-      const result = generatePixelArtFromImage(mockAnalysis, canvasSize);
+      const result = await generatePixelArtFromImage(mockAnalysis, canvasSize);
       
       for (const coord of result.coordinates) {
         expect(coord.x).toBeGreaterThanOrEqual(0);
@@ -110,9 +111,9 @@ describe('PixelBrain Core Logic QA', () => {
       }
     });
 
-    it('should apply extensions to coordinates', () => {
+    it('should apply extensions to coordinates', async () => {
       const canvasSize = { width: 160, height: 144, gridSize: 1 };
-      const result = generatePixelArtFromImage(mockAnalysis, canvasSize, 'style-8bit');
+      const result = await generatePixelArtFromImage(mockAnalysis, canvasSize, 'style-8bit');
       
       // style-8bit quantizes emphasis to 4 levels
       for (const coord of result.coordinates) {

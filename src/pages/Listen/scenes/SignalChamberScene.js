@@ -33,12 +33,18 @@ export class SignalChamberScene extends Phaser.Scene {
     this._needsVolSliderRedraw = true; this._needsSignalSliderRedraw = true;
     this._isCreated = false; this._sx = 1; this._sy = 1; this._ms = 1;
     this._bpm = 90; // Default BPM for rotation sync
+
+    // Interaction Callbacks
+    this.onPlayPause = null;
+    this.onVolumeChange = null;
+    this.onStationSelect = null;
+    this.onOrbClick = null;
   }
 
   create() {
     const W = this.scale.width, H = this.scale.height;
     this._sx = W / REF.W; this._sy = H / REF.H; this._ms = Math.min(this._sx, this._sy);
-    this.scene.settings.zIndex = 10;
+    this.scene.settings.zIndex = 100; // Higher than background (0) and static overlay (1)
     this._rtBg = this.add.renderTexture(0, 0, W, H).setDepth(0);
     this._rtScan = this.add.renderTexture(0, 0, W, H).setDepth(80);
     this._bakeBackground(W, H); this._bakeScanlines(W, H);
@@ -234,7 +240,7 @@ export class SignalChamberScene extends Phaser.Scene {
     this._drawGaugeFace(this._gauRFace, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, col);
   }
 
-  _drawGaugeFace(gfx, cx_ref, cy_ref, r_ref, col) {
+  _drawGaugeFace(gfx, cx_ref, cy_ref, r_ref, _col) {
     const ms = this._ms, cx = cx_ref * this._sx, cy = cy_ref * this._sy, r = r_ref * ms;
     gfx.fillStyle(0x080808, 1); gfx.fillCircle(cx, cy, r);
     gfx.lineStyle(2.5, 0x1c1c1c, 1); gfx.strokeCircle(cx, cy, r);
@@ -268,7 +274,7 @@ export class SignalChamberScene extends Phaser.Scene {
   }
 
   _redrawVolSlider() {
-    const sx = this._sx, sy = this._sy, ms = this._ms, cx = VOL_SLD.x * sx, cy = VOL_SLD.y * sy, w = VOL_SLD.w * sx, h = VOL_SLD.h * sy;
+    const sx = this._sx, sy = this._sy, _ms = this._ms, cx = VOL_SLD.x * sx, cy = VOL_SLD.y * sy, w = VOL_SLD.w * sx, h = VOL_SLD.h * sy;
     this._volFill.clear(); this._volFill.fillStyle(PAL.dimGold, 0.55); this._volFill.fillRoundedRect(cx - w/2, cy - h/2, w * this._vol, h, h/2);
   }
 
@@ -284,35 +290,76 @@ export class SignalChamberScene extends Phaser.Scene {
 
   updateState(data) {
     if (!this._isCreated) return;
-    if (data.schoolId !== undefined && data.schoolId !== this._schoolId) { this._schoolChanged = true; this._transitionAlpha = 0; this._schoolId = data.schoolId; }
+    if (data.schoolId !== undefined && data.schoolId !== this._schoolId) { 
+      this._schoolChanged = true; 
+      this._lastSwitchTime = performance.now();
+      this._schoolId = data.schoolId; 
+    }
     if (data.signalLevel !== undefined) { this._sig = data.signalLevel; this._needsSignalSliderRedraw = true; }
     if (data.volume !== undefined) { this._vol = data.volume; this._needsVolSliderRedraw = true; }
     if (data.bpm !== undefined) { this._bpm = data.bpm; }
     if (data.isPlaying !== undefined && data.isPlaying !== this._isPlaying) { this._isPlaying = data.isPlaying; this._redrawPlayButton(); }
     if (data.schoolColor !== undefined && data.schoolColor !== this._colHex) { this._colHex = data.schoolColor; this._col = this._hexToInt(data.schoolColor); this._drawGaugeFaces(); }
     if (data.stationName !== undefined) this._txtStaName?.setText(data.stationName);
+    
+    // Store AMP motion data
+    if (data.orbMotion) this._orbMotion = data.orbMotion;
+    if (data.consoleMotion) this._consoleMotion = data.consoleMotion;
   }
 
-  update(time, delta) {
+  update(time, _delta) {
     if (!this._isCreated) return;
-    const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER), glow = getBytecodeAMP(time, AMP_CHANNELS.GLOW);
-    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, ms = this._ms, bpm = this._bpm;
-    if (this._schoolChanged) { this._transitionAlpha = Math.min(1, this._transitionAlpha + delta * 0.0035); if (this._transitionAlpha >= 1) this._schoolChanged = false; }
-    const ta = this._transitionAlpha;
-    const standbyAlpha = 0.25 * Math.max(0, 1 - sig * 4) * ta * glow;
+    
+    // Use AMP motion if available, fallback to legacy bytecode
+    const flicker = getBytecodeAMP(time, AMP_CHANNELS.FLICKER);
+    const glow = this._orbMotion?.glow !== undefined ? this._orbMotion.glow : getBytecodeAMP(time, AMP_CHANNELS.GLOW);
+    const scale = this._orbMotion?.scale !== undefined ? this._orbMotion.scale : 1.0;
+    
+    const cx = this._radarCX, cy = this._radarCY, r = this._radarR, col = this._col, sig = this._sig, _ms = this._ms, bpm = this._bpm;
+    
+    // Absolute time transition
+    let ta = 1;
+    if (this._schoolChanged) {
+      const elapsed = performance.now() - (this._lastSwitchTime || 0);
+      ta = Math.min(1, elapsed / 350); 
+      if (ta >= 1) this._schoolChanged = false;
+    }
+    
+    // Modulate standby alpha with AMP glow
+    const standbyAlpha = (this._isPlaying ? 0.6 : 0.25) * Math.max(0.1, glow) * ta;
+    
+    // Apply AMP scale to radar elements
+    const currentR = r * scale;
+    
     // BPM-synced clock-like rotation: smooth, continuous, no wobble
-    this._sprites.hex1.setAlpha(standbyAlpha).setRotation(getRotationAtTime(time, bpm, 90)).setTint(col);
-    this._sprites.hex2.setAlpha(standbyAlpha * 0.7).setRotation(getRotationAtTime(time, bpm, -45)).setTint(col);
-    this._sprites.star.setAlpha(standbyAlpha * 1.4).setRotation(getRotationAtTime(time, bpm, -180)).setTint(col);
-    this._sprites.flower.setAlpha(standbyAlpha * 0.6).setRotation(getRotationAtTime(time, bpm, 45)).setTint(col);
-    this._sprites.metatron.setAlpha(standbyAlpha * 0.8).setRotation(getRotationAtTime(time, bpm, -90)).setTint(col);
-    this._sprites.glint.setAlpha((0.15 + sig * 0.2) * ta * (0.8 + flicker * 0.2)).setRotation(getRotationAtTime(time, bpm, 22.5));
-    this._rdPattern.clear(); this._rdPattern.setAlpha(ta); (this._programs[this._schoolId] || this._genericProgram)(this._rdPattern, cx, cy, r, time, sig, col);
-    this._consGlow.clear(); const gA = (0.035 + sig * 0.1) * ta * (0.9 + flicker * 0.1);
+    this._sprites.hex1.setAlpha(standbyAlpha).setRotation(getRotationAtTime(time, bpm, 90)).setTint(col).setScale(scale);
+    this._sprites.hex2.setAlpha(standbyAlpha * 0.7).setRotation(getRotationAtTime(time, bpm, -45)).setTint(col).setScale(0.7 * scale);
+    this._sprites.star.setAlpha(standbyAlpha * 1.4).setRotation(getRotationAtTime(time, bpm, -180)).setTint(col).setScale(scale);
+    this._sprites.flower.setAlpha(standbyAlpha * 0.6).setRotation(getRotationAtTime(time, bpm, 45)).setTint(col).setScale(1.2 * scale);
+    this._sprites.metatron.setAlpha(standbyAlpha * 0.8).setRotation(getRotationAtTime(time, bpm, -90)).setTint(col).setScale(scale);
+    this._sprites.glint.setAlpha((0.15 + sig * 0.2) * ta * (0.8 + flicker * 0.2)).setRotation(getRotationAtTime(time, bpm, 22.5)).setScale(scale);
+    
+    this._rdPattern.clear(); 
+    this._rdPattern.setAlpha(ta); 
+    (this._programs[this._schoolId] || this._genericProgram)(this._rdPattern, cx, cy, currentR, time, sig, col);
+    
+    // Console glow driven by consoleMotion
+    const consoleGlow = this._consoleMotion?.glow !== undefined ? this._consoleMotion.glow : (0.035 + sig * 0.1);
+    const consoleOpacity = this._consoleMotion?.opacity !== undefined ? this._consoleMotion.opacity : 1.0;
+    
+    this._consGlow.clear(); 
+    const gA = consoleGlow * ta * (0.9 + flicker * 0.1);
+    this._consGlow.setAlpha(consoleOpacity);
     this._consGlow.lineStyle(22, col, gA * 0.4).strokeRoundedRect(CONSOLE.x * this._sx - (CONSOLE.w * this._sx)/2, CONSOLE.y * this._sy - (CONSOLE.h * this._sy)/2, CONSOLE.w * this._sx, CONSOLE.h * this._sx, CONSOLE.cr * this._sx);
-    const newL = Phaser.Math.Linear(this._gaugeL_cur, sig, delta * 0.004), newR = Phaser.Math.Linear(this._gaugeR_cur, this._vol, delta * 0.004);
-    if (Math.abs(newL - this._gaugeL_prev) > 0.004) { this._redrawGaugeNeedle(this._gauLNeedle, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, newL, col); this._gaugeL_prev = newL; }
-    if (Math.abs(newR - this._gaugeR_prev) > 0.004) { this._redrawGaugeNeedle(this._gauRNeedle, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, newR, col); this._gaugeR_prev = newR; }
+    
+    // Gauges: simple time-damped pursuit (Pseudo-simulation, but time-aware)
+    // We update cur values to prev for redraw check
+    const pursuit = 0.15; // fixed pursuit speed per frame (idealized 60fps)
+    const newL = this._gaugeL_cur + (sig - this._gaugeL_cur) * pursuit;
+    const newR = this._gaugeR_cur + (this._vol - this._gaugeR_cur) * pursuit;
+
+    if (Math.abs(newL - this._gaugeL_prev) > 0.002) { this._redrawGaugeNeedle(this._gauLNeedle, GAUGE_L.x, GAUGE_L.y, GAUGE_L.r, newL, col); this._gaugeL_prev = newL; }
+    if (Math.abs(newR - this._gaugeR_prev) > 0.002) { this._redrawGaugeNeedle(this._gauRNeedle, GAUGE_R.x, GAUGE_R.y, GAUGE_R.r, newR, col); this._gaugeR_prev = newR; }
     this._gaugeL_cur = newL; this._gaugeR_cur = newR;
     if (this._needsSignalSliderRedraw) { this._redrawSignalSlider(); this._needsSignalSliderRedraw = false; }
     if (this._needsVolSliderRedraw) { this._redrawVolSlider(); this._needsVolSliderRedraw = false; }

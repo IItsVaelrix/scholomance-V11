@@ -21,30 +21,6 @@
   -webkit-backdrop-filter: blur(20px);
 }
 
-/* Light Mode Specific Adjustments */
-[data-theme="light"] .auth-card {
-  background: #ffffff;
-  border-color: rgba(0, 0, 0, 0.08);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .auth-header .title {
-  background: linear-gradient(to bottom, #000, #444);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-[data-theme="light"] .auth-form .input {
-  background: #fcfcfc;
-  border-color: #ddd;
-  color: #111;
-}
-
-[data-theme="light"] .auth-form .input:focus {
-  border-color: var(--active-school-color, #651fff);
-  background: #fff;
-}
-
 .auth-header {
   text-align: center;
 }

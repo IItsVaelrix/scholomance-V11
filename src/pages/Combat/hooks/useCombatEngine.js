@@ -595,6 +595,8 @@ export function useCombatEngine() {
         damage,
         newPlayerHP: finalNewPlayerHP,
         signatureMove: opponentSpell.signatureMove,
+        moveLabel: opponentSpell.signatureMove?.name || null,
+        moveSchool: opponentSpell.school || null,
       }));
 
       // If MP was drained, update state
@@ -680,6 +682,9 @@ export function useCombatEngine() {
     maxPlayerHP: PLAYER_MAX_HP,
     maxPlayerMP: PLAYER_MAX_MP,
     maxOpponentHP: OPPONENT_MAX_HP,
+    moveLabel: state.lastOpponentMoveLabel,
+    moveSchool: state.lastOpponentMoveSchool,
+    telegraph: state.lastOpponentTelegraph,
     castPlayerSpell,
     continueAfterReveal,
     cancelCasting,

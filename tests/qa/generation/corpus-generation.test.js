@@ -20,8 +20,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(__dirname, '../../..');
 const SCRIPT_PATH = path.join(ROOT, 'scripts/generate_corpus.js');
-const OUTPUT_PATH = path.join(ROOT, 'public/corpus.json');
-
 describe('Corpus Generation QA', () => {
   let originalEnv;
 

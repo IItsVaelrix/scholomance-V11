@@ -17,6 +17,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
+import fastifyCors from '@fastify/cors';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -46,6 +47,7 @@ import { rhymeAstrologyRoutes } from './routes/rhymeAstrology.routes.js';
 import { resolveRhymeAstrologyArtifactPaths } from './utils/rhymeAstrologyPaths.js';
 import { imageAnalysisRoutes } from './routes/imageAnalysis.routes.js';
 import { registerSchoolStylesRoutes } from './routes/schoolStyles.routes.js';
+import { createMailQueueWorker, createMailerService } from './services/mailer.service.js';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 const IS_TEST_RUNTIME =
@@ -135,7 +137,7 @@ const FRONTEND_DIST_PATH = path.join(PROJECT_ROOT, 'dist');
 const FRONTEND_INDEX_PATH = path.join(FRONTEND_DIST_PATH, 'index.html');
 const PUBLIC_PATH = path.join(PROJECT_ROOT, 'public');
 const TRUST_PROXY = parseTrustProxyEnv();
-const ENABLE_COLLAB_API = parseBooleanEnv('ENABLE_COLLAB_API', !IS_PRODUCTION);
+const ENABLE_COLLAB_API = !IS_PRODUCTION;
 const ENABLE_RHYME_ASTROLOGY = parseBooleanEnv('ENABLE_RHYME_ASTROLOGY', false);
 const AUDIO_UPLOAD_PATH = process.env.AUDIO_STORAGE_PATH 
     ? path.resolve(process.env.AUDIO_STORAGE_PATH) 
@@ -175,12 +177,74 @@ fastify.register(multipart, {
     }
 });
 
+// ─── Phase 3: Remote Agent Access Configuration ────────────────────────────
+
+// CORS allow-list for remote agent access
+const COLLAB_ALLOWED_ORIGINS = (process.env.COLLAB_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+const COLLAB_REMOTE_ACCESS = process.env.COLLAB_REMOTE_ACCESS === 'true';
+
+if (COLLAB_REMOTE_ACCESS && COLLAB_ALLOWED_ORIGINS.length > 0) {
+    fastify.register(fastifyCors, {
+        origin: COLLAB_ALLOWED_ORIGINS,
+        methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Agent-ID'],
+        exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+        credentials: true,
+        maxAge: 86400, // 24h preflight cache
+    });
+    fastify.log.info(`[CORS] Remote access enabled. Origins: ${COLLAB_ALLOWED_ORIGINS.join(', ')}`);
+} else {
+    // Default: allow same origin for local development
+    fastify.register(fastifyCors, {
+        origin: true, // Reflects request origin (CORS disabled for same-origin)
+        credentials: true,
+    });
+}
+
+// HTTPS configuration for production
+const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'true';
+const HTTPS_KEY_PATH = process.env.HTTPS_KEY_PATH;
+const HTTPS_CERT_PATH = process.env.HTTPS_CERT_PATH;
+
+if (HTTPS_ENABLED) {
+    if (!HTTPS_KEY_PATH || !HTTPS_CERT_PATH) {
+        fastify.log.warn('[HTTPS] HTTPS enabled but HTTPS_KEY_PATH or HTTPS_CERT_PATH not set');
+    } else {
+        fastify.log.info('[HTTPS] HTTPS configured for production');
+    }
+}
+
+// Remote agent rate limiting (separate bucket from general traffic)
+const COLLAB_AGENT_RATE_LIMIT_MAX = parseInt(process.env.COLLAB_AGENT_RATE_LIMIT_MAX || '120', 10);
+const COLLAB_AGENT_RATE_LIMIT_WINDOW = process.env.COLLAB_AGENT_RATE_LIMIT_WINDOW || '1 minute';
+
 const SESSION_COOKIE_NAME = 'scholomance.sid';
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const DEFAULT_API_TIMEOUT_MS = Number(process.env.API_TIMEOUT_MS ?? 5000);
 const SHUTDOWN_TIMEOUT_MS = parsePositiveIntEnv('SHUTDOWN_TIMEOUT_MS', 10000);
 const AUDIO_ADMIN_TOKEN = getAudioAdminToken();
+const SERVER_BASE_URL = String(
+    process.env.PUBLIC_SERVER_URL ||
+    process.env.VITE_API_BASE_URL ||
+    `http://localhost:${PORT}`
+).trim();
+const PUBLIC_APP_URL = String(
+    process.env.PUBLIC_APP_URL ||
+    process.env.VITE_PUBLIC_APP_URL ||
+    (IS_PRODUCTION ? SERVER_BASE_URL : 'http://localhost:5173')
+).trim();
+const mailerService = createMailerService(fastify.log, {
+    appBaseUrl: SERVER_BASE_URL,
+    appName: 'Scholomance',
+});
+const mailQueueWorker = createMailQueueWorker(mailerService, {
+    logger: fastify.log,
+});
 const SHOULD_SERVE_FRONTEND =
     IS_PRODUCTION &&
     process.env.SERVE_FRONTEND !== 'false' &&
@@ -246,6 +310,29 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_API_TIMEO
     }
 }
 
+fastify.setErrorHandler((error, request, reply) => {
+  const statusCode = error.statusCode || 500;
+  
+  // Log the error with request details
+  request.log.error({
+    err: error,
+    method: request.method,
+    url: request.url,
+    sessionId: request.session?.id,
+    statusCode
+  }, '[SERVER] Unhandled error');
+
+  if (statusCode >= 500) {
+    reply.status(statusCode).send({
+      error: 'Internal Server Error',
+      message: process.env.NODE_ENV === 'development' ? error.message : 'An unexpected error occurred.',
+      bytecode: error.code || 'UNKNOWN_ERROR'
+    });
+  } else {
+    reply.status(statusCode).send(error);
+  }
+});
+
 // 1. Initialize session store
 const useRedisStore =
   process.env.NODE_ENV === 'production' ||
@@ -266,9 +353,15 @@ if (useRedisStore) {
     socket: {
       tls: isTls ? true : undefined, // Explicitly enable TLS for rediss://
       reconnectStrategy: (retries) => {
-        const delay = Math.min(retries * 50, 2000);
+        // Stop retrying after 10 attempts to prevent hanging forever
+        if (retries > 10) {
+          fastify.log.error('[REDIS] Max reconnection attempts reached. Disabling Redis sessions.');
+          return new Error('Max reconnection attempts reached');
+        }
+        const delay = Math.min(retries * 100, 3000);
         return delay;
       },
+      connectTimeout: 5000, // 5 second connection timeout
       // Upstash sometimes closes idle connections, so we set a heartbeat
       keepAlive: 5000 
     }
@@ -426,7 +519,7 @@ function requireJsonContentType(request, reply) {
 // 3. Register global rate limiting (per-user when authenticated, per-IP otherwise)
 fastify.register(rateLimit, {
   global: true,
-  max: 100,
+  max: 150,
   timeWindow: '1 minute',
   keyGenerator: (request) => {
     // Use session user ID for authenticated users so each user gets their own budget.
@@ -497,7 +590,13 @@ fastify.get('/metrics', {
   };
 });
 
-fastify.register(authRoutes, { prefix: '/auth' });
+fastify.register(authRoutes, {
+    prefix: '/auth',
+    mailer: mailerService,
+    appBaseUrl: SERVER_BASE_URL,
+    publicAppUrl: PUBLIC_APP_URL,
+    appName: 'Scholomance',
+});
 
 // Reference API Proxy Routes
 // SECURITY: Rate limit external API proxy to prevent enumeration attacks
@@ -875,6 +974,11 @@ async function closeRedisConnection() {
 
 function closePersistenceConnections() {
     try {
+        mailQueueWorker.stop();
+    } catch (error) {
+        fastify.log.warn({ err: error }, '[MAILER] Queue worker stop failed.');
+    }
+    try {
         persistence.close();
     } catch (error) {
         fastify.log.warn({ err: error }, '[DB:user] Failed to close cleanly.');
@@ -944,6 +1048,9 @@ export const start = async () => {
             await redisClient.connect();
         }
         await PhonemeEngine.init();
+        if (!IS_TEST_RUNTIME) {
+            mailQueueWorker.start();
+        }
         await fastify.listen({ host: HOST, port: PORT });
     } catch (error) {
         fastify.log.error(error);

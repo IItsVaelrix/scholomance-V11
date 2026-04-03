@@ -8,6 +8,15 @@ interface SpectrumCanvasProps {
   signalLevel: number;
 }
 
+// Master Detection Zones (Derived from Acoustic Phonetics & Genre Mastering Curves)
+const SCHOOL_DEFINITIONS = {
+  void: { label: 'VOID', range: [20, 150], color: SCHOOLS.VOID?.color || '#a1a1aa' },
+  sonic: { label: 'SONIC', range: [150, 500], color: SCHOOLS.SONIC?.color || '#651fff' },
+  will: { label: 'WILL', range: [500, 2000], color: SCHOOLS.WILL?.color || '#FF8A00' },
+  alchemy: { label: 'ALCHEMY', range: [2000, 6000], color: SCHOOLS.ALCHEMY?.color || '#D500F9' },
+  psychic: { label: 'PSYCHIC', range: [6000, 20000], color: SCHOOLS.PSYCHIC?.color || '#00E5FF' },
+};
+
 /**
  * SpectrumCanvas — High-acuity spectral waveform graph.
  * Detects the song's "Sonic School" based on real-time energy distribution.
@@ -21,15 +30,6 @@ export const SpectrumCanvas: React.FC<SpectrumCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const dataArrayRef = useRef<Uint8Array>(new Uint8Array(1024));
   const rafIdRef = useRef<number>();
-
-  // Master Detection Zones (Derived from Acoustic Phonetics & Genre Mastering Curves)
-  const SCHOOL_DEFINITIONS = {
-    void: { label: 'VOID', range: [20, 150], color: SCHOOLS.void?.color || '#a1a1aa' },
-    sonic: { label: 'SONIC', range: [150, 500], color: SCHOOLS.sonic?.color || '#651fff' },
-    will: { label: 'WILL', range: [500, 2000], color: SCHOOLS.will?.color || '#FF8A00' },
-    alchemy: { label: 'ALCHEMY', range: [2000, 6000], color: SCHOOLS.alchemy?.color || '#D500F9' },
-    psychic: { label: 'PSYCHIC', range: [6000, 20000], color: SCHOOLS.psychic?.color || '#00E5FF' },
-  };
 
   useEffect(() => {
     const canvas = canvasRef.current;

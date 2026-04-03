@@ -747,9 +747,10 @@ async function createTrackController({
 function createAmbientPlayerService(options = {}) {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const storage = getStorage(options.storage);
+  let dynamicSchools = [];
   const persisted = readPersistedSettings(storage);
-  const initialSchoolId = persisted.schoolId || getDefaultSchoolId(Object.keys(SCHOOLS));
-  const schoolConfig = getSchoolAudioConfig(initialSchoolId);
+  const initialSchoolId = persisted.schoolId; // Default to null if not persisted
+  const schoolConfig = getSchoolConfig(initialSchoolId);
 
   let state = {
     status: AMBIENT_PLAYER_STATES.IDLE,
@@ -788,7 +789,6 @@ function createAmbientPlayerService(options = {}) {
   const dialSfxPlayer = options.dialSfxPlayer || ((settings) => defaultDialSfxPlayer(audioContextRef, settings));
   const nowFn = options.nowFn || Date.now;
   const randomFn = typeof options.randomFn === "function" ? options.randomFn : Math.random;
-  let dynamicSchools = [];
   const lastResolvedTrackUrlBySchool = new Map();
   let hasPlayedDialSfx = false;
   let tuneOperationId = 0;

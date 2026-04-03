@@ -5,7 +5,7 @@
  * Supports multiple grid types, anchor points, symmetry, and onion skinning.
  */
 
-import { clamp01, GOLDEN_RATIO, roundTo } from './shared.js';
+import { GOLDEN_RATIO, roundTo } from './shared.js';
 
 /**
  * Grid types
@@ -407,7 +407,7 @@ export function exportToAseprite(grid) {
       layers: [],
     };
 
-    frame.layers.forEach((layer, layerIndex) => {
+    frame.layers.forEach((layer, _layerIndex) => {
       const layerData = {
         name: layer.name,
         cells: [],

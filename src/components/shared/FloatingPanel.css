@@ -183,20 +183,7 @@ body.is-dragging-panel .aurora-background {
   cursor: s-resize;
 }
 
-[data-theme="light"] .floating-panel {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: rgba(0, 0, 0, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
 
-[data-theme="light"] .panel-header {
-  background: rgba(0, 0, 0, 0.03);
-  border-bottom-color: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="light"] .panel-title {
-  color: #1a1a2e;
-}
 
 .floating-panel.codex-metrics-panel {
   background: linear-gradient(180deg, rgba(17, 18, 34, 0.96), rgba(11, 12, 24, 0.98));
@@ -214,18 +201,4 @@ body.is-dragging-panel .aurora-background {
   color: var(--text-secondary, #c8cce8);
 }
 
-[data-theme="light"] .floating-panel.codex-metrics-panel {
-  background: linear-gradient(180deg, rgba(248, 241, 225, 0.96), rgba(239, 230, 210, 0.98));
-  border-color: rgba(127, 95, 45, 0.28);
-  box-shadow: 0 12px 28px rgba(56, 45, 27, 0.18);
-}
 
-[data-theme="light"] .floating-panel.codex-metrics-panel .panel-header {
-  background: linear-gradient(180deg, rgba(127, 95, 45, 0.14), rgba(127, 95, 45, 0.06));
-  border-bottom-color: rgba(127, 95, 45, 0.24);
-}
-
-[data-theme="light"] .floating-panel.codex-metrics-panel .drag-dots,
-[data-theme="light"] .floating-panel.codex-metrics-panel .panel-title {
-  color: #3a3428;
-}

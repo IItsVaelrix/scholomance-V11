@@ -55,7 +55,7 @@ const COLORS = {
  * Main validation runner
  */
 async function runValidation(options = {}) {
-  const { report = false, fix = false } = options;
+  const { report = false, fix: _fix = false } = options;
 
   console.log(`${COLORS.cyan}╔════════════════════════════════════════════╗`);
   console.log(`║   QA Generation & Export Validation      ║`);

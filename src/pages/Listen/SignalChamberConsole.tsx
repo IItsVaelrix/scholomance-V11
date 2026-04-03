@@ -56,6 +56,27 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
 
   const currentSchoolId = overrideSchoolId || rawSchoolId;
 
+  // ── Animation AMP Integration — DISABLED for stability ──────────────────
+
+  // const orbIntent = useMemo(() => ({
+  //   version: 'v1.0',
+  //   targetId: 'chamber-orb',
+  //   targetType: 'phaser' as const,
+  //   preset: isPlaying ? 'transmission-pulse' : 'orb-idle',
+  //   trigger: isPlaying ? 'audio' as const : 'idle' as const,
+  //   state: { signalLevel, isPlaying },
+  //   metadata: { scene: 'SignalChamber' }
+  // }), [isPlaying, signalLevel]);
+
+  // const consoleIntent = useMemo(() => ({
+  //   version: 'v1.0',
+  //   targetId: 'chamber-console',
+  //   targetType: 'phaser' as const,
+  //   preset: 'console-awaken',
+  //   trigger: 'mount' as const,
+  //   metadata: { scene: 'SignalChamber' }
+  // }), []);
+
   const stations = useMemo(
     () =>
       Object.values(SCHOOLS)
@@ -181,6 +202,9 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
       glyph:       currentStation?.glyph ?? '✦',
       stations,
       bpm,
+      // AMP motion disabled
+      orbMotion:   null,
+      consoleMotion: null,
     });
   }, [signalLevel, volume, isTuning, isPlaying, statusLabel, currentStation, currentSchoolId, stations, getBPM]);
 
@@ -200,6 +224,7 @@ export const SignalChamberConsole: React.FC<SignalChamberConsoleProps> = ({
       <div className="signal-chamber-player-overlay">
         <HolographicEmbed
           trackUrl={currentTrackUrl}
+          trackId={currentStation?.id}
           title={currentStation?.name ?? 'No signal'}
           glyph={currentStation?.glyph ?? '✦'}
           schoolColor={currentStation?.color ?? '#2ddbde'}

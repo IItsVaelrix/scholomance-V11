@@ -1,46 +1,58 @@
 import Fastify from 'fastify';
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const hoisted = vi.hoisted(() => {
+  class HoistedCollabServiceError extends Error {
+    constructor(code, message, options = {}) {
+      super(message);
+      this.name = 'CollabServiceError';
+      this.code = code;
+      this.statusCode = options.statusCode ?? 500;
+      this.details = options.details ?? {};
+    }
+  }
+
+  return { HoistedCollabServiceError };
+});
 
 const mocks = vi.hoisted(() => ({
-  tasksGetAll: vi.fn(() => []),
-  pipelinesGetAll: vi.fn(() => []),
-  activityGetRecent: vi.fn(() => []),
+  listTasks: vi.fn(() => []),
+  listPipelines: vi.fn(() => []),
+  listActivity: vi.fn(() => []),
+  acquireLock: vi.fn(),
 }));
 
-vi.mock('../../codex/server/collab/collab.persistence.js', () => ({
-  collabPersistence: {
-    agents: {
-      register: vi.fn(),
-      heartbeat: vi.fn(),
-      getAll: vi.fn(() => []),
-      getById: vi.fn(() => null),
-    },
-    tasks: {
-      create: vi.fn(),
-      getAll: mocks.tasksGetAll,
-      getById: vi.fn(() => null),
-      update: vi.fn(),
-      assignWithLocks: vi.fn(),
-      delete: vi.fn(() => false),
-    },
-    locks: {
-      acquire: vi.fn(),
-      release: vi.fn(() => false),
-      releaseForTask: vi.fn(),
-      check: vi.fn(() => null),
-      getAll: vi.fn(() => []),
-    },
-    pipelines: {
-      create: vi.fn(),
-      getAll: mocks.pipelinesGetAll,
-      getById: vi.fn(() => null),
-      advance: vi.fn(),
-      fail: vi.fn(),
-    },
-    activity: {
-      log: vi.fn(),
-      getRecent: mocks.activityGetRecent,
-    },
+vi.mock('../../codex/server/collab/collab.service.js', () => ({
+  CollabServiceError: hoisted.HoistedCollabServiceError,
+  collabService: {
+    listAgents: vi.fn(() => []),
+    getAgent: vi.fn(),
+    registerAgent: vi.fn(),
+    heartbeatAgent: vi.fn(),
+    listTasks: mocks.listTasks,
+    getTask: vi.fn(),
+    createTask: vi.fn(),
+    updateTask: vi.fn(),
+    deleteTask: vi.fn(),
+    assignTask: vi.fn(),
+    listLocks: vi.fn(() => []),
+    checkLock: vi.fn(() => null),
+    acquireLock: mocks.acquireLock,
+    releaseLock: vi.fn(),
+    listPipelines: mocks.listPipelines,
+    getPipeline: vi.fn(),
+    createPipeline: vi.fn(),
+    advancePipeline: vi.fn(),
+    failPipeline: vi.fn(),
+    listActivity: mocks.listActivity,
+    getStatus: vi.fn(() => ({
+      online_agents: 0,
+      total_agents: 0,
+      active_tasks: 0,
+      total_tasks: 0,
+      running_pipelines: 0,
+      active_locks: 0,
+    })),
   },
 }));
 
@@ -55,11 +67,14 @@ async function buildApp() {
 describe('[Server] collab query validation + pagination', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.listTasks.mockReturnValue([]);
+    mocks.listPipelines.mockReturnValue([]);
+    mocks.listActivity.mockReturnValue([]);
   });
 
   it('validates and forwards task list pagination', async () => {
     const expectedTasks = [{ id: 'task-1', title: 'Task 1', status: 'backlog' }];
-    mocks.tasksGetAll.mockReturnValue(expectedTasks);
+    mocks.listTasks.mockReturnValue(expectedTasks);
 
     const app = await buildApp();
     const response = await app.inject({
@@ -70,10 +85,13 @@ describe('[Server] collab query validation + pagination', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(expectedTasks);
-    expect(mocks.tasksGetAll).toHaveBeenCalledWith(
-      { status: 'backlog', agent: undefined, priority: 2 },
-      { limit: 5, offset: 3 },
-    );
+    expect(mocks.listTasks).toHaveBeenCalledWith({
+      status: 'backlog',
+      agent: undefined,
+      priority: 2,
+      limit: 5,
+      offset: 3,
+    });
   });
 
   it('returns 400 for invalid task query values', async () => {
@@ -93,7 +111,7 @@ describe('[Server] collab query validation + pagination', () => {
 
   it('validates and forwards pipelines query pagination', async () => {
     const expectedPipelines = [{ id: 'pipe-1', status: 'running' }];
-    mocks.pipelinesGetAll.mockReturnValue(expectedPipelines);
+    mocks.listPipelines.mockReturnValue(expectedPipelines);
 
     const app = await buildApp();
     const response = await app.inject({
@@ -104,10 +122,11 @@ describe('[Server] collab query validation + pagination', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(expectedPipelines);
-    expect(mocks.pipelinesGetAll).toHaveBeenCalledWith(
-      { status: 'running' },
-      { limit: 10, offset: 4 },
-    );
+    expect(mocks.listPipelines).toHaveBeenCalledWith({
+      status: 'running',
+      limit: 10,
+      offset: 4,
+    });
   });
 
   it('returns 400 for invalid activity pagination', async () => {
@@ -126,7 +145,7 @@ describe('[Server] collab query validation + pagination', () => {
 
   it('validates and forwards activity query filters', async () => {
     const expectedActivity = [{ id: 1, action: 'task_created' }];
-    mocks.activityGetRecent.mockReturnValue(expectedActivity);
+    mocks.listActivity.mockReturnValue(expectedActivity);
 
     const app = await buildApp();
     const response = await app.inject({
@@ -137,11 +156,39 @@ describe('[Server] collab query validation + pagination', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json()).toEqual(expectedActivity);
-    expect(mocks.activityGetRecent).toHaveBeenCalledWith(
-      7,
-      { agent: 'agent-ui', action: 'task_created' },
-      2,
-    );
+    expect(mocks.listActivity).toHaveBeenCalledWith({
+      agent: 'agent-ui',
+      action: 'task_created',
+      limit: 7,
+      offset: 2,
+    });
+  });
+
+  it('maps service conflicts into the HTTP error contract', async () => {
+    mocks.acquireLock.mockImplementation(() => {
+      throw new hoisted.HoistedCollabServiceError('AGENT_NOT_FOUND', 'Agent not found', {
+        statusCode: 404,
+        details: { agent_id: 'ghost' },
+      });
+    });
+
+    const app = await buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/collab/locks',
+      payload: {
+        file_path: 'src/pages/Test.jsx',
+        agent_id: 'ghost',
+        ttl_minutes: 30,
+      },
+    });
+    await app.close();
+
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toEqual({
+      error: 'Agent not found',
+      code: 'AGENT_NOT_FOUND',
+      agent_id: 'ghost',
+    });
   });
 });
-

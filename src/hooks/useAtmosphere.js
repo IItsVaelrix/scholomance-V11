@@ -170,5 +170,5 @@ export function useAtmosphere() {
     root.style.setProperty("--active-saturation", `${atmo.saturation}%`);
     root.style.setProperty("--active-vignette-strength", String(atmo.vignetteStrength));
     root.style.setProperty("--active-scanline-opacity", String(atmo.scanlineOpacity));
-  }, [currentSong?.school, ambientState, auroraLevelState]);
+  }, [currentSong?.school, ambientState, auroraLevelState, detectedId]);
 }

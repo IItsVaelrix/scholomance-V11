@@ -16,7 +16,7 @@ const FALLBACKS = {
 
 class ProcessorBridge {
   async execute(id, payload, context = {}, options = {}) {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
       // Browser: use worker, fall back on any error
       try {
         const { workerClient } = await import('./microprocessor.worker-client.js');
@@ -28,14 +28,14 @@ class ProcessorBridge {
         throw err;
       }
     } else {
-      // Node.js: lazy import avoids bundling Node-only APIs (Buffer etc.) into browser bundle
+      // Node.js (or browser without Worker support): lazy import avoids bundling Node-only APIs
       const { verseIRMicroprocessors } = await import('../../codex/core/microprocessors/index.js');
       return await verseIRMicroprocessors.execute(id, payload, context);
     }
   }
 
   async executePipeline(sequence, payload, context = {}, options = {}) {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && typeof Worker !== 'undefined') {
       try {
         const { workerClient } = await import('./microprocessor.worker-client.js');
         return await workerClient.executePipeline(sequence, payload, context, options);

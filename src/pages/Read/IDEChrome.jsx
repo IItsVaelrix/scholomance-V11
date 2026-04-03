@@ -123,8 +123,8 @@ export function TopBar({
         {showMinimapControl && (
           <button
             className={`ide-icon-btn ${showMinimap ? 'active' : ''}`}
-            title="Toggle Minimap"
-            aria-label="Toggle Minimap"
+            title="Toggle Lexicon Oracle"
+            aria-label="Toggle Lexicon Oracle"
             onClick={onToggleMinimap}
           >
             <MapIcon />
@@ -132,8 +132,8 @@ export function TopBar({
         )}
         <button
           className="ide-icon-btn"
-          title="Search (Ctrl+F)"
-          aria-label="Search"
+          title="Open Oracle Search (Ctrl+F)"
+          aria-label="Open Oracle Search"
           onClick={onOpenSearch}
         >
           <SearchIcon />

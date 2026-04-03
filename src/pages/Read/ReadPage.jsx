@@ -20,7 +20,7 @@ import { usePanelAnalysis } from "../../hooks/usePanelAnalysis.js";
 import { useWordLookup } from "../../hooks/useWordLookup.jsx";
 import { usePredictor } from "../../hooks/usePredictor.js";
 import { getVowelColorsForSchool, getRitualPalette } from "../../data/schoolPalettes.js";
-import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
+import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL, getSchoolsByUnlock } from "../../data/schools.js";
 import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
@@ -40,10 +40,9 @@ import { ANALYSIS_MODES } from "./TruesightControls.jsx";
 import { TopBar, StatusBar } from "./IDEChrome.jsx";
 import ToolsSidebar from "./ToolsSidebar.jsx";
 import SearchPanel from "./SearchPanel.jsx";
-import Minimap from "./Minimap.jsx";
 import FloatingPanel from "../../components/shared/FloatingPanel.jsx";
 import IDEAmbientCanvas from "./IDEAmbientCanvas.jsx";
-import KeystrokeSparksCanvas from "./KeystrokeSparksCanvas.jsx";
+import { ToolbarChannel, TOOLBAR_TOOL, SAVE_STATE } from "../../lib/truesight/compiler/toolbarBytecode";
 import "./IDE.css";
 
 const SCHOOL_GLYPHS = {
@@ -90,6 +89,10 @@ function escapeRegExp(value) {
   return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizeComparableWord(value) {
+  return String(value || "").trim().toUpperCase();
+}
+
 function applyMatchCase(sourceWord, replacement) {
   const source = String(sourceWord || "");
   const nextWord = String(replacement || "");
@@ -118,103 +121,47 @@ export default function ReadPage() {
   const [activeScrollId, setActiveScrollId] = useState(null);
   const [isEditable, setIsEditable] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  
+  const [editorContent, setEditorContent] = useState("");
+  const [editorTitle, setEditorTitle] = useState("");
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [selectedSchool, setSelectedSchool] = useState("SONIC");
+  const [infoBeamEnabled, setInfoBeamEnabled] = useState(false);
+  const [infoBeamFamily, setInfoBeamFamily] = useState(null);
+
   // Use settings for initial state if available
   const [isTruesight, setIsTruesight] = useState(settings?.truesightEnabled ?? false);
   const [isPredictive, setIsPredictive] = useState(settings?.predictiveEnabled ?? false);
+  const [mirrored, setMirrored] = useState(settings?.mirroredEnabled ?? false); // Mirror state
   const [analysisMode, setAnalysisMode] = useState(settings?.analysisMode ?? ANALYSIS_MODES.NONE);
   const [_isActivityBarExpanded, _setIsActivityBarExpanded] = useState(settings?.ideLayout?.[0] > 18);
-
-  const handleToggleTruesight = useCallback(() => {
-    setIsTruesight((prev) => {
-      const next = !prev;
-      updateSettings({ truesightEnabled: next });
-      setHighlightedLines([]);
-      return next;
-    });
-  }, [updateSettings]);
-
-  const handleTogglePredictive = useCallback(() => {
-    setIsPredictive(prev => {
-      const next = !prev;
-      updateSettings({ predictiveEnabled: next });
-      return next;
-    });
-  }, [updateSettings]);
-
-  const handleModeChange = useCallback((nextMode) => {
-    setAnalysisMode((prev) => {
-      const resolvedMode = prev === nextMode ? ANALYSIS_MODES.NONE : nextMode;
-      updateSettings({ analysisMode: resolvedMode });
-      return resolvedMode;
-    });
-    setHighlightedLines([]);
-  }, [updateSettings]);
-
-  useLayoutEffect(() => {
-    // Combined activity bar width — drives IDE.css label reveal thresholds
-    const layout = settings?.ideLayout;
-    // Support old 5-element layout (icons + labels were separate) → merge them
-    const isOldLayout = layout?.length === 5;
-    const combinedPct = isOldLayout
-      ? (layout[0] + layout[1])
-      : (layout?.[0] ?? 3);
-    const el = document.querySelector('.ide-activity-combined');
-    if (el) el.setAttribute('data-panel-size', combinedPct.toFixed(1));
-  }, [settings?.ideLayout]);
-
-  const [editorContent, setEditorContent] = useState("");
-  const [editorTitle, setEditorTitle] = useState("");
+  
   const [highlightedLines, setHighlightedLines] = useState([]);
-  const [pinnedLines, setPinnedLines] = useState(null);
-  const effectiveHighlightedLines = pinnedLines ?? highlightedLines;
-  const [selectedSchool, setSelectedSchool] = useState("DEFAULT");
+  const [pinnedLines, setPinnedLines] = useState([]);
+  const [_saveStatus, setSaveStatus] = useState("Saved");
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState("FILES");
+  const [mobileActiveTab, setMobileActiveTab] = useState("EDITOR");
   const [showScorePanel, setShowScorePanel] = useState(false);
-  const [isNarrowViewport, setIsNarrowViewport] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth <= 960;
-  });
-  const [isMobileViewport, setIsMobileViewport] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return window.innerWidth <= 640;
-  });
-  const [mobileActiveTab, setMobileActiveTab] = useState("EDITOR"); // EDITOR, FILES, TOOLS, SCORE
-  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
-  const [, setSaveStatus] = useState("Saved");
-  const [sidebarTab, setSidebarTab] = useState("FILES"); // FILES, SEARCH, TOOLS
-  const [showMinimap, setShowMinimap] = useState(false);
-  const [minimapScrollTop, setMinimapScrollTop] = useState(0);
+  const [showOraclePanel, setShowOraclePanel] = useState(true);
   const [toasts, setToasts] = useState([]);
-  const [infoBeamEnabled, setInfoBeamEnabled] = useState(false);
-  const [infoBeamFamily, setInfoBeamFamily] = useState(null);
+
   const addToast = useCallback((message, type = "info") => {
-    const id = Date.now();
+    const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, 3000);
   }, []);
 
-  const schoolColorHex = useMemo(
-    () => SCHOOLS[selectedSchool]?.color ?? '#c8a84b',
-    [selectedSchool]
-  );
+  const schoolColorHex = useMemo(() => {
+    return SCHOOLS[selectedSchool]?.color || "#d5b34b";
+  }, [selectedSchool]);
 
-  const schoolList = useMemo(
-    () => [
-      { id: "DEFAULT", name: "Truesight", glyph: String(SCHOOL_GLYPHS.DEFAULT || "") },
-      ...["SONIC", "PSYCHIC", "VOID", "ALCHEMY", "WILL", "DIVINATION", "NECROMANCY", "ABJURATION"].map((id) => {
-        const school = SCHOOLS[id];
-        return {
-          id: String(id),
-          name: String(school?.name || id),
-          glyph: String(SCHOOL_GLYPHS[id] || school?.glyph || "\u2736"),
-        };
-      }),
-    ],
-    []
-  );
-
+  const effectiveHighlightedLines = useMemo(() => {
+    return [...new Set([...highlightedLines, ...pinnedLines])];
+  }, [highlightedLines, pinnedLines]);
+  
   const {
     analysis: deepAnalysis,
     schemeDetection,
@@ -234,6 +181,73 @@ export default function ReadPage() {
     emotion,
     error: analysisError,
   } = usePanelAnalysis();
+
+  // Sync toolbar state to bytecode channel
+  useEffect(() => {
+    ToolbarChannel.setTool(TOOLBAR_TOOL.TRUESIGHT, isTruesight);
+  }, [isTruesight]);
+  
+  useEffect(() => {
+    ToolbarChannel.setTool(TOOLBAR_TOOL.PREDICTIVE, isPredictive);
+  }, [isPredictive]);
+  
+  useEffect(() => {
+    ToolbarChannel.setTool(TOOLBAR_TOOL.ANALYSIS_MODE, analysisMode);
+  }, [analysisMode]);
+  
+  useEffect(() => {
+    ToolbarChannel.setTool(TOOLBAR_TOOL.SCHEME_DETECTION, !!schemeDetection);
+  }, [schemeDetection]);
+
+  const handleToggleTruesight = useCallback(() => {
+    setIsTruesight((prev) => {
+      const next = !prev;
+      updateSettings({ truesightEnabled: next });
+      ToolbarChannel.setTool(TOOLBAR_TOOL.TRUESIGHT, next);
+      setHighlightedLines([]);
+      return next;
+    });
+  }, [updateSettings]);
+
+  const handleTogglePredictive = useCallback(() => {
+    setIsPredictive(prev => {
+      const next = !prev;
+      updateSettings({ predictiveEnabled: next });
+      ToolbarChannel.setTool(TOOLBAR_TOOL.PREDICTIVE, next);
+      return next;
+    });
+  }, [updateSettings]);
+
+  const handleToggleMirrored = useCallback(() => {
+    setMirrored((prev) => {
+      const next = !prev;
+      updateSettings({ mirroredEnabled: next });
+      return next;
+    });
+  }, [updateSettings]);
+
+  const handleModeChange = useCallback((nextMode) => {
+    setAnalysisMode((prev) => {
+      const resolvedMode = prev === nextMode ? ANALYSIS_MODES.NONE : nextMode;
+      updateSettings({ analysisMode: resolvedMode });
+      ToolbarChannel.setTool(TOOLBAR_TOOL.ANALYSIS_MODE, resolvedMode);
+      return resolvedMode;
+    });
+    setHighlightedLines([]);
+  }, [updateSettings]);
+
+  useLayoutEffect(() => {
+    // Combined activity bar width — drives IDE.css label reveal thresholds
+    const layout = settings?.ideLayout;
+    // Support old 5-element layout (icons + labels were separate) → merge them
+    const isOldLayout = layout?.length === 5;
+    const combinedPct = isOldLayout
+      ? (layout[0] + layout[1])
+      : (layout?.[0] ?? 3);
+    const el = document.querySelector('.ide-activity-combined');
+    if (el) el.setAttribute('data-panel-size', combinedPct.toFixed(1));
+  }, [settings?.ideLayout]);
+
   const {
     lookup,
     data: lookupData,
@@ -309,6 +323,11 @@ export default function ReadPage() {
     const currentLineIdx = Number.isInteger(cursorPos?.lineNumber) ? cursorPos.lineNumber - 1 : lines.length - 1;
     return lines[currentLineIdx] || "";
   }, [editorContent, cursorPos]);
+
+  const schoolList = useMemo(
+    () => getSchoolsByUnlock(),
+    []
+  );
 
   const activeVowelColors = useMemo(
     () => getVowelColorsForSchool(selectedSchool, theme),
@@ -559,6 +578,7 @@ export default function ReadPage() {
   const handleSaveScroll = useCallback(
     async (title, content) => {
       bumpAutosaveContext();
+      ToolbarChannel.setTool(TOOLBAR_TOOL.SAVE_STATE, SAVE_STATE.SAVING);
       setSaveStatus("Saving...");
       const isUpdate = Boolean(isEditing && activeScrollId);
       const wasSubmitted = Boolean(activeScroll?.submittedAt);
@@ -570,6 +590,7 @@ export default function ReadPage() {
         submittedAt: activeScroll?.submittedAt || null,
       });
       if (!savedScroll) {
+        ToolbarChannel.setTool(TOOLBAR_TOOL.SAVE_STATE, SAVE_STATE.DIRTY);
         setSaveStatus("Error");
         addToast("Failed to save scroll", "error");
         return;
@@ -597,6 +618,7 @@ export default function ReadPage() {
         addToast(`${actionLabel}!`, "success");
       }
 
+      ToolbarChannel.setTool(TOOLBAR_TOOL.SAVE_STATE, SAVE_STATE.SAVED);
       setSaveStatus("Saved");
       setActiveScrollId(savedScroll.id);
       setEditorContent(String(savedScroll.content || content || ""));
@@ -674,12 +696,14 @@ export default function ReadPage() {
       }
     }, 400);
     setEditorContent(content);
+    ToolbarChannel.setTool(TOOLBAR_TOOL.SAVE_STATE, SAVE_STATE.DIRTY);
     setSaveStatus("Unsaved");
   }, []);
 
   const handleEditorTitleChange = useCallback((title) => {
     setEditorTitle(String(title || ""));
     if (isEditable) {
+      ToolbarChannel.setTool(TOOLBAR_TOOL.SAVE_STATE, SAVE_STATE.DIRTY);
       setSaveStatus("Unsaved");
     }
   }, [isEditable]);
@@ -814,6 +838,76 @@ export default function ReadPage() {
         : null,
     };
   }, [analyzedWords, analyzedWordsByCharStart, deepAnalysis, rhymeAstrology, selectedSchool]);
+
+  const resolveLexiconContext = useCallback((word) => {
+    const normalizedWord = normalizeComparableWord(word);
+    if (!normalizedWord) return null;
+
+    const localWordAnalysis = analyzedWords.get(normalizedWord) || null;
+    const schoolMeta = getSchoolMetaFromVowelFamily(localWordAnalysis?.vowelFamily || null);
+    const wordProfiles = Array.isArray(deepAnalysis?.wordAnalyses) ? deepAnalysis.wordAnalyses : [];
+    const matchingProfiles = wordProfiles.filter(
+      (profile) => normalizeComparableWord(profile?.normalizedWord || profile?.word) === normalizedWord
+    );
+
+    const allConnections = Array.isArray(deepAnalysis?.allConnections) ? deepAnalysis.allConnections : [];
+    const matchedLinks = allConnections.flatMap((connection) => {
+      const wordA = normalizeComparableWord(connection?.wordA?.normalizedWord || connection?.wordA?.word);
+      const wordB = normalizeComparableWord(connection?.wordB?.normalizedWord || connection?.wordB?.word);
+      if (wordA !== normalizedWord && wordB !== normalizedWord) return [];
+
+      const opposite = wordA === normalizedWord ? connection?.wordB : connection?.wordA;
+      return [{
+        word: String(opposite?.word || ""),
+        line: Number.isInteger(opposite?.lineIndex) ? opposite.lineIndex + 1 : null,
+        charStart: Number.isInteger(opposite?.charStart) ? opposite.charStart : null,
+        score: Number(connection?.score) || 0,
+        type: String(connection?.type || "near"),
+        groupLabel: String(connection?.groupLabel || ""),
+      }];
+    }).sort((a, b) => (b.score - a.score) || a.word.localeCompare(b.word));
+
+    const astrologyAnchors = Array.isArray(rhymeAstrology?.inspector?.anchors)
+      ? rhymeAstrology.inspector.anchors
+      : [];
+    const astrologyClusters = Array.isArray(rhymeAstrology?.inspector?.clusters)
+      ? rhymeAstrology.inspector.clusters
+      : [];
+    const anchorMatch = astrologyAnchors.find(
+      (anchor) => normalizeComparableWord(anchor?.normalizedWord || anchor?.word) === normalizedWord
+    ) || null;
+    const anchorSign = String(anchorMatch?.sign || "").trim();
+
+    if (!localWordAnalysis && matchingProfiles.length === 0 && matchedLinks.length === 0 && !anchorSign) {
+      return null;
+    }
+
+    return {
+      foundInScroll: matchingProfiles.length > 0,
+      totalOccurrences: matchingProfiles.length,
+      occurrences: matchingProfiles.slice(0, 8).map((profile) => ({
+        word: String(profile?.word || "").trim() || normalizedWord.toLowerCase(),
+        line: Number.isInteger(profile?.lineIndex) ? profile.lineIndex + 1 : null,
+        charStart: Number.isInteger(profile?.charStart) ? profile.charStart : null,
+      })),
+      core: {
+        vowelFamily: localWordAnalysis?.vowelFamily || null,
+        rhymeKey: localWordAnalysis?.rhymeKey || null,
+        syllableCount: Number(localWordAnalysis?.syllableCount) || null,
+        schoolName: schoolMeta.schoolName,
+        schoolGlyph: schoolMeta.schoolGlyph,
+      },
+      resonanceLinks: matchedLinks.filter((link) => link.type !== "assonance").slice(0, 6),
+      assonanceLinks: matchedLinks.filter((link) => link.type === "assonance").slice(0, 6),
+      astrology: anchorSign ? {
+        sign: anchorSign,
+        topMatches: Array.isArray(anchorMatch?.topMatches) ? anchorMatch.topMatches.slice(0, 4) : [],
+        clusters: astrologyClusters
+          .filter((cluster) => String(cluster?.sign || "").trim() === anchorSign)
+          .slice(0, 3),
+      } : null,
+    };
+  }, [analyzedWords, deepAnalysis, rhymeAstrology]);
 
   const handleCloseTooltip = useCallback((options = {}) => {
     const shouldRestoreFocus = options?.restoreFocus !== false;
@@ -1034,6 +1128,10 @@ export default function ReadPage() {
     }
   }, [sessionWords, lookup, resetWordLookup]);
 
+  const lexiconSeedWord = tooltipState.pinned
+    ? String(tooltipState.token?.normalizedWord || "")
+    : "";
+
   const { predict, getCompletions, checkSpelling, getSpellingSuggestions, isReady: predictorReady } = usePredictor();
   const [misspellings, setMisspellings] = useState([]);
   const applySpellcheckCorrection = useCallback((misspelledWord, suggestion) => {
@@ -1139,7 +1237,7 @@ export default function ReadPage() {
             theme={theme}
             onWordActivate={handleWordActivate}
             onCursorChange={setCursorPos}
-            onScrollChange={setMinimapScrollTop}
+            mirrored={mirrored}
           />
         ) : (
           <div className="scroll-placeholder">
@@ -1165,21 +1263,28 @@ export default function ReadPage() {
 
   const searchBlock = (
     <SearchPanel
-      content={documentContent}
+      seedWord={lexiconSeedWord}
+      selectedSchool={selectedSchool}
+      contextLookup={resolveLexiconContext}
       onJumpToLine={(line) => {
         editorRef.current?.jumpToLine?.(line);
         if (isMobileViewport) setMobileActiveTab("EDITOR");
       }}
+      variant="sidebar"
     />
   );
 
   const toolsBlock = (
     <div className="sidebar-tools">
       <ToolsSidebar
+        editorRef={editorRef}
+        isEditable={isEditable}
         isTruesight={isTruesight}
         onToggleTruesight={handleToggleTruesight}
         isPredictive={isPredictive}
         onTogglePredictive={() => setIsPredictive(prev => !prev)}
+        mirrored={mirrored}
+        onToggleMirrored={handleToggleMirrored}
         analysisMode={analysisMode}
         onModeChange={handleModeChange}
         isAnalyzing={isAnalyzing}
@@ -1297,11 +1402,11 @@ export default function ReadPage() {
     },
     {
       id: "SEARCH",
-      label: "Search",
-      hint: "Find",
-      eyebrow: "Needle path",
-      description: "Trace words through the active scroll, then jump back into the exact line.",
-      badge: `${lineCount} lines`,
+      label: "Oracle",
+      hint: "Query",
+      eyebrow: "Archive terminal",
+      description: "Summon definitions, rhyme fields, shadow echoes, and live scroll resonance from one terminal surface.",
+      badge: "Lexicon live",
     },
     {
       id: "TOOLS",
@@ -1530,8 +1635,8 @@ export default function ReadPage() {
       <TopBar
         title={activeScroll?.title || (isEditable ? "New Scroll" : "Scholomance IDE")}
         onOpenSearch={() => setSidebarTab('SEARCH')}
-        showMinimap={showMinimap}
-        onToggleMinimap={() => setShowMinimap(!showMinimap)}
+        showMinimap={showOraclePanel}
+        onToggleMinimap={() => setShowOraclePanel(!showOraclePanel)}
         isEditable={isEditable}
         activeScrollId={activeScrollId}
         onEdit={handleEditScroll}
@@ -1587,7 +1692,7 @@ export default function ReadPage() {
             <div className="sidebar-combined-content">
               {/* Header labels area */}
               <div className="sidebar-labels-header">
-                {['EXPLORER', 'SEARCH', 'HEX TOOLS'].map((label, i) => {
+                {['EXPLORER', 'ORACLE', 'HEX TOOLS'].map((label, i) => {
                   const tabs = ['FILES', 'SEARCH', 'TOOLS'];
                   return (
                     <button
@@ -1615,19 +1720,26 @@ export default function ReadPage() {
                 )}
                 {sidebarTab === 'SEARCH' && (
                   <SearchPanel
-                    content={documentContent}
+                    seedWord={lexiconSeedWord}
+                    selectedSchool={selectedSchool}
+                    contextLookup={resolveLexiconContext}
                     onJumpToLine={(line) => {
                       editorRef.current?.jumpToLine?.(line);
                     }}
+                    variant="sidebar"
                   />
                 )}
                 {sidebarTab === 'TOOLS' && (
                   <div className="sidebar-tools">
                     <ToolsSidebar 
+                      editorRef={editorRef}
+                      isEditable={isEditable}
                       isTruesight={isTruesight}
                       onToggleTruesight={handleToggleTruesight}
                       isPredictive={isPredictive}
                       onTogglePredictive={handleTogglePredictive}
+                      mirrored={mirrored}
+                      onToggleMirrored={handleToggleMirrored}
                       analysisMode={analysisMode}
                       onModeChange={handleModeChange}
                       isAnalyzing={isAnalyzing}
@@ -1675,7 +1787,6 @@ export default function ReadPage() {
           <PanelResizeHandle className="sidebar-resize-handle" />
           <Panel defaultSize={settings?.ideLayout?.length === 5 ? settings.ideLayout[3] : (settings?.ideLayout?.[2] ?? (isNarrowViewport ? undefined : 60))} minSize={isNarrowViewport ? "40%" : "30%"}>
             <div className="codex-workspace">
-              <KeystrokeSparksCanvas schoolColor={schoolColorHex} />
               <div className="document-container">
                 {activeScrollId || isEditable ? (
                   <ScrollEditor
@@ -1710,7 +1821,7 @@ export default function ReadPage() {
                     theme={theme}
                     onWordActivate={handleWordActivate}
                     onCursorChange={setCursorPos}
-                    onScrollChange={setMinimapScrollTop}
+                    mirrored={mirrored}
                   />
                 ) : (
                   <div className="scroll-placeholder">
@@ -1807,27 +1918,25 @@ export default function ReadPage() {
                       </div>
                     )}
 
-                    {showMinimap && (
+                    {showOraclePanel && (
                       <div className="right-panel-section">
                         <div className="right-panel-section-header">
-                          <span className="right-panel-section-title">Minimap</span>
+                          <span className="right-panel-section-title">Lexicon Oracle</span>
                           <button
                             type="button"
                             className="right-panel-close"
-                            onClick={() => setShowMinimap(false)}
-                            aria-label="Close Minimap"
+                            onClick={() => setShowOraclePanel(false)}
+                            aria-label="Close Lexicon Oracle"
                           >×</button>
                         </div>
-                        <Minimap
-                          content={documentContent}
-                          scrollTop={minimapScrollTop}
-                          viewportHeight={editorRef.current?.clientHeight || 0}
-                          totalHeight={editorRef.current?.scrollHeight || 1}
-                          onScrollTo={(y) => {
-                            if (editorRef.current?.scrollTo) {
-                              editorRef.current.scrollTo(y);
-                            }
+                        <SearchPanel
+                          seedWord={lexiconSeedWord}
+                          selectedSchool={selectedSchool}
+                          contextLookup={resolveLexiconContext}
+                          onJumpToLine={(line) => {
+                            editorRef.current?.jumpToLine?.(line);
                           }}
+                          variant="rail"
                         />
                       </div>
                     )}
@@ -1876,10 +1985,10 @@ export default function ReadPage() {
                       </div>
                     )}
 
-                    {!showScorePanel && !isAnalysisPanelVisible && !(infoBeamEnabled && infoBeamFamily) && !showMinimap && !(isPredictive && misspellings.length > 0) && (
+                    {!showScorePanel && !isAnalysisPanelVisible && !(infoBeamEnabled && infoBeamFamily) && !showOraclePanel && !(isPredictive && misspellings.length > 0) && (
                       <div className="right-panel-empty">
                         <div className="right-panel-empty-icon">⊘</div>
-                        <p>Open Rhyme Astrology, Truesight Analyze, or CODEx Metrics to see analysis here</p>
+                        <p>Summon the Lexicon Oracle, Rhyme Astrology, or CODEx Metrics to project analysis here</p>
                       </div>
                     )}
                   </div>
@@ -1899,32 +2008,30 @@ export default function ReadPage() {
       />
       
       {/* Floating panel fallback for narrow viewports only */}
-      {isNarrowViewport && showMinimap && (
+      {isNarrowViewport && showOraclePanel && (
         <FloatingPanel
-          id="minimap-panel"
-          title="Minimap"
-          onClose={() => setShowMinimap(false)}
-          defaultX={window.innerWidth - 180}
-          defaultY={window.innerHeight - 350}
-          defaultWidth={150}
-          defaultHeight={300}
-          minWidth={80}
-          minHeight={100}
-          maxWidth={280}
-          maxHeight={600}
+          id="lexicon-oracle-panel"
+          title="Lexicon Oracle"
+          onClose={() => setShowOraclePanel(false)}
+          defaultX={window.innerWidth - 420}
+          defaultY={88}
+          defaultWidth={380}
+          defaultHeight={520}
+          minWidth={280}
+          minHeight={240}
+          maxWidth={560}
+          maxHeight={760}
           zIndex={200}
-          className="minimap-floating-panel"
+          className="oracle-floating-panel"
         >
-          <Minimap
-            content={documentContent}
-            scrollTop={minimapScrollTop}
-            viewportHeight={editorRef.current?.clientHeight || 0}
-            totalHeight={editorRef.current?.scrollHeight || 1}
-            onScrollTo={(y) => {
-              if (editorRef.current?.scrollTo) {
-                editorRef.current.scrollTo(y);
-              }
+          <SearchPanel
+            seedWord={lexiconSeedWord}
+            selectedSchool={selectedSchool}
+            contextLookup={resolveLexiconContext}
+            onJumpToLine={(line) => {
+              editorRef.current?.jumpToLine?.(line);
             }}
+            variant="floating"
           />
         </FloatingPanel>
       )}

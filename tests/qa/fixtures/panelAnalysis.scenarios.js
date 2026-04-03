@@ -343,3 +343,33 @@ export const VOWEL_COLOR_SCENARIOS = {
     connections: [],
   },
 };
+
+export const HYGIENE_SCENARIOS = {
+  singletonNoise: {
+    text: "time rhyme day",
+    wordAnalyses: [
+      createWordAnalysis({ word: "time", normalizedWord: "TIME", charStart: 0, charEnd: 4, vowelFamily: "AY", wordIndex: 0 }),
+      createWordAnalysis({ word: "rhyme", normalizedWord: "RHYME", charStart: 5, charEnd: 10, vowelFamily: "AY", wordIndex: 1 }),
+      createWordAnalysis({ word: "day", normalizedWord: "DAY", charStart: 11, charEnd: 14, vowelFamily: "EY", wordIndex: 2 }),
+    ],
+    connections: [
+      createConnection({ charStart: 0, wordIndex: 0 }, { charStart: 5, wordIndex: 1 }, { score: 1.0 })
+    ]
+  },
+  forensicMode: {
+    text: "area strict",
+    wordAnalyses: [
+      createWordAnalysis({ word: "area", normalizedWord: "AREA", charStart: 0, charEnd: 4, vowelFamily: "EA", wordIndex: 0 }),
+      createWordAnalysis({ word: "strict", normalizedWord: "STRICT", charStart: 5, charEnd: 11, vowelFamily: "IH", wordIndex: 1 }),
+    ],
+    connections: []
+  },
+  heatmapMode: {
+    text: "match cold",
+    wordAnalyses: [
+      createWordAnalysis({ word: "match", normalizedWord: "MATCH", charStart: 0, charEnd: 5, vowelFamily: "AE", wordIndex: 0 }),
+      createWordAnalysis({ word: "cold", normalizedWord: "COLD", charStart: 6, charEnd: 10, vowelFamily: "OW", wordIndex: 1 }),
+    ],
+    connections: []
+  }
+};

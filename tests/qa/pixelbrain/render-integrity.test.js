@@ -7,10 +7,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { getSafeContext, renderLattice } from '../../../src/lib/render-engine.js';
-import { 
-  ERROR_CATEGORIES, 
-  ERROR_CODES 
-} from '../../../codex/core/pixelbrain/bytecode-error.js';
 
 describe('PixelBrain Render Integrity QA', () => {
   

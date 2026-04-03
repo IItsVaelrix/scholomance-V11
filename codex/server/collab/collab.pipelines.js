@@ -58,6 +58,7 @@ export const OWNERSHIP_MAP = {
         'src/index.css',
     ],
     backend: [
+        'SCHEMA_CONTRACT.md',
         'codex/',
         'src/lib/',
         'src/hooks/',

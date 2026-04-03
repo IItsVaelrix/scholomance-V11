@@ -365,3 +365,41 @@ describe('activity', () => {
         expect(firstPage[0].id).not.toBe(secondPage[0].id);
     });
 });
+
+describe('memories', () => {
+    it('should set and get a global memory', () => {
+        collabPersistence.memories.set('', 'project-goal', 'complete-ritual');
+        const memory = collabPersistence.memories.get('', 'project-goal');
+        expect(memory).toBeDefined();
+        expect(memory.value).toBe('complete-ritual');
+        expect(memory.agent_id).toBe('');
+    });
+
+    it('should set and get an agent-specific memory', () => {
+        collabPersistence.memories.set('test-claude', 'current-mood', 'curious');
+        const memory = collabPersistence.memories.get('test-claude', 'current-mood');
+        expect(memory).toBeDefined();
+        expect(memory.value).toBe('curious');
+        expect(memory.agent_id).toBe('test-claude');
+    });
+
+    it('should update memory on conflict', () => {
+        collabPersistence.memories.set('', 'version', '1.0');
+        collabPersistence.memories.set('', 'version', '1.1');
+        const memory = collabPersistence.memories.get('', 'version');
+        expect(memory.value).toBe('1.1');
+    });
+
+    it('should get all memories for an agent (including global)', () => {
+        collabPersistence.memories.set('', 'global-fact', true);
+        collabPersistence.memories.set('test-gemini', 'local-fact', true);
+        const all = collabPersistence.memories.getAll('test-gemini');
+        expect(all.some(m => m.key === 'global-fact')).toBe(true);
+        expect(all.some(m => m.key === 'local-fact')).toBe(true);
+    });
+
+    it('should return null for missing memory', () => {
+        const memory = collabPersistence.memories.get('', 'missing-key');
+        expect(memory).toBeNull();
+    });
+});

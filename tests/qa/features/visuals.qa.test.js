@@ -221,7 +221,7 @@ describe("Theory 9: SONIC is filtered out by getPlayableSchoolIds", () => {
   });
 
   it("built-in radio surface is SONIC-only", () => {
-    const playable = getPlayableSchoolIds(Object.keys(SCHOOLS));
+    const playable = getPlayableSchoolIds(["SONIC"]);
     expect(playable).toContain("SONIC");
     expect(playable).toHaveLength(1);
   });

@@ -16,26 +16,97 @@
  *   await client.register('Claude (Opus)', 'ui', ['jsx', 'css']);
  */
 
-const BASE_URL = process.env.COLLAB_URL || 'http://localhost:3000/collab';
+import fs from 'fs';
 
-async function collabFetch(path, agentId, options = {}) {
-    const url = `${BASE_URL}${path}`;
+const BASE_URL = process.env.COLLAB_URL || 'http://localhost:3000/collab';
+const API_BASE = process.env.API_BASE_URL || 'http://localhost:3000';
+const COOKIE_FILE = process.env.COLLAB_COOKIE_FILE || '/tmp/scholomance_cookie.txt';
+
+// Cookie jar for session management (Node.js fetch doesn't handle cookies automatically)
+let _sessionCookie = null;
+
+function loadCookie() {
+    try {
+        if (fs.existsSync(COOKIE_FILE)) {
+            _sessionCookie = fs.readFileSync(COOKIE_FILE, 'utf8').trim() || null;
+        }
+    } catch {
+        // Ignore cookie read failures.
+    }
+}
+
+function saveCookie() {
+    try {
+        if (_sessionCookie) {
+            fs.writeFileSync(COOKIE_FILE, _sessionCookie, 'utf8');
+        }
+    } catch {
+        // Ignore cookie persistence failures.
+    }
+}
+
+function captureSessionCookie(response) {
+    const setCookie = response.headers.get('set-cookie');
+    if (!setCookie) return;
+    const match = setCookie.match(/(connect|scholomance)\.sid=([^;]+)/);
+    if (!match) return;
+    _sessionCookie = `${match[1]}.sid=${match[2]}`;
+    saveCookie();
+}
+
+async function apiFetch(baseUrl, path, agentId, options = {}) {
+    const url = `${baseUrl}${path}`;
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(agentId ? { 'X-Agent-ID': agentId } : {}),
+        ...options.headers,
+    };
+    // Attach agent key if available (passwordless remote auth)
+    const agentKey = process.env.AGENT_KEY;
+    if (agentKey) {
+        headers['Authorization'] = `Bearer ${agentKey}`;
+    }
+    // Attach session cookie if available
+    if (_sessionCookie) {
+        headers['Cookie'] = _sessionCookie;
+    }
     const res = await fetch(url, {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...(agentId ? { 'X-Agent-ID': agentId } : {}),
-            ...options.headers,
-        },
+        headers,
     });
+    captureSessionCookie(res);
     const data = await res.json();
     if (!res.ok) {
-        const err = new Error(data.error || `HTTP ${res.status}`);
+        const err = new Error(data.message || data.error || `HTTP ${res.status}`);
         err.status = res.status;
         err.data = data;
         throw err;
     }
     return data;
+}
+
+loadCookie();
+
+async function collabFetch(path, agentId, options = {}) {
+    return apiFetch(BASE_URL, path, agentId, options);
+}
+
+async function authFetch(path, options = {}) {
+    return apiFetch(API_BASE, path, null, options);
+}
+
+export async function login(username, password) {
+    const csrfData = await authFetch('/auth/csrf-token');
+    const csrfToken = csrfData.token;
+
+    return authFetch('/auth/login', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-csrf-token': csrfToken,
+        },
+        body: JSON.stringify({ username, password }),
+    });
 }
 
 export function createCollabClient(agentId) {
@@ -126,7 +197,7 @@ async function main() {
 
     if (!command) {
         console.log('Usage: AGENT_ID=<id> node collab-client.js <command> [options]');
-        console.log('Commands: register, heartbeat, tasks, claim, complete, status, agents, pipelines, activity');
+        console.log('Commands: login, register, heartbeat, tasks, create-task, claim, complete, status, agents, pipelines, start-pipeline, advance-pipeline, fail-pipeline, acquire-lock, release-lock, locks, activity');
         process.exit(0);
     }
 
@@ -134,6 +205,13 @@ async function main() {
 
     try {
         switch (command) {
+            case 'login': {
+                const username = getFlag(args, '--username') || process.env.COLLAB_USER || 'test';
+                const password = getFlag(args, '--password') || process.env.COLLAB_PASS || 'password';
+                const result = await login(username, password);
+                console.log('Logged in:', JSON.stringify(result, null, 2));
+                break;
+            }
             case 'register': {
                 const name = getFlag(args, '--name') || agentId;
                 const role = getFlag(args, '--role') || 'backend';
@@ -144,7 +222,8 @@ async function main() {
             }
             case 'heartbeat': {
                 const status = getFlag(args, '--status') || 'online';
-                const result = await client.heartbeat(status);
+                const currentTaskId = getFlag(args, '--task-id');
+                const result = await client.heartbeat(status, currentTaskId);
                 console.log('Heartbeat:', JSON.stringify(result, null, 2));
                 break;
             }
@@ -152,6 +231,14 @@ async function main() {
                 const status = getFlag(args, '--status');
                 const result = await client.getTasks(status ? { status } : {});
                 console.log(JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'create-task': {
+                const title = args[1];
+                if (!title) { console.error('Task title required'); process.exit(1); }
+                const priority = getFlag(args, '--priority') || '1';
+                const result = await client.createTask(title, { priority: Number(priority) });
+                console.log('Created:', JSON.stringify(result, null, 2));
                 break;
             }
             case 'claim': {
@@ -164,8 +251,10 @@ async function main() {
             case 'complete': {
                 const taskId = args[1];
                 if (!taskId) { console.error('Task ID required'); process.exit(1); }
-                const result = await client.completeTask(taskId);
-                console.log('Completed:', JSON.stringify(result, null, 2));
+                const resultStr = getFlag(args, '--result');
+                const result = resultStr ? JSON.parse(resultStr) : {};
+                const resultObj = await client.completeTask(taskId, result);
+                console.log('Completed:', JSON.stringify(resultObj, null, 2));
                 break;
             }
             case 'status': {
@@ -180,6 +269,52 @@ async function main() {
             }
             case 'pipelines': {
                 const result = await client.getPipelines();
+                console.log(JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'start-pipeline': {
+                const type = args[1];
+                if (!type) { console.error('Pipeline type required'); process.exit(1); }
+                const triggerId = getFlag(args, '--trigger-id');
+                const result = await client.startPipeline(type, triggerId);
+                console.log('Started:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'advance-pipeline': {
+                const pipeId = args[1];
+                if (!pipeId) { console.error('Pipeline ID required'); process.exit(1); }
+                const resultStr = getFlag(args, '--result');
+                const result = resultStr ? JSON.parse(resultStr) : {};
+                const resultObj = await client.advancePipeline(pipeId, result);
+                console.log('Advanced:', JSON.stringify(resultObj, null, 2));
+                break;
+            }
+            case 'fail-pipeline': {
+                const pipeId = args[1];
+                if (!pipeId) { console.error('Pipeline ID required'); process.exit(1); }
+                const reason = getFlag(args, '--reason') || 'Unknown failure';
+                const result = await client.failPipeline(pipeId, reason);
+                console.log('Failed:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'acquire-lock': {
+                const path = args[1];
+                if (!path) { console.error('File path required'); process.exit(1); }
+                const taskId = getFlag(args, '--task-id');
+                const ttl = getFlag(args, '--ttl') || '30';
+                const result = await client.acquireLock(path, taskId, Number(ttl));
+                console.log('Acquired:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'release-lock': {
+                const path = args[1];
+                if (!path) { console.error('File path required'); process.exit(1); }
+                const result = await client.releaseLock(path);
+                console.log('Released:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'locks': {
+                const result = await client.getLocks();
                 console.log(JSON.stringify(result, null, 2));
                 break;
             }

@@ -23,7 +23,7 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
   onSelectTrack,
 }) => {
   const buckets = getSonicStationBuckets();
-  
+
   const handleTrackSelect = (url: string, schoolId: string) => {
     triggerHapticPulse(UI_HAPTICS.LIGHT);
     onSelectTrack(url, schoolId);
@@ -34,35 +34,14 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
     onClose();
   };
 
-  const overlayVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { 
-      opacity: 1, 
-      scale: 1,
-      transition: { duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] } 
-    },
-    exit: { 
-      opacity: 0, 
-      scale: 0.5, 
-      filter: "blur(10px)",
-      transition: { duration: 0.6, ease: "easeIn" } 
-    }
-  };
-
   return (
-    <motion.div 
-      className="scholomance-station-overlay"
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      variants={overlayVariants}
-    >
+    <div className="scholomance-station-overlay">
       <div className="station-content">
         <header className="station-header">
-          <motion.button 
+          <motion.button
             className="back-btn"
             onClick={handleBack}
-            whileHover={{ x: -5 }}
+            whileHover={{ x: -5, scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
           >
             <span className="material-symbols-outlined">arrow_back</span>
@@ -75,27 +54,10 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
         </header>
 
         <main className="station-focus">
-          <motion.div 
-            className="orb-centerpiece"
-            layoutId="central-orb"
-            transition={{ duration: 0.8, ease: [0.43, 0.13, 0.23, 0.96] }}
-          >
-             <CrystalBallVisualizer 
-                size={420}
-                schoolId={activeStation.id}
-                schoolColor={activeStation.color}
-                signalLevel={signalLevel}
-                isPlaying={isPlaying}
-                glyph={activeStation.glyph || '✦'}
-                isTuning={isTuning}
-             />
-             <div className="orb-ring-decoration" style={{ '--accent': activeStation.color } as any} />
-          </motion.div>
-
           <div className="track-matrix">
             {Object.entries(buckets).map(([schoolId, tracks]) => (
               <div key={schoolId} className="school-track-group">
-                <h3 style={{ color: SCHOOLS[schoolId]?.colorHsl ? `hsl(${SCHOOLS[schoolId].colorHsl.h}, ${SCHOOLS[schoolId].colorHsl.s}%, ${SCHOOLS[schoolId].colorHsl.l}%)` : 'var(--text-secondary)' }}>
+                <h3 style={{ color: (SCHOOLS as any)[schoolId]?.colorHsl ? `hsl(${(SCHOOLS as any)[schoolId].colorHsl.h}, ${(SCHOOLS as any)[schoolId].colorHsl.s}%, ${(SCHOOLS as any)[schoolId].colorHsl.l}%)` : 'var(--text-secondary)' }}>
                   {schoolId}
                 </h3>
                 <div className="track-list">
@@ -104,7 +66,7 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
                       key={url}
                       className="track-card"
                       onClick={() => handleTrackSelect(url, schoolId)}
-                      whileHover={{ scale: 1.02, x: 5 }}
+                      whileHover={{ scale: 1.02, x: 5, backgroundColor: "rgba(255,255,255,0.1)" }}
                       whileTap={{ scale: 0.98 }}
                     >
                       <span className="track-idx">0{idx + 1}</span>
@@ -115,15 +77,26 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
               </div>
             ))}
           </div>
+
+          {/* Sacred Geometry Sphere — Procedurally Generated Orb */}
+          <div className="orb-centerpiece">
+             {/* Opaque backing disc — masks the entire circumference behind the sphere */}
+             <div className="orb-centerpiece__backing" />
+             <div className="orb-centerpiece__ring-layer">
+               <div className="orb-ring-decoration" style={{ '--accent': activeStation.color } as React.CSSProperties} />
+             </div>
+             <CrystalBallVisualizer
+                size={420}
+                schoolId={activeStation.id}
+                schoolColor={activeStation.color}
+                signalLevel={signalLevel}
+                isPlaying={isPlaying}
+                glyph={activeStation.glyph || '✦'}
+                isTuning={isTuning}
+             />
+          </div>
         </main>
       </div>
-      
-      {/* Background Decorative Gears */}
-      <div className="station-gears-bg">
-        <div className="gear gear--lg" />
-        <div className="gear gear--md" />
-        <div className="gear gear--sm" />
-      </div>
-    </motion.div>
+    </div>
   );
 };

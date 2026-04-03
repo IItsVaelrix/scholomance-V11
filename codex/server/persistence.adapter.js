@@ -80,10 +80,8 @@ const USER_MIGRATIONS = [
     version: 5,
     name: 'add_email_verification',
     up(database) {
-      database.exec(`
-        ALTER TABLE users ADD COLUMN verified INTEGER DEFAULT 0;
-        ALTER TABLE users ADD COLUMN verificationToken TEXT;
-      `);
+      addSqliteColumnIfMissing(database, 'users', 'verified', 'verified INTEGER DEFAULT 0');
+      addSqliteColumnIfMissing(database, 'users', 'verificationToken', 'verificationToken TEXT');
     },
   },
   {
@@ -149,9 +147,83 @@ const USER_MIGRATIONS = [
     version: 9,
     name: 'add_scroll_submission_timestamp',
     up(database) {
+      addSqliteColumnIfMissing(database, 'scrolls', 'submittedAt', 'submittedAt DATETIME');
+    },
+  },
+  {
+    version: 10,
+    name: 'create_email_outbox_table',
+    up(database) {
       database.exec(`
-        ALTER TABLE scrolls ADD COLUMN submittedAt DATETIME;
+        CREATE TABLE IF NOT EXISTS email_outbox (
+          id TEXT PRIMARY KEY,
+          template_key TEXT NOT NULL,
+          recipient TEXT NOT NULL,
+          subject TEXT NOT NULL,
+          text_body TEXT NOT NULL,
+          html_body TEXT NOT NULL,
+          provider TEXT NOT NULL DEFAULT 'console',
+          status TEXT NOT NULL DEFAULT 'queued',
+          attempts INTEGER NOT NULL DEFAULT 0,
+          max_attempts INTEGER NOT NULL DEFAULT 5,
+          last_error TEXT,
+          provider_message_id TEXT,
+          metadata_json TEXT NOT NULL DEFAULT '{}',
+          next_attempt_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          locked_at TEXT,
+          sent_at TEXT,
+          created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_email_outbox_status_next_attempt
+          ON email_outbox(status, next_attempt_at);
+
+        CREATE INDEX IF NOT EXISTS idx_email_outbox_recipient_created
+          ON email_outbox(recipient, created_at DESC);
       `);
+    },
+  },
+  {
+    version: 11,
+    name: 'create_collab_tasks_unified',
+    up(database) {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS collab_tasks (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'backlog',
+          priority INTEGER NOT NULL DEFAULT 1,
+          assigned_agent TEXT,
+          created_by TEXT,
+          depends_on TEXT DEFAULT '[]',
+          file_paths TEXT DEFAULT '[]',
+          pipeline_run_id TEXT,
+          notes_json TEXT DEFAULT '[]',
+          result_json TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          completed_at DATETIME
+        );
+        CREATE INDEX IF NOT EXISTS idx_tasks_status ON collab_tasks(status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_assigned_agent ON collab_tasks(assigned_agent);
+      `);
+    },
+  },
+  {
+    version: 12,
+    name: 'fix_task_column_names',
+    up(database) {
+      const columns = database.prepare('PRAGMA table_info("collab_tasks")').all();
+      const hasCreatedAt = columns.some(c => c.name === 'createdAt');
+      if (hasCreatedAt) {
+        database.exec(`
+          ALTER TABLE collab_tasks RENAME COLUMN createdAt TO created_at;
+          ALTER TABLE collab_tasks RENAME COLUMN updatedAt TO updated_at;
+          ALTER TABLE collab_tasks RENAME COLUMN completedAt TO completed_at;
+        `);
+      }
     },
   },
 ];
@@ -163,6 +235,26 @@ let dbState = {
   pragmas: null,
 };
 let isClosed = false;
+
+function escapeSqliteIdentifier(identifier) {
+  return String(identifier || '').replaceAll('"', '""');
+}
+
+function hasSqliteColumn(database, tableName, columnName) {
+  const safeTableName = escapeSqliteIdentifier(tableName);
+  const columns = database.prepare(`PRAGMA table_info("${safeTableName}")`).all();
+  return columns.some((column) => column.name === columnName);
+}
+
+function addSqliteColumnIfMissing(database, tableName, columnName, columnDefinition) {
+  if (hasSqliteColumn(database, tableName, columnName)) {
+    return false;
+  }
+
+  const safeTableName = escapeSqliteIdentifier(tableName);
+  database.exec(`ALTER TABLE "${safeTableName}" ADD COLUMN ${columnDefinition};`);
+  return true;
+}
 
 function parseJsonObject(value) {
   if (!value || typeof value !== 'string') return {};
@@ -323,6 +415,11 @@ function findUserByVerificationToken(token) {
   return stmt.get(token);
 }
 
+function findUserByRecoveryTokenHash(tokenHash) {
+  const stmt = db.prepare('SELECT * FROM users WHERE recoveryTokenHash = ?');
+  return stmt.get(tokenHash);
+}
+
 function createUser(username, email, hashedPassword, verificationToken) {
   const stmt = db.prepare('INSERT INTO users (username, email, password, verificationToken, verified) VALUES (?, ?, ?, ?, 0)');
   const result = stmt.run(username, email, hashedPassword, verificationToken);
@@ -332,6 +429,51 @@ function createUser(username, email, hashedPassword, verificationToken) {
 function verifyUser(userId) {
   const stmt = db.prepare('UPDATE users SET verified = 1, verificationToken = NULL WHERE id = ?');
   stmt.run(userId);
+}
+
+function setVerificationToken(userId, verificationToken) {
+  const stmt = db.prepare(`
+    UPDATE users
+    SET verificationToken = ?,
+        verified = 0
+    WHERE id = ?
+  `);
+  stmt.run(verificationToken, userId);
+  return findUserById(userId);
+}
+
+function setRecoveryToken(userId, recoveryTokenHash, recoveryTokenExpiry) {
+  const stmt = db.prepare(`
+    UPDATE users
+    SET recoveryTokenHash = ?,
+        recoveryTokenExpiry = ?
+    WHERE id = ?
+  `);
+  stmt.run(recoveryTokenHash, recoveryTokenExpiry, userId);
+  return findUserById(userId);
+}
+
+function clearRecoveryToken(userId) {
+  const stmt = db.prepare(`
+    UPDATE users
+    SET recoveryTokenHash = NULL,
+        recoveryTokenExpiry = NULL
+    WHERE id = ?
+  `);
+  stmt.run(userId);
+  return findUserById(userId);
+}
+
+function updatePasswordHash(userId, hashedPassword) {
+  const stmt = db.prepare(`
+    UPDATE users
+    SET password = ?,
+        recoveryTokenHash = NULL,
+        recoveryTokenExpiry = NULL
+    WHERE id = ?
+  `);
+  stmt.run(hashedPassword, userId);
+  return findUserById(userId);
 }
 
 // --- Progression ---
@@ -467,6 +609,130 @@ function deleteScroll(scrollId, userId) {
   return result.changes > 0;
 }
 
+// --- Tasks ---
+function normalizeTaskRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    notes: parseJsonArray(row.notes_json),
+    file_paths: parseJsonArray(row.file_paths),
+    depends_on: parseJsonArray(row.depends_on),
+    result: parseJsonObject(row.result_json),
+  };
+}
+
+function createTask({ id, title, description, priority = 1, file_paths = [], depends_on = [], created_by, pipeline_run_id, notes = [] }) {
+  const stmt = db.prepare(`
+    INSERT INTO collab_tasks (id, title, description, priority, file_paths, depends_on, created_by, pipeline_run_id, notes_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    id,
+    title,
+    description || null,
+    priority,
+    JSON.stringify(file_paths),
+    JSON.stringify(depends_on),
+    created_by || null,
+    pipeline_run_id || null,
+    JSON.stringify(notes)
+  );
+  return getTask(id);
+}
+
+function getTask(id) {
+  const row = db.prepare('SELECT * FROM collab_tasks WHERE id = ?').get(id);
+  return normalizeTaskRow(row);
+}
+
+function getAllTasks(filters = {}, pagination = {}) {
+  const limit = Number.isInteger(pagination.limit) ? pagination.limit : 50;
+  const offset = Number.isInteger(pagination.offset) ? pagination.offset : 0;
+
+  const clauses = [];
+  const params = [];
+
+  if (filters.status) {
+    clauses.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.agent) {
+    clauses.push('assigned_agent = ?');
+    params.push(filters.agent);
+  }
+  if (filters.priority !== undefined) {
+    clauses.push('priority = ?');
+    params.push(filters.priority);
+  }
+
+  let query = 'SELECT * FROM collab_tasks';
+  if (clauses.length > 0) {
+    query += ` WHERE ${clauses.join(' AND ')}`;
+  }
+  query += ' ORDER BY priority DESC, created_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  return db.prepare(query).all(...params).map(normalizeTaskRow).filter(Boolean);
+}
+
+function updateTask(id, updates) {
+  const fields = [];
+  const params = [];
+
+  const ALLOWED_COLUMNS = [
+    'title', 'description', 'status', 'priority', 'assigned_agent', 'pipeline_run_id'
+  ];
+
+  for (const col of ALLOWED_COLUMNS) {
+    if (updates[col] !== undefined) {
+      fields.push(`${col} = ?`);
+      params.push(updates[col]);
+    }
+  }
+
+  if (updates.notes) {
+    fields.push('notes_json = ?');
+    params.push(JSON.stringify(updates.notes));
+  }
+  if (updates.result) {
+    fields.push('result_json = ?');
+    params.push(JSON.stringify(updates.result));
+  }
+
+  if (fields.length === 0) return getTask(id);
+
+  if (updates.status === 'done') {
+    fields.push("completed_at = datetime('now')");
+  }
+
+  fields.push("updated_at = datetime('now')");
+  const query = `UPDATE collab_tasks SET ${fields.join(', ')} WHERE id = ?`;
+  params.push(id);
+
+  const result = db.prepare(query).run(...params);
+  if (result.changes === 0) return null;
+  return getTask(id);
+}
+
+function assignTaskWithLocks(taskId, agentId, _filePaths = [], _ttlMinutes = 30) {
+  const query = `
+    UPDATE collab_tasks
+    SET assigned_agent = ?, status = 'assigned', updated_at = datetime('now')
+    WHERE id = ?
+  `;
+  const result = db.prepare(query).run(agentId, taskId);
+  if (result.changes === 0) {
+    return { conflict: false, task: null };
+  }
+  return { conflict: false, task: getTask(taskId) };
+}
+
+function deleteTask(id) {
+  const stmt = db.prepare('DELETE FROM collab_tasks WHERE id = ?');
+  const result = stmt.run(id);
+  return result.changes > 0;
+}
+
 // --- Settings ---
 function getSettings(userId) {
   const stmt = db.prepare('SELECT settings_json FROM user_settings WHERE userId = ?');
@@ -486,14 +752,207 @@ function saveSettings(userId, settings) {
   return getSettings(userId);
 }
 
+function normalizeEmailOutboxRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    templateKey: row.template_key,
+    recipient: row.recipient,
+    subject: row.subject,
+    textBody: row.text_body,
+    htmlBody: row.html_body,
+    provider: row.provider,
+    status: row.status,
+    attempts: Number(row.attempts) || 0,
+    maxAttempts: Number(row.max_attempts) || 0,
+    lastError: row.last_error || null,
+    providerMessageId: row.provider_message_id || null,
+    metadata: parseJsonObject(row.metadata_json),
+    nextAttemptAt: row.next_attempt_at || null,
+    lockedAt: row.locked_at || null,
+    sentAt: row.sent_at || null,
+    createdAt: row.created_at || null,
+    updatedAt: row.updated_at || null,
+  };
+}
+
+function queueEmail({
+  id,
+  templateKey,
+  recipient,
+  subject,
+  textBody,
+  htmlBody,
+  provider = 'console',
+  maxAttempts = 5,
+  metadata = {},
+  nextAttemptAt = new Date().toISOString(),
+}) {
+  const stmt = db.prepare(`
+    INSERT INTO email_outbox (
+      id, template_key, recipient, subject, text_body, html_body, provider,
+      status, attempts, max_attempts, metadata_json, next_attempt_at, created_at, updated_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', 0, ?, ?, ?, ?, ?)
+  `);
+  const now = new Date().toISOString();
+  stmt.run(
+    id,
+    templateKey,
+    recipient,
+    subject,
+    textBody,
+    htmlBody,
+    provider,
+    maxAttempts,
+    JSON.stringify(metadata || {}),
+    nextAttemptAt,
+    now,
+    now,
+  );
+  return getQueuedEmail(id);
+}
+
+function getQueuedEmail(id) {
+  const stmt = db.prepare('SELECT * FROM email_outbox WHERE id = ?');
+  return normalizeEmailOutboxRow(stmt.get(id));
+}
+
+function listQueuedEmails(filters = {}, pagination = {}) {
+  const allowedStatuses = Array.isArray(filters.statuses)
+    ? filters.statuses.map((value) => String(value || '').trim()).filter(Boolean)
+    : [];
+  const limit = Number.isInteger(pagination.limit) ? pagination.limit : 100;
+  const clauses = [];
+  const params = [];
+
+  if (allowedStatuses.length > 0) {
+    clauses.push(`status IN (${allowedStatuses.map(() => '?').join(', ')})`);
+    params.push(...allowedStatuses);
+  }
+
+  let query = 'SELECT * FROM email_outbox';
+  if (clauses.length > 0) {
+    query += ` WHERE ${clauses.join(' AND ')}`;
+  }
+  query += ' ORDER BY created_at DESC LIMIT ?';
+  params.push(limit);
+
+  return db.prepare(query).all(...params).map(normalizeEmailOutboxRow).filter(Boolean);
+}
+
+function claimQueuedEmails(limit = 10) {
+  const candidateRows = db.prepare(`
+    SELECT *
+    FROM email_outbox
+    WHERE status IN ('queued', 'retry')
+    ORDER BY created_at ASC
+    LIMIT ?
+  `).all(limit);
+  const nowMs = Date.now();
+  const claimStmt = db.prepare(`
+    UPDATE email_outbox
+    SET status = 'processing',
+        attempts = attempts + 1,
+        locked_at = ?,
+        updated_at = ?
+    WHERE id = ?
+      AND status IN ('queued', 'retry')
+  `);
+
+  const claimed = [];
+  for (const row of candidateRows) {
+    const nextAttemptMs = Date.parse(row.next_attempt_at || '');
+    if (Number.isFinite(nextAttemptMs) && nextAttemptMs > nowMs) {
+      continue;
+    }
+    const now = new Date().toISOString();
+    const result = claimStmt.run(now, now, row.id);
+    if (result.changes > 0) {
+      claimed.push(normalizeEmailOutboxRow({
+        ...row,
+        status: 'processing',
+        attempts: Number(row.attempts || 0) + 1,
+        locked_at: now,
+        updated_at: now,
+      }));
+    }
+  }
+  return claimed;
+}
+
+function markQueuedEmailSent(id, providerMessageId = null) {
+  const now = new Date().toISOString();
+  const stmt = db.prepare(`
+    UPDATE email_outbox
+    SET status = 'sent',
+        provider_message_id = ?,
+        sent_at = ?,
+        locked_at = NULL,
+        updated_at = ?
+    WHERE id = ?
+  `);
+  stmt.run(providerMessageId, now, now, id);
+  return getQueuedEmail(id);
+}
+
+function markQueuedEmailFailed(id, {
+  lastError,
+  nextAttemptAt = null,
+  terminal = false,
+} = {}) {
+  const now = new Date().toISOString();
+  const nextStatus = terminal ? 'failed' : 'retry';
+  const stmt = db.prepare(`
+    UPDATE email_outbox
+    SET status = ?,
+        last_error = ?,
+        next_attempt_at = ?,
+        locked_at = NULL,
+        updated_at = ?
+    WHERE id = ?
+  `);
+  stmt.run(nextStatus, lastError || null, nextAttemptAt || now, now, id);
+  return getQueuedEmail(id);
+}
+
+function requeueStaleProcessingEmails(staleBeforeIso) {
+  const stmt = db.prepare(`
+    UPDATE email_outbox
+    SET status = 'retry',
+        locked_at = NULL,
+        updated_at = ?
+    WHERE status = 'processing'
+      AND locked_at IS NOT NULL
+      AND locked_at < ?
+  `);
+  const now = new Date().toISOString();
+  const result = stmt.run(now, staleBeforeIso);
+  return Number(result.changes) || 0;
+}
+
 export const persistence = {
   users: {
     findByUsername: findUserByUsername,
     findByEmail: findUserByEmail,
     findById: findUserById,
     findByVerificationToken: findUserByVerificationToken,
+    findByRecoveryTokenHash: findUserByRecoveryTokenHash,
     createUser: createUser,
     verifyUser: verifyUser,
+    setVerificationToken: setVerificationToken,
+    setRecoveryToken: setRecoveryToken,
+    clearRecoveryToken: clearRecoveryToken,
+    updatePasswordHash: updatePasswordHash,
+  },
+  mail: {
+    queue: queueEmail,
+    getOne: getQueuedEmail,
+    getAll: listQueuedEmails,
+    claimDue: claimQueuedEmails,
+    markSent: markQueuedEmailSent,
+    markFailed: markQueuedEmailFailed,
+    requeueStaleProcessing: requeueStaleProcessingEmails,
   },
   settings: {
     get: getSettings,
@@ -503,6 +962,14 @@ export const persistence = {
     get: getProgression,
     save: saveProgression,
     reset: resetProgression,
+  },
+  tasks: {
+    create: createTask,
+    getById: getTask,
+    getAll: getAllTasks,
+    update: updateTask,
+    assignWithLocks: assignTaskWithLocks,
+    delete: deleteTask,
   },
   world: {
     getRoom: getWorldRoom,

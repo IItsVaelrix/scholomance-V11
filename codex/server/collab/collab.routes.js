@@ -1,10 +1,5 @@
-import crypto from 'crypto';
-import { collabPersistence } from './collab.persistence.js';
-import {
-    PIPELINE_DEFINITIONS,
-    validateFileOwnership,
-    getRoleForPath,
-} from './collab.pipelines.js';
+import { CollabServiceError, collabService } from './collab.service.js';
+import { collabAgentKeyAuth } from './collab.agent-auth.js';
 import {
     RegisterAgentSchema,
     HeartbeatSchema,
@@ -16,14 +11,11 @@ import {
     AdvancePipelineSchema,
     FailPipelineSchema,
     ListTasksQuerySchema,
+    TaskAssignmentPreflightQuerySchema,
     ListPipelinesQuerySchema,
     ListActivityQuerySchema,
     LockCheckQuerySchema,
 } from './collab.schemas.js';
-
-function uuid() {
-    return crypto.randomUUID();
-}
 
 function parseZod(schema, data) {
     const result = schema.safeParse(data);
@@ -34,50 +26,84 @@ function parseZod(schema, data) {
     return { ok: true, data: result.data };
 }
 
+function sendServiceError(reply, error) {
+    if (!(error instanceof CollabServiceError)) {
+        throw error;
+    }
+
+    return reply.code(error.statusCode).send({
+        error: error.message,
+        code: error.code,
+        ...error.details,
+    });
+}
+
 /**
  * Fastify plugin that registers all /collab/* routes.
  * Authentication is applied by the parent plugin when configured.
  */
 export async function collabRoutes(fastify, _options) {
+    // Agent key auth pre-handler: tries Bearer token auth, falls through to session auth.
+    fastify.addHook('preHandler', collabAgentKeyAuth);
 
     // ========================
     //  AGENTS
     // ========================
 
-    fastify.post('/agents/register', async (request, reply) => {
+    fastify.post('/agents/register', {
+        config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const parsed = parseZod(RegisterAgentSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const agent = collabPersistence.agents.register(parsed.data);
-        collabPersistence.activity.log({
-            agent_id: agent.id,
-            action: 'agent_registered',
-            target_type: 'agent',
-            target_id: agent.id,
-            details: { role: agent.role },
-        });
-        return reply.code(200).send(agent);
+        try {
+            const agent = collabService.registerAgent(parsed.data);
+            return reply.code(200).send(agent);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
-    fastify.post('/agents/:id/heartbeat', async (request, reply) => {
+    fastify.post('/agents/:id/heartbeat', {
+        config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const { id } = request.params;
         const parsed = parseZod(HeartbeatSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const agent = collabPersistence.agents.heartbeat(id, parsed.data.status, parsed.data.current_task_id);
-        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
-        return reply.code(200).send(agent);
+        try {
+            const agent = collabService.heartbeatAgent({
+                id,
+                status: parsed.data.status,
+                current_task_id: parsed.data.current_task_id,
+            });
+            return reply.code(200).send(agent);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     fastify.get('/agents', async (_request, reply) => {
-        const agents = collabPersistence.agents.getAll();
+        const agents = collabService.listAgents();
         return reply.code(200).send(agents);
     });
 
     fastify.get('/agents/:id', async (request, reply) => {
-        const agent = collabPersistence.agents.getById(request.params.id);
-        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
-        return reply.code(200).send(agent);
+        try {
+            const agent = collabService.getAgent(request.params.id);
+            return reply.code(200).send(agent);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.delete('/agents/:id', async (request, reply) => {
+        try {
+            const result = collabService.deleteAgent(request.params.id);
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     // ========================
@@ -88,125 +114,95 @@ export async function collabRoutes(fastify, _options) {
         const parsedQuery = parseZod(ListTasksQuerySchema, request.query);
         if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
 
-        const { status, agent, priority, limit, offset } = parsedQuery.data;
-        const filters = {
-            status,
-            agent,
-            priority,
-        };
-        const tasks = collabPersistence.tasks.getAll(filters, { limit, offset });
+        const tasks = collabService.listTasks(parsedQuery.data);
         return reply.code(200).send(tasks);
     });
 
-    fastify.post('/tasks', async (request, reply) => {
+    fastify.post('/tasks', {
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const parsed = parseZod(CreateTaskSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const task = collabPersistence.tasks.create({ id: uuid(), ...parsed.data });
-        collabPersistence.activity.log({
-            agent_id: parsed.data.created_by,
-            action: 'task_created',
-            target_type: 'task',
-            target_id: task.id,
-            details: { title: task.title },
-        });
-        return reply.code(201).send(task);
+        try {
+            const task = collabService.createTask(parsed.data);
+            return reply.code(201).send(task);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     fastify.get('/tasks/:id', async (request, reply) => {
-        const task = collabPersistence.tasks.getById(request.params.id);
-        if (!task) return reply.code(404).send({ error: 'Task not found' });
-        return reply.code(200).send(task);
+        try {
+            const task = collabService.getTask(request.params.id);
+            return reply.code(200).send(task);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.get('/tasks/:id/preflight', async (request, reply) => {
+        const parsedQuery = parseZod(TaskAssignmentPreflightQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+
+        try {
+            const preflight = collabService.getTaskAssignmentPreflight({
+                task_id: request.params.id,
+                agent_id: parsedQuery.data.agent_id,
+            });
+            return reply.code(200).send(preflight);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     fastify.patch('/tasks/:id', async (request, reply) => {
         const { id } = request.params;
-        const existing = collabPersistence.tasks.getById(id);
-        if (!existing) return reply.code(404).send({ error: 'Task not found' });
-
         const parsed = parseZod(UpdateTaskSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const task = collabPersistence.tasks.update(id, parsed.data);
-
-        // Release file locks when task is done
-        if (parsed.data.status === 'done') {
-            collabPersistence.locks.releaseForTask(id);
+        try {
+            const task = collabService.updateTask({
+                id,
+                actor_agent_id: request.headers['x-agent-id'] || null,
+                ...parsed.data,
+            });
+            return reply.code(200).send(task);
+        } catch (error) {
+            return sendServiceError(reply, error);
         }
-
-        collabPersistence.activity.log({
-            agent_id: request.headers['x-agent-id'] || null,
-            action: 'task_updated',
-            target_type: 'task',
-            target_id: id,
-            details: parsed.data,
-        });
-        return reply.code(200).send(task);
     });
 
     fastify.delete('/tasks/:id', async (request, reply) => {
-        const { id } = request.params;
-        collabPersistence.locks.releaseForTask(id);
-        const deleted = collabPersistence.tasks.delete(id);
-        if (!deleted) return reply.code(404).send({ error: 'Task not found' });
-
-        collabPersistence.activity.log({
-            agent_id: request.headers['x-agent-id'] || null,
-            action: 'task_deleted',
-            target_type: 'task',
-            target_id: id,
-        });
-        return reply.code(200).send({ ok: true });
+        try {
+            const result = collabService.deleteTask({
+                id: request.params.id,
+                actor_agent_id: request.headers['x-agent-id'] || null,
+            });
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
-    fastify.post('/tasks/:id/assign', async (request, reply) => {
+    fastify.post('/tasks/:id/assign', {
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const { id } = request.params;
         const parsed = parseZod(AssignTaskSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const task = collabPersistence.tasks.getById(id);
-        if (!task) return reply.code(404).send({ error: 'Task not found' });
-
-        const agent = collabPersistence.agents.getById(parsed.data.agent_id);
-        if (!agent) return reply.code(404).send({ error: 'Agent not found' });
-
-        // Validate file ownership unless override is set
-        if (task.file_paths.length > 0 && !parsed.data.override) {
-            const validation = validateFileOwnership(task.file_paths, agent.role);
-            if (!validation.valid) {
-                return reply.code(409).send({
-                    error: 'File ownership conflict',
-                    conflicts: validation.conflicts,
-                    hint: 'Set override: true to bypass ownership checks',
-                });
-            }
-        }
-
-        const assignmentResult = collabPersistence.tasks.assignWithLocks(
-            id,
-            agent.id,
-            task.file_paths,
-            30,
-        );
-        if (assignmentResult.conflict) {
-            return reply.code(409).send({
-                error: 'File lock conflict',
-                file: assignmentResult.file,
-                locked_by: assignmentResult.locked_by,
+        try {
+            const task = collabService.assignTask({
+                task_id: id,
+                agent_id: parsed.data.agent_id,
+                override: parsed.data.override,
+                actor_agent_id: parsed.data.agent_id,
             });
+            return reply.code(200).send(task);
+        } catch (error) {
+            return sendServiceError(reply, error);
         }
-        if (!assignmentResult.task) {
-            return reply.code(404).send({ error: 'Task not found' });
-        }
-
-        collabPersistence.activity.log({
-            agent_id: agent.id,
-            action: 'task_assigned',
-            target_type: 'task',
-            target_id: id,
-            details: { agent_name: agent.name },
-        });
-        return reply.code(200).send(assignmentResult.task);
     });
 
     // ========================
@@ -214,23 +210,22 @@ export async function collabRoutes(fastify, _options) {
     // ========================
 
     fastify.get('/locks', async (_request, reply) => {
-        const locks = collabPersistence.locks.getAll();
+        const locks = collabService.listLocks();
         return reply.code(200).send(locks);
     });
 
-    fastify.post('/locks', async (request, reply) => {
+    fastify.post('/locks', {
+        config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const parsed = parseZod(AcquireLockSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const result = collabPersistence.locks.acquire(parsed.data);
-        if (result.conflict) {
-            return reply.code(409).send({
-                error: 'File already locked',
-                locked_by: result.locked_by,
-                task_id: result.task_id,
-            });
+        try {
+            const result = collabService.acquireLock(parsed.data);
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
         }
-        return reply.code(200).send(result);
     });
 
     fastify.delete('/locks/:encodedPath', async (request, reply) => {
@@ -238,9 +233,15 @@ export async function collabRoutes(fastify, _options) {
         const agentId = request.headers['x-agent-id'];
         if (!agentId) return reply.code(400).send({ error: 'X-Agent-ID header required' });
 
-        const released = collabPersistence.locks.release(filePath, agentId);
-        if (!released) return reply.code(404).send({ error: 'Lock not found or not owned by you' });
-        return reply.code(200).send({ ok: true });
+        try {
+            const result = collabService.releaseLock({
+                file_path: filePath,
+                agent_id: agentId,
+            });
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     fastify.get('/locks/check', async (request, reply) => {
@@ -248,7 +249,7 @@ export async function collabRoutes(fastify, _options) {
         if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
         const filePath = parsedQuery.data.path;
 
-        const lock = collabPersistence.locks.check(filePath);
+        const lock = collabService.checkLock(filePath);
         return reply.code(200).send({ locked: !!lock, lock });
     });
 
@@ -260,71 +261,34 @@ export async function collabRoutes(fastify, _options) {
         const parsedQuery = parseZod(ListPipelinesQuerySchema, request.query);
         if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
 
-        const { status, limit, offset } = parsedQuery.data;
-        const filters = { status };
-        const pipelines = collabPersistence.pipelines.getAll(filters, { limit, offset });
+        const pipelines = collabService.listPipelines(parsedQuery.data);
         return reply.code(200).send(pipelines);
     });
 
-    fastify.post('/pipelines', async (request, reply) => {
+    fastify.post('/pipelines', {
+        config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
         const parsed = parseZod(CreatePipelineSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const definition = PIPELINE_DEFINITIONS[parsed.data.pipeline_type];
-        if (!definition) return reply.code(400).send({ error: `Unknown pipeline type: ${parsed.data.pipeline_type}` });
-
-        const pipelineId = uuid();
-        const pipeline = collabPersistence.pipelines.create({
-            id: pipelineId,
-            pipeline_type: parsed.data.pipeline_type,
-            stages: definition.stages,
-            trigger_task_id: parsed.data.trigger_task_id,
-        });
-
-        // Auto-create a task for the first stage
-        const firstStage = definition.stages[0];
-        const triggerTask = parsed.data.trigger_task_id
-            ? collabPersistence.tasks.getById(parsed.data.trigger_task_id)
-            : null;
-
-        const stageTask = collabPersistence.tasks.create({
-            id: uuid(),
-            title: `[Pipeline] ${definition.name} - ${firstStage.name}`,
-            description: firstStage.description,
-            priority: 2,
-            file_paths: triggerTask ? triggerTask.file_paths : [],
-            depends_on: [],
-            created_by: 'pipeline',
-            pipeline_run_id: pipelineId,
-        });
-
-        // Auto-assign if the stage has a specific role
-        if (firstStage.role) {
-            const agents = collabPersistence.agents.getAll();
-            const candidate = agents.find(a => a.role === firstStage.role && a.status !== 'offline');
-            if (candidate) {
-                collabPersistence.tasks.update(stageTask.id, {
-                    assigned_agent: candidate.id,
-                    status: 'assigned',
-                });
-            }
+        try {
+            const result = collabService.createPipeline({
+                ...parsed.data,
+                actor_agent_id: request.headers['x-agent-id'] || null,
+            });
+            return reply.code(201).send(result.pipeline);
+        } catch (error) {
+            return sendServiceError(reply, error);
         }
-
-        collabPersistence.activity.log({
-            agent_id: request.headers['x-agent-id'] || null,
-            action: 'pipeline_started',
-            target_type: 'pipeline',
-            target_id: pipelineId,
-            details: { type: parsed.data.pipeline_type, name: definition.name },
-        });
-
-        return reply.code(201).send(pipeline);
     });
 
     fastify.get('/pipelines/:id', async (request, reply) => {
-        const pipeline = collabPersistence.pipelines.getById(request.params.id);
-        if (!pipeline) return reply.code(404).send({ error: 'Pipeline not found' });
-        return reply.code(200).send(pipeline);
+        try {
+            const pipeline = collabService.getPipeline(request.params.id);
+            return reply.code(200).send(pipeline);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     fastify.post('/pipelines/:id/advance', async (request, reply) => {
@@ -332,63 +296,16 @@ export async function collabRoutes(fastify, _options) {
         const parsed = parseZod(AdvancePipelineSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const result = collabPersistence.pipelines.advance(id, parsed.data.result);
-        if (!result) return reply.code(404).send({ error: 'Pipeline not found' });
-
-        // If there's a next stage, auto-create a task for it
-        if (!result.isComplete) {
-            const pipeline = result.pipeline;
-            const nextStageDef = pipeline.stages[result.nextStageIndex];
-            const triggerTask = pipeline.trigger_task_id
-                ? collabPersistence.tasks.getById(pipeline.trigger_task_id)
-                : null;
-
-            const stageTask = collabPersistence.tasks.create({
-                id: uuid(),
-                title: `[Pipeline] ${pipeline.pipeline_type} - ${nextStageDef.name}`,
-                description: nextStageDef.description,
-                priority: 2,
-                file_paths: triggerTask ? triggerTask.file_paths : [],
-                depends_on: [],
-                created_by: 'pipeline',
-                pipeline_run_id: id,
+        try {
+            const result = collabService.advancePipeline({
+                id,
+                result: parsed.data.result,
+                actor_agent_id: request.headers['x-agent-id'] || null,
             });
-
-            // Auto-assign based on role
-            if (nextStageDef.role) {
-                const agents = collabPersistence.agents.getAll();
-                const candidate = agents.find(a => a.role === nextStageDef.role && a.status !== 'offline');
-                if (candidate) {
-                    collabPersistence.tasks.update(stageTask.id, {
-                        assigned_agent: candidate.id,
-                        status: 'assigned',
-                    });
-                }
-            } else if (triggerTask && triggerTask.file_paths.length > 0) {
-                // For role=null stages, try to auto-assign by file ownership
-                const primaryRole = getRoleForPath(triggerTask.file_paths[0]);
-                if (primaryRole) {
-                    const agents = collabPersistence.agents.getAll();
-                    const candidate = agents.find(a => a.role === primaryRole && a.status !== 'offline');
-                    if (candidate) {
-                        collabPersistence.tasks.update(stageTask.id, {
-                            assigned_agent: candidate.id,
-                            status: 'assigned',
-                        });
-                    }
-                }
-            }
+            return reply.code(200).send(result.pipeline);
+        } catch (error) {
+            return sendServiceError(reply, error);
         }
-
-        collabPersistence.activity.log({
-            agent_id: request.headers['x-agent-id'] || null,
-            action: result.isComplete ? 'pipeline_completed' : 'pipeline_advanced',
-            target_type: 'pipeline',
-            target_id: id,
-            details: { stage: result.isComplete ? 'done' : result.nextStageIndex },
-        });
-
-        return reply.code(200).send(result.pipeline);
     });
 
     fastify.post('/pipelines/:id/fail', async (request, reply) => {
@@ -396,18 +313,117 @@ export async function collabRoutes(fastify, _options) {
         const parsed = parseZod(FailPipelineSchema, request.body);
         if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
 
-        const pipeline = collabPersistence.pipelines.fail(id, parsed.data.reason);
-        if (!pipeline) return reply.code(404).send({ error: 'Pipeline not found' });
+        try {
+            const result = collabService.failPipeline({
+                id,
+                reason: parsed.data.reason,
+                actor_agent_id: request.headers['x-agent-id'] || null,
+            });
+            return reply.code(200).send(result.pipeline);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
 
-        collabPersistence.activity.log({
-            agent_id: request.headers['x-agent-id'] || null,
-            action: 'pipeline_failed',
-            target_type: 'pipeline',
-            target_id: id,
-            details: { reason: parsed.data.reason },
-        });
+    // ========================
+    //  BUG REPORTS
+    // ========================
 
-        return reply.code(200).send(pipeline);
+    fastify.get('/bugs', async (request, reply) => {
+        const {
+            ListBugsQuerySchema,
+            CreateBugReportSchema,
+            UpdateBugReportSchema,
+            BytecodeParseSchema
+        } = await import('./collab.schemas.js');
+
+        const parsedQuery = parseZod(ListBugsQuerySchema, request.query);
+        if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
+
+        const bugs = collabService.listBugReports(parsedQuery.data);
+        return reply.code(200).send(bugs);
+    });
+
+    fastify.post('/bugs', {
+        config: { rateLimit: { max: 20, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
+        const { CreateBugReportSchema } = await import('./collab.schemas.js');
+        const parsed = parseZod(CreateBugReportSchema, request.body);
+        if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
+
+        try {
+            const bug = collabService.createBugReport(parsed.data);
+            return reply.code(201).send(bug);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.get('/bugs/:id', async (request, reply) => {
+        try {
+            const bug = collabService.getBugReport(request.params.id);
+            return reply.code(200).send(bug);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.patch('/bugs/:id', async (request, reply) => {
+        const { UpdateBugReportSchema } = await import('./collab.schemas.js');
+        const parsed = parseZod(UpdateBugReportSchema, request.body);
+        if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
+
+        try {
+            const bug = collabService.updateBugReport({
+                id: request.params.id,
+                ...parsed.data,
+            });
+            return reply.code(200).send(bug);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.delete('/bugs/:id', async (request, reply) => {
+        try {
+            const result = collabService.deleteBugReport(request.params.id);
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.post('/bugs/parse', async (request, reply) => {
+        const { BytecodeParseSchema } = await import('./collab.schemas.js');
+        const parsed = parseZod(BytecodeParseSchema, request.body);
+        if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
+
+        const result = collabService.parseBytecode(parsed.data.bytecode);
+        return reply.code(200).send(result);
+    });
+
+    fastify.post('/bugs/:id/create-task', async (request, reply) => {
+        try {
+            const task = collabService.createTaskFromBug(
+                request.params.id,
+                request.headers['x-agent-id'] || null
+            );
+            return reply.code(201).send(task);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.post('/bugs/import-qa', async (request, reply) => {
+        try {
+            const bugs = collabService.importQaResults(
+                request.body,
+                request.headers['x-agent-id'] || null
+            );
+            return reply.code(201).send(bugs);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     // ========================
@@ -418,13 +434,58 @@ export async function collabRoutes(fastify, _options) {
         const parsedQuery = parseZod(ListActivityQuerySchema, request.query);
         if (!parsedQuery.ok) return reply.code(400).send({ error: 'Validation failed', details: parsedQuery.errors });
 
-        const { limit, offset, agent, action } = parsedQuery.data;
-        const filters = {
-            agent,
-            action,
-        };
-        const activity = collabPersistence.activity.getRecent(limit, filters, offset);
+        const activity = collabService.listActivity(parsedQuery.data);
         return reply.code(200).send(activity);
+    });
+
+    // ========================
+    //  MEMORIES
+    // ========================
+
+    fastify.get('/memories', async (request, reply) => {
+        const { GetMemorySchema } = await import('./collab.schemas.js');
+        const agentId = request.query.agent_id || '';
+        const key = request.query.key;
+
+        // If key provided, get single memory
+        if (key) {
+            const parsed = parseZod(GetMemorySchema, { agent_id: agentId, key });
+            if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
+            const memory = collabService.getMemory({ agent_id: agentId || null, key });
+            return reply.code(200).send(memory);
+        }
+
+        // Otherwise list all memories (optionally filtered by agent_id)
+        const memories = collabService.listMemories(agentId || null);
+        return reply.code(200).send(memories);
+    });
+
+    fastify.post('/memories', {
+        config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
+    }, async (request, reply) => {
+        const { SetMemorySchema } = await import('./collab.schemas.js');
+        const parsed = parseZod(SetMemorySchema, request.body);
+        if (!parsed.ok) return reply.code(400).send({ error: 'Validation failed', details: parsed.errors });
+
+        try {
+            const memory = collabService.setMemory(parsed.data);
+            return reply.code(200).send(memory);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
+    });
+
+    fastify.delete('/memories', async (request, reply) => {
+        const agentId = request.query.agent_id || '';
+        const key = request.query.key;
+        if (!key) return reply.code(400).send({ error: 'key query parameter required' });
+
+        try {
+            const result = collabService.deleteMemory({ agent_id: agentId || null, key });
+            return reply.code(200).send(result);
+        } catch (error) {
+            return sendServiceError(reply, error);
+        }
     });
 
     // ========================
@@ -432,16 +493,6 @@ export async function collabRoutes(fastify, _options) {
     // ========================
 
     fastify.get('/status', async (_request, reply) => {
-        const agents = collabPersistence.agents.getAll();
-        const tasks = collabPersistence.tasks.getAll();
-        const pipelines = collabPersistence.pipelines.getAll({ status: 'running' });
-
-        return reply.code(200).send({
-            online_agents: agents.filter(a => a.status !== 'offline').length,
-            total_agents: agents.length,
-            active_tasks: tasks.filter(t => t.status !== 'done' && t.status !== 'backlog').length,
-            total_tasks: tasks.length,
-            running_pipelines: pipelines.length,
-        });
+        return reply.code(200).send(collabService.getStatus());
     });
 }

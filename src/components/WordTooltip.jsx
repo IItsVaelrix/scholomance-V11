@@ -6,6 +6,7 @@ import { getVowelColorsForSchool } from "../data/schoolPalettes.js";
 import { SCHOOLS, VOWEL_FAMILY_TO_SCHOOL } from "../data/schools.js";
 import { normalizeVowelFamily } from "../lib/phonology/vowelFamily.js";
 import SigilChamber from "./SigilChamber.jsx";
+import { STACKING_TIERS } from '../data/stacking_tiers';
 import "./WordTooltip.css";
 
 /* ── Ink transitions — content fades in like ink soaking into parchment ── */
@@ -684,7 +685,7 @@ const WordTooltip = ({
         left: pos.x,
         width: size.width,
         height: size.height,
-        zIndex: 1300,
+        zIndex: STACKING_TIERS.SYSTEM,
         touchAction: "none",
       }}
       initial={{ opacity: 0, scale: 0.95 }}

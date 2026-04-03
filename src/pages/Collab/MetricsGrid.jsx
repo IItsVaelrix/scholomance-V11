@@ -1,0 +1,98 @@
+/**
+ * MetricsGrid — Display collaboration metrics at a glance
+ * Adapted from PixelBrain AnalysisResults
+ */
+
+import { motion } from 'framer-motion';
+import {
+  MetricsIcon,
+  ZapIcon,
+  LayersIcon,
+  GridIcon,
+  WarningIcon,
+  CheckIcon
+} from "../../components/Icons.jsx";
+
+const METRIC_CONFIG = {
+  agents: {
+    label: 'Agent Presence',
+    icon: MetricsIcon,
+    format: (value) => `${value.connected} live / ${value.disconnected} down`
+  },
+  tasks: {
+    label: 'Active Tasks',
+    icon: ZapIcon,
+    format: (value) => `${value.active} / ${value.total}`
+  },
+  pipelines: {
+    label: 'Running Pipelines',
+    icon: LayersIcon,
+    format: (value) => `${value.running} active`
+  },
+  locks: {
+    label: 'File Locks',
+    icon: GridIcon,
+    format: (value) => `${value.active} locked`
+  },
+  bugs: {
+    label: 'Bug Artifacts',
+    icon: WarningIcon,
+    format: (value) => `${value.critical} crit / ${value.total} total`
+  },
+  blocked: {
+    label: 'Blocked Items',
+    icon: WarningIcon,
+    format: (value) => `${value.count} blocked`
+  },
+  completed: {
+    label: 'Completed Today',
+    icon: CheckIcon,
+    format: (value) => `${value.count} done`
+  }
+};
+
+export default function MetricsGrid({ metrics }) {
+  if (!metrics) return null;
+
+  return (
+    <motion.div
+      className="metrics-grid"
+      initial="hidden"
+      animate="visible"
+      variants={{
+        visible: {
+          transition: {
+            staggerChildren: 0.04
+          }
+        }
+      }}
+    >
+      {Object.entries(metrics).map(([key, value]) => {
+        const config = METRIC_CONFIG[key];
+        if (!config) return null;
+        
+        const Icon = config.icon;
+        
+        return (
+          <motion.div 
+            key={key} 
+            className="metric-card"
+            variants={{
+              hidden: { opacity: 0, y: 15 },
+              visible: { opacity: 1, y: 0 }
+            }}
+            whileHover={{ scale: 1.02, borderColor: 'var(--color-collab-gold)' }}
+          >
+            <Icon className="metric-icon" />
+            <div className="metric-content">
+              <span className="metric-label">{config.label}</span>
+              <span className="metric-value">
+                {config.format(value)}
+              </span>
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+}

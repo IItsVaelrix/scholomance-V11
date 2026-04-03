@@ -43,6 +43,9 @@ export const ERROR_CATEGORIES = Object.freeze({
   RENDER: 'RENDER',       // Rendering pipeline error
   CANVAS: 'CANVAS',       // Canvas context/size issues
   FORMULA: 'FORMULA',     // Formula parsing/evaluation
+  LINGUISTIC: 'LINGUISTIC', // Phonemic/syntactic law violations
+  COMBAT: 'COMBAT',       // Combat engine failures
+  UI_STASIS: 'UI_STASIS', // UI freeze/stasis detection
 });
 
 // ─── Error Severity Levels ───────────────────────────────────────────────────
@@ -70,6 +73,9 @@ export const MODULE_IDS = Object.freeze({
   TEMPLATE: 'TMPLT',
   GEAR_GLIDE: 'GEARGL',
   SHARED: 'SHARED',
+  LINGUISTIC: 'LINGUA',
+  COMBAT: 'COMBAT',
+  UI_STASIS: 'UISTAS',
 });
 
 // ─── Error Codes (per category) ──────────────────────────────────────────────
@@ -134,6 +140,29 @@ export const ERROR_CODES = Object.freeze({
   FORMULA_PARSE_FAIL: 0x0B01,
   FORMULA_EVAL_FAIL: 0x0B02,
   FORMULA_INVALID_SYNTAX: 0x0B03,
+
+  // LINGUISTIC errors (0x0C00–0x0CFF) — World-law violations
+  PHONEMIC_SATURATION: 0x0C01,
+  RESONANCE_MISMATCH: 0x0C02,
+  METER_DEGRADATION: 0x0C03,
+  SYLLABLE_OVERFLOW: 0x0C04,
+  VOWEL_FAMILY_MISMATCH: 0x0C05,
+
+  // COMBAT errors (0x0D00–0x0DFF) — Arena failures
+  FORCE_DISSIPATION: 0x0D01,
+  ENTROPIC_REPETITION: 0x0D02,
+  MANA_VOID_EXCEPTION: 0x0D03,
+  SPELL_CASCADE_FAILURE: 0x0D04,
+
+  // UI_STASIS errors (0x0E00–0x0EFF) — Interface freeze detection
+  CLICK_HANDLER_STALL: 0x0E01,
+  ANIMATION_LIFECYCLE_HANG: 0x0E02,
+  EVENT_LISTENER_LEAK: 0x0E03,
+  FOCUS_TRAP_ESCAPE: 0x0E04,
+  POINTER_CAPTURE_FAILURE: 0x0E05,
+  RAF_LOOP_ORPHAN: 0x0E06,
+  INTERVAL_TIMER_LEAK: 0x0E07,
+  TRANSITION_INTERRUPT: 0x0E08,
 });
 
 // ─── Bytecode Error Class ────────────────────────────────────────────────────
@@ -389,6 +418,27 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.invariants.push('canvas.width > 0 && canvas.height > 0');
       break;
       
+    case ERROR_CATEGORIES.LINGUISTIC:
+      hints.suggestions.push('Validate phoneme density and vessel capacity');
+      hints.suggestions.push('Check rhyme-law alignment');
+      hints.constraints.push('Structural integrity must be >= threshold');
+      hints.invariants.push('rhymeKey(wordA) === rhymeKey(wordB)');
+      break;
+
+    case ERROR_CATEGORIES.COMBAT:
+      hints.suggestions.push('Check kinetic force propagation');
+      hints.suggestions.push('Review anti-exploit repetition decay');
+      hints.constraints.push('Spell force must be finite and positive');
+      hints.invariants.push('Number.isFinite(calculatedForce) && calculatedForce > 0');
+      break;
+
+    case ERROR_CATEGORIES.UI_STASIS:
+      hints.suggestions.push('Check for long-running async operations in handlers');
+      hints.suggestions.push('Ensure animation lifecycle cleanup');
+      hints.constraints.push('UI operations must complete within budget');
+      hints.invariants.push('handlerDuration < MAX_HANDLER_DURATION_MS');
+      break;
+
     default:
       hints.suggestions.push('Review error context for specific issue');
       hints.suggestions.push('Check module documentation');

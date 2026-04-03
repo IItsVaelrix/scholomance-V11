@@ -5,7 +5,6 @@
  * This module traces shapes, extracts features, and maps them to PixelBrain's coordinate system.
  */
 
-import { clamp01, roundTo } from './shared.js';
 import { snapToPixelGrid } from './anti-alias-control.js';
 import { analyzeImageToFormula, formulaToBytecode } from './image-to-bytecode-formula.js';
 import { processorBridge } from '../../../src/lib/processor-bridge.js';
@@ -27,14 +26,14 @@ import { processorBridge } from '../../../src/lib/processor-bridge.js';
  * @returns {Promise<Object>} PixelBrain-compatible result
  */
 export async function generatePixelArtFromImage(imageAnalysis, canvasSize, extension = null) {
-  const { colors, composition, semanticParams, pixelData, dimensions } = imageAnalysis;
+  const { colors, composition, semanticParams: _semanticParams, pixelData, dimensions } = imageAnalysis;
   
   // 1. Extract mathematical formula from image
   const formula = analyzeImageToFormula(imageAnalysis);
   const bytecode = formulaToBytecode(formula);
 
   // 2. Build palette from image colors
-  const palettes = buildPaletteFromImageColors(colors, semanticParams);
+  const palettes = buildPaletteFromImageColors(colors);
   
   // 3. Generate coordinates from image features
   // FIX: If coordinates were already extracted (e.g. by a WebWorker), use them!
@@ -114,7 +113,7 @@ export function transcribeFullPixelData(pixelData, dimensions, canvasSize) {
 /**
  * Build palette from image colors
  */
-function buildPaletteFromImageColors(colors, semanticParams) {
+function buildPaletteFromImageColors(colors) {
   if (!colors || colors.length === 0) {
     return [];
   }
@@ -147,6 +146,107 @@ function applyExtensionToCoordinates(coordinates, extensionId, canvasSize) {
     }));
   }
   return coordinates;
+}
+
+/**
+ * Generate a silhouette (outline) from image analysis
+ */
+export function generateSilhouetteFromImage(imageAnalysis, canvasSize) {
+  const { pixelData, dimensions } = imageAnalysis;
+  const { width: srcWidth, height: srcHeight } = dimensions;
+  const { width: canvasWidth, height: canvasHeight } = canvasSize;
+  const silhouette = [];
+
+  const scaleX = canvasWidth / srcWidth;
+  const scaleY = canvasHeight / srcHeight;
+  const scale = Math.min(scaleX, scaleY);
+  const offsetX = (canvasWidth - srcWidth * scale) / 2;
+  const offsetY = (canvasHeight - srcHeight * scale) / 2;
+
+  // Simple edge detection: check if alpha > 128 and has at least one transparent neighbor
+  for (let y = 0; y < srcHeight; y++) {
+    for (let x = 0; x < srcWidth; x++) {
+      const idx = (y * srcWidth + x) * 4;
+      if (pixelData[idx + 3] < 128) continue;
+
+      let isEdge = false;
+      const neighbors = [
+        [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+      ];
+
+      for (const [nx, ny] of neighbors) {
+        if (nx < 0 || nx >= srcWidth || ny < 0 || ny >= srcHeight) {
+          isEdge = true;
+          break;
+        }
+        const nidx = (ny * srcWidth + nx) * 4;
+        if (pixelData[nidx + 3] < 128) {
+          isEdge = true;
+          break;
+        }
+      }
+
+      if (isEdge) {
+        const coord = {
+          x: x * scale + offsetX,
+          y: y * scale + offsetY,
+          z: 0,
+          emphasis: 1.0,
+          source: 'silhouette',
+        };
+        const snapped = snapToPixelGrid(coord, canvasSize.gridSize || 1);
+        silhouette.push({
+          ...coord,
+          snappedX: snapped.x,
+          snappedY: snapped.y,
+        });
+      }
+    }
+  }
+
+  return silhouette;
+}
+
+/**
+ * Fills a shape defined by a silhouette with a target color
+ */
+export function fillShape(silhouette, canvasSize, colorHex) {
+  if (!silhouette || silhouette.length === 0) return [];
+
+  // Simple bounding box fill for interior points
+  const minX = Math.min(...silhouette.map(c => c.snappedX));
+  const maxX = Math.max(...silhouette.map(c => c.snappedX));
+  const minY = Math.min(...silhouette.map(c => c.snappedY));
+  const maxY = Math.max(...silhouette.map(c => c.snappedY));
+
+  const filled = [];
+  const gridSize = canvasSize.gridSize || 1;
+
+  for (let y = minY; y <= maxY; y += gridSize) {
+    for (let x = minX; x <= maxX; x += gridSize) {
+      // Basic check: is it inside the horizontal bounds of the silhouette for this row?
+      const rowPoints = silhouette.filter(c => Math.abs(c.snappedY - y) < gridSize / 2);
+      if (rowPoints.length < 2) continue;
+
+      const rowMinX = Math.min(...rowPoints.map(c => c.snappedX));
+      const rowMaxX = Math.max(...rowPoints.map(c => c.snappedX));
+
+      if (x >= rowMinX && x <= rowMaxX) {
+        filled.push({
+          x,
+          y,
+          z: 0,
+          color: colorHex,
+          emphasis: 0.5,
+          source: 'fill',
+          snappedX: x,
+          snappedY: y,
+        });
+      }
+    }
+  }
+
+  return filled;
 }
 
 function rgbToHex(r, g, b) {

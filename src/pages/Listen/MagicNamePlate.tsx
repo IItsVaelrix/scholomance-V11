@@ -23,7 +23,7 @@ export const MagicNamePlate: React.FC<MagicNamePlateProps> = ({ name, color }) =
 
       let iteration = 0;
       const interval = setInterval(() => {
-        setDisplayText(prev => 
+        setDisplayText(() => 
           name.split("").map((char, index) => {
             if (index < iteration) return name[index];
             return GLYPHS[Math.floor(Math.random() * GLYPHS.length)];

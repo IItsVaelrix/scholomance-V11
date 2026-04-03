@@ -261,7 +261,7 @@ describe('Missing Imports QA', () => {
         const content = fs.readFileSync(filePath, 'utf8');
         const imports = extractImports(content);
 
-        for (const { type, names, name } of imports.all) {
+        for (const { type, names } of imports.all) {
           if (type === 'named' && names) {
             for (const importedName of names) {
               if (/^use[A-Z]/.test(importedName)) continue;

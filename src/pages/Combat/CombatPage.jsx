@@ -84,18 +84,9 @@ export default function CombatPage() {
     lastPlayerDamage,
     battleLog,
     turnNumber,
-    profileType,
-    doctrine,
-    passiveLabel,
-    phase,
     telegraph,
-    telegraphKey,
-    moveId,
     moveLabel,
     moveSchool,
-    statusesApplied,
-    stolenTokens,
-    arenaCondition,
     castPlayerSpell,
     continueAfterReveal,
     cancelCasting,
@@ -206,18 +197,18 @@ export default function CombatPage() {
   const opponentHPPct    = Math.max(0, Math.min(100, (opponentHP / maxOpponentHP) * 100));
   const opponentHPColor = opponentHPPct > 50 ? '#22aa44' : opponentHPPct > 25 ? '#ddaa00' : '#cc2222';
   const doctrineSurface = {
-    profileType: profileType ?? opponent?.profileType ?? null,
-    doctrine: doctrine ?? opponent?.doctrine ?? opponent?.subtitle ?? null,
-    passiveLabel: passiveLabel ?? opponent?.passiveLabel ?? null,
-    phase: phase ?? opponent?.phase ?? null,
-    telegraph: telegraph ?? opponent?.telegraph ?? null,
-    telegraphKey: telegraphKey ?? opponent?.telegraphKey ?? null,
-    moveId: moveId ?? opponent?.moveId ?? lastOpponentSpell ?? null,
-    moveLabel: moveLabel ?? opponent?.moveLabel ?? null,
-    moveSchool: moveSchool ?? opponent?.moveSchool ?? null,
-    statusesApplied: statusesApplied ?? opponent?.statusesApplied ?? [],
-    stolenTokens: stolenTokens ?? opponent?.stolenTokens ?? [],
-    arenaCondition: arenaCondition ?? opponent?.arenaCondition ?? null,
+    profileType: opponent?.doctrine?.id || opponent?.profileType || null,
+    doctrine: opponent?.doctrine?.description || opponent?.subtitle || null,
+    passiveLabel: opponent?.doctrine?.traits?.join(', ') || null,
+    phase: opponent?.phase || null,
+    telegraph: telegraph || null,
+    telegraphKey: telegraph || null,
+    moveId: moveLabel || lastOpponentSpell || null,
+    moveLabel: moveLabel || null,
+    moveSchool: moveSchool || null,
+    statusesApplied: opponent?.statusEffects || [],
+    stolenTokens: opponent?.stolenTokens || [],
+    arenaCondition: opponent?.arenaCondition || null,
   };
 
   // ─── Render ──────────────────────────────────────────────────────────────
@@ -227,7 +218,7 @@ export default function CombatPage() {
 
       {/* ── Turn Banner ── */}
       <div className="combat-turn-banner" aria-label={`Turn ${turnNumber}`}>
-        <span className="combat-school-badge">SONIC THAUMATURGY</span>
+        <span className="combat-school-badge">{(opponent?.schoolName || 'THE RITE').toUpperCase()}</span>
         <span className="combat-turn-label">TURN {turnNumber}</span>
         <span className="combat-opponent-name">{opponent?.name}</span>
       </div>

@@ -1,0 +1,198 @@
+/**
+ * Collab Diagnostic Engine — "Disconnected Wiring" Detector
+ * 
+ * Phase 1: HotLint (Soap and Water) — Fast static analysis scan.
+ * Phase 2: PixelBrain Diagnostic (Sanitizer) — Deep state and invariant check.
+ */
+
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'url';
+import { collabService } from './collab.service.js';
+import * as schemas from './collab.schemas.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const ROOT = path.resolve(__dirname, '..', '..', '..');
+
+const SRC_DIR = path.join(ROOT, 'src');
+const CODEX_DIR = path.join(ROOT, 'codex');
+
+const ENTRY_POINTS = [
+    path.join(SRC_DIR, 'main.jsx'),
+    path.join(CODEX_DIR, 'server/index.js'),
+];
+
+/**
+ * Generate a formal PixelBrain Bytecode Error
+ */
+function createPixelBrainError(category, severity, module, code, context) {
+    const contextB64 = Buffer.from(JSON.stringify(context)).toString('base64');
+    const content = `PB-ERR-v1-${category}-${severity}-${module}-${code}-${contextB64}`;
+    
+    // Calculate checksum
+    let calculatedChecksum = 0;
+    for (let i = 0; i < content.length; i++) {
+        calculatedChecksum = (calculatedChecksum + content.charCodeAt(i)) % 0xFFFF;
+    }
+    const checksum = calculatedChecksum.toString(16).toUpperCase().padStart(4, '0');
+    
+    return `${content}-${checksum}`;
+}
+
+/**
+ * Phase 1: HotLint — Static Analysis
+ */
+async function runHotLint() {
+    const issues = [];
+    const allFiles = [];
+    
+    function walk(dir) {
+        const entries = fs.readdirSync(dir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(dir, entry.name);
+            if (entry.name === 'node_modules' || entry.name.startsWith('.') || entry.name === 'dist') continue;
+            if (entry.isDirectory()) walk(fullPath);
+            else if (/\.(js|jsx|ts|tsx)$/.test(entry.name)) allFiles.push(fullPath);
+        }
+    }
+
+    walk(SRC_DIR);
+    walk(CODEX_DIR);
+
+    const reachable = new Set();
+    const queue = [...ENTRY_POINTS];
+
+    function getImports(filePath) {
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            const imports = [];
+            const importRegex = /import\s+[\s\S]*?\s+from\s+['"](.*?)['"]/g;
+            let match;
+            while ((match = importRegex.exec(content)) !== null) {
+                const imp = match[1];
+                if (!imp.startsWith('.')) continue;
+                
+                const resolved = resolveImport(filePath, imp);
+                if (resolved) imports.push(resolved);
+                else {
+                    issues.push({
+                        type: 'BROKEN_IMPORT',
+                        file: path.relative(ROOT, filePath),
+                        target: imp,
+                        severity: 'WARN'
+                    });
+                }
+            }
+            return imports;
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function resolveImport(sourceFile, importPath) {
+        const sourceDir = path.dirname(sourceFile);
+        const resolved = path.resolve(sourceDir, importPath);
+        const extensions = ['', '.js', '.jsx', '.ts', '.tsx', '/index.js', '/index.jsx'];
+        for (const ext of extensions) {
+            const p = resolved + ext;
+            if (fs.existsSync(p) && !fs.statSync(p).isDirectory()) return p;
+        }
+        return null;
+    }
+
+    while (queue.length > 0) {
+        const current = queue.shift();
+        if (reachable.has(current)) continue;
+        reachable.add(current);
+        const imports = getImports(current);
+        imports.forEach(imp => {
+            if (!reachable.has(imp)) queue.push(imp);
+        });
+    }
+
+    const unreachable = allFiles.filter(f => !reachable.has(f));
+    unreachable.forEach(f => {
+        issues.push({
+            type: 'UNREACHABLE_FILE',
+            file: path.relative(ROOT, f),
+            severity: 'INFO'
+        });
+    });
+
+    return issues;
+}
+
+/**
+ * Phase 2: PixelBrain Diagnostic — State & Invariants
+ */
+async function runPixelBrainDiagnostic() {
+    const bytecodeErrors = [];
+    const status = collabService.getStatus();
+    const tasks = collabService.listTasks();
+    const agents = collabService.listAgents();
+    const locks = collabService.listLocks();
+    
+    const agentIds = new Set(agents.map(a => a.id));
+
+    // Invariant: Tasks assigned to existing agents
+    tasks.forEach(task => {
+        if (task.assigned_agent && !agentIds.has(task.assigned_agent)) {
+            bytecodeErrors.push(createPixelBrainError(
+                'STATE', 'CRIT', 'COORD', '0E02',
+                { taskId: task.id, ghostAgent: task.assigned_agent, reason: 'Assigned agent does not exist in presence table.' }
+            ));
+        }
+    });
+
+    // Invariant: Locks held by existing agents
+    locks.forEach(lock => {
+        if (!agentIds.has(lock.agent_id)) {
+            bytecodeErrors.push(createPixelBrainError(
+                'STATE', 'WARN', 'COORD', '0E03',
+                { path: lock.file_path, ghostAgent: lock.agent_id, reason: 'Lock held by non-existent agent.' }
+            ));
+        }
+    });
+
+    // Invariant: Bug report bytecode integrity
+    const bugs = collabService.listBugReports();
+    bugs.forEach(bug => {
+        if (bug.bytecode && !bug.checksum_verified) {
+            bytecodeErrors.push(createPixelBrainError(
+                'VALUE', 'CRIT', 'ARTIFACT', '0B01',
+                { bugId: bug.id, reason: 'Bytecode checksum mismatch. Artifact integrity compromised.' }
+            ));
+        }
+    });
+
+    return bytecodeErrors;
+}
+
+export const collabDiagnostic = {
+    async scan() {
+        const startTime = Date.now();
+        
+        console.error('[DIAGNOSTIC] Initiating Codebase Wash (HotLint)...');
+        const hotLintIssues = await runHotLint();
+        
+        console.error('[DIAGNOSTIC] Initiating Deep Sanitization (PixelBrain)...');
+        const bytecodeErrors = await runPixelBrainDiagnostic();
+        
+        const duration = Date.now() - startTime;
+        
+        return {
+            summary: {
+                status: bytecodeErrors.length > 0 ? 'INFECTED' : (hotLintIssues.length > 0 ? 'DIRTY' : 'CLEAN'),
+                duration_ms: duration,
+                hotlint_issue_count: hotLintIssues.length,
+                pixelbrain_error_count: bytecodeErrors.length,
+            },
+            hotlint: hotLintIssues,
+            pixelbrain: bytecodeErrors,
+            message: bytecodeErrors.length > 0 
+                ? `System sanitization failed. ${bytecodeErrors.length} bytecode errors detected.`
+                : `System sanitization complete. ${hotLintIssues.length} minor wiring issues found.`
+        };
+    }
+};

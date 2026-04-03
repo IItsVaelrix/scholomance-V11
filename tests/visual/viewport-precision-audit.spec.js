@@ -53,7 +53,7 @@ test.describe('Viewport Precision Audit', () => {
       // ── MANDATE 2: Bilateral Symmetry Audit ──
       
       // Take a high-fidelity screenshot
-      const screenshot = await page.screenshot();
+      await page.screenshot();
       
       // Perform Visual Symmetry Analysis via Script
       const symmetryResult = await page.evaluate(async () => {

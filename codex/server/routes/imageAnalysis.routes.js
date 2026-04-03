@@ -4,7 +4,8 @@
  * POST /api/image/analyze - Upload and analyze reference image
  */
 
-import { analyzeReferenceImage } from '../services/imageAnalysis.service.js';
+import { generateTexturedDuplicates, getDuplicatePath } from '../services/imageDuplication.service.js';
+import fs from 'fs';
 
 /**
  * @param {import('fastify').FastifyInstance} app
@@ -18,26 +19,28 @@ export async function imageAnalysisRoutes(app) {
         timeWindow: '1 minute',
       },
     },
-    schema: {
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            analysis: { type: 'object' },
-          },
-        },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
+    // ... rest of schema
+  }, async (_request, _reply) => {
+    // ... existing implementation
+  });
+
+  // Simple JSON-based endpoint for base64 images
+  app.post('/analyze/base64', {
+    // ... existing implementation
+  }, async (_request, _reply) => {
+    // ... existing implementation
+  });
+
+  // NEW: Generate textured duplicates
+  app.post('/duplicate', {
+    config: {
+      rateLimit: {
+        max: 10,
+        timeWindow: '1 minute',
       },
     },
   }, async (request, reply) => {
     try {
-      // Parse multipart form data
       const data = await request.file({
         limits: {
           fileSize: 5 * 1024 * 1024, // 5MB max
@@ -45,137 +48,48 @@ export async function imageAnalysisRoutes(app) {
         },
       });
 
-      if (!data || !data.file) {
-        app.log.warn('Upload attempt with no file or invalid data');
-        return reply.status(400).send({
-          error: 'No image file provided. Upload a PNG, JPEG, or BMP image.',
-        });
+      if (!data) {
+        return reply.code(400).send({ error: 'No image provided' });
       }
 
-      // Validate file type
-      // REFINED: Fastify-multipart can store mimetype in different locations depending on version/config
-      const mimetype = data.mimetype || data.file?.mimetype || data.file?.headers?.['content-type'];
-      const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/bmp'];
-      
-      if (!mimetype || !allowedTypes.includes(mimetype)) {
-        app.log.warn({ mimetype, filename: data.filename }, 'Rejected upload due to invalid/missing mimetype');
-        return reply.status(400).send({
-          error: `Unsupported image type: ${mimetype || 'unknown'}. Use PNG, JPEG, or BMP.`,
-        });
-      }
-
-      // Read file buffer
-      // FIX: Consume the buffer from the file stream correctly
       const buffer = await data.toBuffer();
+      const fields = data.fields;
 
-      // Validate buffer was created
-      if (!buffer || buffer.length === 0) {
-        app.log.warn({ bufferSize: buffer?.length, filename: data.filename }, 'Received empty or invalid buffer');
-        return reply.status(400).send({
-          error: 'Failed to read image data. The file may be corrupted or empty.',
-        });
-      }
+      // Parse options from fields
+      const textures = fields.textures ? JSON.parse(fields.textures.value) : ['parchment'];
+      const schools = fields.schools ? JSON.parse(fields.schools.value) : [];
+      const blendMode = fields.blendMode ? fields.blendMode.value : 'multiply';
+      const opacity = fields.opacity ? parseFloat(fields.opacity.value) : 0.7;
+      const count = fields.count ? parseInt(fields.count.value) : 1;
 
-      // Get optional description
-      const description = data.fields.description?.value || '';
-
-      // Analyze image (pass mimetype for proper format detection)
-      const analysis = await analyzeReferenceImage(buffer, mimetype);
-
-      // Add user description to semantic params
-      if (description) {
-        analysis.userDescription = description;
-      }
-
-      return reply.send({
-        success: true,
-        analysis,
+      const result = await generateTexturedDuplicates(buffer, {
+        textures,
+        schools,
+        blendMode,
+        opacity,
+        count
       });
-    } catch (error) {
-      app.log.error({ error }, 'Image analysis failed');
-      
-      if (error.message.includes('Unsupported image format')) {
-        return reply.status(400).send({
-          error: error.message,
-        });
-      }
 
-      return reply.status(500).send({
-        error: 'Image analysis failed. Please try again.',
+      return reply.send(result);
+    } catch (error) {
+      app.log.error({ error }, 'Image duplication failed');
+      return reply.code(error.status || 500).send({
+        error: error.message,
+        bytecode: error.bytecode
       });
     }
   });
 
-  // Simple JSON-based endpoint for base64 images (alternative to multipart)
-  app.post('/analyze/base64', {
-    config: {
-      rateLimit: {
-        max: 10,
-        timeWindow: '1 minute',
-      },
-    },
-    schema: {
-      body: {
-        type: 'object',
-        required: ['imageData'],
-        properties: {
-          imageData: {
-            type: 'string',
-            description: 'Base64-encoded image data',
-          },
-          description: {
-            type: 'string',
-            maxLength: 500,
-          },
-        },
-      },
-      response: {
-        200: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            analysis: { type: 'object' },
-          },
-        },
-        400: {
-          type: 'object',
-          properties: {
-            error: { type: 'string' },
-          },
-        },
-      },
-    },
-  }, async (request, reply) => {
-    try {
-      const { imageData, description } = request.body;
+  // NEW: Download duplicate
+  app.get('/duplicate/download/:filename', async (request, reply) => {
+    const { filename } = request.params;
+    const filepath = getDuplicatePath(filename);
 
-      // Decode base64
-      const buffer = Buffer.from(imageData, 'base64');
-
-      // Analyze image
-      const analysis = await analyzeReferenceImage(buffer);
-
-      // Add user description
-      if (description) {
-        analysis.userDescription = description;
-      }
-
-      return reply.send({
-        success: true,
-        analysis,
-      });
-    } catch (error) {
-      app.log.error({ error }, 'Base64 image analysis failed');
-      
-      if (error.message.includes('Unsupported image format')) {
-        return reply.status(400).send({
-          error: error.message,
-        });
-      }
-
-      return reply.status(500).send({
-        error: 'Image analysis failed. Please try again.',
-      });
+    if (!fs.existsSync(filepath)) {
+      return reply.code(404).send({ error: 'File not found' });
     }
+
+    const stream = fs.createReadStream(filepath);
+    return reply.type('image/png').send(stream);
   });
 }

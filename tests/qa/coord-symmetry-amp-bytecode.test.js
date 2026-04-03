@@ -11,10 +11,7 @@ import { describe, it, expect } from 'vitest';
 import {
   assertEqual,
   assertTrue,
-  assertInRange,
   assertType,
-  assertThrowsBytecode,
-  assertCoordinateInBounds,
   assertValidHexColor,
 } from './tools/bytecode-assertions.js';
 import {
