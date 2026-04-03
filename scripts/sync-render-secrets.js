@@ -5,21 +5,33 @@ import path from 'node:path';
  * sync-render-secrets.js
  * 
  * Synchronizes local .env secrets to a Render.com service via the Render API.
- * 
- * Usage:
- *   node scripts/sync-render-secrets.js
- * 
- * Required Environment Variables:
- *   RENDER_API_KEY: Your Render API key
- *   RENDER_SERVICE_ID: The ID of your Render service (found in the service settings URL)
  */
+
+// Simple .env parser to get bootstrap variables
+function bootstrapEnv() {
+  const envPath = path.resolve(process.cwd(), '.env');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    content.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...rest] = trimmed.split('=');
+        if (key && !process.env[key.trim()]) {
+          process.env[key.trim()] = rest.join('=').trim();
+        }
+      }
+    });
+  }
+}
+
+bootstrapEnv();
 
 const API_KEY = process.env.RENDER_API_KEY;
 const SERVICE_ID = process.env.RENDER_SERVICE_ID;
 
 async function sync() {
   if (!API_KEY || !SERVICE_ID) {
-    console.error('Error: RENDER_API_KEY and RENDER_SERVICE_ID must be set.');
+    console.error('Error: RENDER_API_KEY and RENDER_SERVICE_ID must be set in .env or environment.');
     process.exit(1);
   }
 
