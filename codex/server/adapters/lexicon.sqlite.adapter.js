@@ -117,115 +117,99 @@ export function createLexiconAdapter(dbPath, options = {}) {
     ? path.resolve(dbPath.trim())
     : null;
 
-  if (!resolvedPath) {
-    logger.warn?.('[LexiconAdapter] SCHOLOMANCE_DICT_PATH is not set. Lexicon routes will return empty results.');
-    return createEmptyAdapter();
-  }
-
-  if (!existsSync(resolvedPath)) {
-    logger.warn?.({ dbPath: resolvedPath }, '[LexiconAdapter] Dictionary DB file not found. Lexicon routes will return empty results.');
-    return createEmptyAdapter();
-  }
-
-  let db;
-  try {
-    db = new Database(resolvedPath, { readonly: true, fileMustExist: true });
-    db.pragma('query_only = ON');
-    db.pragma('busy_timeout = 5000');
-  } catch (error) {
-    logger.warn?.({ err: error, dbPath: resolvedPath }, '[LexiconAdapter] Failed to open dictionary DB. Lexicon routes will return empty results.');
-    return createEmptyAdapter();
-  }
-
-  const lookupEntriesStmt = db.prepare(`
-    SELECT id, headword, pos, ipa, etymology, senses_json, source, source_url
-    FROM entry
-    WHERE headword_lower = ?
-    LIMIT ?
-  `);
-
-  const lookupRhymeFamilyStmt = db.prepare(`
-    SELECT rhyme_family, ipa
-    FROM rhyme_index
-    LEFT JOIN entry ON entry.headword_lower = rhyme_index.word_lower
-    WHERE word_lower = ?
-  `);
-
-  const lookupRhymesStmt = db.prepare(`
-    SELECT word_lower
-    FROM rhyme_index
-    WHERE rhyme_family = ? AND word_lower != ?
-    LIMIT ?
-  `);
-
-  const lookupSynonymsStmt = db.prepare(`
-    SELECT l2.lemma AS lemma
-    FROM wordnet_lemma l1
-    JOIN wordnet_lemma l2 ON l1.synset_id = l2.synset_id
-    WHERE l1.lemma_lower = ?
-    LIMIT ?
-  `);
-
-  const lookupAntonymsStmt = db.prepare(`
-    SELECT l2.lemma AS lemma
-    FROM wordnet_lemma l1
-    JOIN wordnet_rel r ON l1.synset_id = r.synset_id
-    JOIN wordnet_lemma l2 ON r.target_synset_id = l2.synset_id
-    WHERE l1.lemma_lower = ? AND r.rel = 'antonym'
-    LIMIT ?
-  `);
-
-  const searchEntriesStmt = db.prepare(`
-    SELECT e.id, e.headword, e.pos, e.ipa, e.etymology, e.senses_json, e.source, e.source_url
-    FROM entry_fts f
-    JOIN entry e ON e.id = f.rowid
-    WHERE entry_fts MATCH ?
-    LIMIT ?
-  `);
-
-  const suggestEntriesStmt = db.prepare(`
-    SELECT headword, pos
-    FROM entry
-    WHERE headword_lower LIKE ?
-    LIMIT ?
-  `);
+  let db = null;
+  let stmts = null;
   const familyBatchStmtCache = new Map();
   const validateBatchStmtCache = new Map();
 
-  function sanitizeLemmaRows(rows, word, limit = 20) {
-    const boundedLimit = toBoundedLimit(limit, 20);
-    const target = normalizeWord(word);
-    const seen = new Set();
-    const out = [];
-    for (const row of rows) {
-      const lemma = typeof row?.lemma === 'string' ? row.lemma.trim() : '';
-      if (!lemma) continue;
-      const lower = lemma.toLowerCase();
-      if (lower === target || seen.has(lower)) continue;
-      seen.add(lower);
-      out.push(lemma);
-      if (out.length >= boundedLimit) break;
+  function tryConnect() {
+    if (db && db.open) return true;
+    if (!resolvedPath || !existsSync(resolvedPath)) return false;
+
+    try {
+      db = new Database(resolvedPath, { readonly: true, fileMustExist: true });
+      db.pragma('query_only = ON');
+      db.pragma('busy_timeout = 5000');
+      
+      stmts = {
+        lookupEntries: db.prepare(`
+          SELECT id, headword, pos, ipa, etymology, senses_json, source, source_url
+          FROM entry
+          WHERE headword_lower = ?
+          LIMIT ?
+        `),
+        lookupRhymeFamily: db.prepare(`
+          SELECT rhyme_family, ipa
+          FROM rhyme_index
+          LEFT JOIN entry ON entry.headword_lower = rhyme_index.word_lower
+          WHERE word_lower = ?
+        `),
+        lookupRhymes: db.prepare(`
+          SELECT word_lower
+          FROM rhyme_index
+          WHERE rhyme_family = ? AND word_lower != ?
+          LIMIT ?
+        `),
+        lookupSynonyms: db.prepare(`
+          SELECT l2.lemma AS lemma
+          FROM wordnet_lemma l1
+          JOIN wordnet_lemma l2 ON l1.synset_id = l2.synset_id
+          WHERE l1.lemma_lower = ?
+          LIMIT ?
+        `),
+        lookupAntonyms: db.prepare(`
+          SELECT l2.lemma AS lemma
+          FROM wordnet_lemma l1
+          JOIN wordnet_rel r ON l1.synset_id = r.synset_id
+          JOIN wordnet_lemma l2 ON r.target_synset_id = l2.synset_id
+          WHERE l1.lemma_lower = ? AND r.rel = 'antonym'
+          LIMIT ?
+        `),
+        searchEntries: db.prepare(`
+          SELECT e.id, e.headword, e.pos, e.ipa, e.etymology, e.senses_json, e.source, e.source_url
+          FROM entry_fts f
+          JOIN entry e ON e.id = f.rowid
+          WHERE entry_fts MATCH ?
+          LIMIT ?
+        `),
+        suggestEntries: db.prepare(`
+          SELECT headword, pos
+          FROM entry
+          WHERE headword_lower LIKE ?
+          LIMIT ?
+        `)
+      };
+      
+      logger.info?.({ dbPath: resolvedPath }, '[LexiconAdapter] Connected to dictionary DB.');
+      return true;
+    } catch (error) {
+      logger.warn?.({ err: error.message, dbPath: resolvedPath }, '[LexiconAdapter] Failed to open dictionary DB.');
+      return false;
     }
-    return out;
   }
 
+  // Initial connection attempt
+  tryConnect();
+
   function lookupWord(word, limit = DEFAULT_LOOKUP_LIMIT) {
+    if (!tryConnect()) return [];
     const normalized = normalizeWord(word);
     if (!normalized) return [];
     const boundedLimit = toBoundedLimit(limit, DEFAULT_LOOKUP_LIMIT);
-    const rows = lookupEntriesStmt.all(normalized, boundedLimit);
+    const rows = stmts.lookupEntries.all(normalized, boundedLimit);
     return rows.map(normalizeEntry);
   }
 
   function lookupRhymes(word, limit = DEFAULT_RHYME_LIMIT) {
+    if (!tryConnect()) return { family: null, words: [] };
     const normalized = normalizeWord(word);
     if (!normalized) return { family: null, words: [] };
-    const familyRow = lookupRhymeFamilyStmt.get(normalized);
+    const familyRow = stmts.lookupRhymeFamily.get(normalized);
     if (!familyRow?.rhyme_family) {
       return { family: null, words: [] };
     }
     const boundedLimit = toBoundedLimit(limit, DEFAULT_RHYME_LIMIT);
-    const rows = lookupRhymesStmt.all(familyRow.rhyme_family, normalized, boundedLimit);
+    const rows = stmts.lookupRhymes.all(familyRow.rhyme_family, normalized, boundedLimit);
     return {
       family: familyRow.rhyme_family,
       words: rows.map((row) => row.word_lower),
@@ -233,6 +217,7 @@ export function createLexiconAdapter(dbPath, options = {}) {
   }
 
   function batchLookupFamilies(words) {
+    if (!tryConnect()) return {};
     const normalized = [...new Set((Array.isArray(words) ? words : [])
       .map(normalizeWord)
       .filter(Boolean))];
@@ -262,6 +247,7 @@ export function createLexiconAdapter(dbPath, options = {}) {
   }
 
   function batchValidateWords(words) {
+    if (!tryConnect()) return [];
     const normalized = [...new Set((Array.isArray(words) ? words : [])
       .map(normalizeWord)
       .filter(Boolean))].sort();
@@ -284,27 +270,30 @@ export function createLexiconAdapter(dbPath, options = {}) {
   }
 
   function lookupSynonyms(word, limit = 20) {
+    if (!tryConnect()) return [];
     const normalized = normalizeWord(word);
     if (!normalized) return [];
     const boundedLimit = toBoundedLimit(limit + 10, 30);
-    const rows = lookupSynonymsStmt.all(normalized, boundedLimit);
+    const rows = stmts.lookupSynonyms.all(normalized, boundedLimit);
     return sanitizeLemmaRows(rows, normalized, limit);
   }
 
   function lookupAntonyms(word, limit = 20) {
+    if (!tryConnect()) return [];
     const normalized = normalizeWord(word);
     if (!normalized) return [];
     const boundedLimit = toBoundedLimit(limit + 10, 30);
-    const rows = lookupAntonymsStmt.all(normalized, boundedLimit);
+    const rows = stmts.lookupAntonyms.all(normalized, boundedLimit);
     return sanitizeLemmaRows(rows, normalized, limit);
   }
 
   function searchEntries(query, limit = DEFAULT_SEARCH_LIMIT) {
+    if (!tryConnect()) return [];
     const sanitized = sanitizeFtsQuery(query);
     if (!sanitized) return [];
     const boundedLimit = toBoundedLimit(limit, DEFAULT_SEARCH_LIMIT);
     try {
-      const rows = searchEntriesStmt.all(sanitized, boundedLimit);
+      const rows = stmts.searchEntries.all(sanitized, boundedLimit);
       return rows.map(normalizeEntry);
     } catch {
       return [];
@@ -312,10 +301,11 @@ export function createLexiconAdapter(dbPath, options = {}) {
   }
 
   function suggestEntries(prefix, limit = DEFAULT_SUGGEST_LIMIT) {
+    if (!tryConnect()) return [];
     const normalized = normalizeWord(prefix);
     if (!normalized) return [];
     const boundedLimit = toBoundedLimit(limit, DEFAULT_SUGGEST_LIMIT);
-    const rows = suggestEntriesStmt.all(`${normalized}%`, boundedLimit);
+    const rows = stmts.suggestEntries.all(`${normalized}%`, boundedLimit);
     return rows.map((row) => ({
       headword: row.headword,
       pos: row.pos,
@@ -323,8 +313,9 @@ export function createLexiconAdapter(dbPath, options = {}) {
   }
 
   function close() {
-    if (!db?.open) return;
-    db.close();
+    if (db && db.open) {
+      db.close();
+    }
   }
 
   return {
@@ -339,8 +330,8 @@ export function createLexiconAdapter(dbPath, options = {}) {
     extractGloss,
     close,
     __unsafe: {
-      connected: true,
-      dbPath: resolvedPath,
+      get connected() { return !!(db && db.open); },
+      get dbPath() { return resolvedPath; },
     },
   };
 }

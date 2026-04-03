@@ -56,77 +56,81 @@ async function downloadOEWN() {
 }
 
 async function main() {
-  console.log('[RITUAL] Starting Production Initialization...');
+  const args = process.argv.slice(2);
+  const isDetached = args.includes('--detach');
 
-  // 1. Dictionary Initialization
-  if (!existsSync(DICT_PATH)) {
-    console.log('[RITUAL] Dictionary missing. Commencing build...');
-    try {
-      await downloadOEWN();
-      await runCommand('python3', [
-        'scripts/build_scholomance_dict.py',
-        '--db', DICT_PATH,
-        '--oewn_path', OEWN_XML_PATH,
-        '--overwrite'
-      ]);
-    } catch (err) {
-      console.error('[RITUAL] Dictionary build failed:', err.message);
-      // Don't exit; the app can run with degraded dictionary
-    }
-  } else {
-    console.log('[RITUAL] Dictionary already exists on persistent storage.');
-  }
+  console.log(`[RITUAL] Starting Production Initialization... (detached=${isDetached})`);
 
-  // 2. Super Corpus Initialization
-  if (!existsSync(CORPUS_PATH)) {
-    console.log('[RITUAL] Super Corpus missing. Commencing ingestion...');
-    try {
-      await runCommand('python3', [
-        'scripts/build_super_corpus.py',
-        '--db', CORPUS_PATH,
-        '--dict', DICT_PATH,
-        '--overwrite'
-      ]);
-    } catch (err) {
-      console.error('[RITUAL] Corpus build failed:', err.message);
-    }
-  } else {
-    console.log('[RITUAL] Super Corpus already exists on persistent storage.');
-  }
-
-  // 3. Rhyme Astrology artifact initialization
-  if (ENABLE_RHYME_ASTROLOGY) {
-    if (RHYME_ASTROLOGY_PATHS.usedExistingArtifactsFallback || RHYME_ASTROLOGY_PATHS.usedProductionPersistentFallback) {
-      console.warn(
-        `[RITUAL] Rhyme Astrology output fallback engaged.` +
-        ` configured=${RHYME_ASTROLOGY_PATHS.configuredOutputDir || 'unset'}` +
-        ` resolved=${RHYME_ASTROLOGY_PATHS.outputDir}`
-      );
-    }
-
-    if (!RHYME_ASTROLOGY_READY()) {
-      console.log(`[RITUAL] Rhyme Astrology artifacts missing. Building into ${RHYME_ASTROLOGY_PATHS.outputDir}...`);
+  async function runRitual() {
+    // 1. Dictionary Initialization
+    if (!existsSync(DICT_PATH)) {
+      console.log('[RITUAL] Dictionary missing. Commencing build...');
       try {
-        mkdirSync(RHYME_ASTROLOGY_PATHS.outputDir, { recursive: true });
-        await runCommand(process.execPath, ['scripts/buildRhymeAstrologyIndex.js'], {
-          env: {
-            ...process.env,
-            SCHOLOMANCE_DICT_PATH: DICT_PATH,
-            SCHOLOMANCE_CORPUS_PATH: CORPUS_PATH,
-            RHYME_ASTROLOGY_OUTPUT_DIR: RHYME_ASTROLOGY_PATHS.outputDir,
-          },
-        });
+        await downloadOEWN();
+        await runCommand('python3', [
+          'scripts/build_scholomance_dict.py',
+          '--db', DICT_PATH,
+          '--oewn_path', OEWN_XML_PATH,
+          '--overwrite'
+        ]);
       } catch (err) {
-        console.error('[RITUAL] Rhyme Astrology artifact build failed:', err.message);
+        console.error('[RITUAL] Dictionary build failed:', err.message);
       }
     } else {
-      console.log(`[RITUAL] Rhyme Astrology artifacts already exist at ${RHYME_ASTROLOGY_PATHS.outputDir}.`);
+      console.log('[RITUAL] Dictionary already exists on persistent storage.');
     }
-  } else {
-    console.log('[RITUAL] Rhyme Astrology initialization skipped; feature flag is disabled.');
+
+    // 2. Super Corpus Initialization
+    if (!existsSync(CORPUS_PATH)) {
+      console.log('[RITUAL] Super Corpus missing. Commencing ingestion...');
+      try {
+        await runCommand('python3', [
+          'scripts/build_super_corpus.py',
+          '--db', CORPUS_PATH,
+          '--dict', DICT_PATH,
+          '--overwrite'
+        ]);
+      } catch (err) {
+        console.error('[RITUAL] Corpus build failed:', err.message);
+      }
+    } else {
+      console.log('[RITUAL] Super Corpus already exists on persistent storage.');
+    }
+
+    // 3. Rhyme Astrology artifact initialization
+    if (ENABLE_RHYME_ASTROLOGY) {
+      if (!RHYME_ASTROLOGY_READY()) {
+        console.log(`[RITUAL] Rhyme Astrology artifacts missing. Building into ${RHYME_ASTROLOGY_PATHS.outputDir}...`);
+        try {
+          mkdirSync(RHYME_ASTROLOGY_PATHS.outputDir, { recursive: true });
+          await runCommand(process.execPath, ['scripts/buildRhymeAstrologyIndex.js'], {
+            env: {
+              ...process.env,
+              SCHOLOMANCE_DICT_PATH: DICT_PATH,
+              SCHOLOMANCE_CORPUS_PATH: CORPUS_PATH,
+              RHYME_ASTROLOGY_OUTPUT_DIR: RHYME_ASTROLOGY_PATHS.outputDir,
+            },
+          });
+        } catch (err) {
+          console.error('[RITUAL] Rhyme Astrology artifact build failed:', err.message);
+        }
+      } else {
+        console.log(`[RITUAL] Rhyme Astrology artifacts already exist at ${RHYME_ASTROLOGY_PATHS.outputDir}.`);
+      }
+    }
+    console.log('[RITUAL] Background indexing tasks completed.');
   }
 
-  console.log('[RITUAL] Initialization Complete. Launching Scholomance CODEx.');
+  if (isDetached) {
+    console.log('[RITUAL] Detaching indexing tasks to background...');
+    runRitual().catch(err => console.error('[RITUAL] Background ritual error:', err));
+    // Small delay to ensure logs are visible before main process continues
+    await new Promise(r => setTimeout(r, 1000));
+  } else {
+    await runRitual();
+  }
+
+  console.log('[RITUAL] Initialization Sequence Handoff. Launching Scholomance CODEx.');
 }
 
 main().catch((err) => {

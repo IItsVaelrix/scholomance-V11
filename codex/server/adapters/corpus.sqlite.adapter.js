@@ -12,60 +12,66 @@ export function createCorpusAdapter(dbPath, options = {}) {
     ? path.resolve(dbPath.trim())
     : null;
 
-  if (!resolvedPath) {
-    logger.warn?.('[CorpusAdapter] SCHOLOMANCE_CORPUS_PATH is not set. Corpus routes will return empty results.');
-    return createEmptyAdapter();
+  let db = null;
+  let stmts = null;
+
+  function tryConnect() {
+    if (db && db.open) return true;
+    if (!resolvedPath || !existsSync(resolvedPath)) return false;
+
+    try {
+      db = new Database(resolvedPath, { readonly: true, fileMustExist: true });
+      db.pragma('query_only = ON');
+      db.pragma('busy_timeout = 5000');
+
+      // Prepared Statements
+      stmts = {
+        searchSentences: db.prepare(`
+          SELECT s.id, s.text, src.title, src.author, src.type, src.url
+          FROM sentence_fts f
+          JOIN sentence s ON s.id = f.rowid
+          JOIN source src ON src.id = s.source_id
+          WHERE sentence_fts MATCH ?
+          LIMIT ?
+        `),
+        getSentenceContext: db.prepare(`
+          SELECT id, text
+          FROM sentence
+          WHERE source_id = (SELECT source_id FROM sentence WHERE id = ?)
+            AND id BETWEEN (? - ?) AND (? + ?)
+          ORDER BY id ASC
+        `)
+      };
+
+      logger.info?.({ dbPath: resolvedPath }, '[CorpusAdapter] Connected to corpus DB.');
+      return true;
+    } catch (error) {
+      logger.warn?.({ err: error.message, dbPath: resolvedPath }, '[CorpusAdapter] Failed to open corpus DB.');
+      return false;
+    }
   }
 
-  if (!existsSync(resolvedPath)) {
-    logger.warn?.({ dbPath: resolvedPath }, '[CorpusAdapter] Corpus DB file not found. Corpus routes will return empty results.');
-    return createEmptyAdapter();
-  }
-
-  let db;
-  try {
-    db = new Database(resolvedPath, { readonly: true, fileMustExist: true });
-    db.pragma('query_only = ON');
-    db.pragma('busy_timeout = 5000');
-  } catch (error) {
-    logger.warn?.({ err: error, dbPath: resolvedPath }, '[CorpusAdapter] Failed to open corpus DB. Corpus routes will return empty results.');
-    return createEmptyAdapter();
-  }
-
-  // Prepared Statements
-  const searchSentencesStmt = db.prepare(`
-    SELECT s.id, s.text, src.title, src.author, src.type, src.url
-    FROM sentence_fts f
-    JOIN sentence s ON s.id = f.rowid
-    JOIN source src ON src.id = s.source_id
-    WHERE sentence_fts MATCH ?
-    LIMIT ?
-  `);
-
-  const getSentenceContextStmt = db.prepare(`
-    SELECT id, text
-    FROM sentence
-    WHERE source_id = (SELECT source_id FROM sentence WHERE id = ?)
-      AND id BETWEEN (? - ?) AND (? + ?)
-    ORDER BY id ASC
-  `);
+  // Initial attempt
+  tryConnect();
 
   function searchSentences(query, limit = 20) {
+    if (!tryConnect()) return [];
     const sanitized = sanitizeFtsQuery(query);
     if (!sanitized) return [];
     try {
-      return searchSentencesStmt.all(sanitized, Math.min(limit, 100));
+      return stmts.searchSentences.all(sanitized, Math.min(limit, 100));
     } catch (e) {
-      logger.error?.({ err: e, query: sanitized }, '[CorpusAdapter] Search failed');
+      logger.error?.({ err: e.message, query: sanitized }, '[CorpusAdapter] Search failed');
       return [];
     }
   }
 
   function getSentenceContext(sentenceId, windowSize = 2) {
+    if (!tryConnect()) return [];
     try {
-      return getSentenceContextStmt.all(sentenceId, sentenceId, windowSize, sentenceId, windowSize);
+      return stmts.getSentenceContext.all(sentenceId, sentenceId, windowSize, sentenceId, windowSize);
     } catch (e) {
-      logger.error?.({ err: e, sentenceId }, '[CorpusAdapter] Context lookup failed');
+      logger.error?.({ err: e.message, sentenceId }, '[CorpusAdapter] Context lookup failed');
       return [];
     }
   }
@@ -81,7 +87,7 @@ export function createCorpusAdapter(dbPath, options = {}) {
   }
 
   function close() {
-    if (db?.open) db.close();
+    if (db && db.open) db.close();
   }
 
   return {
@@ -89,8 +95,8 @@ export function createCorpusAdapter(dbPath, options = {}) {
     getSentenceContext,
     close,
     __unsafe: {
-      connected: true,
-      dbPath: resolvedPath
+      get connected() { return !!(db && db.open); },
+      get dbPath() { return resolvedPath; }
     }
   };
 }
