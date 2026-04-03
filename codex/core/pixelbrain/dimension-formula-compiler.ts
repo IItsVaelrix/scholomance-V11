@@ -389,10 +389,11 @@ export class DimensionCompiler {
         return { ...spec as CanonicalDimensionSpec, kind: 'fixed', widthPolicy: { type: 'selectNearest', value: this.canonicalize(parsed.value).widthPolicy, options: parsed.options }, heightPolicy: { type: 'sameAsWidth' } };
       case 'orientation':
         return { ...spec as CanonicalDimensionSpec, kind: 'orientation', widthPolicy: { type: 'const', value: 0 }, orientation: { portrait: this.canonicalize(parsed.portrait, `${id}-portrait`), landscape: this.canonicalize(parsed.landscape, `${id}-landscape`) } };
-      case 'orientation-single':
+      case 'orientation-single': {
         // Map single orientation to same value for both if needed, but usually part of a pair
         const valSpec = this.canonicalize(parsed.value, `${id}-${parsed.orientation}`);
         return valSpec;
+      }
       default:
         throw new DimensionCompileError(`Unsupported type: ${parsed.type}`, JSON.stringify(parsed), DimensionErrorCode.UNSUPPORTED_TYPE);
     }

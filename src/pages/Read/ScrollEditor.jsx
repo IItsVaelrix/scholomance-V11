@@ -369,7 +369,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
-    if (process.env.NODE_ENV === 'test') {
+    if (import.meta.env.MODE === 'test') {
       console.log(`[ScrollEditor] updateTypography: ${wrapper.clientWidth}x${wrapper.clientHeight}, content: ${content?.length}`);
     }
 
