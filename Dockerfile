@@ -42,12 +42,6 @@ RUN npm prune --omit=dev
 FROM node:20-bookworm-slim AS runtime
 WORKDIR /app
 
-# curl needed by ritual-init.js if it needs to download OEWN at runtime
-RUN apt-get update && apt-get install -y \
-    curl \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 ENV PORT=3000
