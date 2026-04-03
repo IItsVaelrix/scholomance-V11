@@ -265,7 +265,7 @@ describe('HIGH-02: Collab Tasks SQL Injection Prevention', () => {
     it('should have ALLOWED_TASK_COLUMNS constant defined', async () => {
         const fs = await import('fs');
         const source = fs.readFileSync(
-            '../../codex/server/collab/collab.persistence.js',
+            'codex/server/collab/collab.persistence.js',
             'utf-8'
         );
         expect(source).toContain('ALLOWED_TASK_COLUMNS');
@@ -284,7 +284,7 @@ describe('HIGH-03: /metrics Endpoint Authentication', () => {
         // Read the server source to verify auth is required
         const fs = await import('fs');
         const source = fs.readFileSync(
-            '../../codex/server/index.js',
+            'codex/server/index.js',
             'utf-8'
         );
         
@@ -299,7 +299,7 @@ describe('HIGH-03: /metrics Endpoint Authentication', () => {
     it('should have rate limiting on /metrics endpoint', async () => {
         const fs = await import('fs');
         const source = fs.readFileSync(
-            '../../codex/server/index.js',
+            'codex/server/index.js',
             'utf-8'
         );
         
@@ -314,7 +314,7 @@ describe('HIGH-03: /metrics Endpoint Authentication', () => {
     it('should have security comment explaining the protection', async () => {
         const fs = await import('fs');
         const source = fs.readFileSync(
-            '../../codex/server/index.js',
+            'codex/server/index.js',
             'utf-8'
         );
         
@@ -334,7 +334,7 @@ describe('Security Integration', () => {
         
         // HIGH-01: Rhyme astrology table validation
         const indexRepoSource = fs.readFileSync(
-            '../../codex/services/rhyme-astrology/indexRepo.js',
+            'codex/services/rhyme-astrology/indexRepo.js',
             'utf-8'
         );
         expect(indexRepoSource).toContain('ALLOWED_PRAGMA_TABLES');
@@ -342,7 +342,7 @@ describe('Security Integration', () => {
 
         // HIGH-02: Collab task column validation
         const collabSource = fs.readFileSync(
-            '../../codex/server/collab/collab.persistence.js',
+            'codex/server/collab/collab.persistence.js',
             'utf-8'
         );
         expect(collabSource).toContain('ALLOWED_TASK_COLUMNS');
@@ -350,7 +350,7 @@ describe('Security Integration', () => {
 
         // HIGH-03: Metrics auth
         const serverSource = fs.readFileSync(
-            '../../codex/server/index.js',
+            'codex/server/index.js',
             'utf-8'
         );
         expect(serverSource).toContain('preHandler: [requireAuth]');

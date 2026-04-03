@@ -27,8 +27,10 @@ export function ThemeProvider({ children }) {
  */
 export function useTheme() {
   const context = useContext(ThemeContext);
+  // V11 is strictly dark mode — return safe default when used outside ThemeProvider
+  // (e.g. in isolated component tests or lazy-loaded subtrees).
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    return { theme: 'dark' };
   }
   return context;
 }
