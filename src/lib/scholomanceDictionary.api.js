@@ -78,6 +78,12 @@ class ScholomanceHttpError extends Error {
   }
 }
 
+// HTTP errors prove the server is reachable — only network-level failures
+// (connection refused, DNS, timeout/abort) should trigger offline cooldown.
+function isNetworkError(error) {
+  return !(error instanceof ScholomanceHttpError);
+}
+
 const connectionState = {
   baseUrl: "",
   reachable: null,
@@ -159,7 +165,9 @@ async function requestJson(baseUrl, url, options = {}) {
     markConnectionSuccess(baseUrl);
     return payload;
   } catch (error) {
-    markConnectionFailure(baseUrl, error);
+    if (isNetworkError(error)) {
+      markConnectionFailure(baseUrl, error);
+    }
     throw error;
   }
 }
@@ -238,7 +246,9 @@ export const ScholomanceDictionaryAPI = {
       markConnectionSuccess(baseUrl);
       return true;
     } catch (error) {
-      markConnectionFailure(baseUrl, error);
+      if (isNetworkError(error)) {
+        markConnectionFailure(baseUrl, error);
+      }
       return false;
     }
   },
