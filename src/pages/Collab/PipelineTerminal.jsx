@@ -39,6 +39,7 @@ export default function PipelineTerminal({
 }) {
   const [showResultEditor, setShowResultEditor] = useState(false);
   const [currentStageResult, setCurrentStageResult] = useState('');
+  const [createBugOnFail, setCreateBugOnFail] = useState(true);
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [error, setError] = useState(null);
 
@@ -87,9 +88,29 @@ export default function PipelineTerminal({
   // Handle fail
   const handleFail = useCallback(async (reason) => {
     setIsAdvancing(true);
+
+    if (createBugOnFail) {
+        try {
+            await fetch('/collab/bugs', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: `Pipeline Failure: ${pipeline.pipeline_type} - ${currentStage?.name}`,
+                    summary: `Stage "${currentStage?.name}" failed with reason: ${reason}`,
+                    source_type: 'pipeline',
+                    severity: 'CRIT',
+                    priority: 2,
+                    related_pipeline_id: pipeline.id,
+                }),
+            });
+        } catch (e) {
+            console.error('Failed to auto-create bug report', e);
+        }
+    }
+
     await onFail(reason);
     setIsAdvancing(false);
-  }, [onFail]);
+  }, [onFail, createBugOnFail, pipeline, currentStage]);
 
   if (!pipeline) return null;
 
@@ -175,6 +196,15 @@ export default function PipelineTerminal({
               <ErrorIcon size={12} />
               Fail Stage
             </button>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: 'var(--color-collab-text-dim)', cursor: 'pointer', marginLeft: 'auto' }}>
+                <input 
+                    type="checkbox" 
+                    checked={createBugOnFail} 
+                    onChange={e => setCreateBugOnFail(e.target.checked)} 
+                />
+                Auto-create Bug Report
+            </label>
           </div>
 
           {/* Error Display */}

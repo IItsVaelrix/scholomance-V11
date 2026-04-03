@@ -39,10 +39,7 @@ const router = createBrowserRouter([
       { path: "read", element: <ReadPage /> },
       { path: "auth", element: <AuthPage /> },
       { path: "profile", element: <ProfilePage /> },
-      { 
-        path: "collab", 
-        element: import.meta.env.DEV ? <CollabPage /> : <Navigate to="/read" replace /> 
-      },
+      { path: "collab", element: <CollabPage /> },
       { path: "combat", element: <CombatPage /> },
       { path: "nexus", element: <NexusPage /> },
       { path: "pixelbrain", element: <PixelBrainPage /> },

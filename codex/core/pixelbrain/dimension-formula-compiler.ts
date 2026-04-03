@@ -202,37 +202,37 @@ export class DimensionCompiler {
       }
     }
 
-    // Viewport/parent references
-    if (cleanInput === 'viewport.width') return { type: 'viewport-width' };
-    if (cleanInput === 'viewport.height') return { type: 'viewport-height' };
-    if (cleanInput === 'parent.width') return { type: 'parent-width' };
-    if (cleanInput === 'parent.height') return { type: 'parent-height' };
-
-    // Clamp
-    const clampMatch = cleanInput.match(/^clamp\(([^,]+),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\)$/);
-    if (clampMatch) {
-      const min = parseFloat(clampMatch[2]);
-      const max = parseFloat(clampMatch[3]);
-      if (min > max) {
-        throw new DimensionCompileError(
-          `Invalid clamp: min (${min}) > max (${max})`,
-          input,
-          DimensionErrorCode.IMPOSSIBLE_CLAMP
-        );
-      }
-      return { type: 'clamp', value: this.parse(clampMatch[1]), min, max };
+    // Orientation Pair (MUST BE CHECKED BEFORE COMMA SPLIT)
+    const orientationPairMatch = cleanInput.match(/^portrait\s+([\d.x\w%]+),\s*landscape\s+([\d.x\w%]+)$/);
+    if (orientationPairMatch) {
+      return { 
+        type: 'orientation', 
+        portrait: this.parse(orientationPairMatch[1].trim()), 
+        landscape: this.parse(orientationPairMatch[2].trim()) 
+      };
     }
 
-    // Comma-separated attributes
-    if (cleanInput.includes(',')) {
+    let hasTopLevelComma = false;
+    let bracketLevel = 0;
+    for (let i = 0; i < cleanInput.length; i++) {
+      const char = cleanInput[i];
+      if (char === '[' || char === '(') bracketLevel++;
+      if (char === ']' || char === ')') bracketLevel--;
+      if (char === ',' && bracketLevel === 0) {
+        hasTopLevelComma = true;
+        break;
+      }
+    }
+
+    if (hasTopLevelComma) {
       const parts: string[] = [];
       let current = '';
-      let bracketLevel = 0;
+      let nestedBracketLevel = 0;
       for (let i = 0; i < cleanInput.length; i++) {
         const char = cleanInput[i];
-        if (char === '[' || char === '(') bracketLevel++;
-        if (char === ']' || char === ')') bracketLevel--;
-        if (char === ',' && bracketLevel === 0) {
+        if (char === '[' || char === '(') nestedBracketLevel++;
+        if (char === ']' || char === ')') nestedBracketLevel--;
+        if (char === ',' && nestedBracketLevel === 0) {
           parts.push(current.trim());
           current = '';
         } else {
@@ -261,34 +261,52 @@ export class DimensionCompiler {
       return { ...base, ...attrs };
     }
 
-    // Variants
-    if (cleanInput.includes(' or ')) {
-      return { type: 'variants', variants: cleanInput.split(' or ').map((v) => this.parse(v.trim())) };
-    }
+    // Viewport/parent references
+    if (cleanInput === 'viewport.width') return { type: 'viewport-width' };
+    if (cleanInput === 'viewport.height') return { type: 'viewport-height' };
+    if (cleanInput === 'parent.width') return { type: 'parent-width' };
+    if (cleanInput === 'parent.height') return { type: 'parent-height' };
 
-    // Orientation
-    const orientationMatch = cleanInput.match(/^portrait\s+(\d+x\d+),\s*landscape\s+(\d+x\d+)$/);
-    if (orientationMatch) {
-      return { type: 'orientation', portrait: this.parse(orientationMatch[1]), landscape: this.parse(orientationMatch[2]) };
+    // Clamp
+    const clampMatch = cleanInput.match(/^clamp\(([^,]+),\s*(\d+(?:\.\d+)?),\s*(\d+(?:\.\d+)?)\)$/);
+    if (clampMatch) {
+      const min = parseFloat(clampMatch[2]);
+      const max = parseFloat(clampMatch[3]);
+      if (min > max) {
+        throw new DimensionCompileError(
+          `Invalid clamp: min (${min}) > max (${max})`,
+          input,
+          DimensionErrorCode.IMPOSSIBLE_CLAMP
+        );
+      }
+      return { type: 'clamp', value: this.parse(clampMatch[1]), min, max };
     }
 
     // selectNearest
     const selectMatch = cleanInput.match(/^selectnearest\(([^,]+),\s*\[([\d\s,]+)\]\)$/);
     if (selectMatch) {
       const valueStr = selectMatch[1].trim();
-      if (valueStr === 'parent.width') {
-        return { type: 'select-nearest', value: { type: 'parent-width' }, options: selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)) };
-      }
-      if (valueStr === 'parent.height') {
-        return { type: 'select-nearest', value: { type: 'parent-height' }, options: selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)) };
-      }
-      if (valueStr === 'viewport.width') {
-        return { type: 'select-nearest', value: { type: 'viewport-width' }, options: selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)) };
-      }
-      if (valueStr === 'viewport.height') {
-        return { type: 'select-nearest', value: { type: 'viewport-height' }, options: selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)) };
-      }
-      return { type: 'select-nearest', value: this.parse(valueStr), options: selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)) };
+      const options = selectMatch[2].split(',').map((s) => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
+      
+      if (valueStr === 'parent.width') return { type: 'select-nearest', value: { type: 'parent-width' }, options };
+      if (valueStr === 'parent.height') return { type: 'select-nearest', value: { type: 'parent-height' }, options };
+      if (valueStr === 'viewport.width') return { type: 'select-nearest', value: { type: 'viewport-width' }, options };
+      if (valueStr === 'viewport.height') return { type: 'select-nearest', value: { type: 'viewport-height' }, options };
+      
+      return { type: 'select-nearest', value: this.parse(valueStr), options };
+    }
+
+    // Orientation (Single)
+    if (cleanInput.startsWith('portrait ')) {
+      return { type: 'orientation-single', orientation: 'portrait', value: this.parse(cleanInput.replace('portrait ', '').trim()) };
+    }
+    if (cleanInput.startsWith('landscape ')) {
+      return { type: 'orientation-single', orientation: 'landscape', value: this.parse(cleanInput.replace('landscape ', '').trim()) };
+    }
+
+    // Variants
+    if (cleanInput.includes(' or ')) {
+      return { type: 'variants', variants: cleanInput.split(' or ').map((v) => this.parse(v.trim())) };
     }
 
     // Range with units
@@ -371,6 +389,10 @@ export class DimensionCompiler {
         return { ...spec as CanonicalDimensionSpec, kind: 'fixed', widthPolicy: { type: 'selectNearest', value: this.canonicalize(parsed.value).widthPolicy, options: parsed.options }, heightPolicy: { type: 'sameAsWidth' } };
       case 'orientation':
         return { ...spec as CanonicalDimensionSpec, kind: 'orientation', widthPolicy: { type: 'const', value: 0 }, orientation: { portrait: this.canonicalize(parsed.portrait, `${id}-portrait`), landscape: this.canonicalize(parsed.landscape, `${id}-landscape`) } };
+      case 'orientation-single':
+        // Map single orientation to same value for both if needed, but usually part of a pair
+        const valSpec = this.canonicalize(parsed.value, `${id}-${parsed.orientation}`);
+        return valSpec;
       default:
         throw new DimensionCompileError(`Unsupported type: ${parsed.type}`, JSON.stringify(parsed), DimensionErrorCode.UNSUPPORTED_TYPE);
     }
@@ -586,6 +608,7 @@ export class DimensionRuntime {
         case 'SELECT_NEAREST': {
           const val = registers[inst[2] as number];
           const options = inst[3] as number[];
+          if (!options || options.length === 0) break;
           let nearest = options[0];
           let minDiff = Math.abs(val - nearest);
           for (let i = 1; i < options.length; i++) {

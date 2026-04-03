@@ -1020,4 +1020,3 @@ The design must unify:
 - status as operational pulse
 
 If implemented correctly, the Collab Console will feel less like an admin dashboard and more like a living orchestration instrument.
-

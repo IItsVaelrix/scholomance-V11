@@ -7,6 +7,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { z } from 'zod';
+import { useAuth } from '../../hooks/useAuth.jsx';
 
 // New components
 import CollabStatusDisplay from './CollabStatusDisplay.jsx';
@@ -14,12 +15,16 @@ import MetricsGrid from './MetricsGrid.jsx';
 import FilterSliders from './FilterSliders.jsx';
 import TaskDetailDrawer from './TaskDetailDrawer.jsx';
 import PipelineTerminal from './PipelineTerminal.jsx';
+import AgentMessaging from './AgentMessaging.jsx';
 
 // Existing components (to be refactored)
 import AgentStatus from './AgentStatus.jsx';
 import TaskBoard from './TaskBoard.jsx';
 import PipelineView from './PipelineView.jsx';
 import ActivityFeed from './ActivityFeed.jsx';
+import BugBoard from './BugBoard.jsx';
+import BugDetailDrawer from './BugDetailDrawer.jsx';
+import BugCreateModal from './BugCreateModal.jsx';
 
 import './CollabPage.css';
 
@@ -89,33 +94,113 @@ const PipelineSchema = z.object({
 }).passthrough();
 
 const ActivitySchema = z.object({
-    id: z.string(),
+    id: z.union([z.string(), z.number()]).transform(v => String(v)),
     agent_id: z.string().nullable().optional(),
     action: z.string(),
     details: z.object({
         title: z.string().optional(),
         name: z.string().optional(),
-    }).optional(),
+    }).passthrough().optional(),
     created_at: z.string(),
+}).passthrough();
+
+const BugReportSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    status: z.string(),
+    severity: z.string().optional(),
+    category: z.string().optional(),
+    module_id: z.string().optional(),
+    error_code_hex: z.string().optional(),
+    bytecode: z.string().optional(),
+    checksum_verified: z.boolean().optional(),
+    parseable: z.boolean().optional(),
+    source_type: z.string(),
+    related_task_id: z.string().nullable().optional(),
+    updated_at: z.string(),
 }).passthrough();
 
 const TABS = [
     { key: 'overview', label: 'OVERVIEW' },
     { key: 'tasks', label: 'TASKS' },
+    { key: 'bugs', label: 'BUGS' },
     { key: 'agents', label: 'AGENTS' },
     { key: 'pipelines', label: 'PIPELINES' },
     { key: 'locks', label: 'LOCKS' },
     { key: 'activity', label: 'ACTIVITY' },
+    { key: 'messaging', label: 'MESSAGING' },
 ];
 
+class CollabHttpError extends Error {
+    constructor(status, message, payload = null) {
+        super(message);
+        this.name = 'CollabHttpError';
+        this.status = status;
+        this.payload = payload;
+    }
+}
+
+function describeCollabHttpError(status, payload) {
+    const message = payload?.message || payload?.error || null;
+
+    if (status === 401 || status === 403) {
+        return 'Collab session required. Log in on /auth and refresh this console.';
+    }
+
+    if (status === 404) {
+        return 'Collab API is unavailable. Start the server with ENABLE_COLLAB_API=true.';
+    }
+
+    return message || `Collab request failed with status ${status}.`;
+}
+
+async function fetchCollabJson(path, options = {}) {
+    const response = await fetch(path, {
+        credentials: 'include',
+        ...options,
+    });
+
+    const rawBody = await response.text();
+    let payload = null;
+
+    if (rawBody) {
+        try {
+            payload = JSON.parse(rawBody);
+        } catch {
+            payload = { message: rawBody };
+        }
+    }
+
+    if (!response.ok) {
+        throw new CollabHttpError(
+            response.status,
+            describeCollabHttpError(response.status, payload),
+            payload,
+        );
+    }
+
+    return payload;
+}
+
+function parseCollabCollection(schema, raw, label) {
+    const parsed = z.array(schema).safeParse(raw);
+    if (!parsed.success) {
+        throw new Error(`Collab ${label} payload is invalid.`);
+    }
+    return parsed.data;
+}
+
 export default function CollabPage() {
+    const { checkMe, user } = useAuth();
+
     // Core state
     const [agents, setAgents] = useState([]);
     const [tasks, setTasks] = useState([]);
     const [pipelines, setPipelines] = useState([]);
     const [activity, setActivity] = useState([]);
     const [locks, setLocks] = useState([]);
-    
+    const [bugs, setBugs] = useState([]);
+
     // UI state
     const [activeTab, setActiveTab] = useState('overview');
     const [status, setStatus] = useState('idle'); // 'idle' | 'syncing' | 'ready' | 'conflict' | 'error'
@@ -123,10 +208,19 @@ export default function CollabPage() {
     const [error, setError] = useState(null);
     const [lastRefresh, setLastRefresh] = useState(null);
     const [nowMs, setNowMs] = useState(() => Date.now());
+
+    // Real-time activity state
+    const [newActivityCount, setNewActivityCount] = useState(0);
+    const [lastActivityId, setLastActivityId] = useState(null);
     
     // Drawer state
     const [selectedTask, setSelectedTask] = useState(null);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+    // Bug state
+    const [selectedBug, setSelectedBug] = useState(null);
+    const [isBugDrawerOpen, setIsBugDrawerOpen] = useState(false);
+    const [showCreateBug, setShowCreateBug] = useState(false);
     
     // Pipeline terminal state
     const [selectedPipeline, setSelectedPipeline] = useState(null);
@@ -150,6 +244,15 @@ export default function CollabPage() {
 
     const canvasRef = useRef(null);
 
+    // Tab switching event listener
+    useEffect(() => {
+        const handler = (e) => {
+            if (e.detail) setActiveTab(e.detail);
+        };
+        window.addEventListener('collab:switch-tab', handler);
+        return () => window.removeEventListener('collab:switch-tab', handler);
+    }, []);
+
     // Refresh all data
     const refresh = useCallback(async ({ silent = false } = {}) => {
         if (!silent) {
@@ -159,37 +262,38 @@ export default function CollabPage() {
         setConflict(null);
 
         try {
-            const [agentsRaw, tasksRaw, pipelinesRaw, activityRaw, locksRaw] = await Promise.all([
-                fetch('/collab/agents').then(r => r.json()),
-                fetch('/collab/tasks').then(r => r.json()),
-                fetch('/collab/pipelines').then(r => r.json()),
-                fetch('/collab/activity?limit=30').then(r => r.json()),
-                fetch('/collab/locks').then(r => r.json()),
+            const [agentsRaw, tasksRaw, pipelinesRaw, activityRaw, locksRaw, bugsRaw] = await Promise.all([
+                fetchCollabJson('/collab/agents'),
+                fetchCollabJson('/collab/tasks'),
+                fetchCollabJson('/collab/pipelines'),
+                fetchCollabJson('/collab/activity?limit=30'),
+                fetchCollabJson('/collab/locks'),
+                fetchCollabJson('/collab/bugs'),
             ]);
 
-            const agentsParsed = z.array(AgentSchema).safeParse(agentsRaw);
-            const tasksParsed = z.array(TaskSchema).safeParse(tasksRaw);
-            const pipelinesParsed = z.array(PipelineSchema).safeParse(pipelinesRaw);
-            const activityParsed = z.array(ActivitySchema).safeParse(activityRaw);
-            const locksParsed = z.array(z.any()).safeParse(locksRaw);
+            setAgents(parseCollabCollection(AgentSchema, agentsRaw, 'agents'));
+            setTasks(parseCollabCollection(TaskSchema, tasksRaw, 'tasks'));
+            setPipelines(parseCollabCollection(PipelineSchema, pipelinesRaw, 'pipelines'));
+            setActivity(parseCollabCollection(ActivitySchema, activityRaw, 'activity'));
+            setLocks(parseCollabCollection(z.any(), locksRaw, 'locks'));
+            setBugs(parseCollabCollection(BugReportSchema, bugsRaw, 'bugs'));
 
-            if (agentsParsed.success) setAgents(agentsParsed.data);
-            if (tasksParsed.success) setTasks(tasksParsed.data);
-            if (pipelinesParsed.success) setPipelines(pipelinesParsed.data);
-            if (activityParsed.success) setActivity(activityParsed.data);
-            if (locksParsed.success) setLocks(locksParsed.data);
-
-            if (silent) {
-                setStatus(prev => (prev === 'error' ? 'ready' : prev));
-            } else {
-                setStatus('ready');
-            }
+            setStatus('ready');
             setLastRefresh(new Date());
         } catch (err) {
-            setError('Cannot reach collab server. Is it running?');
+            if (err instanceof CollabHttpError && (err.status === 401 || err.status === 403)) {
+                void checkMe({ force: true });
+            }
+            setAgents([]);
+            setTasks([]);
+            setPipelines([]);
+            setActivity([]);
+            setLocks([]);
+            setBugs([]);
+            setError(err?.message || 'Cannot reach collab server. Is it running?');
             setStatus('error');
         }
-    }, []);
+    }, [checkMe]);
 
     // Polling effect
     useEffect(() => {
@@ -238,6 +342,76 @@ export default function CollabPage() {
         return () => clearInterval(intervalId);
     }, []);
 
+    // Real-time activity polling (faster when activity tab is visible)
+    useEffect(() => {
+        const ACTIVITY_POLL_VISIBLE = 2000;
+        const ACTIVITY_POLL_HIDDEN = 10000;
+
+        let intervalId = null;
+
+        const pollActivity = async () => {
+            try {
+                const data = await fetch('/collab/activity?limit=1').then(r => r.json());
+                if (Array.isArray(data) && data.length > 0) {
+                    const newestId = data[0].id;
+                    if (lastActivityId !== null && newestId !== lastActivityId) {
+                        setNewActivityCount(prev => prev + 1);
+                        // When on activity tab, fetch new entries and merge them in real-time
+                        if (activeTab === 'activity') {
+                            try {
+                                const newEntries = await fetch(`/collab/activity?limit=20`).then(r => r.json());
+                                if (Array.isArray(newEntries)) {
+                                    setActivity(prev => {
+                                        const existingIds = new Set(prev.map(e => e.id));
+                                        const merged = [...newEntries.filter(e => !existingIds.has(e.id)), ...prev];
+                                        return merged.slice(0, 100); // Keep last 100 entries
+                                    });
+                                }
+                            } catch {
+                                // Fall back to full refresh on merge failure
+                                await refresh({ silent: true });
+                            }
+                            setNewActivityCount(0);
+                        }
+                    }
+                    setLastActivityId(newestId);
+                }
+            } catch {
+                // Ignore poll failures
+            }
+        };
+
+        const scheduleActivityPoll = () => {
+            if (intervalId) clearInterval(intervalId);
+            const ms = (typeof document !== 'undefined' && document.visibilityState === 'hidden')
+                ? ACTIVITY_POLL_HIDDEN
+                : ACTIVITY_POLL_VISIBLE;
+            intervalId = setInterval(pollActivity, ms);
+        };
+
+        pollActivity();
+        scheduleActivityPoll();
+
+        const handleVisibility = () => {
+            pollActivity();
+            scheduleActivityPoll();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            if (intervalId) clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [activeTab, lastActivityId, refresh]);
+
+    // Reset new activity count when switching to activity tab
+    useEffect(() => {
+        if (activeTab === 'activity') {
+            setNewActivityCount(0);
+            refresh({ silent: true });
+        }
+    }, [activeTab, refresh]);
+
     // Handle filter change
     const handleFilterChange = useCallback((key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -250,7 +424,7 @@ export default function CollabPage() {
 
         setStatus('processing');
         try {
-            await fetch('/collab/tasks', {
+            await fetchCollabJson('/collab/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -263,7 +437,7 @@ export default function CollabPage() {
             setShowCreateTask(false);
             refresh();
         } catch (err) {
-            setError('Task creation failed');
+            setError(err?.message || 'Task creation failed');
             setStatus('error');
         }
     }, [newTaskTitle, newTaskPriority, refresh]);
@@ -281,22 +455,32 @@ export default function CollabPage() {
         refresh();
     }, [refresh]);
 
+    // Handle bug click
+    const handleBugClick = useCallback((bug) => {
+        setSelectedBug(bug);
+        setIsBugDrawerOpen(true);
+    }, []);
+
+    // Handle bug update
+    const handleBugUpdate = useCallback((updatedBug) => {
+        setBugs(prev => prev.map(b => b.id === updatedBug.id ? updatedBug : b));
+        setSelectedBug(updatedBug);
+        refresh({ silent: true });
+    }, [refresh]);
+
     // Handle task status change
     const handleTaskStatusChange = useCallback(async (taskId, newStatus) => {
         try {
-            const response = await fetch(`/collab/tasks/${taskId}`, {
+            const updated = await fetchCollabJson(`/collab/tasks/${taskId}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: newStatus }),
+                body: JSON.stringify({ status: newStatus, note: `Updated task status to ${newStatus}.` }),
             });
-            if (response.ok) {
-                const updated = await response.json();
-                setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
-                setSelectedTask(updated);
-                refresh();
-            }
+            setTasks(prev => prev.map(t => t.id === updated.id ? updated : t));
+            setSelectedTask(updated);
+            refresh();
         } catch (err) {
-            setError('Failed to update task status');
+            setError(err?.message || 'Failed to update task status');
             setStatus('error');
         }
     }, [refresh]);
@@ -306,14 +490,14 @@ export default function CollabPage() {
         if (!confirm('Are you sure you want to delete this task?')) return;
         
         try {
-            await fetch(`/collab/tasks/${taskId}`, {
+            await fetchCollabJson(`/collab/tasks/${taskId}`, {
                 method: 'DELETE',
             });
             setIsDrawerOpen(false);
             setSelectedTask(null);
             refresh();
         } catch (err) {
-            setError('Failed to delete task');
+            setError(err?.message || 'Failed to delete task');
             setStatus('error');
         }
     }, [refresh]);
@@ -322,19 +506,17 @@ export default function CollabPage() {
     const handlePipelineAdvance = useCallback(async (result) => {
         if (!selectedPipeline) return;
         
-        const response = await fetch(`/collab/pipelines/${selectedPipeline.id}/advance`, {
+        const response = await fetchCollabJson(`/collab/pipelines/${selectedPipeline.id}/advance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ result }),
         });
-        if (response.ok) {
-            refresh();
-            setIsTerminalOpen(false);
-            setSelectedPipeline(null);
-        } else {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to advance pipeline');
+        if (!response) {
+            throw new Error('Failed to advance pipeline');
         }
+        refresh();
+        setIsTerminalOpen(false);
+        setSelectedPipeline(null);
     }, [selectedPipeline, refresh]);
 
     // Handle pipeline fail
@@ -342,7 +524,7 @@ export default function CollabPage() {
         if (!selectedPipeline) return;
         
         try {
-            await fetch(`/collab/pipelines/${selectedPipeline.id}/fail`, {
+            await fetchCollabJson(`/collab/pipelines/${selectedPipeline.id}/fail`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reason }),
@@ -351,7 +533,7 @@ export default function CollabPage() {
             setIsTerminalOpen(false);
             setSelectedPipeline(null);
         } catch (err) {
-            setError('Failed to fail pipeline');
+            setError(err?.message || 'Failed to fail pipeline');
             setStatus('error');
         }
     }, [selectedPipeline, refresh]);
@@ -368,7 +550,7 @@ export default function CollabPage() {
         
         setStatus('processing');
         try {
-            await fetch('/collab/pipelines', {
+            await fetchCollabJson('/collab/pipelines', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pipeline_type: newPipelineType }),
@@ -376,7 +558,7 @@ export default function CollabPage() {
             setShowCreatePipeline(false);
             refresh();
         } catch (err) {
-            setError('Pipeline creation failed');
+            setError(err?.message || 'Pipeline creation failed');
             setStatus('error');
         }
     }, [newPipelineType, refresh]);
@@ -408,6 +590,10 @@ export default function CollabPage() {
         },
         locks: {
             active: locks.length,
+        },
+        bugs: {
+            total: bugs.length,
+            critical: bugs.filter(b => b.severity === 'CRIT' || b.severity === 'FATAL').length,
         },
         blocked: {
             count: tasks.filter(t => t.status === 'blocked').length,
@@ -460,10 +646,21 @@ export default function CollabPage() {
                     </div>
                 );
             
+            case 'bugs':
+                return (
+                    <div className="viewport-content viewport-content--bugs">
+                        <BugBoard 
+                            bugs={bugs}
+                            onBugClick={handleBugClick}
+                            onReportClick={() => setShowCreateBug(true)}
+                        />
+                    </div>
+                );
+            
             case 'agents':
                 return (
                     <div className="viewport-content viewport-content--agents">
-                        <AgentStatus agents={agents} nowMs={nowMs} />
+                        <AgentStatus agents={agents} nowMs={nowMs} onRefresh={refresh} />
                     </div>
                 );
             
@@ -495,7 +692,14 @@ export default function CollabPage() {
                         <ActivityFeed activity={activity} />
                     </div>
                 );
-            
+
+            case 'messaging':
+                return (
+                    <div className="viewport-content viewport-content--messaging">
+                        <AgentMessaging agents={agents} currentAgentId={user?.username || null} />
+                    </div>
+                );
+
             default:
                 return null;
         }
@@ -552,6 +756,12 @@ export default function CollabPage() {
                                 aria-controls={`tab-panel-${tab.key}`}
                             >
                                 {tab.label}
+                                {tab.key === 'activity' && newActivityCount > 0 && (
+                                    <span className="collab-tab-btn__badge">{newActivityCount}</span>
+                                )}
+                                {tab.key === 'bugs' && metrics.bugs.critical > 0 && (
+                                    <span className="collab-tab-btn__badge collab-tab-btn__badge--critical">!</span>
+                                )}
                             </button>
                         ))}
                     </div>
@@ -565,6 +775,17 @@ export default function CollabPage() {
                                     onClick={() => setShowCreateTask(!showCreateTask)}
                                 >
                                     {showCreateTask ? 'CANCEL' : '+ NEW TASK'}
+                                </button>
+                            </div>
+                        )}
+
+                        {activeTab === 'bugs' && (
+                            <div className="quick-actions">
+                                <button
+                                    className="quick-action-btn"
+                                    onClick={() => setShowCreateBug(true)}
+                                >
+                                    + REPORT BUG
                                 </button>
                             </div>
                         )}
@@ -598,6 +819,11 @@ export default function CollabPage() {
                                     Tasks are work packets. Agents claim tasks based on role compatibility and file ownership.
                                 </p>
                             )}
+                            {activeTab === 'bugs' && (
+                                <p className="context-text">
+                                    Bug artifacts are deterministic failure records. Bytecode payloads provide deep context for AI-led recovery.
+                                </p>
+                            )}
                             {activeTab === 'agents' && (
                                 <p className="context-text">
                                     Agent presence refreshes every 5 seconds while visible. Without heartbeat, an agent falls cold after 5 minutes.
@@ -616,6 +842,11 @@ export default function CollabPage() {
                             {activeTab === 'activity' && (
                                 <p className="context-text">
                                     Activity is the system memory. All agent actions are logged here.
+                                </p>
+                            )}
+                            {activeTab === 'messaging' && (
+                                <p className="context-text">
+                                    Ephemeral thought-threads between minds in the chamber. Messages dissolve on session end.
                                 </p>
                             )}
                         </div>
@@ -651,6 +882,7 @@ export default function CollabPage() {
                         status={status}
                         conflict={conflict}
                         context={error || null}
+                        bugs={bugs}
                     />
                 </motion.section>
 
@@ -680,6 +912,10 @@ export default function CollabPage() {
                             <div className="telemetry-row">
                                 <span className="telemetry-label">Active Tasks</span>
                                 <span className="telemetry-value">{metrics.tasks.active}</span>
+                            </div>
+                            <div className="telemetry-row">
+                                <span className="telemetry-label">Bugs</span>
+                                <span className={`telemetry-value ${metrics.bugs.critical > 0 ? 'telemetry-value--error' : ''}`}>{metrics.bugs.total}</span>
                             </div>
                             <div className="telemetry-row">
                                 <span className="telemetry-label">Pipelines</span>
@@ -748,9 +984,31 @@ export default function CollabPage() {
                 onAssign={handleTaskAssign}
                 onStatusChange={handleTaskStatusChange}
                 onDelete={handleTaskDelete}
-            />
+                />
 
-            {/* Pipeline Terminal Modal */}
+                {/* Bug Detail Drawer */}
+                <BugDetailDrawer 
+                bug={selectedBug}
+                isOpen={isBugDrawerOpen}
+                onClose={() => {
+                    setIsBugDrawerOpen(false);
+                    setSelectedBug(null);
+                }}
+                onUpdate={handleBugUpdate}
+                onRefresh={refresh}
+                />
+
+                {/* Bug CreateModal */}
+                <BugCreateModal 
+                isOpen={showCreateBug}
+                onClose={() => setShowCreateBug(false)}
+                onSuccess={() => {
+                    refresh();
+                    setActiveTab('bugs');
+                }}
+                />
+
+                {/* Pipeline Terminal Modal */}
             {isTerminalOpen && selectedPipeline && (
                 <PipelineTerminal
                     pipeline={selectedPipeline}

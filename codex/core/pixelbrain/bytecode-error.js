@@ -418,6 +418,27 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.invariants.push('canvas.width > 0 && canvas.height > 0');
       break;
       
+    case ERROR_CATEGORIES.LINGUISTIC:
+      hints.suggestions.push('Validate phoneme density and vessel capacity');
+      hints.suggestions.push('Check rhyme-law alignment');
+      hints.constraints.push('Structural integrity must be >= threshold');
+      hints.invariants.push('rhymeKey(wordA) === rhymeKey(wordB)');
+      break;
+
+    case ERROR_CATEGORIES.COMBAT:
+      hints.suggestions.push('Check kinetic force propagation');
+      hints.suggestions.push('Review anti-exploit repetition decay');
+      hints.constraints.push('Spell force must be finite and positive');
+      hints.invariants.push('Number.isFinite(calculatedForce) && calculatedForce > 0');
+      break;
+
+    case ERROR_CATEGORIES.UI_STASIS:
+      hints.suggestions.push('Check for long-running async operations in handlers');
+      hints.suggestions.push('Ensure animation lifecycle cleanup');
+      hints.constraints.push('UI operations must complete within budget');
+      hints.invariants.push('handlerDuration < MAX_HANDLER_DURATION_MS');
+      break;
+
     default:
       hints.suggestions.push('Review error context for specific issue');
       hints.suggestions.push('Check module documentation');

@@ -57,6 +57,8 @@ function createMockService() {
         getPipeline: vi.fn((id) => ({ id, status: 'running' })),
         advancePipeline: vi.fn((params) => ({ pipeline: { id: params.id, status: 'completed' }, terminal: false })),
         failPipeline: vi.fn((params) => ({ pipeline: { id: params.id, status: 'failed', reason: params.reason } })),
+        deleteTask: vi.fn(() => ({ ok: true })),
+        logActivity: vi.fn(),
     };
 }
 
@@ -96,7 +98,13 @@ describe('collab MCP bridge parity', () => {
                 'collab_pipeline_fail',
                 'collab_status_get',
                 'collab_task_get',
+                'collab_task_delete',
                 'collab_pipeline_get',
+                'collab_fs_list',
+                'collab_fs_read',
+                'collab_execute_verification',
+                'collab_memory_set',
+                'collab_memory_get',
             ]),
         );
     });
@@ -119,6 +127,20 @@ describe('collab MCP bridge parity', () => {
         expect(parsed.ok).toBe(true);
         expect(parsed.tool).toBe('collab_pipeline_advance');
         expect(parsed.result.pipeline.id).toBe('pipe-created');
+    });
+
+    it('supports setting and getting memories through tools', async () => {
+        service.setMemory = vi.fn((params) => ({ ...params, updated_at: 'now' }));
+        service.getMemory = vi.fn((params) => ({ ...params, value: 'remembered', updated_at: 'now' }));
+
+        const setTool = fakeServer.tools.get('collab_memory_set');
+        const setPayload = await setTool.handler({ key: 'test', value: 'foo' });
+        expect(JSON.parse(setPayload.content[0].text).ok).toBe(true);
+
+        const getTool = fakeServer.tools.get('collab_memory_get');
+        const getPayload = await getTool.handler({ key: 'test' });
+        const getResult = JSON.parse(getPayload.content[0].text);
+        expect(getResult.ok).toBe(true);
     });
 
     it('maps domain conflicts into consistent MCP errors', async () => {

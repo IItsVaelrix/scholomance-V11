@@ -148,6 +148,107 @@ function applyExtensionToCoordinates(coordinates, extensionId, canvasSize) {
   return coordinates;
 }
 
+/**
+ * Generate a silhouette (outline) from image analysis
+ */
+export function generateSilhouetteFromImage(imageAnalysis, canvasSize) {
+  const { pixelData, dimensions } = imageAnalysis;
+  const { width: srcWidth, height: srcHeight } = dimensions;
+  const { width: canvasWidth, height: canvasHeight } = canvasSize;
+  const silhouette = [];
+
+  const scaleX = canvasWidth / srcWidth;
+  const scaleY = canvasHeight / srcHeight;
+  const scale = Math.min(scaleX, scaleY);
+  const offsetX = (canvasWidth - srcWidth * scale) / 2;
+  const offsetY = (canvasHeight - srcHeight * scale) / 2;
+
+  // Simple edge detection: check if alpha > 128 and has at least one transparent neighbor
+  for (let y = 0; y < srcHeight; y++) {
+    for (let x = 0; x < srcWidth; x++) {
+      const idx = (y * srcWidth + x) * 4;
+      if (pixelData[idx + 3] < 128) continue;
+
+      let isEdge = false;
+      const neighbors = [
+        [x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]
+      ];
+
+      for (const [nx, ny] of neighbors) {
+        if (nx < 0 || nx >= srcWidth || ny < 0 || ny >= srcHeight) {
+          isEdge = true;
+          break;
+        }
+        const nidx = (ny * srcWidth + nx) * 4;
+        if (pixelData[nidx + 3] < 128) {
+          isEdge = true;
+          break;
+        }
+      }
+
+      if (isEdge) {
+        const coord = {
+          x: x * scale + offsetX,
+          y: y * scale + offsetY,
+          z: 0,
+          emphasis: 1.0,
+          source: 'silhouette',
+        };
+        const snapped = snapToPixelGrid(coord, canvasSize.gridSize || 1);
+        silhouette.push({
+          ...coord,
+          snappedX: snapped.x,
+          snappedY: snapped.y,
+        });
+      }
+    }
+  }
+
+  return silhouette;
+}
+
+/**
+ * Fills a shape defined by a silhouette with a target color
+ */
+export function fillShape(silhouette, canvasSize, colorHex) {
+  if (!silhouette || silhouette.length === 0) return [];
+
+  // Simple bounding box fill for interior points
+  const minX = Math.min(...silhouette.map(c => c.snappedX));
+  const maxX = Math.max(...silhouette.map(c => c.snappedX));
+  const minY = Math.min(...silhouette.map(c => c.snappedY));
+  const maxY = Math.max(...silhouette.map(c => c.snappedY));
+
+  const filled = [];
+  const gridSize = canvasSize.gridSize || 1;
+
+  for (let y = minY; y <= maxY; y += gridSize) {
+    for (let x = minX; x <= maxX; x += gridSize) {
+      // Basic check: is it inside the horizontal bounds of the silhouette for this row?
+      const rowPoints = silhouette.filter(c => Math.abs(c.snappedY - y) < gridSize / 2);
+      if (rowPoints.length < 2) continue;
+
+      const rowMinX = Math.min(...rowPoints.map(c => c.snappedX));
+      const rowMaxX = Math.max(...rowPoints.map(c => c.snappedX));
+
+      if (x >= rowMinX && x <= rowMaxX) {
+        filled.push({
+          x,
+          y,
+          z: 0,
+          color: colorHex,
+          emphasis: 0.5,
+          source: 'fill',
+          snappedX: x,
+          snappedY: y,
+        });
+      }
+    }
+  }
+
+  return filled;
+}
+
 function rgbToHex(r, g, b) {
   return '#' + [r, g, b].map(x => {
     const hex = x.toString(16);

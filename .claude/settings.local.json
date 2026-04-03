@@ -37,7 +37,21 @@
       "Bash(taskkill:*)",
       "Bash(npm run lint)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(NODE_PATH=\"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules\" node \"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules/eslint/bin/eslint.js\" src/ --max-warnings=0)"
+      "Bash(NODE_PATH=\"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules\" node \"C:/Users/Vaelrix/Desktop/scholomance-V11/node_modules/eslint/bin/eslint.js\" src/ --max-warnings=0)",
+      "Bash(node scripts/connect-collab.js connect --agent-id claude-ui --name \"Claude UI\" --role ui --capabilities jsx,css,framer-motion,a11y)",
+      "Bash(/home/deck/.nvm/versions/node/v24.14.1/bin/node scripts/connect-collab.js connect --agent-id claude-ui --name \"Claude UI\" --role ui --capabilities jsx,css,framer-motion,a11y)",
+      "Bash(/home/deck/.nvm/versions/node/v24.14.1/bin/node scripts/connect-collab.js heartbeat --agent-id claude-ui --status online)",
+      "Bash(echo \"Heartbeat PID: $!\")",
+      "Bash(/home/deck/.nvm/versions/node/v24.14.1/bin/node -e ':*)",
+      "Read(//usr/bin/**)",
+      "Read(//home/deck/.nvm/versions/node/**)",
+      "Bash(export PATH=\"$HOME/.nvm/versions/node/v24.14.1/bin:$PATH\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('mcpServers', {}\\), indent=2\\)\\)\")",
+      "Bash(cat /home/deck/Downloads/scholomance-V11/.claude/mcp*.json)",
+      "mcp__scholomance-collab__collab_status_get",
+      "mcp__scholomance-collab__collab_bug_report_list",
+      "mcp__scholomance-collab__collab_memory_get",
+      "mcp__scholomance-collab__collab_fs_list"
     ]
   }
 }

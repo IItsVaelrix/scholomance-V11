@@ -124,7 +124,7 @@ export const deviceProfileProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 90,
   
-  supports(_intent: AnimationIntent): boolean {
+  supports(intent: AnimationIntent): boolean {
     return intent.constraints?.deviceClass !== undefined;
   },
   
@@ -184,7 +184,7 @@ export const performanceCapProcessor: MotionProcessor = {
   stage: 'constraint',
   priority: 85,
   
-  supports(_intent: AnimationIntent): boolean {
+  supports(intent: AnimationIntent): boolean {
     return intent.constraints?.maxFps !== undefined || intent.constraints?.maxDurationMs !== undefined;
   },
   

@@ -80,6 +80,11 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
 
           {/* Sacred Geometry Sphere — Procedurally Generated Orb */}
           <div className="orb-centerpiece">
+             {/* Opaque backing disc — masks the entire circumference behind the sphere */}
+             <div className="orb-centerpiece__backing" />
+             <div className="orb-centerpiece__ring-layer">
+               <div className="orb-ring-decoration" style={{ '--accent': activeStation.color } as React.CSSProperties} />
+             </div>
              <CrystalBallVisualizer
                 size={420}
                 schoolId={activeStation.id}
@@ -89,7 +94,6 @@ export const ScholomanceStation: React.FC<ScholomanceStationProps> = ({
                 glyph={activeStation.glyph || '✦'}
                 isTuning={isTuning}
              />
-             <div className="orb-ring-decoration" style={{ '--accent': activeStation.color }} />
           </div>
         </main>
       </div>

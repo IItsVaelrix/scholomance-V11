@@ -1,6 +1,6 @@
 # Dead Code Report
 
-Generated at: 2026-04-02T00:34:39.392Z
+Generated at: 2026-04-03T12:36:01.797Z
 
 ## Unreachable Files
 Files in `src/` or `codex/` that are not imported by any entry point or reachable file.
@@ -16,8 +16,15 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src/lib/css/schoolStyles.js
 - [ ] src/lib/phonology/phoneticWeighting.js
 - [ ] src/lib/render-engine.js
+- [ ] src/lib/truesight/compiler/pixelbrainTruesightAMP.ts
 - [ ] src/lib/truesight/compiler/verseIRQueries.js
 - [ ] src/lib/workers/analysis.worker.js
+- [ ] src/pages/PixelBrain/TemplateEditor.jsx
+- [ ] src/pages/PixelBrain/components/ExportOptions.jsx
+- [ ] src/pages/PixelBrain/components/FormulaEditor.jsx
+- [ ] src/pages/Read/KeystrokeSparksCanvas.jsx
+- [ ] src/pages/Read/Minimap.jsx
+- [ ] src/pages/Read/scenes/KeystrokeSparksScene.js
 - [ ] src/types/core/analysis.ts
 - [ ] src/types/core/combat.ts
 - [ ] src/types/core/judiciary.ts
@@ -31,7 +38,10 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] src/types/lib/pls.ts
 - [ ] src/types/lib/rhyme.ts
 - [ ] src/types/runtime/runtime.ts
+- [ ] src/ui/animation/adapters/motionToCssVars.ts
+- [ ] src/ui/animation/adapters/motionToFramerProps.ts
 - [ ] src/ui/animation/adapters/motionToPhaserTween.ts
+- [ ] src/ui/animation/hooks/useAnimationIntent.ts
 - [ ] src/ui/animation/hooks/useCursorSync.ts
 - [ ] src/ui/animation/hooks/useResolvedMotion.ts
 - [ ] src/workers/microprocessor.worker.js
@@ -52,6 +62,9 @@ Files in `src/` or `codex/` that are not imported by any entry point or reachabl
 - [ ] codex/core/rhyme/predictor.js
 - [ ] codex/core/rhyme/training.js
 - [ ] codex/core/rhyme/validator.js
+- [ ] codex/server/collab/collab.diagnostic.js
+- [ ] codex/server/collab/mcp-bridge.js
+- [ ] codex/server/services/imageAnalysis.service.js
 - [ ] codex/server/services/narrativeAMP.service.js
 - [ ] codex/server/services/rhyme-astrology/indexRepo.js
 - [ ] codex/server/services/rhyme-astrology/lexiconRepo.js
@@ -71,6 +84,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `hashMotionBytecode` in `src/codex/animation/bytecode/encodeMotionBytecode.ts`
 - [ ] `prettyPrintBytecode` in `src/codex/animation/bytecode/encodeMotionBytecode.ts`
 - [ ] `BackendAdapterCapabilities` in `src/codex/animation/bytecode-bridge/adapters/backendAdapters.ts`
+- [ ] `AdapterApplyOptions` in `src/codex/animation/bytecode-bridge/adapters/backendAdapters.ts`
 - [ ] `TargetSpecSchema` in `src/codex/animation/bytecode-bridge/contracts/blueprint.schemas.ts`
 - [ ] `EasingSpecSchema` in `src/codex/animation/bytecode-bridge/contracts/blueprint.schemas.ts`
 - [ ] `EnvelopeSpecSchema` in `src/codex/animation/bytecode-bridge/contracts/blueprint.schemas.ts`
@@ -141,6 +155,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `isAnimationIntent` in `src/codex/animation/contracts/animation.schemas.ts`
 - [ ] `isMotionOutput` in `src/codex/animation/contracts/animation.schemas.ts`
 - [ ] `AnimationRenderer` in `src/codex/animation/contracts/animation.types.ts`
+- [ ] `ProcessorStage` in `src/codex/animation/contracts/animation.types.ts`
 - [ ] `TraceEntry` in `src/codex/animation/diagnostics/buildMotionTrace.ts`
 - [ ] `buildOutputTrace` in `src/codex/animation/diagnostics/buildMotionTrace.ts`
 - [ ] `formatTraceHuman` in `src/codex/animation/diagnostics/buildMotionTrace.ts`
@@ -191,7 +206,6 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `RHYME_SUBTYPES` in `src/data/rhymeScheme.patterns.js`
 - [ ] `DEFAULT_VOWEL_COLORS` in `src/data/schoolPalettes.js`
 - [ ] `SCHOOL_SKINS` in `src/data/schoolPalettes.js`
-- [ ] `SCHOOL_SKINS_LIGHT` in `src/data/schoolPalettes.js`
 - [ ] `getSchoolById` in `src/data/schools.js`
 - [ ] `isSchoolUnlocked` in `src/data/schools.js`
 - [ ] `getLockTier` in `src/data/schools.js`
@@ -199,6 +213,7 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `getSchoolAngle` in `src/data/schools.js`
 - [ ] `getSchoolBadgeClass` in `src/data/schools.js`
 - [ ] `getSonicStationTrackPool` in `src/data/sonicStationBuckets.js`
+- [ ] `getDefaultSonicStationTrackUrl` in `src/data/sonicStationBuckets.js`
 - [ ] `Z_ABOVE` in `src/data/stacking_tiers.js`
 - [ ] `Z_OVERLAY` in `src/data/stacking_tiers.js`
 - [ ] `emitXPEvent` in `src/hooks/useProgression.jsx`
@@ -233,18 +248,26 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `SyntaxAnalyzer` in `src/lib/syntax.layer.js`
 - [ ] `classifySyntaxToken` in `src/lib/syntax.layer.js`
 - [ ] `getSyntaxIdentityKey` in `src/lib/syntax.layer.js`
-- [ ] `getVerseIrColorProjection` in `src/lib/truesight/color/pcaChroma.js`
 - [ ] `buildVerseIrPalette` in `src/lib/truesight/color/pcaChroma.js`
+- [ ] `getVerseIrColorProjection` in `src/lib/truesight/color/pcaChroma.js`
 - [ ] `VERSE_IR_PCA_CHROMA_BASIS` in `src/lib/truesight/color/pcaChroma.js`
-- [ ] `AdaptiveGridTopology` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `TokenMeasurement` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `mirrorRectX` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `getSymmetryAxisX` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `measureTextWidth` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `measureTokens` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
-- [ ] `TRUESIGHT_ANALYSIS_MODES` in `src/lib/truesight/compiler/analysisModes.js`
+- [ ] `getAdaptiveTokenWidth` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
+- [ ] `compileAdaptiveGrid` in `src/lib/truesight/compiler/adaptiveWhitespaceGrid.ts`
 - [ ] `VERSE_IR_VERSION` in `src/lib/truesight/compiler/compileVerseToIR.js`
 - [ ] `splitVerseLines` in `src/lib/truesight/compiler/compileVerseToIR.js`
+- [ ] `CorpusTokenMeasurement` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `CorpusAdaptiveGridTopology` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `getCachedCorpusFrequencies` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `getSpacingConfidence` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `measureWithCorpusInference` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `buildCorpusAdaptiveGrid` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `mirrorCorpusCol` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `mirrorCorpusRectX` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `getCorpusSymmetryAxisX` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `getCorpusAdjustedWidth` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `compileCorpusGrid` in `src/lib/truesight/compiler/corpusWhitespaceGrid.ts`
+- [ ] `TruesightBridgeResult` in `src/lib/truesight/compiler/pixelbrainTruesightAMP.ts`
+- [ ] `resolvePhonemeAtPoint` in `src/lib/truesight/compiler/pixelbrainTruesightAMP.ts`
 - [ ] `AnalysisMode` in `src/lib/truesight/compiler/toolbarBytecode.ts`
 - [ ] `SaveState` in `src/lib/truesight/compiler/toolbarBytecode.ts`
 - [ ] `ToolbarState` in `src/lib/truesight/compiler/toolbarBytecode.ts`
@@ -255,6 +278,8 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `GridTopology` in `src/lib/truesight/compiler/truesightGrid.ts`
 - [ ] `GridCoordinate` in `src/lib/truesight/compiler/truesightGrid.ts`
 - [ ] `calculateVisualColumn` in `src/lib/truesight/compiler/truesightGrid.ts`
+- [ ] `compileTokensToGrid` in `src/lib/truesight/compiler/truesightGrid.ts`
+- [ ] `gridToPixels` in `src/lib/truesight/compiler/truesightGrid.ts`
 - [ ] `getTokensByIds` in `src/lib/truesight/compiler/verseIRQueries.js`
 - [ ] `getWindowsByIds` in `src/lib/truesight/compiler/verseIRQueries.js`
 - [ ] `getTokensByVowelFamily` in `src/lib/truesight/compiler/verseIRQueries.js`
@@ -269,6 +294,9 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `createViewportChannel` in `src/lib/truesight/compiler/viewportBytecode.ts`
 - [ ] `WORD_PATTERN` in `src/lib/wordTokenization.js`
 - [ ] `getSyntacticIntegrity` in `src/pages/Combat/components/Spellbook.jsx`
+- [ ] `TemplateEditor` in `src/pages/PixelBrain/TemplateEditor.jsx`
+- [ ] `ExportOptions` in `src/pages/PixelBrain/components/ExportOptions.jsx`
+- [ ] `FormulaEditor` in `src/pages/PixelBrain/components/FormulaEditor.jsx`
 - [ ] `DocumentStats` in `src/types/core/analysis.ts`
 - [ ] `DocumentParsed` in `src/types/core/analysis.ts`
 - [ ] `JudiciaryLayer` in `src/types/core/judiciary.ts`
@@ -291,7 +319,9 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `SyntaxGatingStats` in `src/types/lib/rhyme.ts`
 - [ ] `CacheEntry` in `src/types/runtime/runtime.ts`
 - [ ] `EventCallback` in `src/types/runtime/runtime.ts`
+- [ ] `motionToCssVars` in `src/ui/animation/adapters/motionToCssVars.ts`
 - [ ] `FramerMotionProps` in `src/ui/animation/adapters/motionToFramerProps.ts`
+- [ ] `motionToFramerProps` in `src/ui/animation/adapters/motionToFramerProps.ts`
 - [ ] `motionToPhaserTween` in `src/ui/animation/adapters/motionToPhaserTween.ts`
 - [ ] `CursorSyncBlueprint` in `src/ui/animation/hooks/useCursorSync.ts`
 - [ ] `CursorSyncOutput` in `src/ui/animation/hooks/useCursorSync.ts`
@@ -337,6 +367,9 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `DimensionCompileError` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
 - [ ] `Unit` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
 - [ ] `FormulaNode` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
+- [ ] `FitMode` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
+- [ ] `AnchorMode` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
+- [ ] `SnapMode` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
 - [ ] `DeviceClass` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
 - [ ] `Orientation` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
 - [ ] `RuntimeBindings` in `codex/core/pixelbrain/dimension-formula-compiler.ts`
@@ -436,16 +469,20 @@ Symbols that are exported but not referenced in any other file. (Note: May inclu
 - [ ] `secureTokenEquals` in `codex/server/audioAuth.js`
 - [ ] `OWNERSHIP_MAP` in `codex/server/collab/collab.pipelines.js`
 - [ ] `isPathAllowedForRole` in `codex/server/collab/collab.pipelines.js`
-- [ ] `AgentRole` in `codex/server/collab/collab.schemas.js`
-- [ ] `TaskStatus` in `codex/server/collab/collab.schemas.js`
-- [ ] `PipelineType` in `codex/server/collab/collab.schemas.js`
 - [ ] `MAX_PAGE_LIMIT` in `codex/server/collab/collab.schemas.js`
 - [ ] `PaginationQuerySchema` in `codex/server/collab/collab.schemas.js`
 - [ ] `PipelineRunStatus` in `codex/server/collab/collab.schemas.js`
+- [ ] `BugStatus` in `codex/server/collab/collab.schemas.js`
+- [ ] `BugSeverity` in `codex/server/collab/collab.schemas.js`
+- [ ] `BugSourceType` in `codex/server/collab/collab.schemas.js`
+- [ ] `registerCollabMcpBridge` in `codex/server/collab/mcp-bridge.js`
+- [ ] `createCollabMcpServer` in `codex/server/collab/mcp-bridge.js`
 - [ ] `readSqlitePragmas` in `codex/server/db/sqlite.migrations.js`
 - [ ] `CaptchaService` in `codex/server/services/captcha.service.js`
-- [ ] `ConsoleMailerService` in `codex/server/services/mailer.service.js`
-- [ ] `SendGridMailerService` in `codex/server/services/mailer.service.js`
+- [ ] `ConsoleMailerAdapter` in `codex/server/services/mailer.service.js`
+- [ ] `SendGridMailerAdapter` in `codex/server/services/mailer.service.js`
+- [ ] `ResendMailerAdapter` in `codex/server/services/mailer.service.js`
+- [ ] `MailerService` in `codex/server/services/mailer.service.js`
 - [ ] `createNarrativeAMPService` in `codex/server/services/narrativeAMP.service.js`
 - [ ] `getPendingCount` in `codex/server/services/wordLookupCoalescer.js`
 - [ ] `RHYME_ASTROLOGY_ARTIFACT_FILES` in `codex/server/utils/rhymeAstrologyPaths.js`

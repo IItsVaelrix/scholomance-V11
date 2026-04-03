@@ -15,13 +15,34 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Check if we should fetch from API (only in production)
-const FETCH_FROM_API = process.argv.includes('--from-api') && process.env.NODE_ENV === 'production';
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
-
 const outputPath = path.join(__dirname, '../src/lib/css/generated');
 
+async function generateLocalFallback() {
+  try {
+    // Dynamic import to avoid circular dependencies
+    const { generateSchoolCSSVariables, generateLockedSchoolStyles } = 
+      await import('../src/lib/css/schoolStyles.js');
+    
+    const cssContent = generateSchoolCSSVariables() + generateLockedSchoolStyles();
+    
+    // Ensure output directory exists
+    if (!fs.existsSync(outputPath)) {
+      fs.mkdirSync(outputPath, { recursive: true });
+    }
+    
+    fs.writeFileSync(path.join(outputPath, 'school-styles.css'), cssContent);
+    
+    console.log('✓ Successfully generated school-styles.css (local)');
+    return true;
+    
+  } catch (error) {
+    console.error('✗ Failed to generate school styles locally:', error.message);
+    return false;
+  }
+}
+
 async function fetchSchoolStyles() {
+  const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:3000';
   try {
     console.log(`Fetching school styles from ${API_BASE_URL}/api/styles/schools...`);
     
@@ -51,40 +72,25 @@ async function fetchSchoolStyles() {
   }
 }
 
-async function generateLocalFallback() {
-  try {
-    // Dynamic import to avoid circular dependencies
-    const { generateSchoolCSSVariables, generateLockedSchoolStyles } = 
-      await import('../src/lib/css/schoolStyles.js');
-    
-    const cssContent = generateSchoolCSSVariables() + generateLockedSchoolStyles();
-    
-    // Ensure output directory exists
-    if (!fs.existsSync(outputPath)) {
-      fs.mkdirSync(outputPath, { recursive: true });
-    }
-    
-    fs.writeFileSync(path.join(outputPath, 'school-styles.css'), cssContent);
-    
-    console.log('✓ Successfully generated school-styles.css (local)');
-    return true;
-    
-  } catch (error) {
-    console.error('✗ Failed to generate school styles locally:', error.message);
-    return false;
-  }
-}
-
-// Run the script - default to local generation for reliability
-(async () => {
+export async function main() {
+  // Check if we should fetch from API (only in production)
+  const FETCH_FROM_API = process.argv.includes('--from-api') && process.env.NODE_ENV === 'production';
+  
   let success;
   if (FETCH_FROM_API) {
     success = await fetchSchoolStyles();
   } else {
     success = await generateLocalFallback();
   }
-  
-  if (!success) {
-    process.exit(1);
-  }
-})();
+  return success;
+}
+
+// Run if called directly
+if (process.argv[1] === __filename || process.argv[1]?.endsWith('generate-school-styles.js')) {
+  (async () => {
+    const success = await main();
+    if (!success) {
+      process.exit(1);
+    }
+  })();
+}

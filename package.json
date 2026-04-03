@@ -35,10 +35,13 @@
     "start:server": "node codex/server/index.js",
     "db:setup": "node scripts/setup_database.cjs",
     "track:add:suno": "node scripts/add_suno_track.js",
-    "mcp:collab": "node --env-file=.env codex/server/collab/mcp-bridge.js"
+    "mcp:collab": "node --env-file=.env codex/server/collab/mcp-bridge.js",
+    "start:collab-daemon": "node scripts/collab-daemon.js",
+    "sync:render-secrets": "node scripts/sync-render-secrets.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
+    "@fastify/cors": "^11.2.0",
     "@fastify/csrf-protection": "^7.1.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/multipart": "^9.4.0",

@@ -17,6 +17,7 @@ import rateLimit from '@fastify/rate-limit';
 import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import multipart from '@fastify/multipart';
+import fastifyCors from '@fastify/cors';
 import crypto from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
@@ -175,6 +176,51 @@ fastify.register(multipart, {
         fileSize: 50 * 1024 * 1024, // 50MB
     }
 });
+
+// ─── Phase 3: Remote Agent Access Configuration ────────────────────────────
+
+// CORS allow-list for remote agent access
+const COLLAB_ALLOWED_ORIGINS = (process.env.COLLAB_ALLOWED_ORIGINS || '')
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+const COLLAB_REMOTE_ACCESS = process.env.COLLAB_REMOTE_ACCESS === 'true';
+
+if (COLLAB_REMOTE_ACCESS && COLLAB_ALLOWED_ORIGINS.length > 0) {
+    fastify.register(fastifyCors, {
+        origin: COLLAB_ALLOWED_ORIGINS,
+        methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization', 'X-Agent-ID'],
+        exposedHeaders: ['X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
+        credentials: true,
+        maxAge: 86400, // 24h preflight cache
+    });
+    fastify.log.info(`[CORS] Remote access enabled. Origins: ${COLLAB_ALLOWED_ORIGINS.join(', ')}`);
+} else {
+    // Default: allow same origin for local development
+    fastify.register(fastifyCors, {
+        origin: true, // Reflects request origin (CORS disabled for same-origin)
+        credentials: true,
+    });
+}
+
+// HTTPS configuration for production
+const HTTPS_ENABLED = process.env.HTTPS_ENABLED === 'true';
+const HTTPS_KEY_PATH = process.env.HTTPS_KEY_PATH;
+const HTTPS_CERT_PATH = process.env.HTTPS_CERT_PATH;
+
+if (HTTPS_ENABLED) {
+    if (!HTTPS_KEY_PATH || !HTTPS_CERT_PATH) {
+        fastify.log.warn('[HTTPS] HTTPS enabled but HTTPS_KEY_PATH or HTTPS_CERT_PATH not set');
+    } else {
+        fastify.log.info('[HTTPS] HTTPS configured for production');
+    }
+}
+
+// Remote agent rate limiting (separate bucket from general traffic)
+const COLLAB_AGENT_RATE_LIMIT_MAX = parseInt(process.env.COLLAB_AGENT_RATE_LIMIT_MAX || '120', 10);
+const COLLAB_AGENT_RATE_LIMIT_WINDOW = process.env.COLLAB_AGENT_RATE_LIMIT_WINDOW || '1 minute';
 
 const SESSION_COOKIE_NAME = 'scholomance.sid';
 const PORT = Number(process.env.PORT ?? 3000);
@@ -473,7 +519,7 @@ function requireJsonContentType(request, reply) {
 // 3. Register global rate limiting (per-user when authenticated, per-IP otherwise)
 fastify.register(rateLimit, {
   global: true,
-  max: 100,
+  max: 150,
   timeWindow: '1 minute',
   keyGenerator: (request) => {
     // Use session user ID for authenticated users so each user gets their own budget.

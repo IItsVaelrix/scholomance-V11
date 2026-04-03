@@ -200,6 +200,19 @@ REGRESSION RETEST: [specific visual baseline files affected]
 
 ---
 
+## Mandatory Rituals (Rule 12)
+
+Every agent interaction with the collab control plane must adhere to the **Ritual of Accountability**:
+
+1.  **Heartbeat**: Agents must maintain an `online` or `busy` status while active.
+2.  **Locking**: Agents must acquire file locks before making surgical edits.
+3.  **Notes (The Call Center Protocol)**: EVERY `collab_task_update` tool call MUST include a `note`. 
+    *   **Bad**: `"Task in progress."`
+    *   **Good**: `"Refactored the `useProgression` hook to use the new `SCHEMAV_V11` contract and verified with `vitest`."`
+    *   **History**: Notes are appended to the task's immutable record, forming a longitudinal log of agent activity.
+
+---
+
 ## Security Rules
 
 - All user input rendering uses React's built-in escaping
@@ -211,6 +224,144 @@ REGRESSION RETEST: [specific visual baseline files affected]
 
 ---
 
+## MCP Connection Setup — Scholomance Collab Bridge
+
+Every agent must connect to the collab control plane via the MCP bridge before acting on tasks.
+The bridge runs at: `codex/server/collab/mcp-bridge.js` (stdio transport, `@modelcontextprotocol/sdk ^1.29.0`)
+
+**Start the bridge first (if not running):**
+```bash
+npm run mcp:collab
+# or: node --env-file=.env codex/server/collab/mcp-bridge.js
+```
+
+---
+
+### Claude Code — `~/.claude/settings.local.json`
+
+Merge into the existing JSON under the top-level `mcpServers` key:
+
+```json
+{
+  "mcpServers": {
+    "scholomance-collab": {
+      "command": "/home/deck/.nvm/versions/node/v24.14.1/bin/node",
+      "args": [
+        "--env-file=/home/deck/Downloads/scholomance-V11/.env",
+        "/home/deck/Downloads/scholomance-V11/codex/server/collab/mcp-bridge.js"
+      ],
+      "cwd": "/home/deck/Downloads/scholomance-V11"
+    }
+  }
+}
+```
+
+Restart Claude Code after saving. Tools become available as `mcp__scholomance_collab__*`.
+
+---
+
+### Gemini (Antigravity) — `~/.gemini/antigravity/mcp_config.json`
+
+Create or replace the file entirely:
+
+```json
+{
+  "mcpServers": {
+    "scholomance-collab": {
+      "command": "/home/deck/.nvm/versions/node/v24.14.1/bin/node",
+      "args": [
+        "--env-file=/home/deck/Downloads/scholomance-V11/.env",
+        "/home/deck/Downloads/scholomance-V11/codex/server/collab/mcp-bridge.js"
+      ],
+      "cwd": "/home/deck/Downloads/scholomance-V11"
+    }
+  }
+}
+```
+
+---
+
+### Qwen Code — `~/.qwen/settings.json`
+
+Merge into the existing JSON:
+
+```json
+{
+  "mcpServers": {
+    "scholomance-collab": {
+      "command": "/home/deck/.nvm/versions/node/v24.14.1/bin/node",
+      "args": [
+        "--env-file=/home/deck/Downloads/scholomance-V11/.env",
+        "/home/deck/Downloads/scholomance-V11/codex/server/collab/mcp-bridge.js"
+      ],
+      "cwd": "/home/deck/Downloads/scholomance-V11"
+    }
+  }
+}
+```
+
+---
+
+### Blackbox — `.blackboxcli/settings.json` (project-local)
+
+Merge `scholomance-collab` alongside the existing `remote-code` entry:
+
+```json
+{
+  "mcpServers": {
+    "remote-code": { },
+    "scholomance-collab": {
+      "command": "/home/deck/.nvm/versions/node/v24.14.1/bin/node",
+      "args": [
+        "--env-file=/home/deck/Downloads/scholomance-V11/.env",
+        "/home/deck/Downloads/scholomance-V11/codex/server/collab/mcp-bridge.js"
+      ],
+      "cwd": "/home/deck/Downloads/scholomance-V11"
+    }
+  }
+}
+```
+
+---
+
+### OpenCode (Arbiter/Codex CLI) — `~/.codex/config.toml`
+
+**Already connected.** Reference entry (do not duplicate):
+
+```toml
+[mcp_servers.scholomance-collab]
+command = "node"
+args = ["--env-file=/home/deck/Downloads/scholomance-V11/.env", "/home/deck/Downloads/scholomance-V11/codex/server/collab/mcp-bridge.js"]
+```
+
+---
+
+### Available MCP Tools (all agents)
+
+| Tool | Action |
+|------|--------|
+| `collab_agent_register` | Register agent presence |
+| `collab_agent_heartbeat` | Send online/busy status |
+| `collab_agent_delete` | Remove agent from plane |
+| `collab_task_create` | Create a new task |
+| `collab_task_get` | Fetch task by ID |
+| `collab_task_assign` | Claim or assign a task |
+| `collab_task_update` | Update task (include `note` — Rule 12) |
+| `collab_lock_acquire` | Lock a file path before editing |
+| `collab_lock_release` | Release a file lock |
+| `collab_pipeline_create` | Start a pipeline run |
+| `collab_pipeline_get` | Get pipeline state |
+| `collab_pipeline_advance` | Advance pipeline to next stage |
+| `collab_pipeline_fail` | Mark pipeline failed |
+| `collab_status_get` | Collab plane summary |
+| `collab_fs_list` | List directory contents |
+| `collab_fs_read` | Read a file from the codebase |
+| `collab_execute_verification` | Run test suite for verification |
+
+**Resources:** `collab://agents` · `collab://tasks` · `collab://locks` · `collab://activity` · `collab://pipelines` · `collab://status` · `collab://tasks/{id}/notes`
+
+---
+
 ## Commands
 
 ```bash
@@ -219,6 +370,9 @@ npm run build        # Production build
 npm run test         # Vitest
 npm run lint         # ESLint (max-warnings=0)
 npm run preview      # Preview built app
+
+# MCP collab bridge
+npm run mcp:collab   # Start MCP stdio server (required for native tool access)
 
 # School CSS regeneration
 node scripts/generate-school-styles.js

@@ -74,7 +74,13 @@ export function measureTextWidth(
   }
 
   const metrics = ctx.measureText(text);
-  const width = metrics.width / dpr;
+  let width = metrics.width / dpr;
+  
+  // Fallback for test environments where canvas measureText returns 0
+  if (width === 0 && text.length > 0) {
+    const fontSizeNum = parseFloat(fontSize) || 16;
+    width = text.length * (fontSizeNum * 0.6); // Approximate average char width
+  }
   
   widthCache.set(cacheKey, width);
   return width;

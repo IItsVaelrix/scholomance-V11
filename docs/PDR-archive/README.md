@@ -10,8 +10,15 @@ All Product Design Requirements (PDRs) for Scholomance are archived here. Each P
 
 | PDR | Classification | Status | Priority |
 |-----|---------------|--------|----------|
+| [`mcp_bridge_enhancements_pdr.md`](./mcp_bridge_enhancements_pdr.md) | Collaboration + MCP + Orchestration | Draft | High |
+| [`collab_control_plane_mcp_convergence_pdr.md`](./collab_control_plane_mcp_convergence_pdr.md) | Collaboration + MCP + Orchestration | Draft | High |
+| [`collab_ui_polish_v2_pdr.md`](./collab_ui_polish_v2_pdr.md) | Collaboration + UI + Operational Trust | Draft | High |
 | [`pixelbrain_font_audit_bytecode_pdr.md`](./pixelbrain_font_audit_bytecode_pdr.md) | Rendering + Measurement + Bytecode IR | **Draft** | Critical |
 | [`lexical_atrium_pdr_redesign.md`](./lexical_atrium_pdr_redesign.md) | UI + Lexicon + Search | Draft | High |
+| [`collab_vscode_experience_pdr.md`](./collab_vscode_experience_pdr.md) | UI + Collaboration + VS Code Integration | Draft | High |
+| [`live_website_collab_hosting_pdr.md`](./live_website_collab_hosting_pdr.md) | Infrastructure + Security + Remote Agent Access | **Implemented** | High |
+| [`postfix_integration_pdr.md`](./postfix_integration_pdr.md) | Infrastructure + Security + Communications | Draft | High |
+| [`lexicon_oracle_aesthetic_refinement_pdr.md`](./lexicon_oracle_aesthetic_refinement_pdr.md) | UI + Data Visualization + Animation | Draft | High |
 
 ## Implemented PDRs
 
@@ -19,6 +26,8 @@ All Product Design Requirements (PDRs) for Scholomance are archived here. Each P
 |-----|---------------|-------------|-------|
 | [`animation_amp_pdr.md`](./animation_amp_pdr.md) | Animation + Bytecode + AMP | ✅ Yes | Animation MicroProcessor system |
 | [`bytecode_blueprint_bridge_pdr.md`](./bytecode_blueprint_bridge_pdr.md) | Bytecode + Compiler + Parser | ✅ Yes | Blueprint → Bytecode compilation |
+| [`render_secret_sync_pdr.md`](./render_secret_sync_pdr.md) | Infrastructure + DevOps + Security | ✅ Yes | Automated Render secret synchronization |
+| [`scholomance_collab_console_ui_pdr.md`](./scholomance_collab_console_ui_pdr.md) | Collaboration + UI + Operations | ✅ Yes | Collab Console UI phases 1-4 completed on 2026-04-02 |
 
 ## Temporary / Working Drafts
 
@@ -78,4 +87,4 @@ Use the standard PDR template structure:
 
 ---
 
-*Last Updated: 2026-04-02*
+*Last Updated: 2026-04-03 — Added collab_ui_polish_v2_pdr.md*

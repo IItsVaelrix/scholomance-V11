@@ -369,6 +369,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
 
+    if (process.env.NODE_ENV === 'test') {
+      console.log(`[ScrollEditor] updateTypography: ${wrapper.clientWidth}x${wrapper.clientHeight}, content: ${content?.length}`);
+    }
+
     const styles = window.getComputedStyle(wrapper);
     const topology = computeGridTopology(wrapper);
 
@@ -464,10 +468,20 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   }, [computedTypography, gridTopology]);
 
   useEffect(() => {
-    const handleResize = () => { cachedEditorStyles = null; };
+    let resizeTimer;
+    const handleResize = () => { 
+      cachedEditorStyles = null;
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(() => {
+        updateTypography();
+      }, 100);
+    };
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearTimeout(resizeTimer);
+    };
+  }, [updateTypography]);
 
   const reducedMotion = usePrefersReducedMotion();
   const { theme: activeTheme } = useTheme();
@@ -891,7 +905,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
                         const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
-                        const color = decoded?.color || (wordVowelFamily ? vowelColors[wordVowelFamily] : null);
+                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordStyle = {
@@ -908,9 +922,10 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                             key={localStart}
                             role="button"
                             tabIndex={0}
+                            data-char-start={charStart}
                             className={[
                               'truesight-word',
-                              (shouldColor || wordVowelFamily) ? 'grimoire-word' : 'grimoire-word--grey',
+                              shouldColor ? 'grimoire-word' : 'grimoire-word--grey',
                               decoded?.className || '',
                               isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                             ].filter(Boolean).join(' ')}
@@ -992,7 +1007,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
                         const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
-                        const color = decoded?.color || (wordVowelFamily ? vowelColors[wordVowelFamily] : null);
+                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
                         const isMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 2);
                         const isRichMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 3);
 

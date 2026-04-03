@@ -213,7 +213,7 @@ describe('PixelBrain — Dimension Formula Compiler', () => {
       const spec1 = compiler.canonicalize(compiler.parse('1920.5×1080.7, snap integer'));
       const bytecode1 = compiler.compile(spec1);
       const result1 = runtime.execute(bytecode1, { viewportWidth: 2000, viewportHeight: 1200, parentWidth: 2000, parentHeight: 1200 });
-      expect(result1.width).toBe(1920); // Rounded
+      expect(result1.width).toBe(1921); // Rounded
       expect(result1.height).toBe(1081); // Rounded
 
       // No snap

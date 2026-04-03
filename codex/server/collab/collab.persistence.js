@@ -123,6 +123,95 @@ const COLLAB_MIGRATIONS = [
             `);
         },
     },
+    {
+        version: 7,
+        name: 'add_notes_to_tasks',
+        up(database) {
+            database.exec(`
+                ALTER TABLE collab_tasks ADD COLUMN notes TEXT DEFAULT '[]';
+            `);
+        },
+    },
+    {
+        version: 8,
+        name: 'create_collab_memories',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_memories (
+                    agent_id TEXT NOT NULL DEFAULT '',
+                    key TEXT NOT NULL,
+                    value TEXT NOT NULL,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (agent_id, key)
+                );
+                CREATE INDEX IF NOT EXISTS idx_memories_agent ON collab_memories(agent_id);
+            `);
+        },
+    },
+    {
+        version: 9,
+        name: 'create_collab_bug_reports',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_bug_reports (
+                    id TEXT PRIMARY KEY,
+                    title TEXT NOT NULL,
+                    summary TEXT,
+                    status TEXT NOT NULL DEFAULT 'new',
+                    priority INTEGER NOT NULL DEFAULT 1,
+                    source_type TEXT NOT NULL,
+                    source_ref_id TEXT,
+                    reporter_agent_id TEXT,
+                    assigned_agent_id TEXT,
+                    category TEXT,
+                    severity TEXT,
+                    module_id TEXT,
+                    error_code_hex TEXT,
+                    bytecode TEXT,
+                    checksum_verified INTEGER DEFAULT 0,
+                    parseable INTEGER DEFAULT 0,
+                    auto_fixable INTEGER DEFAULT 0,
+                    decoded_context TEXT,
+                    recovery_hints TEXT,
+                    observed_behavior TEXT,
+                    expected_behavior TEXT,
+                    repro_steps TEXT,
+                    environment TEXT,
+                    attachments TEXT DEFAULT '[]',
+                    related_task_id TEXT,
+                    related_pipeline_id TEXT,
+                    related_activity_id TEXT,
+                    dedupe_fingerprint TEXT,
+                    duplicate_of_bug_id TEXT,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE INDEX IF NOT EXISTS idx_bugs_status ON collab_bug_reports(status);
+                CREATE INDEX IF NOT EXISTS idx_bugs_severity ON collab_bug_reports(severity);
+                CREATE INDEX IF NOT EXISTS idx_bugs_fingerprint ON collab_bug_reports(dedupe_fingerprint);
+            `);
+        },
+    },
+    {
+        version: 10,
+        name: 'create_collab_agent_keys',
+        up(database) {
+            database.exec(`
+                CREATE TABLE IF NOT EXISTS collab_agent_keys (
+                    id TEXT PRIMARY KEY,
+                    agent_id TEXT NOT NULL,
+                    key_hash TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    expires_at DATETIME,
+                    revoked_at DATETIME,
+                    created_by TEXT
+                );
+                CREATE INDEX IF NOT EXISTS idx_agent_keys_agent ON collab_agent_keys(agent_id);
+                CREATE INDEX IF NOT EXISTS idx_agent_keys_hash ON collab_agent_keys(key_hash);
+                CREATE INDEX IF NOT EXISTS idx_agent_keys_revoked ON collab_agent_keys(revoked_at);
+            `);
+        },
+    },
 ];
 
 let db;
@@ -132,6 +221,26 @@ let dbState = {
     pragmas: null,
 };
 let isClosed = false;
+
+function parseJsonArray(value) {
+    if (!value || typeof value !== 'string') return [];
+    try {
+        const parsed = JSON.parse(value);
+        return Array.isArray(parsed) ? parsed : [];
+    } catch {
+        return [];
+    }
+}
+
+function parseJsonObjectOrNull(value) {
+    if (!value || typeof value !== 'string') return null;
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : null;
+    } catch {
+        return null;
+    }
+}
 
 try {
     mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -147,7 +256,7 @@ try {
         ...dbState,
         ...migrationResult,
     };
-    console.log(
+    console.error(
         `[DB:collab] Connected. version=${dbState.currentVersion}, journal=${dbState.pragmas.journalMode}, foreign_keys=${dbState.pragmas.foreignKeys}, busy_timeout=${dbState.pragmas.busyTimeout}`,
     );
 } catch (error) {
@@ -161,7 +270,7 @@ function closeDatabase() {
     isClosed = true;
     if (db?.open) {
         db.close();
-        console.log('[DB:collab] Connection closed.');
+        console.error('[DB:collab] Connection closed.');
     }
 }
 
@@ -207,6 +316,11 @@ function heartbeatAgent(id, status, currentTaskId) {
     return getAgent(id);
 }
 
+function deleteAgent(id) {
+    const result = db.prepare('DELETE FROM collab_agents WHERE id = ?').run(id);
+    return result.changes > 0;
+}
+
 function getAllAgents() {
     const rows = db.prepare('SELECT * FROM collab_agents').all();
     const now = Date.now();
@@ -234,12 +348,22 @@ function getAgent(id) {
 
 // --- Tasks ---
 
-function createTask({ id, title, description, priority, file_paths, depends_on, created_by, pipeline_run_id }) {
+function createTask({ id, title, description, priority = 1, file_paths, depends_on, created_by, pipeline_run_id, notes = [] }) {
     const stmt = db.prepare(`
-        INSERT INTO collab_tasks (id, title, description, priority, file_paths, depends_on, created_by, pipeline_run_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO collab_tasks (id, title, description, priority, file_paths, depends_on, created_by, pipeline_run_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, title, description || null, priority, JSON.stringify(file_paths), JSON.stringify(depends_on), created_by, pipeline_run_id || null);
+    stmt.run(
+        id, 
+        title, 
+        description || null, 
+        priority, 
+        JSON.stringify(file_paths), 
+        JSON.stringify(depends_on), 
+        created_by, 
+        pipeline_run_id || null,
+        JSON.stringify(notes)
+    );
     return getTask(id);
 }
 
@@ -287,6 +411,7 @@ const ALLOWED_TASK_COLUMNS = new Set([
     'status',
     'priority',
     'result',
+    'notes',
     'assigned_agent',
     'pipeline_run_id',
 ]);
@@ -313,6 +438,7 @@ function updateTask(id, updates) {
         }
         else if (key === 'priority') { fields.push('priority = ?'); params.push(value); }
         else if (key === 'result') { fields.push('result = ?'); params.push(JSON.stringify(value)); }
+        else if (key === 'notes') { fields.push('notes = ?'); params.push(JSON.stringify(value)); }
         else if (key === 'assigned_agent') { fields.push('assigned_agent = ?'); params.push(value); }
         else if (key === 'pipeline_run_id') { fields.push('pipeline_run_id = ?'); params.push(value); }
     }
@@ -379,9 +505,10 @@ function deleteTask(id) {
 function parseTaskRow(row) {
     return {
         ...row,
-        file_paths: JSON.parse(row.file_paths),
-        depends_on: JSON.parse(row.depends_on),
-        result: row.result ? JSON.parse(row.result) : null,
+        file_paths: parseJsonArray(row.file_paths),
+        depends_on: parseJsonArray(row.depends_on),
+        result: parseJsonObjectOrNull(row.result),
+        notes: parseJsonArray(row.notes),
     };
 }
 
@@ -559,6 +686,229 @@ function getRecentActivity(limit = 50, filters = {}, offset = 0) {
     }));
 }
 
+// --- Memories ---
+
+function setMemory(agentId, key, value) {
+    const stmt = db.prepare(`
+        INSERT INTO collab_memories (agent_id, key, value, updated_at)
+        VALUES (?, ?, ?, datetime('now'))
+        ON CONFLICT(agent_id, key) DO UPDATE SET
+            value = excluded.value,
+            updated_at = excluded.updated_at
+    `);
+    stmt.run(agentId ?? '', key, JSON.stringify(value));
+    return getMemory(agentId, key);
+}
+
+function getMemory(agentId, key) {
+    const row = db.prepare(`
+        SELECT * FROM collab_memories
+        WHERE agent_id = ? AND key = ?
+    `).get(agentId ?? '', key);
+    
+    if (!row) return null;
+    return {
+        ...row,
+        value: JSON.parse(row.value),
+    };
+}
+
+function getAllMemories(agentId = null) {
+    const aid = agentId ?? '';
+    let rows;
+    if (aid === '') {
+        rows = db.prepare(`
+            SELECT * FROM collab_memories
+            WHERE agent_id = ''
+            ORDER BY updated_at DESC
+        `).all();
+    } else {
+        rows = db.prepare(`
+            SELECT * FROM collab_memories
+            WHERE agent_id IN ('', ?)
+            ORDER BY updated_at DESC
+        `).all(aid);
+    }
+    return rows.map(row => ({
+        ...row,
+        value: JSON.parse(row.value),
+    }));
+}
+
+function deleteMemory(agentId, key) {
+    const result = db.prepare(`
+        DELETE FROM collab_memories
+        WHERE agent_id = ? AND key = ?
+    `).run(agentId ?? '', key);
+    return result.changes > 0;
+}
+
+// --- Bug Reports ---
+
+function createBugReport(input) {
+    const fields = Object.keys(input);
+    const placeholders = fields.map(() => '?').join(', ');
+    const params = fields.map(k => {
+        const v = input[k];
+        if (v && typeof v === 'object' && !Array.isArray(v)) return JSON.stringify(v);
+        if (Array.isArray(v)) return JSON.stringify(v);
+        return v;
+    });
+
+    const stmt = db.prepare(`
+        INSERT INTO collab_bug_reports (${fields.join(', ')})
+        VALUES (${placeholders})
+    `);
+    stmt.run(...params);
+    return getBugReport(input.id);
+}
+
+function getAllBugReports(filters = {}, pagination = {}) {
+    const rawLimit = Number.isInteger(Number(pagination.limit)) ? Number(pagination.limit) : 50;
+    const rawOffset = Number.isInteger(Number(pagination.offset)) ? Number(pagination.offset) : 0;
+    const limit = Math.max(1, rawLimit);
+    const offset = Math.max(0, rawOffset);
+
+    let query = 'SELECT * FROM collab_bug_reports WHERE 1=1';
+    const params = [];
+
+    if (filters.status) {
+        query += ' AND status = ?';
+        params.push(filters.status);
+    }
+    if (filters.severity) {
+        query += ' AND severity = ?';
+        params.push(filters.severity);
+    }
+    if (filters.category) {
+        query += ' AND category = ?';
+        params.push(filters.category);
+    }
+    if (filters.module_id) {
+        query += ' AND module_id = ?';
+        params.push(filters.module_id);
+    }
+    if (filters.source_type) {
+        query += ' AND source_type = ?';
+        params.push(filters.source_type);
+    }
+    if (filters.assigned_agent_id) {
+        query += ' AND assigned_agent_id = ?';
+        params.push(filters.assigned_agent_id);
+    }
+
+    query += ' ORDER BY priority DESC, created_at DESC LIMIT ? OFFSET ?';
+    params.push(limit, offset);
+    const rows = db.prepare(query).all(...params);
+    return rows.map(parseBugReportRow);
+}
+
+function getBugReport(id) {
+    const row = db.prepare('SELECT * FROM collab_bug_reports WHERE id = ?').get(id);
+    if (!row) return null;
+    return parseBugReportRow(row);
+}
+
+const ALLOWED_BUG_COLUMNS = new Set([
+    'title', 'summary', 'status', 'priority', 'assigned_agent_id',
+    'category', 'severity', 'module_id', 'error_code_hex',
+    'bytecode', 'checksum_verified', 'parseable', 'auto_fixable',
+    'decoded_context', 'recovery_hints', 'observed_behavior',
+    'expected_behavior', 'repro_steps', 'environment', 'attachments',
+    'related_task_id', 'related_pipeline_id', 'related_activity_id',
+    'duplicate_of_bug_id',
+]);
+
+function updateBugReport(id, updates) {
+    const fields = [];
+    const params = [];
+
+    for (const [key, value] of Object.entries(updates || {})) {
+        if (!ALLOWED_BUG_COLUMNS.has(key)) continue;
+        
+        fields.push(`${key} = ?`);
+        if (value && typeof value === 'object') {
+            params.push(JSON.stringify(value));
+        } else {
+            params.push(value);
+        }
+    }
+
+    if (fields.length === 0) return getBugReport(id);
+
+    fields.push("updated_at = datetime('now')");
+    const stmt = db.prepare(`UPDATE collab_bug_reports SET ${fields.join(', ')} WHERE id = ?`);
+    params.push(id);
+    stmt.run(...params);
+    return getBugReport(id);
+}
+
+function deleteBugReport(id) {
+    const result = db.prepare('DELETE FROM collab_bug_reports WHERE id = ?').run(id);
+    return result.changes > 0;
+}
+
+function parseBugReportRow(row) {
+    return {
+        ...row,
+        attachments: row.attachments ? JSON.parse(row.attachments) : [],
+        decoded_context: row.decoded_context ? JSON.parse(row.decoded_context) : null,
+        recovery_hints: row.recovery_hints ? JSON.parse(row.recovery_hints) : null,
+        repro_steps: row.repro_steps ? JSON.parse(row.repro_steps) : null,
+        environment: row.environment ? JSON.parse(row.environment) : null,
+        checksum_verified: !!row.checksum_verified,
+        parseable: !!row.parseable,
+        auto_fixable: !!row.auto_fixable,
+    };
+}
+
+// --- Agent Keys ---
+
+function createAgentKey({ id, agentId, keyHash, expiresAt, createdBy }) {
+    db.prepare(`
+        INSERT INTO collab_agent_keys (id, agent_id, key_hash, expires_at, created_by)
+        VALUES (?, ?, ?, ?, ?)
+    `).run(id, agentId, keyHash, expiresAt || null, createdBy || null);
+    return getAgentKey(id);
+}
+
+function getAgentKey(id) {
+    return db.prepare('SELECT * FROM collab_agent_keys WHERE id = ?').get(id) || null;
+}
+
+function getAllAgentKeys() {
+    return db.prepare('SELECT * FROM collab_agent_keys ORDER BY created_at DESC').all();
+}
+
+function getKeysByAgentId(agentId) {
+    return db.prepare('SELECT * FROM collab_agent_keys WHERE agent_id = ? ORDER BY created_at DESC').all(agentId);
+}
+
+function revokeAgentKeyById(keyId) {
+    const result = db.prepare(
+        "UPDATE collab_agent_keys SET revoked_at = datetime('now') WHERE id = ? AND revoked_at IS NULL"
+    ).run(keyId);
+    return result.changes > 0;
+}
+
+function revokeAllKeysForAgent(agentId) {
+    const result = db.prepare(
+        "UPDATE collab_agent_keys SET revoked_at = datetime('now') WHERE agent_id = ? AND revoked_at IS NULL"
+    ).run(agentId);
+    return result.changes;
+}
+
+function deleteAgentKey(keyId) {
+    return db.prepare('DELETE FROM collab_agent_keys WHERE id = ?').run(keyId).changes > 0;
+}
+
+function expireAgentKey(keyId) {
+    const result = db.prepare(
+        "UPDATE collab_agent_keys SET expires_at = datetime('now', '-1 day') WHERE id = ?"
+    ).run(keyId);
+    return result.changes > 0;
+}
+
 // --- Export ---
 
 export const collabPersistence = {
@@ -567,6 +917,7 @@ export const collabPersistence = {
         heartbeat: heartbeatAgent,
         getAll: getAllAgents,
         getById: getAgent,
+        delete: deleteAgent,
     },
     tasks: {
         create: createTask,
@@ -575,6 +926,13 @@ export const collabPersistence = {
         update: updateTask,
         assignWithLocks: assignTaskWithLocks,
         delete: deleteTask,
+    },
+    bug_reports: {
+        create: createBugReport,
+        getAll: getAllBugReports,
+        getById: getBugReport,
+        update: updateBugReport,
+        delete: deleteBugReport,
     },
     locks: {
         acquire: acquireLock,
@@ -594,6 +952,22 @@ export const collabPersistence = {
     activity: {
         log: logActivity,
         getRecent: getRecentActivity,
+    },
+    memories: {
+        set: setMemory,
+        get: getMemory,
+        getAll: getAllMemories,
+        delete: deleteMemory,
+    },
+    agent_keys: {
+        create: createAgentKey,
+        getAll: getAllAgentKeys,
+        getByAgentId: getKeysByAgentId,
+        getById: getAgentKey,
+        revoke: revokeAgentKeyById,
+        revokeAll: revokeAllKeysForAgent,
+        delete: deleteAgentKey,
+        expire: expireAgentKey,
     },
     close: closeDatabase,
     getStatus,

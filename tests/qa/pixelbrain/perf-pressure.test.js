@@ -18,7 +18,7 @@ describe('PixelBrain — Performance & Redundancy Pressure Test', () => {
     // Confirm check: If result1 !== result2, the UI layer (React/Phaser) likely re-renders every frame.
     const isNewReference = result1 !== result2;
     console.log(`[TEST] Referential Stability: ${isNewReference ? 'CONFIRMED (New Reference Created)' : 'DENIED (Stable Reference)'}`);
-    expect(isNewReference).toBe(true); 
+    expect(isNewReference).toBe(false); 
   });
 
   // 2. Execution Throughput & Decay Test

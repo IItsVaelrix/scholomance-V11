@@ -9,7 +9,21 @@ function isNormalizedPanelData(payload) {
 
 export function installPanelAnalysisFetchMock() {
   const originalFetch = global.fetch;
-  const fetchMock = vi.fn();
+  
+  const fetchMock = vi.fn().mockImplementation(async (url, options) => {
+    const href = String(url);
+    
+    // Only intercept panel analysis endpoint
+    if (href.includes(PANEL_ANALYSIS_ENDPOINT)) {
+      // Return a promise that will be resolved by mockResolvedValueOnce if queued
+      // Or return a "hanging" promise if nothing is queued (better than undefined)
+      return new Promise(() => {});
+    }
+    
+    // Fallback to original fetch for everything else (corpus.json, etc.)
+    return await originalFetch(url, options);
+  });
+  
   global.fetch = fetchMock;
 
   return {
@@ -54,10 +68,10 @@ export function queuePanelAnalysisFailure(fetchMock, options = {}) {
 export function expectPanelAnalysisRequest(fetchMock, expectedText) {
   expect(fetchMock).toHaveBeenCalled();
 
-  const lastCall = fetchMock.mock.calls.at(-1);
-  expect(lastCall).toBeTruthy();
+  const analysisCall = fetchMock.mock.calls.find(call => String(call[0]).includes(PANEL_ANALYSIS_ENDPOINT));
+  expect(analysisCall).toBeTruthy();
 
-  const [url, options] = lastCall;
+  const [url, options] = analysisCall;
   const normalizedUrl = String(url || "");
   expect(normalizedUrl).toContain(PANEL_ANALYSIS_ENDPOINT);
 

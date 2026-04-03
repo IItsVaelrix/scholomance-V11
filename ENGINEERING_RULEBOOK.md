@@ -384,6 +384,34 @@ Production incident → Post-mortem → Lessons learned → Law update if needed
 
 ---
 
+## Rule 12: Mandatory Agent Notes (Call Center Style)
+
+**The Rule:**
+```
+Every task update MUST include a note detailing the specific actions performed.
+```
+
+**Enforcement:**
+- `UpdateTaskSchema` requires a `note` field.
+- `collab_task_update` tool call will fail if `note` is missing or empty.
+- Notes are appended to a permanent history on the task substrate.
+
+**Note Requirements:**
+- [ ] Must be specific (e.g., "Refactored login logic to use Zod" not "Updated code")
+- [ ] Must be written in the agent's persona (if applicable)
+- [ ] Must include any relevant file paths or symbols touched
+
+**Violation = Escalation:**
+```
+ESCALATION: MISSING_AGENT_NOTE
+- Agent: [who attempted update]
+- Task: [task ID]
+- Action: [what was attempted]
+- Result: Update blocked by schema validation
+```
+
+---
+
 ## Enforcement Mechanism
 
 ### Pre-Commit Hooks

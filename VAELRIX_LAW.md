@@ -3,7 +3,7 @@
 
 > Read first: `SHARED_PREAMBLE.md` → this file.
 
-**Version: 1.3** | Status: Living Document | Arbiter: Angel (IItsVaelrix, repository owner/user)
+**Version: 1.10** | Status: Living Document | Arbiter: Angel (IItsVaelrix, repository owner/user)
 
 All agents read this file before acting.
 All agents reference `SCHEMA_CONTRACT.md` for data shapes.
@@ -211,6 +211,270 @@ Centralized archive ensures:
 - Architecture decisions are auditable
 
 **Related:** Scholomance Encyclopedia (`docs/scholomance-encyclopedia/`) documents bug fixes and architecture proposals post-implementation. PDRs document features pre-implementation.
+
+### 14. Collab Login and MCP Access Protocol
+
+**Any agent participating in coordinated work must use the collab control plane through approved login and MCP access paths.**
+
+No agent may invent an alternate transport, bypass authentication on the HTTP surface, or access collab persistence directly as a substitute for the control plane.
+
+#### 14.1 Transport split is explicit
+
+There are two distinct access paths:
+
+- **HTTP / CLI control plane**: authenticated routes under `/collab`, used by `scripts/connect-collab.js` and `scripts/collab-client.js`
+- **MCP bridge**: local stdio server at `codex/server/collab/mcp-bridge.js`, used by MCP-capable clients and agents
+
+These paths serve different purposes:
+
+- HTTP / CLI requires login and uses a session cookie
+- MCP is a local process transport and does **not** use the browser/session login cookie
+- Both paths must converge on the same collab service law
+
+#### 14.2 Required boot order
+
+Before any agent attempts to coordinate through the collab plane:
+
+1. Start the local server:
+   `npm run dev:server`
+2. Start the MCP bridge if MCP access is needed:
+   `npm run mcp:collab`
+3. If using HTTP / CLI, log in first:
+   `node scripts/connect-collab.js connect --agent-id <id> --name "<name>" --role <role>`
+4. If using MCP, connect the client to the stdio bridge and then register through MCP:
+   call `collab_agent_register`
+5. After registration on either surface, keep presence alive with heartbeat:
+   HTTP: `node scripts/connect-collab.js heartbeat --agent-id <id> --status online`
+   MCP: call `collab_agent_heartbeat`
+
+If the server is not running, login and collab HTTP calls will fail.
+If the MCP bridge is not running, MCP clients will not see `collab://*` resources or `collab_*` tools.
+
+#### 14.3 HTTP / CLI login path
+
+**Primary login command**
+
+```bash
+node scripts/connect-collab.js connect \
+  --agent-id <agent-id> \
+  --name "<display-name>" \
+  --role <ui|backend|qa> \
+  --capabilities <comma,separated,capabilities>
+```
+
+**What this does**
+
+- fetches a CSRF token
+- logs in against `/auth/login`
+- persists the session cookie to `COLLAB_COOKIE_FILE` (default: `/tmp/scholomance_cookie.txt`)
+- registers the agent on `/collab/agents/register`
+
+**Relevant environment variables**
+
+- `API_BASE_URL` — defaults to `http://localhost:3000`
+- `COLLAB_URL` — defaults to `http://localhost:3000/collab`
+- `COLLAB_COOKIE_FILE` — defaults to `/tmp/scholomance_cookie.txt`
+- `COLLAB_USER` / `COLLAB_PASS` — optional CLI login credentials
+- `AGENT_ID` — used by `scripts/collab-client.js`
+
+**Local default credentials**
+
+The helper script currently defaults to:
+
+- username: `test`
+- password: `password`
+
+These defaults are for local development only. If local auth has been changed, agents must use the current valid credentials instead of assuming the defaults still apply.
+
+#### 14.4 MCP access path
+
+**Canonical bridge command**
+
+```bash
+npm run mcp:collab
+```
+
+Equivalent direct invocation:
+
+```bash
+node --env-file=.env codex/server/collab/mcp-bridge.js
+```
+
+**Canonical MCP client configuration**
+
+```json
+{
+  "mcpServers": {
+    "scholomance-collab": {
+      "command": "node",
+      "args": ["--env-file=.env", "codex/server/collab/mcp-bridge.js"]
+    }
+  }
+}
+```
+
+If an MCP host prefers npm wrappers, `npm run mcp:collab` is acceptable as the command target instead of the raw `node` invocation.
+
+**Minimum MCP verification sequence**
+
+1. Read `collab://status`
+2. Call `collab_status_get`
+3. Call `collab_agent_register`
+4. Call `collab_agent_heartbeat`
+
+**Required MCP resources**
+
+- `collab://agents`
+- `collab://tasks`
+- `collab://locks`
+- `collab://activity`
+- `collab://pipelines`
+- `collab://status`
+
+**Required MCP tools**
+
+- `collab_agent_register`
+- `collab_agent_heartbeat`
+- `collab_task_create`
+- `collab_task_assign`
+- `collab_task_update`
+- `collab_lock_acquire`
+- `collab_lock_release`
+- `collab_pipeline_create`
+- `collab_pipeline_advance`
+- `collab_pipeline_fail`
+- `collab_status_get`
+
+#### 14.5 Supported collab roles are currently narrow
+
+The current collab schema supports only these roles:
+
+- `ui`
+- `backend`
+- `qa`
+
+Agents must **not** invent additional role strings during registration. In particular, `docs` may appear in older helper text, but it is **not** a valid collab schema role at this time.
+
+Until schema support expands, agents whose domain does not map perfectly must choose the nearest lawful operational role.
+
+#### 14.6 Canonical role map by agent
+
+| Agent | Domain | Collab role | Canonical capabilities |
+|-------|--------|-------------|------------------------|
+| Claude | UI, visuals, accessibility | `ui` | `jsx,css,framer-motion,a11y` |
+| Codex | engine, backend, schemas, runtime | `backend` | `node,fastify,schemas,mcp` |
+| Gemini | mechanics, balance, formal rules | `backend` | `mechanics,balance,specs,systems` |
+| Blackbox | testing, QA, CI | `qa` | `vitest,playwright,ci,debugging` |
+| Arbiter | verdicts, architecture review | `backend` | `architecture,review,verdicts` |
+| Nexus | interactive debugging, repro traces | `backend` | `debugging,tracing,repro` |
+| Unity | documentation synthesis, navigation | `backend` | `docs,synthesis,navigation` |
+| Angel | arbitration, operator authority | `backend` | `override,arbitration,release` |
+
+This role map is an operational transport mapping, not a redefinition of domain ownership.
+Role choice grants access to the collab plane. It does **not** authorize edits outside the agent's actual domain.
+
+#### 14.7 Canonical login examples by agent
+
+```bash
+# Claude
+node scripts/connect-collab.js connect --agent-id claude-ui --name "Claude UI" --role ui --capabilities jsx,css,framer-motion,a11y
+
+# Codex
+node scripts/connect-collab.js connect --agent-id codex-backend --name "Codex Backend" --role backend --capabilities node,fastify,schemas,mcp
+
+# Gemini
+node scripts/connect-collab.js connect --agent-id gemini-backend --name "Gemini Mechanics" --role backend --capabilities mechanics,balance,specs,systems
+
+# Blackbox
+node scripts/connect-collab.js connect --agent-id blackbox-qa --name "Blackbox QA" --role qa --capabilities vitest,playwright,ci,debugging
+
+# Arbiter
+node scripts/connect-collab.js connect --agent-id arbiter-backend --name "Arbiter" --role backend --capabilities architecture,review,verdicts
+
+# Nexus
+node scripts/connect-collab.js connect --agent-id nexus-backend --name "Nexus" --role backend --capabilities debugging,tracing,repro
+
+# Unity
+node scripts/connect-collab.js connect --agent-id unity-backend --name "Unity" --role backend --capabilities docs,synthesis,navigation
+
+# Angel
+node scripts/connect-collab.js connect --agent-id angel-backend --name "Angel" --role backend --capabilities override,arbitration,release
+```
+
+#### 14.8 Lawful operating sequence after login or MCP attach
+
+After access is established, agents should follow this sequence:
+
+1. Register the agent if not already present
+2. Send heartbeat when beginning work
+3. Read current state:
+   `collab://status`, `collab://tasks`, `collab://locks`, or HTTP equivalents
+4. Create or claim a task before editing shared files
+5. Respect ownership and lock conflicts instead of bypassing them casually
+6. Update task state as work progresses
+7. Mark completion and release locks through the control plane
+
+No agent may treat "I can reach the repo" as sufficient substitute for "I am registered on the control plane."
+
+#### 14.9 MCP access is not a privilege escalation path
+
+MCP exists to expose the collab plane to agentic tools, not to bypass the law.
+
+Therefore:
+
+- MCP callers must register the same way any other agent does
+- MCP callers must respect lock conflicts and ownership conflicts
+- MCP callers must use collab tools instead of reaching into persistence or sqlite directly
+- terminal pipeline states must be treated as terminal across all transports
+
+Any agent that uses MCP as a shortcut around ownership, locking, or audit rules is violating this law.
+
+#### 14.10 Remote agent key authentication
+
+Agents connecting from remote machines (not the host running the server) authenticate via **bearer token keys**, not passwords.
+
+**How it works:**
+
+1. Angel generates an agent key: `node scripts/collab-admin.js generate-agent-key --agent-id <id> --role <role>`
+2. The plaintext key (`sk-scholomance-<id>-<hex>`) is shared out-of-band with the agent
+3. The agent includes the key in every request: `Authorization: Bearer sk-scholomance-...`
+4. The server validates the key against bcrypt-hashed entries in `collab_agent_keys`
+5. On success, the agent identity is resolved and `X-Agent-ID` is set on the request
+6. On failure, a generic 401 is returned — no key details leaked
+
+**Remote agent CLI usage:**
+
+```bash
+# Any collab-client.js command with AGENT_KEY set
+AGENT_KEY=sk-scholomance-qwen-code-abc123... AGENT_ID=qwen-code \
+  node scripts/collab-client.js heartbeat --status online
+
+# Or set in .env file
+AGENT_KEY=sk-scholomance-qwen-code-abc123...
+AGENT_ID=qwen-code
+API_BASE_URL=https://your-live-site.com
+node scripts/collab-client.js tasks
+```
+
+**Remote pulse script:**
+
+```bash
+AGENT_KEY=sk-scholomance-qwen-code-abc123... \
+AGENT_ID=qwen-code \
+API_BASE_URL=https://your-live-site.com \
+HEARTBEAT_INTERVAL=60 \
+node scripts/heartbeat-pulse.mjs
+```
+
+**Security constraints:**
+
+- Keys are bcrypt-hashed server-side — never stored or transmitted in plaintext after generation
+- Keys are never logged, never returned in API responses
+- Revoked or expired keys are rejected immediately
+- Rate limiting applies per agent key (same as session auth)
+- HTTPS is mandatory for remote access — keys must never travel over plaintext HTTP
+
+**This is not a privilege escalation path.** Remote agent keys grant the same collab plane access as local session auth. They do not bypass ownership checks, lock conflicts, or audit rules.
 
 ---
 
@@ -917,6 +1181,7 @@ Use the Points vs Pixels calculator to verify:
 | 1.7 | 2026-04-02 | Added Law 11: "Scholomance Encyclopedia — Bug Fix Documentation" — mandates documentation of all bug fixes with bytecode search codes upon Angel's "BUG REPORT AUDIT" command. Renumbered subsequent laws |
 | 1.8 | 2026-04-02 | Added "Online Reference Resources" section — mandatory bookmarks for bytecode-to-pixel conversions, typography measurements, and web API references. Added Points vs Pixels calculator for DPI/DPR calculations |
 | 1.9 | 2026-04-02 | Added Law 13: "PDR Archive Is Mandatory" — all Product Design Requirements must be stored in `docs/PDR-archive/`. Scattered PDRs prohibited |
+| 1.10 | 2026-04-02 | Added Law 14: "Collab Login and MCP Access Protocol" — explicit boot order, login path, MCP bridge configuration, role mapping, and per-agent access instructions. Corrected stale top-level version header to match the actual law revision |
 
 ---
 

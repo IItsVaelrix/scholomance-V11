@@ -34,6 +34,11 @@ const METRIC_CONFIG = {
     icon: GridIcon,
     format: (value) => `${value.active} locked`
   },
+  bugs: {
+    label: 'Bug Artifacts',
+    icon: WarningIcon,
+    format: (value) => `${value.critical} crit / ${value.total} total`
+  },
   blocked: {
     label: 'Blocked Items',
     icon: WarningIcon,

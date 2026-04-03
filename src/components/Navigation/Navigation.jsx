@@ -50,7 +50,7 @@ export default function Navigation() {
   const navTimeoutRef = useRef(null);
   const { user } = useAuth();
   const prefersReducedMotion = usePrefersReducedMotion();
-  const canAccessCollab = import.meta.env.DEV;
+  const canAccessCollab = true;
   const navLinks = LINKS.filter((link) => link.id !== "collab" || canAccessCollab);
 
   const allLinks = [

@@ -132,15 +132,16 @@ export class ResendMailerAdapter extends MailerAdapter {
 
 function createProviderAdapter(logger) {
   const provider = normalizeProviderName(
-    process.env.MAIL_PROVIDER ||
+    (process.env.MAIL_PROVIDER ||
     (process.env.SMTP_HOST ? 'smtp' : '') ||
     (process.env.RESEND_API_KEY ? 'resend' : '') ||
     (process.env.SENDGRID_API_KEY ? 'sendgrid' : '') ||
-    'console'
+    'console').toLowerCase().trim()
   );
   const fromEmail = process.env.EMAIL_FROM || DEFAULT_FROM_EMAIL;
 
   switch (provider) {
+    case 'postfix':
     case 'smtp': {
       const smtpConfig = createSmtpProviderConfigFromEnv();
       return {

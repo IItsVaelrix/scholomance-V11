@@ -1949,6 +1949,26 @@
   isolation: isolate;
 }
 
+/* Opaque backing disc — masks the entire circumference behind the sphere */
+.orb-centerpiece__backing {
+  position: absolute;
+  width: 420px;
+  height: 420px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 50%, rgba(8, 12, 22, 0.95) 0%, rgba(8, 12, 22, 0.85) 70%, rgba(8, 12, 22, 0.7) 100%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Ring layer — sits between backing and sphere */
+.orb-centerpiece__ring-layer {
+  position: absolute;
+  width: 540px;
+  height: 540px;
+  z-index: 2;
+  pointer-events: none;
+}
+
 /* Phaser canvas inside orb must be opaque to block underlying text */
 .orb-centerpiece canvas {
   background: transparent;
@@ -1960,6 +1980,9 @@
 
 .orb-ring-decoration {
   position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   width: 540px;
   height: 540px;
   border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);

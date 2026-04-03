@@ -61,16 +61,16 @@ describe('PixelBrain — Aseprite Emulation Audit', () => {
   // ── 1. VISUAL FIDELITY TRANSCRIPTION ───────────────────────────────────────
 
   describe('Full Visual Fidelity Transcription', () => {
-    it('transcribes an asset image into a high-fidelity coordinate lattice', () => {
-      const result = generatePixelArtFromImage(mockImageAnalysis, canvasSize);
+    it('transcribes an asset image into a high-fidelity coordinate lattice', async () => {
+      const result = await generatePixelArtFromImage(mockImageAnalysis, canvasSize);
       
       expect(result.coordinates.length).toBeGreaterThan(0);
       expect(result.palettes[0].colors).toContain('#6B59B6'); // SNES Purple
       expect(result.bytecode).toMatch(/^0xF/);
     });
 
-    it('identifies dominant symmetry during transcription', () => {
-      const result = generatePixelArtFromImage(mockImageAnalysis, canvasSize);
+    it('identifies dominant symmetry during transcription', async () => {
+      const result = await generatePixelArtFromImage(mockImageAnalysis, canvasSize);
       expect(result.dominantSymmetry).toBe('vertical');
     });
   });

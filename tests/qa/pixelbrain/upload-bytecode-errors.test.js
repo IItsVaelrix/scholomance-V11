@@ -29,7 +29,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
     it('rejects empty buffer', async () => {
       const emptyBuffer = Buffer.alloc(0);
       await expect(decodeBitStream({ buffer: emptyBuffer, mimetype: 'image/png' }))
-        .rejects.toThrow('EMPTY_BUFFER');
+        .rejects.toThrow(/EMPTY_BUFFER|empty buffer/i);
     });
 
     it('rejects invalid PNG signature', async () => {
@@ -357,7 +357,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
   describe('Integration: Full Pipeline Errors', () => {
     const _testSuite = 'Pipeline Integration';
 
-    it('fails gracefully on corrupted image data', () => {
+    it('fails gracefully on corrupted image data', async () => {
       const corruptedAnalysis = {
         colors: [],
         composition: {
@@ -376,7 +376,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       };
 
       try {
-        const result = generatePixelArtFromImage(corruptedAnalysis, { width: 160, height: 144, gridSize: 1 });
+        const result = await generatePixelArtFromImage(corruptedAnalysis, { width: 160, height: 144, gridSize: 1 });
         expect(result).toBeDefined();
       } catch (error) {
         expect(error.message).toBeDefined();

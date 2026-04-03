@@ -83,7 +83,9 @@ export const AlchemicalLabBackground: React.FC<{ signalLevel?: number }> = ({ si
         }
 
         // Fade in the Phaser canvas
-        setIsLoaded(true);
+        if (typeof window !== 'undefined') {
+          setIsLoaded(true);
+        }
 
         // Cache the static background for next visit (after a delay to not block render)
         setTimeout(() => {

@@ -50,7 +50,7 @@ describe('PixelProcessor Pipeline', () => {
     expect(pixelData instanceof Uint8ClampedArray).toBe(true);
 
     // Step 2: Resample (Scale up to 4x4)
-    const { pixelData: upscaled, dimensions: newDims } = verseIRMicroprocessors.execute('pixel.resample', {
+    const { pixelData: upscaled, dimensions: newDims } = await verseIRMicroprocessors.execute('pixel.resample', {
       pixelData,
       dimensions,
       targetSize: { width: 4, height: 4 }
@@ -60,7 +60,7 @@ describe('PixelProcessor Pipeline', () => {
     expect(upscaled.length).toBe(4 * 4 * 4);
 
     // Step 3: Trace Lattice
-    const { coordinates } = verseIRMicroprocessors.execute('pixel.trace', {
+    const { coordinates } = await verseIRMicroprocessors.execute('pixel.trace', {
       pixelData: upscaled,
       dimensions: newDims,
       threshold: 10
@@ -71,7 +71,7 @@ describe('PixelProcessor Pipeline', () => {
 
     // Step 4: Quantize Chroma (to SONIC school)
     const colors = coordinates.slice(0, 2).map(c => c.color);
-    const { quantizedColors } = verseIRMicroprocessors.execute('pixel.quantize', {
+    const { quantizedColors } = await verseIRMicroprocessors.execute('pixel.quantize', {
       colors,
       schoolId: 'SONIC'
     });

@@ -61,6 +61,11 @@ async function apiFetch(baseUrl, path, agentId, options = {}) {
         ...(agentId ? { 'X-Agent-ID': agentId } : {}),
         ...options.headers,
     };
+    // Attach agent key if available (passwordless remote auth)
+    const agentKey = process.env.AGENT_KEY;
+    if (agentKey) {
+        headers['Authorization'] = `Bearer ${agentKey}`;
+    }
     // Attach session cookie if available
     if (_sessionCookie) {
         headers['Cookie'] = _sessionCookie;
@@ -192,7 +197,7 @@ async function main() {
 
     if (!command) {
         console.log('Usage: AGENT_ID=<id> node collab-client.js <command> [options]');
-        console.log('Commands: login, register, heartbeat, tasks, claim, complete, status, agents, pipelines, activity');
+        console.log('Commands: login, register, heartbeat, tasks, create-task, claim, complete, status, agents, pipelines, start-pipeline, advance-pipeline, fail-pipeline, acquire-lock, release-lock, locks, activity');
         process.exit(0);
     }
 
@@ -217,7 +222,8 @@ async function main() {
             }
             case 'heartbeat': {
                 const status = getFlag(args, '--status') || 'online';
-                const result = await client.heartbeat(status);
+                const currentTaskId = getFlag(args, '--task-id');
+                const result = await client.heartbeat(status, currentTaskId);
                 console.log('Heartbeat:', JSON.stringify(result, null, 2));
                 break;
             }
@@ -225,6 +231,14 @@ async function main() {
                 const status = getFlag(args, '--status');
                 const result = await client.getTasks(status ? { status } : {});
                 console.log(JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'create-task': {
+                const title = args[1];
+                if (!title) { console.error('Task title required'); process.exit(1); }
+                const priority = getFlag(args, '--priority') || '1';
+                const result = await client.createTask(title, { priority: Number(priority) });
+                console.log('Created:', JSON.stringify(result, null, 2));
                 break;
             }
             case 'claim': {
@@ -237,8 +251,10 @@ async function main() {
             case 'complete': {
                 const taskId = args[1];
                 if (!taskId) { console.error('Task ID required'); process.exit(1); }
-                const result = await client.completeTask(taskId);
-                console.log('Completed:', JSON.stringify(result, null, 2));
+                const resultStr = getFlag(args, '--result');
+                const result = resultStr ? JSON.parse(resultStr) : {};
+                const resultObj = await client.completeTask(taskId, result);
+                console.log('Completed:', JSON.stringify(resultObj, null, 2));
                 break;
             }
             case 'status': {
@@ -253,6 +269,52 @@ async function main() {
             }
             case 'pipelines': {
                 const result = await client.getPipelines();
+                console.log(JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'start-pipeline': {
+                const type = args[1];
+                if (!type) { console.error('Pipeline type required'); process.exit(1); }
+                const triggerId = getFlag(args, '--trigger-id');
+                const result = await client.startPipeline(type, triggerId);
+                console.log('Started:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'advance-pipeline': {
+                const pipeId = args[1];
+                if (!pipeId) { console.error('Pipeline ID required'); process.exit(1); }
+                const resultStr = getFlag(args, '--result');
+                const result = resultStr ? JSON.parse(resultStr) : {};
+                const resultObj = await client.advancePipeline(pipeId, result);
+                console.log('Advanced:', JSON.stringify(resultObj, null, 2));
+                break;
+            }
+            case 'fail-pipeline': {
+                const pipeId = args[1];
+                if (!pipeId) { console.error('Pipeline ID required'); process.exit(1); }
+                const reason = getFlag(args, '--reason') || 'Unknown failure';
+                const result = await client.failPipeline(pipeId, reason);
+                console.log('Failed:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'acquire-lock': {
+                const path = args[1];
+                if (!path) { console.error('File path required'); process.exit(1); }
+                const taskId = getFlag(args, '--task-id');
+                const ttl = getFlag(args, '--ttl') || '30';
+                const result = await client.acquireLock(path, taskId, Number(ttl));
+                console.log('Acquired:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'release-lock': {
+                const path = args[1];
+                if (!path) { console.error('File path required'); process.exit(1); }
+                const result = await client.releaseLock(path);
+                console.log('Released:', JSON.stringify(result, null, 2));
+                break;
+            }
+            case 'locks': {
+                const result = await client.getLocks();
                 console.log(JSON.stringify(result, null, 2));
                 break;
             }

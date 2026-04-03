@@ -184,6 +184,48 @@ const USER_MIGRATIONS = [
       `);
     },
   },
+  {
+    version: 11,
+    name: 'create_collab_tasks_unified',
+    up(database) {
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS collab_tasks (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          description TEXT,
+          status TEXT NOT NULL DEFAULT 'backlog',
+          priority INTEGER NOT NULL DEFAULT 1,
+          assigned_agent TEXT,
+          created_by TEXT,
+          depends_on TEXT DEFAULT '[]',
+          file_paths TEXT DEFAULT '[]',
+          pipeline_run_id TEXT,
+          notes_json TEXT DEFAULT '[]',
+          result_json TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          completed_at DATETIME
+        );
+        CREATE INDEX IF NOT EXISTS idx_tasks_status ON collab_tasks(status);
+        CREATE INDEX IF NOT EXISTS idx_tasks_assigned_agent ON collab_tasks(assigned_agent);
+      `);
+    },
+  },
+  {
+    version: 12,
+    name: 'fix_task_column_names',
+    up(database) {
+      const columns = database.prepare('PRAGMA table_info("collab_tasks")').all();
+      const hasCreatedAt = columns.some(c => c.name === 'createdAt');
+      if (hasCreatedAt) {
+        database.exec(`
+          ALTER TABLE collab_tasks RENAME COLUMN createdAt TO created_at;
+          ALTER TABLE collab_tasks RENAME COLUMN updatedAt TO updated_at;
+          ALTER TABLE collab_tasks RENAME COLUMN completedAt TO completed_at;
+        `);
+      }
+    },
+  },
 ];
 
 let db;
@@ -567,6 +609,130 @@ function deleteScroll(scrollId, userId) {
   return result.changes > 0;
 }
 
+// --- Tasks ---
+function normalizeTaskRow(row) {
+  if (!row) return null;
+  return {
+    ...row,
+    notes: parseJsonArray(row.notes_json),
+    file_paths: parseJsonArray(row.file_paths),
+    depends_on: parseJsonArray(row.depends_on),
+    result: parseJsonObject(row.result_json),
+  };
+}
+
+function createTask({ id, title, description, priority = 1, file_paths = [], depends_on = [], created_by, pipeline_run_id, notes = [] }) {
+  const stmt = db.prepare(`
+    INSERT INTO collab_tasks (id, title, description, priority, file_paths, depends_on, created_by, pipeline_run_id, notes_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(
+    id,
+    title,
+    description || null,
+    priority,
+    JSON.stringify(file_paths),
+    JSON.stringify(depends_on),
+    created_by || null,
+    pipeline_run_id || null,
+    JSON.stringify(notes)
+  );
+  return getTask(id);
+}
+
+function getTask(id) {
+  const row = db.prepare('SELECT * FROM collab_tasks WHERE id = ?').get(id);
+  return normalizeTaskRow(row);
+}
+
+function getAllTasks(filters = {}, pagination = {}) {
+  const limit = Number.isInteger(pagination.limit) ? pagination.limit : 50;
+  const offset = Number.isInteger(pagination.offset) ? pagination.offset : 0;
+
+  const clauses = [];
+  const params = [];
+
+  if (filters.status) {
+    clauses.push('status = ?');
+    params.push(filters.status);
+  }
+  if (filters.agent) {
+    clauses.push('assigned_agent = ?');
+    params.push(filters.agent);
+  }
+  if (filters.priority !== undefined) {
+    clauses.push('priority = ?');
+    params.push(filters.priority);
+  }
+
+  let query = 'SELECT * FROM collab_tasks';
+  if (clauses.length > 0) {
+    query += ` WHERE ${clauses.join(' AND ')}`;
+  }
+  query += ' ORDER BY priority DESC, created_at DESC LIMIT ? OFFSET ?';
+  params.push(limit, offset);
+
+  return db.prepare(query).all(...params).map(normalizeTaskRow).filter(Boolean);
+}
+
+function updateTask(id, updates) {
+  const fields = [];
+  const params = [];
+
+  const ALLOWED_COLUMNS = [
+    'title', 'description', 'status', 'priority', 'assigned_agent', 'pipeline_run_id'
+  ];
+
+  for (const col of ALLOWED_COLUMNS) {
+    if (updates[col] !== undefined) {
+      fields.push(`${col} = ?`);
+      params.push(updates[col]);
+    }
+  }
+
+  if (updates.notes) {
+    fields.push('notes_json = ?');
+    params.push(JSON.stringify(updates.notes));
+  }
+  if (updates.result) {
+    fields.push('result_json = ?');
+    params.push(JSON.stringify(updates.result));
+  }
+
+  if (fields.length === 0) return getTask(id);
+
+  if (updates.status === 'done') {
+    fields.push("completed_at = datetime('now')");
+  }
+
+  fields.push("updated_at = datetime('now')");
+  const query = `UPDATE collab_tasks SET ${fields.join(', ')} WHERE id = ?`;
+  params.push(id);
+
+  const result = db.prepare(query).run(...params);
+  if (result.changes === 0) return null;
+  return getTask(id);
+}
+
+function assignTaskWithLocks(taskId, agentId, _filePaths = [], _ttlMinutes = 30) {
+  const query = `
+    UPDATE collab_tasks
+    SET assigned_agent = ?, status = 'assigned', updated_at = datetime('now')
+    WHERE id = ?
+  `;
+  const result = db.prepare(query).run(agentId, taskId);
+  if (result.changes === 0) {
+    return { conflict: false, task: null };
+  }
+  return { conflict: false, task: getTask(taskId) };
+}
+
+function deleteTask(id) {
+  const stmt = db.prepare('DELETE FROM collab_tasks WHERE id = ?');
+  const result = stmt.run(id);
+  return result.changes > 0;
+}
+
 // --- Settings ---
 function getSettings(userId) {
   const stmt = db.prepare('SELECT settings_json FROM user_settings WHERE userId = ?');
@@ -796,6 +962,14 @@ export const persistence = {
     get: getProgression,
     save: saveProgression,
     reset: resetProgression,
+  },
+  tasks: {
+    create: createTask,
+    getById: getTask,
+    getAll: getAllTasks,
+    update: updateTask,
+    assignWithLocks: assignTaskWithLocks,
+    delete: deleteTask,
   },
   world: {
     getRoom: getWorldRoom,

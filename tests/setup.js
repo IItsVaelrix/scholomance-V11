@@ -67,7 +67,28 @@ vi.mock('phaser', () => {
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {
-  observe() {}
+  constructor(callback) {
+    this.callback = callback;
+  }
+  observe(target) {
+    // Trigger callback immediately with target's dimensions (fallback to 1000 for tests)
+    const width = target.clientWidth || 1000;
+    const height = target.clientHeight || 1000;
+    
+    this.callback([{
+      target,
+      contentRect: {
+        width,
+        height,
+        top: 0,
+        left: 0,
+        right: width,
+        bottom: height,
+        x: 0,
+        y: 0
+      }
+    }]);
+  }
   unobserve() {}
   disconnect() {}
 };

@@ -3,6 +3,8 @@
  */
 
 import { motion } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import AgentLoginModal from './AgentLoginModal.jsx';
 
 const STALE_AFTER_MS = 5 * 60 * 1000;
 
@@ -80,7 +82,7 @@ function buildPresenceSummary(agents) {
     });
 }
 
-function AgentSection({ title, subtitle, agents, emptyText }) {
+function AgentSection({ title, subtitle, agents, emptyText, onLoginClick, onDeleteClick }) {
     return (
         <section className="agents-section">
             <div className="agents-section__header">
@@ -119,6 +121,24 @@ function AgentSection({ title, subtitle, agents, emptyText }) {
                                     <span className="agent-card__name">{agent.name}</span>
                                     <span className="agent-card__presence">{STATUS_LABELS[agent.connectionState] || agent.connectionState}</span>
                                 </div>
+                                <div className="agent-card__actions">
+                                    <button
+                                        className="agent-card__login-btn"
+                                        onClick={(e) => onLoginClick(e, agent.id)}
+                                        aria-label={`Log in ${agent.name}`}
+                                        title="Log in this agent"
+                                    >
+                                        Log In
+                                    </button>
+                                    <button
+                                        className="agent-card__delete-btn"
+                                        onClick={(e) => onDeleteClick(e, agent.id)}
+                                        aria-label={`Delete ${agent.name}`}
+                                        title="Remove this agent"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="agent-card__meta">
@@ -152,22 +172,73 @@ function AgentSection({ title, subtitle, agents, emptyText }) {
     );
 }
 
-export default function AgentStatus({ agents, nowMs = Date.now() }) {
+export default function AgentStatus({ agents, nowMs = Date.now(), onRefresh, onError }) {
+    const [loginModalOpen, setLoginModalOpen] = useState(false);
+    const [selectedAgentId, setSelectedAgentId] = useState(null);
+    const [deleteStatus, setDeleteStatus] = useState(null); // { type: 'success' | 'error', message: string }
+
+    const handleLoginClick = useCallback((e, agentId) => {
+        e.stopPropagation();
+        setSelectedAgentId(agentId);
+        setLoginModalOpen(true);
+    }, []);
+
+    const handleDeleteClick = useCallback(async (e, agentId) => {
+        e.stopPropagation();
+        if (!confirm(`Are you sure you want to remove agent "${agentId}"? This cannot be undone.`)) {
+            return;
+        }
+        try {
+            const response = await fetch(`/collab/agents/${agentId}`, {
+                method: 'DELETE',
+            });
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `Server returned ${response.status}`);
+            }
+            setDeleteStatus({ type: 'success', message: `Agent "${agentId}" removed from the chamber.` });
+            onRefresh?.();
+            // Clear success message after 4s
+            setTimeout(() => setDeleteStatus(null), 4000);
+        } catch (err) {
+            const message = err.message || 'Failed to delete agent';
+            setDeleteStatus({ type: 'error', message });
+            onError?.(message);
+            // Clear error message after 6s
+            setTimeout(() => setDeleteStatus(null), 6000);
+        }
+    }, [onRefresh, onError]);
+
+    const handleLoginSuccess = useCallback(() => {
+        // Parent component can refresh agents list via callback
+        window.dispatchEvent(new CustomEvent('collab:agent-logged-in'));
+    }, []);
+
     if (!agents || agents.length === 0) {
         return (
-            <motion.div
-                className="agents-empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-            >
-                <h3 className="agents-empty-title">No Agents Registered</h3>
-                <p className="agents-empty-text">
-                    The ritual chamber is empty. Register agents via CLI to begin collaboration.
-                </p>
-                <code className="agents-empty-code">
-                    node scripts/collab-client.js register --name &quot;Agent&quot; --role backend --capabilities node,fastify
-                </code>
-            </motion.div>
+            <>
+                <motion.div
+                    className="agents-empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                >
+                    <h3 className="agents-empty-title">No Agents Registered</h3>
+                    <p className="agents-empty-text">
+                        The ritual chamber is empty. Register agents via CLI to begin collaboration.
+                    </p>
+                    <code className="agents-empty-code">
+                        node scripts/collab-client.js register --name &quot;Agent&quot; --role backend --capabilities node,fastify
+                    </code>
+                </motion.div>
+                <AgentLoginModal
+                    isOpen={loginModalOpen}
+                    onClose={() => {
+                        setLoginModalOpen(false);
+                        setSelectedAgentId(null);
+                    }}
+                    onSuccess={handleLoginSuccess}
+                />
+            </>
         );
     }
 
@@ -193,6 +264,21 @@ export default function AgentStatus({ agents, nowMs = Date.now() }) {
 
     return (
         <div className="agents-view">
+            {/* In-world notification surface — delete status */}
+            {deleteStatus && (
+                <motion.div
+                    className={`notification-banner notification-banner--${deleteStatus.type}`}
+                    initial={{ opacity: 0, y: -10, height: 0 }}
+                    animate={{ opacity: 1, y: 0, height: 'auto' }}
+                    exit={{ opacity: 0, y: -10, height: 0 }}
+                    role="status"
+                    aria-live="polite"
+                >
+                    <span className="notification-banner__glyph">{deleteStatus.type === 'success' ? '✓' : '✗'}</span>
+                    <span className="notification-banner__text">{deleteStatus.message}</span>
+                </motion.div>
+            )}
+
             <div className="agents-header">
                 <h3 className="agents-title">
                     Agent Presence <span className="agents-count">({summary.connected + summary.busy + summary.idle}/{summary.total} connected)</span>
@@ -210,6 +296,8 @@ export default function AgentStatus({ agents, nowMs = Date.now() }) {
                 subtitle={`${connectedAgents.length} agents responding to the chamber`}
                 agents={connectedAgents}
                 emptyText="No agents are actively responding right now."
+                onLoginClick={handleLoginClick}
+                onDeleteClick={handleDeleteClick}
             />
 
             <AgentSection
@@ -217,6 +305,17 @@ export default function AgentStatus({ agents, nowMs = Date.now() }) {
                 subtitle={`${disconnectedAgents.length} agents have gone cold`}
                 agents={disconnectedAgents}
                 emptyText="No stale or disconnected agents."
+                onLoginClick={handleLoginClick}
+                onDeleteClick={handleDeleteClick}
+            />
+
+            <AgentLoginModal
+                isOpen={loginModalOpen}
+                onClose={() => {
+                    setLoginModalOpen(false);
+                    setSelectedAgentId(null);
+                }}
+                onSuccess={handleLoginSuccess}
             />
         </div>
     );
