@@ -26,7 +26,8 @@ const EXPIRY_DAYS = parseInt(process.env.COLLAB_KEY_EXPIRY_DAYS || '0', 10);
 
 function getFlag(args, flag) {
     const idx = args.indexOf(flag);
-    if (idx === -1 || idx + 1 >= args.length) return null;
+    if (idx === -1) return null;
+    if (idx + 1 >= args.length || args[idx + 1].startsWith('--')) return true;
     return args[idx + 1];
 }
 
