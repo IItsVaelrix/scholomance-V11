@@ -17,7 +17,7 @@ const ENABLE_RHYME_ASTROLOGY = parseBooleanFlag(process.env.ENABLE_RHYME_ASTROLO
 const DATA_DIR = IS_PRODUCTION && existsSync('/var/data') ? '/var/data' : PROJECT_ROOT;
 const DICT_PATH = path.join(DATA_DIR, 'scholomance_dict.sqlite');
 const CORPUS_PATH = path.join(DATA_DIR, 'scholomance_corpus.sqlite');
-const OEWN_XML_PATH = path.join(PROJECT_ROOT, 'english-wordnet-2024.xml.gz');
+const OEWN_XML_PATH = path.join(PROJECT_ROOT, 'english-wordnet-2025.xml.gz');
 
 const RHYME_ASTROLOGY_PATHS = resolveRhymeAstrologyArtifactPaths({
   projectRoot: PROJECT_ROOT,
@@ -65,7 +65,7 @@ async function downloadOEWN() {
     return;
   }
   console.log('[RITUAL] Downloading Open English WordNet (OEWN)...');
-  const url = 'https://github.com/globalwordnet/english-wordnet/releases/download/2024/english-wordnet-2024.xml.gz';
+  const url = 'https://github.com/globalwordnet/english-wordnet/releases/download/2025-edition/english-wordnet-2025.xml.gz';
   
   try {
     await runCommand('curl', ['-fL', url, '-o', OEWN_XML_PATH]);
