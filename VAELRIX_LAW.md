@@ -3,7 +3,7 @@
 
 > Read first: `SHARED_PREAMBLE.md` → this file.
 
-**Version: 1.10** | Status: Living Document | Arbiter: Angel (IItsVaelrix, repository owner/user)
+**Version: 1.11** | Status: Living Document | Arbiter: Angel (IItsVaelrix, repository owner/user)
 
 All agents read this file before acting.
 All agents reference `SCHEMA_CONTRACT.md` for data shapes.
@@ -442,37 +442,55 @@ Agents connecting from remote machines (not the host running the server) authent
 5. On success, the agent identity is resolved and `X-Agent-ID` is set on the request
 6. On failure, a generic 401 is returned — no key details leaked
 
+**Key Management Commands:**
+
+```bash
+# Generate keys for ALL canonical agents
+node scripts/collab-admin.js generate-canonical-keys --output tmp/agent-keys.txt --expires 90 --force
+
+# Generate a specific key
+node scripts/collab-admin.js generate-agent-key --agent-id <id> --role <ui|backend|qa>
+
+# Rotate/Revoke keys
+node scripts/collab-admin.js rotate-agent-key --agent-id <id>
+node scripts/collab-admin.js revoke-agent-key --key-id <uuid>
+node scripts/collab-admin.js list-agent-keys
+```
+
 **Remote agent CLI usage:**
 
 ```bash
 # Any collab-client.js command with AGENT_KEY set
-AGENT_KEY=sk-scholomance-qwen-code-abc123... AGENT_ID=qwen-code \
+AGENT_KEY=sk-scholomance-qwen-code-... AGENT_ID=qwen-code \
   node scripts/collab-client.js heartbeat --status online
 
-# Or set in .env file
-AGENT_KEY=sk-scholomance-qwen-code-abc123...
+# Or set in .env file (Automatic Update Protocol)
+AGENT_KEY=sk-scholomance-qwen-code-...
 AGENT_ID=qwen-code
 API_BASE_URL=https://your-live-site.com
-node scripts/collab-client.js tasks
 ```
 
-**Remote pulse script:**
+#### 14.11 Automatic Secret Synchronization (Render)
 
-```bash
-AGENT_KEY=sk-scholomance-qwen-code-abc123... \
-AGENT_ID=qwen-code \
-API_BASE_URL=https://your-live-site.com \
-HEARTBEAT_INTERVAL=60 \
-node scripts/heartbeat-pulse.mjs
-```
+To maintain parity between local development and the live server, a **pre-push hook** is mandatory for all operators with Render access.
+
+**Automation Protocol:**
+1. The hook is located at `.git/hooks/pre-push`.
+2. It executes `npm run sync:render-secrets` before every `git push`.
+3. It requires `RENDER_API_KEY` and `RENDER_SERVICE_ID` in the local `.env`.
+4. If the secret sync fails, the code push is blocked to prevent environment drift.
+
+**Manual Bypass (Emergency Only):**
+`git push --no-verify`
 
 **Security constraints:**
 
-- Keys are bcrypt-hashed server-side — never stored or transmitted in plaintext after generation
-- Keys are never logged, never returned in API responses
-- Revoked or expired keys are rejected immediately
-- Rate limiting applies per agent key (same as session auth)
-- HTTPS is mandatory for remote access — keys must never travel over plaintext HTTP
+- Keys are bcrypt-hashed server-side — never stored or transmitted in plaintext after generation.
+- **NEVER** commit `tmp/agent-keys.txt` or any file containing plaintext keys.
+- Keys are never logged, never returned in API responses.
+- Revoked or expired keys are rejected immediately.
+- Rate limiting applies per agent key (same as session auth).
+- HTTPS is mandatory for remote access — keys must never travel over plaintext HTTP.
 
 **This is not a privilege escalation path.** Remote agent keys grant the same collab plane access as local session auth. They do not bypass ownership checks, lock conflicts, or audit rules.
 
@@ -1182,6 +1200,7 @@ Use the Points vs Pixels calculator to verify:
 | 1.8 | 2026-04-02 | Added "Online Reference Resources" section — mandatory bookmarks for bytecode-to-pixel conversions, typography measurements, and web API references. Added Points vs Pixels calculator for DPI/DPR calculations |
 | 1.9 | 2026-04-02 | Added Law 13: "PDR Archive Is Mandatory" — all Product Design Requirements must be stored in `docs/PDR-archive/`. Scattered PDRs prohibited |
 | 1.10 | 2026-04-02 | Added Law 14: "Collab Login and MCP Access Protocol" — explicit boot order, login path, MCP bridge configuration, role mapping, and per-agent access instructions. Corrected stale top-level version header to match the actual law revision |
+| 1.11 | 2026-04-03 | Expanded Law 14.10 with Key Management commands and added Law 14.11 "Automatic Secret Synchronization" for Render integration. |
 
 ---
 
