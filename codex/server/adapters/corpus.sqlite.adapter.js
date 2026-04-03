@@ -2,15 +2,28 @@ import Database from 'better-sqlite3';
 import { existsSync } from 'fs';
 import path from 'path';
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+function resolveDbPath(dbPath) {
+  if (typeof dbPath !== 'string' || !dbPath.trim()) return null;
+  const resolved = path.resolve(dbPath.trim());
+  
+  // In production, if the env path is an absolute path that doesn't exist,
+  // it's likely a synced local dev path. Fallback to /var/data.
+  if (IS_PRODUCTION && path.isAbsolute(resolved) && !existsSync(resolved)) {
+    const prodPath = path.join('/var/data', path.basename(resolved));
+    if (existsSync(prodPath)) return prodPath;
+  }
+  return resolved;
+}
+
 /**
  * Adapter for the Scholomance Super Corpus SQLite database.
  * Provides full-text search and context retrieval for literary sentences.
  */
 export function createCorpusAdapter(dbPath, options = {}) {
   const logger = options.log ?? console;
-  const resolvedPath = typeof dbPath === 'string' && dbPath.trim()
-    ? path.resolve(dbPath.trim())
-    : null;
+  const resolvedPath = resolveDbPath(dbPath);
 
   let db = null;
   let stmts = null;

@@ -1,29 +1,54 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync } from 'node:fs';
 import Database from 'better-sqlite3';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
 function resolveDefaultCorpusDbPath() {
-  if (typeof process.env.CORPUS_DB_PATH === 'string' && process.env.CORPUS_DB_PATH.trim()) {
-    return path.resolve(process.env.CORPUS_DB_PATH.trim());
+  const envPath = process.env.SCHOLOMANCE_CORPUS_PATH || process.env.CORPUS_DB_PATH;
+  if (typeof envPath === 'string' && envPath.trim()) {
+    const resolved = path.resolve(envPath.trim());
+    // In production, if the env path is an absolute path that doesn't exist, 
+    // it's likely a synced local dev path. Fallback to /var/data.
+    if (IS_PRODUCTION && path.isAbsolute(resolved) && !existsSync(resolved)) {
+      const prodPath = path.join('/var/data', path.basename(resolved));
+      if (existsSync(prodPath)) return prodPath;
+    }
+    return resolved;
   }
+  
+  const defaultProd = path.join('/var/data', 'scholomance_corpus.sqlite');
+  if (IS_PRODUCTION && existsSync(defaultProd)) return defaultProd;
+  
   return path.join(PROJECT_ROOT, 'scholomance_corpus.sqlite');
 }
 
 export function createCorpusService(options = {}) {
-  const dbPath = options.dbPath ? path.resolve(options.dbPath) : resolveDefaultCorpusDbPath();
+  const targetPath = options.dbPath ? path.resolve(options.dbPath) : resolveDefaultCorpusDbPath();
   const log = options.log || console;
   
   let db = null;
-  try {
-    db = new Database(dbPath, { readonly: true });
-    log.info?.(`[CorpusService] Connected to ${dbPath}`);
-  } catch (error) {
-    log.warn?.({ err: error, dbPath }, '[CorpusService] Failed to connect to corpus database');
+
+  function tryConnect() {
+    if (db && db.open) return true;
+    if (!targetPath || !existsSync(targetPath)) return false;
+
+    try {
+      db = new Database(targetPath, { readonly: true });
+      log.info?.(`[CorpusService] Connected to ${targetPath}`);
+      return true;
+    } catch (error) {
+      log.warn?.({ err: error.message, targetPath }, '[CorpusService] Failed to connect to corpus database');
+      return false;
+    }
   }
+
+  // Initial attempt
+  tryConnect();
 
   /**
    * Search for sentences in the corpus using FTS5.
@@ -31,7 +56,7 @@ export function createCorpusService(options = {}) {
    * @param {number} limit - Max results.
    */
   function searchSentences(query, limit = 10) {
-    if (!db) return [];
+    if (!tryConnect()) return [];
     try {
       const stmt = db.prepare(`
         SELECT 
@@ -49,7 +74,7 @@ export function createCorpusService(options = {}) {
       `);
       return stmt.all(query, limit);
     } catch (error) {
-      log.warn?.({ err: error, query }, '[CorpusService] Search failed');
+      log.warn?.({ err: error.message, query }, '[CorpusService] Search failed');
       return [];
     }
   }
@@ -69,6 +94,8 @@ export function createCorpusService(options = {}) {
   return {
     searchSentences,
     findLiteraryExamples,
-    close: () => db?.close(),
+    close: () => {
+      if (db && db.open) db.close();
+    },
   };
 }
