@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, unlinkSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, unlinkSync, statSync, copyFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseBooleanFlag } from '../codex/server/utils/envFlags.js';
@@ -19,12 +19,33 @@ const DICT_PATH = path.join(DATA_DIR, 'scholomance_dict.sqlite');
 const CORPUS_PATH = path.join(DATA_DIR, 'scholomance_corpus.sqlite');
 const OEWN_XML_PATH = path.join(PROJECT_ROOT, 'english-wordnet-2025.xml.gz');
 
+// Baked-in seed data paths (from Dockerfile build-time stage)
+const SEED_DICT_PATH = '/app/data/scholomance_dict.sqlite';
+const SEED_CORPUS_PATH = '/app/data/scholomance_corpus.sqlite';
+
 const RHYME_ASTROLOGY_PATHS = resolveRhymeAstrologyArtifactPaths({
   projectRoot: PROJECT_ROOT,
   isProduction: IS_PRODUCTION,
 });
 const RHYME_ASTROLOGY_READY = () => hasRhymeAstrologyArtifactBundle(RHYME_ASTROLOGY_PATHS)
   && existsSync(RHYME_ASTROLOGY_PATHS.emotionPriorsPath);
+
+/**
+ * Seed persistent disk with baked-in databases on first boot.
+ * Render's disk mount shadows the Dockerfile copies, so we copy them over.
+ */
+function seedPersistentDisk() {
+  if (!IS_PRODUCTION) return;
+
+  if (!existsSync(DICT_PATH) && existsSync(SEED_DICT_PATH)) {
+    console.log(`[RITUAL] Seeding dictionary from baked-in image: ${SEED_DICT_PATH} → ${DICT_PATH}`);
+    copyFileSync(SEED_DICT_PATH, DICT_PATH);
+  }
+  if (!existsSync(CORPUS_PATH) && existsSync(SEED_CORPUS_PATH)) {
+    console.log(`[RITUAL] Seeding corpus from baked-in image: ${SEED_CORPUS_PATH} → ${CORPUS_PATH}`);
+    copyFileSync(SEED_CORPUS_PATH, CORPUS_PATH);
+  }
+}
 
 // 1. Ensure /var/data/audio exists
 const AUDIO_DIR = path.join(DATA_DIR, 'audio');
@@ -91,6 +112,9 @@ async function main() {
 
   async function runRitual() {
     try {
+      // 0. Seed persistent disk from baked-in images (first boot only)
+      seedPersistentDisk();
+
       // 1. Dictionary Initialization
       if (!existsSync(DICT_PATH)) {
         console.log('[RITUAL] Dictionary missing. Commencing build...');
