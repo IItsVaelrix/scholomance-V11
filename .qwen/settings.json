@@ -36,7 +36,12 @@
       "Bash(/home/deck/.nvm/versions/node/v24.14.1/bin/node *)",
       "Bash(disown)",
       "Bash(git status *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Bash(which *)",
+      "Bash(lsof *)",
+      "Bash(pgrep *)"
     ]
   },
   "$version": 3
