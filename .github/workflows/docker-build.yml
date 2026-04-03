@@ -1,0 +1,52 @@
+name: Docker Build Preflight
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        push: false
+        load: true
+        progress: plain
+        tags: scholomance-test:latest
+        # No cache — matches Render's behavior exactly
+        no-cache: true
+
+    - name: Verify baked-in databases exist
+      run: |
+        docker run --rm scholomance-test:latest bash -c '
+          echo "Checking dictionary..."
+          if [ -f /app/data/scholomance_dict.sqlite ]; then
+            echo "✅ Dictionary exists ($(du -h /app/data/scholomance_dict.sqlite | cut -f1))"
+          else
+            echo "❌ Dictionary missing"
+            exit 1
+          fi
+          echo "Checking corpus..."
+          if [ -f /app/data/scholomance_corpus.sqlite ]; then
+            echo "✅ Corpus exists ($(du -h /app/data/scholomance_corpus.sqlite | cut -f1))"
+          else
+            echo "❌ Corpus missing"
+            exit 1
+          fi
+          echo "✅ All data artifacts verified"
+        '
