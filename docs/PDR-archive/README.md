@@ -10,6 +10,7 @@ All Product Design Requirements (PDRs) for Scholomance are archived here. Each P
 
 | PDR | Classification | Status | Priority |
 |-----|---------------|--------|----------|
+| [`prototype_systems_wiring_pdr.md`](./prototype_systems_wiring_pdr.md) | Architectural + Core Pipeline + Scoring | Draft | Critical |
 | [`mcp_bridge_enhancements_pdr.md`](./mcp_bridge_enhancements_pdr.md) | Collaboration + MCP + Orchestration | Draft | High |
 | [`collab_control_plane_mcp_convergence_pdr.md`](./collab_control_plane_mcp_convergence_pdr.md) | Collaboration + MCP + Orchestration | Draft | High |
 | [`collab_ui_polish_v2_pdr.md`](./collab_ui_polish_v2_pdr.md) | Collaboration + UI + Operational Trust | Draft | High |
@@ -87,4 +88,4 @@ Use the standard PDR template structure:
 
 ---
 
-*Last Updated: 2026-04-03 — Added collab_ui_polish_v2_pdr.md*
+*Last Updated: 2026-04-03 — Added prototype_systems_wiring_pdr.md*
