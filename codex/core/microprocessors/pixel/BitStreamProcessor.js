@@ -3,10 +3,21 @@
  *
  * Specialized image decoder for PNG, JPEG, and BMP formats.
  * Converts raw buffers into standardized Uint8ClampedArray substrates.
+ *
+ * All errors emitted as PB-ERR-v1 bytecode for AI-parsable diagnostics.
  */
 
 // Node.js zlib for PNG DEFLATE decompression
 import zlib from 'zlib';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.IMG_PIXEL;
 
 /**
  * Decode image buffer to pixel data
@@ -16,15 +27,27 @@ import zlib from 'zlib';
 export async function decodeBitStream({ buffer, mimetype }) {
   // Comprehensive buffer validation
   if (!buffer) {
-    throw new Error('EMPTY_BUFFER: No buffer provided to decodeBitStream');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.TYPE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.NULL_INPUT,
+      { parameter: 'buffer', operation: 'decodeBitStream' },
+    );
   }
-  
+
   if (!Buffer.isBuffer(buffer) && !(buffer instanceof Uint8Array)) {
-    throw new Error(`INVALID_BUFFER_TYPE: Expected Buffer or Uint8Array, got ${typeof buffer}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.TYPE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.TYPE_MISMATCH,
+      { parameter: 'buffer', expectedType: 'Buffer|Uint8Array', actualType: typeof buffer },
+    );
   }
-  
+
   if (buffer.length === 0) {
-    throw new Error('EMPTY_BUFFER: Buffer has zero length');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_VALUE,
+      { parameter: 'buffer', reason: 'zero-length buffer' },
+    );
   }
 
   // BMP is simple enough to decode directly
@@ -38,7 +61,11 @@ export async function decodeBitStream({ buffer, mimetype }) {
   }
 
   // For others (JPEG), we'll need a lightweight helper or fallback
-  throw new Error(`UNSUPPORTED_FORMAT: ${mimetype}`);
+  throw new BytecodeError(
+    ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.WARN, MOD,
+    ERROR_CODES.INVALID_ENUM,
+    { parameter: 'mimetype', value: mimetype, supported: ['image/png', 'image/bmp'] },
+  );
 }
 
 /**
@@ -46,27 +73,39 @@ export async function decodeBitStream({ buffer, mimetype }) {
  */
 function decodeBMP(buffer) {
   if (buffer.length < 54) {
-    throw new Error('CORRUPT_BMP_HEADER: Buffer too short');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_FORMAT,
+      { reason: 'buffer too short for BMP header', bufferLength: buffer.length, minimum: 54 },
+    );
   }
 
   const width = buffer.readInt32LE(18);
   const height = buffer.readInt32LE(22);
   const bitsPerPixel = buffer.readUInt16LE(28);
   const pixelDataOffset = buffer.readUInt32LE(10);
-  
+
   // Safety: Prevent dimension bombs
   if (width <= 0 || width > 4096 || Math.abs(height) <= 0 || Math.abs(height) > 4096) {
-    throw new Error(`INVALID_DIMENSIONS: ${width}x${height} exceeds safety limits`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.EXCEEDS_MAX,
+      { width, height, maxAllowed: 4096 },
+    );
   }
 
   const absHeight = Math.abs(height);
-  
+
   // Safety: Verify buffer length against claimed dimensions
   const rowSize = Math.floor((bitsPerPixel * width + 31) / 32) * 4;
   const expectedSize = pixelDataOffset + (rowSize * absHeight);
-  
+
   if (buffer.length < expectedSize) {
-    throw new Error(`CORRUPT_BMP_DATA: Buffer length ${buffer.length} < expected ${expectedSize}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_FORMAT,
+      { reason: 'buffer shorter than expected for dimensions', actualLength: buffer.length, expectedSize },
+    );
   }
 
   const data = new Uint8ClampedArray(width * absHeight * 4);
@@ -98,7 +137,11 @@ async function decodePNG(buffer) {
   const signature = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
   for (let i = 0; i < 8; i++) {
     if (buffer[i] !== signature[i]) {
-      throw new Error('INVALID_PNG_SIGNATURE');
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.INVALID_FORMAT,
+        { reason: 'invalid PNG signature', offset: i, expected: signature[i], actual: buffer[i] },
+      );
     }
   }
   console.log('[PNG Decoder] Signature valid');
@@ -106,7 +149,11 @@ async function decodePNG(buffer) {
   // Parse IHDR chunk
   const ihdrLength = buffer.readUInt32BE(8);
   if (ihdrLength !== 13) {
-    throw new Error('INVALID_IHDR_CHUNK_LENGTH');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_FORMAT,
+      { reason: 'invalid IHDR chunk length', expected: 13, actual: ihdrLength },
+    );
   }
   
   const width = buffer.readUInt32BE(16);
@@ -121,7 +168,11 @@ async function decodePNG(buffer) {
 
   // Safety checks
   if (width <= 0 || width > 4096 || height <= 0 || height > 4096) {
-    throw new Error(`INVALID_DIMENSIONS: ${width}x${height} exceeds safety limits`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.EXCEEDS_MAX,
+      { width, height, maxAllowed: 4096 },
+    );
   }
 
   // Calculate bytes per pixel based on color type and bit depth
@@ -151,7 +202,11 @@ async function decodePNG(buffer) {
   }
 
   if (idatChunks.length === 0) {
-    throw new Error('NO_IDAT_CHUNKS_FOUND');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_FORMAT,
+      { reason: 'no IDAT chunks found in PNG file' },
+    );
   }
 
   console.log('[PNG Decoder] Collected', idatChunks.length, 'IDAT chunks, decompressing...');
@@ -165,7 +220,11 @@ async function decodePNG(buffer) {
     console.log('[PNG Decoder] Decompressed to', decompressedData.length, 'bytes');
   } catch (err) {
     console.error('[PNG Decoder] Decompression failed:', err);
-    throw new Error(`PNG_DEFLATE_DECOMPRESSION_FAILED: ${err.message}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_STATE,
+      { reason: 'PNG DEFLATE decompression failed', originalError: err.message },
+    );
   }
 
   // Create output buffer
@@ -247,7 +306,11 @@ function getChannelsForColorType(colorType) {
     case 3: return 1; // Indexed (palette)
     case 4: return 2; // Grayscale + Alpha
     case 6: return 4; // RGBA
-    default: throw new Error(`UNSUPPORTED_PNG_COLOR_TYPE: ${colorType}`);
+    default: throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_ENUM,
+      { parameter: 'colorType', value: colorType, supported: [0, 2, 3, 4, 6] },
+    );
   }
 }
 
@@ -288,7 +351,11 @@ function reconstructScanline(scanlineData, filterType, row, width, channels, bit
         result[i] = (raw + paethPredictor(left, prior, priorLeft)) & 0xFF;
         break;
       default:
-        throw new Error(`INVALID_PNG_FILTER_TYPE: ${filterType}`);
+        throw new BytecodeError(
+          ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+          ERROR_CODES.INVALID_ENUM,
+          { parameter: 'filterType', value: filterType, supported: [0, 1, 2, 3, 4] },
+        );
     }
   }
 

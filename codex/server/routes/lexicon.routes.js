@@ -1,5 +1,14 @@
 import { z } from 'zod';
 import { requireLexiconSession } from '../auth-pre-handler.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
@@ -57,7 +66,11 @@ function mapSearchResults(entries, extractGloss) {
 export async function lexiconRoutes(fastify, opts = {}) {
   const adapter = opts.adapter;
   if (!adapter) {
-    throw new Error('lexiconRoutes requires opts.adapter');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_STATE,
+      { reason: 'lexiconRoutes requires opts.adapter', parameter: 'adapter' },
+    );
   }
 
   fastify.get('/lookup/:word', {

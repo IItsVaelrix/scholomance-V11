@@ -5,7 +5,15 @@
  * and transforms them into VerseIR-compatible coordinate hints.
  */
 
-import { clamp01 } from '../../pixelbrain/shared.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.IMG_PIXEL;
 
 /**
  * Trace visual lattice from substrate
@@ -18,7 +26,11 @@ export function traceLattice({ pixelData, dimensions, threshold = 30 }) {
   
   // Safety: Validate dimensions
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
-    throw new Error(`INVALID_TRACER_DIMENSIONS: ${width}x${height}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.BELOW_MIN,
+      { width, height, minimum: 1, reason: 'lattice tracing requires finite positive dimensions' },
+    );
   }
 
   const coordinates = [];

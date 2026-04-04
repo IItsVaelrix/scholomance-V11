@@ -1,7 +1,18 @@
 /**
  * Shared SQLite lifecycle helpers (pragmas + migration runner).
+ *
+ * All errors use PB-ERR-v1 bytecode for AI-parsable diagnostics.
  */
 
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 const DEFAULT_BUSY_TIMEOUT_MS = 5000;
 
 function normalizePositiveInteger(value, fallback) {
@@ -56,7 +67,11 @@ function ensureMigrationTable(db) {
 export function runSqliteMigrations(db, options) {
   const namespace = String(options?.namespace || '').trim();
   if (!namespace) {
-    throw new Error('runSqliteMigrations requires a non-empty namespace');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.MISSING_REQUIRED,
+      { parameter: 'namespace', reason: 'runSqliteMigrations requires a non-empty namespace' },
+    );
   }
 
   const migrationList = Array.isArray(options?.migrations) ? options.migrations : [];
@@ -65,13 +80,25 @@ export function runSqliteMigrations(db, options) {
   const sorted = [...migrationList].sort((left, right) => left.version - right.version);
   for (const migration of sorted) {
     if (!Number.isInteger(migration.version) || migration.version <= 0) {
-      throw new Error(`Migration version must be a positive integer for namespace "${namespace}"`);
+      throw new BytecodeError(
+        ERROR_CATEGORIES.TYPE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.TYPE_MISMATCH,
+        { parameter: 'version', expectedType: 'positive integer', actualValue: migration.version, namespace },
+      );
     }
     if (typeof migration.name !== 'string' || migration.name.trim().length === 0) {
-      throw new Error(`Migration name must be a non-empty string for version ${migration.version}`);
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.MISSING_REQUIRED,
+        { parameter: 'name', version: migration.version },
+      );
     }
     if (typeof migration.up !== 'function') {
-      throw new Error(`Migration ${migration.version} is missing an "up" function`);
+      throw new BytecodeError(
+        ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.INVALID_STATE,
+        { parameter: 'up', version: migration.version, reason: 'missing up function' },
+      );
     }
   }
 
@@ -101,4 +128,3 @@ export function runSqliteMigrations(db, options) {
     appliedVersions,
   };
 }
-

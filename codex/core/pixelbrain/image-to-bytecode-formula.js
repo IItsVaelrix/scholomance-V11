@@ -7,6 +7,13 @@
  */
 
 import { clamp01, GOLDEN_RATIO, roundTo } from './shared.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from './bytecode-error.js';
 
 /**
  * Formula types supported by the system
@@ -607,7 +614,11 @@ function hashFormula(coordinateFormula, colorFormula) {
  */
 export function parseBytecodeToFormula(bytecode) {
   if (!bytecode || !bytecode.startsWith('0xF')) {
-    throw new Error('INVALID_BYTECODE_SIGNATURE');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.FORMULA, ERROR_SEVERITY.CRIT, MODULE_IDS.IMG_FORMULA,
+      ERROR_CODES.FORMULA_PARSE_FAIL,
+      { reason: 'invalid bytecode signature', expectedPrefix: '0xF', actual: bytecode ? bytecode.substring(0, 3) : 'empty' },
+    );
   }
 
   try {
@@ -671,7 +682,11 @@ export function parseBytecodeToFormula(bytecode) {
       }
     };
   } catch (e) {
-    throw new Error(`BYTECODE_PARSING_ERROR: ${e.message}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.FORMULA, ERROR_SEVERITY.CRIT, MODULE_IDS.IMG_FORMULA,
+      ERROR_CODES.FORMULA_EVAL_FAIL,
+      { reason: 'bytecode parsing failed', originalError: e.message },
+    );
   }
 }
 

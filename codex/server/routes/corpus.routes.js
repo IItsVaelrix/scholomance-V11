@@ -1,11 +1,27 @@
 /**
  * Corpus Routes
  * Exposes the Scholomance Super Corpus for literary analysis and rituals.
+ *
+ * All errors use PB-ERR-v1 bytecode for AI-parsable diagnostics.
  */
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
+
 export async function corpusRoutes(fastify, options) {
   const { adapter } = options;
   if (!adapter) {
-    throw new Error('[CorpusRoutes] Adapter is required');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_STATE,
+      { reason: 'CorpusRoutes adapter is required', parameter: 'adapter' },
+    );
   }
 
   // GET /api/corpus/search?q=query&limit=20

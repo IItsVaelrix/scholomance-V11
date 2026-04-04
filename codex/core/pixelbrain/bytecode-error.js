@@ -417,7 +417,21 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.constraints.push('Canvas dimensions must be > 0');
       hints.invariants.push('canvas.width > 0 && canvas.height > 0');
       break;
-      
+
+    case ERROR_CATEGORIES.CANVAS:
+      hints.suggestions.push('Verify canvas element exists in DOM');
+      hints.suggestions.push('Ensure canvas has non-zero dimensions');
+      hints.constraints.push('Canvas element must be mounted and visible');
+      hints.invariants.push('canvas !== null && canvas.width > 0 && canvas.height > 0');
+      break;
+
+    case ERROR_CATEGORIES.FORMULA:
+      hints.suggestions.push('Validate formula syntax before evaluation');
+      hints.suggestions.push('Check parameter ranges and types');
+      hints.constraints.push('Formula must be parseable and evaluable');
+      hints.invariants.push('typeof formula === "string" && formula.length > 0');
+      break;
+
     case ERROR_CATEGORIES.LINGUISTIC:
       hints.suggestions.push('Validate phoneme density and vessel capacity');
       hints.suggestions.push('Check rhyme-law alignment');

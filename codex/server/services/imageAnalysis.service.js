@@ -1,4 +1,13 @@
 import { processorBridge } from '../../../src/lib/processor-bridge.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.IMG_PIXEL;
 
 /**
  * IMAGE ANALYSIS SERVICE
@@ -31,7 +40,11 @@ export async function analyzeReferenceImage(buffer, mimetype) {
 
     // Validate decode result
     if (!pixelData || !dimensions) {
-      throw new Error('DECODE_FAILED: pixel.decode returned invalid result');
+      throw new BytecodeError(
+        ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.INVALID_STATE,
+        { reason: 'pixel.decode returned invalid result', operation: 'decodeBitStream' },
+      );
     }
 
     // 2. Normalization: Resample to working substrate if too large
