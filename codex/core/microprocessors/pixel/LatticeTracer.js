@@ -12,6 +12,7 @@ import {
   MODULE_IDS,
   ERROR_CODES,
 } from '../../pixelbrain/bytecode-error.js';
+import { clamp01 } from '../../pixelbrain/shared.js';
 
 const MOD = MODULE_IDS.IMG_PIXEL;
 

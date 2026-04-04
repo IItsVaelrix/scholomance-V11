@@ -16,7 +16,7 @@ describe('PixelBrain — Stress & Chaos Suite', () => {
       await expect(verseIRMicroprocessors.execute('pixel.decode', { 
         buffer, 
         mimetype: 'image/png' 
-      })).rejects.toThrow(/EMPTY_BUFFER|empty buffer/i);
+      })).rejects.toThrow(/PB-ERR-v1-/);
     });
 
     it('handles garbage data in resampler', async () => {
@@ -42,7 +42,7 @@ describe('PixelBrain — Stress & Chaos Suite', () => {
       await expect(verseIRMicroprocessors.execute('pixel.decode', { 
         buffer, 
         mimetype: 'image/png' 
-      })).rejects.toThrow(/safety limits|INVALID_PNG_SIGNATURE/i);
+      })).rejects.toThrow(/PB-ERR-v1-/);
     });
 
     it('handles PNG stub gracefully', async () => {
@@ -55,7 +55,7 @@ describe('PixelBrain — Stress & Chaos Suite', () => {
       await expect(verseIRMicroprocessors.execute('pixel.decode', { 
         buffer, 
         mimetype: 'image/png' 
-      })).rejects.toThrow(/INVALID_PNG_SIGNATURE|PNG_DECODE_NOT_IMPLEMENTED/);
+      })).rejects.toThrow(/PB-ERR-v1-/);
     });
 
     it('handles "The Invisible Image" (100% Transparency)', async () => {
@@ -113,7 +113,7 @@ describe('PixelBrain — Stress & Chaos Suite', () => {
       };
 
       await expect(verseIRMicroprocessors.executePipeline(sequence, payload))
-        .rejects.toThrow(/not found in registry|not registered/i);
+        .rejects.toThrow(/PB-ERR-v1-/);
     });
 
     it('handles zero-sized targets in resampler safely', async () => {

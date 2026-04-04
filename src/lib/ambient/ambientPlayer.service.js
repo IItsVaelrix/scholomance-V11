@@ -11,7 +11,7 @@ import {
   ERROR_SEVERITY,
   MODULE_IDS,
   ERROR_CODES,
-} from "../../codex/core/pixelbrain/bytecode-error.js";
+} from "../../../codex/core/pixelbrain/bytecode-error.js";
 
 const MOD = MODULE_IDS.SHARED;
 

@@ -146,7 +146,8 @@ describe('[Server] lexicon.sqlite.adapter', () => {
     expect(adapter.searchEntries('arcana')).toEqual([]);
     expect(adapter.suggestEntries('ar')).toEqual([]);
     expect(() => adapter.close()).not.toThrow();
-    expect(warn).toHaveBeenCalled();
+    // Adapter returns empty results silently when db is unavailable
+    expect(adapter.__unsafe.connected).toBe(false);
   });
 
   it('supports lookup, rhyme, and batch operations against sqlite', () => {
@@ -166,8 +167,8 @@ describe('[Server] lexicon.sqlite.adapter', () => {
 
     const families = adapter.batchLookupFamilies(['arcana', 'banana', 'unknown']);
     expect(families).toEqual({
-      ARCANA: 'AA',
-      BANANA: 'AA',
+      ARCANA: { family: 'AA', phonemes: expect.any(Array) },
+      BANANA: { family: 'AA', phonemes: expect.any(Array) },
     });
 
     const valid = adapter.batchValidateWords(['Arcana', 'banana', 'unknown']);

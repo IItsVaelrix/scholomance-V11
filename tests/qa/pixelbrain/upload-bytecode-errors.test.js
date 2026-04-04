@@ -13,7 +13,27 @@ import { resampleSubstrate } from '../../../codex/core/microprocessors/pixel/Sub
 import { generatePixelArtFromImage } from '../../../codex/core/pixelbrain/image-to-pixel-art.js';
 import { parseBytecodeToFormula } from '../../../codex/core/pixelbrain/image-to-bytecode-formula.js';
 import { evaluateFormulaWithColor } from '../../../codex/core/pixelbrain/formula-to-coordinates.js';
-import { parseErrorForAI } from '../../../src/lib/pixelbrain.adapter.js';
+import { parseErrorForAI, decodeBytecodeError } from '../../../src/lib/pixelbrain.adapter.js';
+
+/**
+ * Helper: verify error is valid bytecode and decode it.
+ * Returns the decoded bytecode payload for assertions.
+ */
+function assertBytecodeError(fn, expectedCategory, expectedCodeName) {
+  return expect(fn()).rejects.toThrow((err) => {
+    const msg = err.message || '';
+    // Must start with PB-ERR-v1
+    expect(msg).toMatch(/^PB-ERR-v1-/);
+    // Decode and verify category
+    const decoded = decodeBytecodeError(msg);
+    expect(decoded).not.toBeNull();
+    expect(decoded.category).toBe(expectedCategory);
+    // If code name specified, verify it's in the error
+    if (expectedCodeName) {
+      expect(decoded.context?.reason || msg).toMatch(expectedCodeName);
+    }
+  });
+}
 
 // Test context helper
 const _createTestContext = (testName, testSuite = 'PixelBrain Upload') => ({
@@ -29,18 +49,17 @@ describe('PixelBrain Upload Bytecode Errors', () => {
     it('rejects empty buffer', async () => {
       const emptyBuffer = Buffer.alloc(0);
       await expect(decodeBitStream({ buffer: emptyBuffer, mimetype: 'image/png' }))
-        .rejects.toThrow(/EMPTY_BUFFER|empty buffer/i);
+        .rejects.toThrow(/PB-ERR-v1-VALUE/);
     });
 
     it('rejects invalid PNG signature', async () => {
       const invalidBuffer = Buffer.from([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]);
       await expect(decodeBitStream({ buffer: invalidBuffer, mimetype: 'image/png' }))
-        .rejects.toThrow('INVALID_PNG_SIGNATURE');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0102/);
     });
 
     it('rejects PNG with invalid IHDR chunk length', async () => {
       const buffer = Buffer.alloc(20);
-      // PNG signature
       buffer.writeUInt8(0x89, 0);
       buffer.writeUInt8(0x50, 1);
       buffer.writeUInt8(0x4E, 2);
@@ -49,16 +68,14 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt8(0x0A, 5);
       buffer.writeUInt8(0x1A, 6);
       buffer.writeUInt8(0x0A, 7);
-      // Wrong IHDR length (should be 13)
       buffer.writeUInt32BE(10, 8);
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/png' }))
-        .rejects.toThrow('INVALID_IHDR_CHUNK_LENGTH');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0102/);
     });
 
     it('rejects PNG with dimensions exceeding safety limits', async () => {
       const buffer = Buffer.alloc(33);
-      // PNG signature
       buffer.writeUInt8(0x89, 0);
       buffer.writeUInt8(0x50, 1);
       buffer.writeUInt8(0x4E, 2);
@@ -67,13 +84,9 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt8(0x0A, 5);
       buffer.writeUInt8(0x1A, 6);
       buffer.writeUInt8(0x0A, 7);
-      // IHDR length
       buffer.writeUInt32BE(13, 8);
-      // Width = 5000 (exceeds 4096 limit)
       buffer.writeUInt32BE(5000, 16);
-      // Height = 5000
       buffer.writeUInt32BE(5000, 20);
-      // Bit depth, color type, etc.
       buffer.writeUInt8(8, 24);
       buffer.writeUInt8(2, 25);
       buffer.writeUInt8(0, 26);
@@ -81,12 +94,11 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt8(0, 28);
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/png' }))
-        .rejects.toThrow('exceeds safety limits');
+        .rejects.toThrow(/PB-ERR-v1-RANGE-CRIT-IMGPIX-0202/);
     });
 
     it('rejects PNG with no IDAT chunks', async () => {
       const buffer = Buffer.alloc(50);
-      // PNG signature
       buffer.writeUInt8(0x89, 0);
       buffer.writeUInt8(0x50, 1);
       buffer.writeUInt8(0x4E, 2);
@@ -95,9 +107,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt8(0x0A, 5);
       buffer.writeUInt8(0x1A, 6);
       buffer.writeUInt8(0x0A, 7);
-      // IHDR length
       buffer.writeUInt32BE(13, 8);
-      // Valid dimensions
       buffer.writeUInt32BE(100, 16);
       buffer.writeUInt32BE(100, 20);
       buffer.writeUInt8(8, 24);
@@ -105,12 +115,11 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt8(0, 26);
       buffer.writeUInt8(0, 27);
       buffer.writeUInt8(0, 28);
-      // IEND chunk immediately (no IDAT)
       buffer.writeUInt32BE(0, 41);
       buffer.write('IEND', 45, 'ascii');
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/png' }))
-        .rejects.toThrow('NO_IDAT_CHUNKS_FOUND');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0102/);
     });
 
     it('rejects unsupported color types', async () => {
@@ -122,13 +131,13 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt32BE(10, 16);
       buffer.writeUInt32BE(10, 20);
       buffer.writeUInt8(8, 24);
-      buffer.writeUInt8(5, 25); // Invalid color type
+      buffer.writeUInt8(5, 25);
       buffer.writeUInt8(0, 26);
       buffer.writeUInt8(0, 27);
       buffer.writeUInt8(0, 28);
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/png' }))
-        .rejects.toThrow('UNSUPPORTED_PNG_COLOR_TYPE');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0101/);
     });
   });
 
@@ -141,7 +150,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       shortBuffer.writeUInt8(0x4D, 1);
 
       await expect(decodeBitStream({ buffer: shortBuffer, mimetype: 'image/bmp' }))
-        .rejects.toThrow('CORRUPT_BMP_HEADER');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0102/);
     });
 
     it('rejects BMP with invalid dimensions', async () => {
@@ -154,7 +163,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt16LE(24, 28);
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/bmp' }))
-        .rejects.toThrow('INVALID_DIMENSIONS');
+        .rejects.toThrow(/PB-ERR-v1-RANGE-CRIT-IMGPIX-0202/);
     });
 
     it('rejects BMP with insufficient buffer length', async () => {
@@ -167,7 +176,7 @@ describe('PixelBrain Upload Bytecode Errors', () => {
       buffer.writeUInt16LE(24, 28);
 
       await expect(decodeBitStream({ buffer, mimetype: 'image/bmp' }))
-        .rejects.toThrow('CORRUPT_BMP_DATA');
+        .rejects.toThrow(/PB-ERR-v1-VALUE-CRIT-IMGPIX-0102/);
     });
   });
 
