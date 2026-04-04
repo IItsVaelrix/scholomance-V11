@@ -5,6 +5,15 @@ import {
   getRandomizedStationTrackUrl,
   getSchoolAudioConfig,
 } from "./schoolAudio.config";
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from "../../codex/core/pixelbrain/bytecode-error.js";
+
+const MOD = MODULE_IDS.SHARED;
 
 const SETTINGS_STORAGE_KEY = "scholomance.ambient.settings.v1";
 
@@ -324,7 +333,11 @@ async function createTrackController({
 }) {
   const embed = getTrackEmbedConfig(trackUrl, { autoPlay });
   if (!embed?.src && !embed?.audioUrl) {
-    throw new Error("Unsupported track URL");
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.WARN, MOD,
+      ERROR_CODES.INVALID_VALUE,
+      { parameter: 'trackUrl', reason: 'Unsupported track URL' },
+    );
   }
 
   if ((embed.provider === "suno" || embed.provider === "direct") && embed.audioUrl) {
@@ -614,7 +627,11 @@ async function createTrackController({
             return;
           }
           console.warn("Audio playback failed (user gesture?):", err);
-          throw new Error("Audio playback blocked. Please interact with the page.");
+          throw new BytecodeError(
+            ERROR_CATEGORIES.UI_STASIS, ERROR_SEVERITY.WARN, MOD,
+            ERROR_CODES.INVALID_STATE,
+            { reason: 'Audio playback blocked. Please interact with the page.' },
+          );
         }
       },
       seek: (offset) => {
@@ -1373,7 +1390,11 @@ function createAmbientPlayerService(options = {}) {
   async function loadSchoolTrack(schoolId, trackUrl, id = activeTuneOperationId) {
     if (!controllerFactory) {
       if (!container || !container.isConnected) {
-        throw new Error("Ambient container is not mounted");
+        throw new BytecodeError(
+          ERROR_CATEGORIES.STATE, ERROR_SEVERITY.WARN, MOD,
+          ERROR_CODES.INVALID_STATE,
+          { reason: 'Ambient container is not mounted' },
+        );
       }
     }
 

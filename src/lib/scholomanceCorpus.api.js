@@ -1,9 +1,20 @@
 /**
  * Scholomance Super Corpus API Client
  * Interfaces with the massive literary database on the backend.
+ *
+ * All errors use PB-ERR-v1 bytecode for AI-parsable diagnostics.
  */
 
 import { z } from "zod";
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from "../../codex/core/pixelbrain/bytecode-error.js";
+
+const MOD = MODULE_IDS.SHARED;
 
 function readEnvVar(name) {
   const viteEnv = (typeof import.meta !== "undefined" && import.meta.env)
@@ -55,7 +66,11 @@ async function fetchJson(url, options = {}) {
   const timeout = setTimeout(() => controller.abort(), 5000);
   try {
     const res = await fetch(url, { ...options, signal: controller.signal });
-    if (!res.ok) throw new Error(`Corpus API error: ${res.status}`);
+    if (!res.ok) throw new BytecodeError(
+      ERROR_CATEGORIES.EXT, ERROR_SEVERITY.WARN, MOD,
+      ERROR_CODES.EXT_NOT_FOUND,
+      { reason: 'Corpus API error', httpStatus: res.status, url },
+    );
     return await res.json();
   } finally { clearTimeout(timeout); }
 }
