@@ -240,7 +240,7 @@ Before any agent attempts to coordinate through the collab plane:
 2. Start the MCP bridge if MCP access is needed:
    `npm run mcp:collab`
 3. If using HTTP / CLI, log in first:
-   `node scripts/connect-collab.js connect --agent-id <id> --name "<name>" --role <role>`
+   `node scripts/connect-collab.js connect --agent-id <id> --name "<name>" --role <ui|backend|qa>`
 4. If using MCP, connect the client to the stdio bridge and then register through MCP:
    call `collab_agent_register`
 5. After registration on either surface, keep presence alive with heartbeat:
@@ -435,7 +435,7 @@ Agents connecting from remote machines (not the host running the server) authent
 
 **How it works:**
 
-1. Angel generates an agent key: `node scripts/collab-admin.js generate-agent-key --agent-id <id> --role <role>`
+1. Angel generates an agent key: `node scripts/collab-admin.js generate-agent-key --agent-id <id> --role <ui|backend|qa>`
 2. The plaintext key (`sk-scholomance-<id>-<hex>`) is shared out-of-band with the agent
 3. The agent includes the key in every request: `Authorization: Bearer sk-scholomance-...`
 4. The server validates the key against bcrypt-hashed entries in `collab_agent_keys`
@@ -493,6 +493,79 @@ To maintain parity between local development and the live server, a **pre-push h
 - HTTPS is mandatory for remote access — keys must never travel over plaintext HTTP.
 
 **This is not a privilege escalation path.** Remote agent keys grant the same collab plane access as local session auth. They do not bypass ownership checks, lock conflicts, or audit rules.
+
+#### 14.12 Render CLI — Production Service Management
+
+The Render CLI (`render`) is installed at `~/.local/bin/render` (v0.1.11). It is the **only** tool authorized to interact with the live production service.
+
+**Installation (already done):**
+
+```bash
+curl -sL https://github.com/render-oss/render-cli-deprecated/releases/download/v0.1.11/render-linux-x86_64 \
+  -o ~/.local/bin/render && chmod +x ~/.local/bin/render
+```
+
+**Authentication:**
+
+The CLI reads credentials from `~/.render/config.json`. Agents must **never** run `render login` manually — the config is managed by Angel. If authentication fails:
+
+```
+ESCALATION: RENDER_AUTH_EXPIRED
+- Service: scholomance-app
+- Action Required: Angel must re-authenticate CLI
+- Impact: Cannot deploy, inspect env vars, or view logs
+```
+
+**Approved Operations:**
+
+| Command | Purpose | Safe for Agents? |
+|---------|---------|-----------------|
+| `render services list` | List all services | ✅ Yes — read-only |
+| `render services describe scholomance-app` | Get service details | ✅ Yes — read-only |
+| `render deploys list --serviceId <id>` | List recent deploys | ✅ Yes — read-only |
+| `render deploys describe --deployId <id>` | Get deploy details | ✅ Yes — read-only |
+| `render env-vars list --serviceId <id>` | List env vars (values hidden) | ✅ Yes — read-only |
+| `render logs follow --serviceId <id>` | Tail production logs | ✅ Yes — debugging only |
+| `render env-vars set --serviceId <id> --var KEY=VAL` | Update env var | ⚠️ **Flag to Angel first** |
+| `render services cancel-deploy --serviceId <id>` | Rollback deploy | ⚠️ **Flag to Angel first** |
+
+**Forbidden Operations:**
+
+| Command | Reason |
+|---------|--------|
+| `render config init` | Config is pre-configured — re-init breaks auth |
+| `render services delete` | Destructive — Angel only |
+| `render services create` | Infra provisioning — Angel only |
+| `render custom-domains *` | DNS management — Angel only |
+
+**Canonical service ID:**
+
+```bash
+# From .env
+RENDER_SERVICE_ID=srv-d66g6rh4tr6s73al8qg0
+
+# Verify
+render services list
+```
+
+**Debugging production issues:**
+
+```bash
+# Tail live logs
+render logs follow --serviceId "$RENDER_SERVICE_ID" --region oregon
+
+# Inspect environment variables (values are redacted)
+render env-vars list --serviceId "$RENDER_SERVICE_ID"
+
+# Check recent deploys
+render deploys list --serviceId "$RENDER_SERVICE_ID" --limit 5
+```
+
+**When to use Render CLI over dashboard:**
+
+- Agents cannot access the Render web dashboard — the CLI is the only production interface.
+- Use `render logs follow` for real-time debugging instead of guessing from local behavior.
+- Use `render env-vars list` to verify secret sync parity (compare with `npm run sync:render-secrets` output).
 
 ---
 
