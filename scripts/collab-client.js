@@ -61,12 +61,13 @@ async function apiFetch(baseUrl, path, agentId, options = {}) {
         ...(agentId ? { 'X-Agent-ID': agentId } : {}),
         ...options.headers,
     };
-    // Attach agent key if available (passwordless remote auth)
+    // Attach agent key if available AND matches the calling agent (passwordless remote auth)
     const agentKey = process.env.AGENT_KEY;
-    if (agentKey) {
+    const expectedAgentId = process.env.AGENT_ID;
+    if (agentKey && expectedAgentId && agentKey.includes(expectedAgentId)) {
         headers['Authorization'] = `Bearer ${agentKey}`;
     }
-    // Attach session cookie if available
+    // Attach session cookie if available (local dev auth)
     if (_sessionCookie) {
         headers['Cookie'] = _sessionCookie;
     }
