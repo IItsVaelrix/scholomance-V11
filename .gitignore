@@ -108,3 +108,7 @@ english-wordnet-2025.xml
 *test-output.txt
 .blackboxcli/
 .claude/worktrees/
+
+# PB-SANI output artifacts (generated, not committed)
+scripts/pb-sani/output/
+
