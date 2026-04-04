@@ -8,6 +8,15 @@
 
 import { DictionaryAdapter } from './dictionary.adapter.js';
 import { createEmptyLexicalEntry } from '../../core/schemas.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 const FREE_DICT_BASE_URL = 'https://api.dictionaryapi.dev/api/v2/entries/en';
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -69,7 +78,11 @@ export class FreeDictionaryAdapter extends DictionaryAdapter {
 
       if (!response.ok) {
         if (response.status === 404) return null;
-        throw new Error(`Free Dictionary API error: ${response.status}`);
+        throw new BytecodeError(
+          ERROR_CATEGORIES.EXT, ERROR_SEVERITY.WARN, MOD,
+          ERROR_CODES.EXT_NOT_FOUND,
+          { reason: 'Free Dictionary API error', httpStatus: response.status },
+        );
       }
 
       return await response.json();

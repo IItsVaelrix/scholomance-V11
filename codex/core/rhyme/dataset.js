@@ -1,5 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.LINGUISTIC;
 
 const SONG_HEADER_REGEX = /^\s*(\d+)\s*[.)]\s+(.+?)\s*$/;
 const SECTION_MARKER_REGEX = /^\s*\[(.+?)\]\s*$/;
@@ -43,8 +52,10 @@ async function extractDocxTextFromPath(filePath) {
   try {
     mammoth = await import("mammoth");
   } catch (error) {
-    throw new Error(
-      "DOCX parsing needs optional dependency `mammoth`. Install it or pass plain text/markdown input."
+    throw new BytecodeError(
+      ERROR_CATEGORIES.HOOK, ERROR_SEVERITY.WARN, MOD,
+      ERROR_CODES.HOOK_NOT_FN,
+      { reason: 'DOCX parsing needs optional dependency `mammoth`. Install it or pass plain text/markdown input.' },
     );
   }
 
@@ -57,8 +68,10 @@ async function extractDocxTextFromBuffer(buffer) {
   try {
     mammoth = await import("mammoth");
   } catch (error) {
-    throw new Error(
-      "DOCX parsing needs optional dependency `mammoth`. Install it or pass plain text/markdown input."
+    throw new BytecodeError(
+      ERROR_CATEGORIES.HOOK, ERROR_SEVERITY.WARN, MOD,
+      ERROR_CODES.HOOK_NOT_FN,
+      { reason: 'DOCX parsing needs optional dependency `mammoth`. Install it or pass plain text/markdown input.' },
     );
   }
 
@@ -72,7 +85,11 @@ async function resolveInputText(source) {
   }
 
   if (typeof source !== "string") {
-    throw new TypeError("parseDocxToLines expects a filepath, raw text, or Buffer.");
+    throw new BytecodeError(
+      ERROR_CATEGORIES.TYPE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.TYPE_MISMATCH,
+      { parameter: 'source', expectedType: 'string|Buffer', actualType: typeof source },
+    );
   }
 
   const looksLikeRawText = source.includes("\n");
@@ -82,7 +99,11 @@ async function resolveInputText(source) {
 
   const absolutePath = path.resolve(source);
   if (!fs.existsSync(absolutePath)) {
-    throw new Error(`Input not found: ${absolutePath}`);
+    throw new BytecodeError(
+      ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_VALUE,
+      { reason: 'Input not found', absolutePath },
+    );
   }
 
   if (absolutePath.toLowerCase().endsWith(".docx")) {

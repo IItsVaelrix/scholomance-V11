@@ -13,6 +13,15 @@ import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mc
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import * as schemas from './collab.schemas.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 import { CollabServiceError, collabService } from './collab.service.js';
 import { collabDiagnostic } from './collab.diagnostic.js';
 
@@ -280,7 +289,11 @@ export function registerCollabMcpBridge(server, service = collabService) {
         recursive: z.boolean().optional().default(false).describe('Whether to descend recursively into sub-archives'),
     }, async ({ directory, recursive }) => {
         const absDir = path.resolve(ROOT, directory);
-        if (!absDir.startsWith(ROOT)) throw new Error('Security Breach: Out of bounds access attempt to external substrates.');
+        if (!absDir.startsWith(ROOT)) throw new BytecodeError(
+            ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, MOD,
+            ERROR_CODES.OUT_OF_BOUNDS,
+            { reason: 'Out of bounds access attempt to external substrates', requestedPath: absDir, rootPath: ROOT },
+        );
         if (!fs.existsSync(absDir)) return [];
 
         const results = [];
@@ -311,7 +324,11 @@ export function registerCollabMcpBridge(server, service = collabService) {
             walk(absDir, 0);
             return results;
         } catch (e) {
-            throw new Error(`Failed to list substrate: ${e.message}`);
+            throw new BytecodeError(
+                ERROR_CATEGORIES.STATE, ERROR_SEVERITY.WARN, MOD,
+                ERROR_CODES.INVALID_STATE,
+                { reason: 'Failed to list substrate', originalError: e.message },
+            );
         }
     });
 
@@ -319,13 +336,25 @@ export function registerCollabMcpBridge(server, service = collabService) {
         path: z.string().describe('The relative path of the file substrate to read'),
     }, async ({ path: filePath }) => {
         const absPath = path.resolve(ROOT, filePath);
-        if (!absPath.startsWith(ROOT)) throw new Error('Security Breach: Out of bounds read attempt.');
-        if (!fs.existsSync(absPath)) throw new Error('Ritual Failure: File substrate does not exist at the requested path.');
+        if (!absPath.startsWith(ROOT)) throw new BytecodeError(
+            ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, MOD,
+            ERROR_CODES.OUT_OF_BOUNDS,
+            { reason: 'Out of bounds read attempt', requestedPath: absPath, rootPath: ROOT },
+        );
+        if (!fs.existsSync(absPath)) throw new BytecodeError(
+            ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+            ERROR_CODES.INVALID_VALUE,
+            { reason: 'File substrate does not exist at the requested path', requestedPath: absPath },
+        );
         
         try {
             return fs.readFileSync(absPath, 'utf8');
         } catch (e) {
-            throw new Error(`Failed to read substrate: ${e.message}`);
+            throw new BytecodeError(
+                ERROR_CATEGORIES.STATE, ERROR_SEVERITY.WARN, MOD,
+                ERROR_CODES.INVALID_STATE,
+                { reason: 'Failed to read substrate', originalError: e.message },
+            );
         }
     });
 

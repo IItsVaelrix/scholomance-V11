@@ -10,6 +10,15 @@
 
 import { DictionaryAdapter } from './dictionary.adapter.js';
 import { createEmptyLexicalEntry } from '../../core/schemas.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 const DATAMUSE_BASE_URL = 'https://api.datamuse.com';
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -161,7 +170,11 @@ export class DatamuseAdapter extends DictionaryAdapter {
       });
 
       if (!response.ok) {
-        throw new Error(`Datamuse API error: ${response.status}`);
+        throw new BytecodeError(
+          ERROR_CATEGORIES.EXT, ERROR_SEVERITY.WARN, MOD,
+          ERROR_CODES.EXT_NOT_FOUND,
+          { reason: 'Datamuse API error', httpStatus: response.status },
+        );
       }
 
       return await response.json();
