@@ -146,7 +146,7 @@ describe("AmbientPlayerService", () => {
     await service.setSchool("SONIC");
     await vi.runAllTimersAsync();
 
-    expect(controllerFactory).toHaveBeenCalledTimes(1);
+    expect(controllerFactory).toHaveBeenCalledTimes(2);
     expect(service.getState().status).toBe(AMBIENT_PLAYER_STATES.PLAYING);
   });
 

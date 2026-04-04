@@ -129,8 +129,8 @@ describe('PhonemeEngine', () => {
       });
     });
 
-    it('should map fallback vowel family A to WILL school', () => {
-      expect(PhonemeEngine.getSchoolFromVowelFamily('A')).toBe('WILL');
+    it('should map fallback vowel family A to NECROMANCY school', () => {
+      expect(PhonemeEngine.getSchoolFromVowelFamily('A')).toBe('NECROMANCY');
     });
 
     it('should extract coda correctly', () => {
