@@ -1,4 +1,13 @@
 const DEFAULT_APP_NAME = 'Scholomance';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -126,6 +135,10 @@ export function renderEmailTemplate(templateKey, data = {}) {
       };
     }
     default:
-      throw new Error(`Unknown email template: ${templateKey}`);
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.WARN, MOD,
+        ERROR_CODES.INVALID_ENUM,
+        { parameter: 'templateKey', value: templateKey },
+      );
   }
 }

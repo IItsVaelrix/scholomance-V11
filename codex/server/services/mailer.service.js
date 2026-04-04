@@ -3,6 +3,15 @@ import { MailerAdapter } from '../../../mailer.adapter.js';
 import { persistence } from '../persistence.adapter.js';
 import { renderEmailTemplate } from './emailTemplates.service.js';
 import { createSmtpProviderConfigFromEnv, SmtpMailerAdapter } from './smtp.client.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 const DEFAULT_FROM_EMAIL = 'noreply@scholomance.ai';
 const DEFAULT_MAX_ATTEMPTS = 5;
@@ -54,7 +63,11 @@ export class SendGridMailerAdapter extends MailerAdapter {
 
   async send({ to, subject, text, html }) {
     if (!this.apiKey) {
-      throw new Error('SENDGRID_API_KEY is missing');
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.MISSING_REQUIRED,
+        { parameter: 'SENDGRID_API_KEY', operation: 'SendGridMailerAdapter.send' },
+      );
     }
 
     const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
@@ -97,7 +110,11 @@ export class ResendMailerAdapter extends MailerAdapter {
 
   async send({ to, subject, text, html }) {
     if (!this.apiKey) {
-      throw new Error('RESEND_API_KEY is missing');
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.MISSING_REQUIRED,
+        { parameter: 'RESEND_API_KEY', operation: 'ResendMailerAdapter.send' },
+      );
     }
 
     const response = await fetch('https://api.resend.com/emails', {
@@ -177,7 +194,11 @@ export class MailerService {
   queueTemplate(templateKey, { to, data = {}, metadata = {}, maxAttempts = DEFAULT_MAX_ATTEMPTS } = {}) {
     const normalizedRecipient = String(to || '').trim().toLowerCase();
     if (!normalizedRecipient) {
-      throw new Error('queueTemplate requires a recipient email');
+      throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MOD,
+        ERROR_CODES.MISSING_REQUIRED,
+        { parameter: 'to', operation: 'MailerService.queueTemplate' },
+      );
     }
 
     const rendered = renderEmailTemplate(templateKey, {

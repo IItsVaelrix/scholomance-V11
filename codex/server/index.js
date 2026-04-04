@@ -39,6 +39,15 @@ import { isApiRoutePath, isStaticAssetPath, stripQueryFromUrl } from './notFound
 import { createOpsMetrics } from './observability.metrics.js';
 import { PhonemeEngine } from '../../src/lib/phonology/phoneme.engine.js';
 import { authorizeAudioRequest, buildAudioUnauthorizedPayload } from './audioAuth.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../core/pixelbrain/bytecode-error.js';
+
+const BYTECODE_MOD = MODULE_IDS.SHARED;
 import { createLexiconAdapter } from './adapters/lexicon.sqlite.adapter.js';
 import { createCorpusAdapter } from './adapters/corpus.sqlite.adapter.js';
 import { createCorpusService } from './services/corpus.service.js';
@@ -67,7 +76,11 @@ function parseBooleanEnv(name, defaultValue = false) {
     if (rawValue === 'false') {
         return false;
     }
-    throw new Error(`${name} must be either "true" or "false" when set`);
+    throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, BYTECODE_MOD,
+        ERROR_CODES.INVALID_VALUE,
+        { parameter: name, expectedValue: 'true|false', actualValue: rawValue },
+    );
 }
 
 function parseTrustProxyEnv() {
@@ -96,7 +109,11 @@ function parsePositiveIntEnv(name, defaultValue) {
     if (Number.isInteger(parsed) && parsed > 0) {
         return parsed;
     }
-    throw new Error(`${name} must be a positive integer when set`);
+    throw new BytecodeError(
+        ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, BYTECODE_MOD,
+        ERROR_CODES.INVALID_VALUE,
+        { parameter: name, expectedValue: 'positive integer', actualValue: rawValue },
+    );
 }
 
 function getAudioAdminToken() {
@@ -104,7 +121,11 @@ function getAudioAdminToken() {
         ? process.env.AUDIO_ADMIN_TOKEN.trim()
         : '';
     if (IS_PRODUCTION && token.length === 0) {
-        throw new Error('AUDIO_ADMIN_TOKEN environment variable is required in production');
+        throw new BytecodeError(
+            ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, BYTECODE_MOD,
+            ERROR_CODES.MISSING_REQUIRED,
+            { parameter: 'AUDIO_ADMIN_TOKEN', environment: 'production' },
+        );
     }
     return token.length > 0 ? token : null;
 }
@@ -113,7 +134,11 @@ function getSessionSecret() {
     const secret = process.env.SESSION_SECRET;
     if (!secret) {
         if (IS_PRODUCTION && !IS_TEST_RUNTIME) {
-            throw new Error('SESSION_SECRET environment variable is required in production');
+            throw new BytecodeError(
+                ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, BYTECODE_MOD,
+                ERROR_CODES.MISSING_REQUIRED,
+                { parameter: 'SESSION_SECRET', environment: 'production' },
+            );
         }
         // SECURITY: Use fastify.log for production-safe logging
         fastify.log.warn('[SESSION] Using development secret - NOT FOR PRODUCTION');
@@ -122,7 +147,11 @@ function getSessionSecret() {
     // SECURITY: Enforce minimum secret length in all environments
     if (secret.length < 32) {
         if (IS_PRODUCTION && !IS_TEST_RUNTIME) {
-            throw new Error('SESSION_SECRET must be at least 32 characters in production');
+            throw new BytecodeError(
+                ERROR_CATEGORIES.RANGE, ERROR_SEVERITY.CRIT, BYTECODE_MOD,
+                ERROR_CODES.BELOW_MIN,
+                { parameter: 'SESSION_SECRET', value: secret.length, minimum: 32 },
+            );
         }
         // SECURITY: Use fastify.log instead of console.warn
         fastify.log.warn('[SESSION] SESSION_SECRET is shorter than 32 characters; consider using a longer secret.');
@@ -304,7 +333,11 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = DEFAULT_API_TIMEO
     } catch (error) {
         clearTimeout(timeoutId);
         if (error.name === 'AbortError') {
-            throw new Error(`Request timeout after ${timeoutMs}ms`);
+            throw new BytecodeError(
+                ERROR_CATEGORIES.HOOK, ERROR_SEVERITY.WARN, BYTECODE_MOD,
+                ERROR_CODES.HOOK_TIMEOUT,
+                { timeoutMs, operation: 'server request' },
+            );
         }
         throw error;
     }

@@ -8,6 +8,15 @@ import { createJudiciaryEngine } from '../../core/judiciary.js';
 import { buildTokenGraph } from '../../core/token-graph/build.js';
 import { buildContextActivation } from '../../core/token-graph/activation.js';
 import { traverseTokenGraph } from '../../core/token-graph/traverse.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 import { scoreGraphCandidates } from '../../core/token-graph/score.js';
 import { createTokenGraphSemanticRepo } from '../../services/token-graph/semantic.repo.js';
 import { coalescedLookup } from './wordLookupCoalescer.js';
@@ -426,7 +435,11 @@ async function fetchWithTimeout(fetchImpl, url, timeoutMs) {
   } catch (error) {
     clearTimeout(timeoutId);
     if (error?.name === 'AbortError') {
-      throw new Error(`Request timeout after ${timeoutMs}ms`);
+      throw new BytecodeError(
+        ERROR_CATEGORIES.HOOK, ERROR_SEVERITY.WARN, MOD,
+        ERROR_CODES.HOOK_TIMEOUT,
+        { timeoutMs, operation: 'word lookup request' },
+      );
     }
     throw error;
   }

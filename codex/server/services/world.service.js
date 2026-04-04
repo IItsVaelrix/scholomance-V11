@@ -3,6 +3,15 @@ import {
   buildRoomSnapshot,
   DEFAULT_WORLD_ROOM_ID,
 } from '../../core/world.entity.js';
+import {
+  BytecodeError,
+  ERROR_CATEGORIES,
+  ERROR_SEVERITY,
+  MODULE_IDS,
+  ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
+
+const MOD = MODULE_IDS.SHARED;
 
 function extractDefinition(adapter, entry) {
   if (!entry) return null;
@@ -65,7 +74,11 @@ export function createWorldService(options = {}) {
   const adapter = options.adapter;
   const persistence = options.persistence;
   if (!persistence?.world) {
-    throw new Error('createWorldService requires persistence.world accessors');
+    throw new BytecodeError(
+      ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MOD,
+      ERROR_CODES.INVALID_STATE,
+      { reason: 'createWorldService requires persistence.world accessors', parameter: 'persistence.world' },
+    );
   }
 
   async function getRoomSnapshot(roomId = DEFAULT_WORLD_ROOM_ID) {
