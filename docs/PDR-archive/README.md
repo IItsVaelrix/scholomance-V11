@@ -18,8 +18,14 @@ All Product Design Requirements (PDRs) for Scholomance are archived here. Each P
 | [`lexical_atrium_pdr_redesign.md`](./lexical_atrium_pdr_redesign.md) | UI + Lexicon + Search | Draft | High |
 | [`collab_vscode_experience_pdr.md`](./collab_vscode_experience_pdr.md) | UI + Collaboration + VS Code Integration | Draft | High |
 | [`live_website_collab_hosting_pdr.md`](./live_website_collab_hosting_pdr.md) | Infrastructure + Security + Remote Agent Access | **Implemented** | High |
+| [`a2a_universal_interoperability_pdr.md`](./a2a_universal_interoperability_pdr.md) | world-law expansion + MCP + A2A Interoperability | Draft | High |
+| [`experience_bytecode_pdr.md`](./experience_bytecode_pdr.md) | new heuristic + Bytecode + PB-EXP-v1 | Draft | High |
+| [`mcp_direct_bind_pdr.md`](./mcp_direct_bind_pdr.md) | exploit patch + world-law expansion + MCP Direct-Bind | Draft | High |
+| [`pbexp_skeleton_normalization_pdr.md`](./pbexp_skeleton_normalization_pdr.md) | PB-EXP sub-system + Trace Normalization + Hashing | Draft | High |
 | [`postfix_integration_pdr.md`](./postfix_integration_pdr.md) | Infrastructure + Security + Communications | Draft | High |
 | [`lexicon_oracle_aesthetic_refinement_pdr.md`](./lexicon_oracle_aesthetic_refinement_pdr.md) | UI + Data Visualization + Animation | Draft | High |
+| [`mcp_infrastructure_hardening_pdr.md`](./mcp_infrastructure_hardening_pdr.md) | Infrastructure + Resilience + MCP | Draft | High |
+| [`adaptive_palette_pdr.md`](./adaptive_palette_pdr.md) | UI + Color Engine + Codex Contract | Draft | High |
 
 ## Implemented PDRs
 

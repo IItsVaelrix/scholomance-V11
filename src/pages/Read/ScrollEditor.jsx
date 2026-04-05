@@ -13,6 +13,13 @@ import { WORD_TOKEN_REGEX } from "../../lib/wordTokenization.js";
 import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 import { decodeBytecode } from "./bytecodeRenderer.js";
 import { VOWEL_FAMILY_TO_SCHOOL } from "../../data/schools.js";
+import { 
+  BytecodeError, 
+  ERROR_CATEGORIES, 
+  ERROR_SEVERITY, 
+  ERROR_CODES, 
+  MODULE_IDS 
+} from "../../lib/pixelbrain.adapter.js";
 
 const MAX_CONTENT_LENGTH = 50000;
 const DEFAULT_LINE_HEIGHT = 24;
@@ -318,6 +325,7 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   onScrollChange,
   mirrored = false,
   vowelColors = {},
+  vowelColorResolver = null,
 }, ref) {
   const [title, setTitle] = useState(initialTitle);
   const [content, setContent] = useState(initialContent);
@@ -363,11 +371,77 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const [computedTypography, setComputedTypography] = useState(null);
   const [gridTopology, setGridTopology] = useState(null);
   const [adaptiveTopology, setAdaptiveTopology] = useState(null);
-  
+  const [bytecodeArtifacts, setBytecodeArtifacts] = useState([]);
+
+  // --- Bytecode Guard: Style Invariant Verification ---
+  const verifyTypographyInvariant = useCallback((textareaStyles, overlayStyles) => {
+    const criticalFields = ['fontFamily', 'fontSize', 'lineHeight', 'paddingLeft', 'paddingTop'];
+    for (const field of criticalFields) {
+      if (textareaStyles[field] !== overlayStyles[field]) {
+        const error = new BytecodeError(
+          ERROR_CATEGORIES.TYPE,
+          ERROR_SEVERITY.CRIT,
+          MODULE_IDS.SHARED,
+          ERROR_CODES.TYPE_MISMATCH,
+          {
+            field,
+            expected: textareaStyles[field],
+            actual: overlayStyles[field],
+            component: 'ScrollEditor',
+            reason: 'Typography mismatch between substrate and overlay'
+          }
+        );
+        console.error(`[PB-GUARD] Typography Invariant Violated: ${error.bytecode}`);
+        setBytecodeArtifacts(prev => [...prev.slice(-4), error.bytecode]);
+        return false;
+      }
+    }
+    return true;
+  }, []);
+
+  // --- Bytecode Guard: Overlay Geometry Invariant ---
+  // Verifies that the Truesight overlay and the textarea share the exact bounding rect.
+  // A mismatch means pixel-perfect word hit-testing is broken.
+  useEffect(() => {
+    if (!isTruesight) return;
+    const overlay = wordBackgroundLayerRef.current;
+    const textarea = textareaRef.current;
+    if (!overlay || !textarea) return;
+
+    const overlayRect = overlay.getBoundingClientRect();
+    const textareaRect = textarea.getBoundingClientRect();
+    const TOLERANCE = 1; // 1px — sub-pixel rounding is acceptable
+
+    const dTop  = Math.abs(overlayRect.top    - textareaRect.top);
+    const dLeft = Math.abs(overlayRect.left   - textareaRect.left);
+    const dW    = Math.abs(overlayRect.width  - textareaRect.width);
+    const dH    = Math.abs(overlayRect.height - textareaRect.height);
+
+    if (dTop > TOLERANCE || dLeft > TOLERANCE || dW > TOLERANCE || dH > TOLERANCE) {
+      const geoError = new BytecodeError(
+        ERROR_CATEGORIES.COORD,
+        ERROR_SEVERITY.CRIT,
+        MODULE_IDS.SHARED,
+        ERROR_CODES.COORD_OUT_OF_BOUNDS,
+        {
+          reason: 'Truesight overlay geometry diverges from substrate textarea — pixel-perfect word hit-testing is compromised',
+          delta: { top: dTop.toFixed(2), left: dLeft.toFixed(2), width: dW.toFixed(2), height: dH.toFixed(2) },
+          overlay:  { top: overlayRect.top.toFixed(1), left: overlayRect.left.toFixed(1), w: overlayRect.width.toFixed(1),  h: overlayRect.height.toFixed(1) },
+          textarea: { top: textareaRect.top.toFixed(1), left: textareaRect.left.toFixed(1), w: textareaRect.width.toFixed(1), h: textareaRect.height.toFixed(1) },
+          component: 'ScrollEditor'
+        }
+      );
+      console.error(`[PB-GUARD] Overlay Geometry Invariant Violated: ${geoError.bytecode}`);
+      setBytecodeArtifacts(prev => [...prev.slice(-4), geoError.bytecode]);
+    }
+  }, [isTruesight, computedTypography]);
+
   // Compute typography and grid topology from wrapper's computed styles
   const updateTypography = useCallback(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
+
+    const start = performance.now();
 
     if (import.meta.env.MODE === 'test') {
       console.log(`[ScrollEditor] updateTypography: ${wrapper.clientWidth}x${wrapper.clientHeight}, content: ${content?.length}`);
@@ -404,6 +478,23 @@ const ScrollEditor = forwardRef(function ScrollEditor({
         setLineHeightPx(adaptiveTopo.baseCellHeight);
       }
     }
+
+    const duration = performance.now() - start;
+    if (duration > 16) { // 1 frame budget
+      const stasisErr = new BytecodeError(
+        ERROR_CATEGORIES.UI_STASIS,
+        ERROR_SEVERITY.WARN,
+        'UISTAS',
+        0x0E01, // CLICK_HANDLER_STALL / Generic sync stall
+        {
+          operation: 'updateTypography',
+          actualDuration: duration,
+          timeoutMs: 16,
+          contentLength: content?.length || 0
+        }
+      );
+      console.warn(`[PB-GUARD] UI Stasis Detected: ${stasisErr.bytecode}`);
+    }
   }, [content]);
   
   // Initial capture + adaptive updates via ResizeObserver
@@ -429,43 +520,50 @@ const ScrollEditor = forwardRef(function ScrollEditor({
   const cursorSync = useMemo(() => {
     if (!computedTypography || !gridTopology) return null;
     
+    const textareaStyles = {
+      fontFamily: computedTypography.fontFamily,
+      fontSize: computedTypography.fontSize,
+      lineHeight: computedTypography.lineHeight,
+      letterSpacing: computedTypography.letterSpacing,
+      wordSpacing: computedTypography.wordSpacing,
+      paddingTop: computedTypography.paddingTop,
+      paddingRight: computedTypography.paddingRight,
+      paddingBottom: computedTypography.paddingBottom,
+      paddingLeft: computedTypography.paddingLeft,
+      tabSize: 2,
+      MozTabSize: 2,
+      boxSizing: 'border-box',
+      WebkitTextFillColor: 'currentColor',
+      resize: 'none',
+      overflow: 'auto',
+    };
+
+    const overlayStyles = {
+      fontFamily: computedTypography.fontFamily,
+      fontSize: computedTypography.fontSize,
+      lineHeight: computedTypography.lineHeight,
+      letterSpacing: computedTypography.letterSpacing,
+      wordSpacing: computedTypography.wordSpacing,
+      paddingTop: computedTypography.paddingTop,
+      paddingRight: computedTypography.paddingRight,
+      paddingBottom: computedTypography.paddingBottom,
+      paddingLeft: computedTypography.paddingLeft,
+      tabSize: 2,
+      MozTabSize: 2,
+      boxSizing: 'border-box',
+      overflow: 'hidden',
+      pointerEvents: 'none',
+    };
+
+    // --- Bytecode Guard: Final Typography Validation ---
+    verifyTypographyInvariant(textareaStyles, overlayStyles);
+
     return {
-      textareaStyles: {
-        fontFamily: computedTypography.fontFamily,
-        fontSize: computedTypography.fontSize,
-        lineHeight: computedTypography.lineHeight,
-        letterSpacing: computedTypography.letterSpacing,
-        wordSpacing: computedTypography.wordSpacing,
-        paddingTop: computedTypography.paddingTop,
-        paddingRight: computedTypography.paddingRight,
-        paddingBottom: computedTypography.paddingBottom,
-        paddingLeft: computedTypography.paddingLeft,
-        tabSize: 2,
-        MozTabSize: 2,
-        boxSizing: 'border-box',
-        WebkitTextFillColor: 'currentColor',
-        resize: 'none',
-        overflow: 'auto',
-      },
-      overlayStyles: {
-        fontFamily: computedTypography.fontFamily,
-        fontSize: computedTypography.fontSize,
-        lineHeight: computedTypography.lineHeight,
-        letterSpacing: computedTypography.letterSpacing,
-        wordSpacing: computedTypography.wordSpacing,
-        paddingTop: computedTypography.paddingTop,
-        paddingRight: computedTypography.paddingRight,
-        paddingBottom: computedTypography.paddingBottom,
-        paddingLeft: computedTypography.paddingLeft,
-        tabSize: 2,
-        MozTabSize: 2,
-        boxSizing: 'border-box',
-        overflow: 'hidden',
-        pointerEvents: 'none',
-      },
+      textareaStyles,
+      overlayStyles,
       gridTopology,
     };
-  }, [computedTypography, gridTopology]);
+  }, [computedTypography, gridTopology, verifyTypographyInvariant]);
 
   useEffect(() => {
     let resizeTimer;
@@ -548,8 +646,34 @@ const ScrollEditor = forwardRef(function ScrollEditor({
     const peers = [textareaRef.current, wordBackgroundLayerRef.current, markdownRef.current];
     for (const node of peers) {
       if (!node || node === source) continue;
-      if (Math.abs((node.scrollTop ?? 0) - nextTop) > 1) node.scrollTop = nextTop;
-      if (Math.abs((node.scrollLeft ?? 0) - nextLeft) > 1) node.scrollLeft = nextLeft;
+      
+      const currentTop = node.scrollTop ?? 0;
+      const currentLeft = node.scrollLeft ?? 0;
+      const deltaTop = Math.abs(currentTop - nextTop);
+      const deltaLeft = Math.abs(currentLeft - nextLeft);
+
+      // --- Bytecode Guard: Sync Invariant ---
+      if ((deltaTop > 1 || deltaLeft > 1) && !isReadOnlyPlain && !isReadOnlyTruesight) {
+        const error = new BytecodeError(
+          ERROR_CATEGORIES.COORD,
+          ERROR_SEVERITY.WARN,
+          MODULE_IDS.COORD,
+          ERROR_CODES.COORD_OUT_OF_BOUNDS,
+          {
+            operation: 'syncScrollPosition',
+            sourceTop: nextTop,
+            targetTop: currentTop,
+            delta: deltaTop,
+            nodeType: node.className,
+            reason: 'Parallax drift detected during scroll synchronization'
+          }
+        );
+        console.warn(`[PB-GUARD] Scroll Sync Invariant Violated: ${error.bytecode}`);
+        setBytecodeArtifacts(prev => [...prev.slice(-4), error.bytecode]);
+      }
+
+      if (deltaTop > 1) node.scrollTop = nextTop;
+      if (deltaLeft > 1) node.scrollLeft = nextLeft;
     }
   }, [onScrollChange]);
 
@@ -855,9 +979,9 @@ const ScrollEditor = forwardRef(function ScrollEditor({
           {isTruesight && (
             <div
               ref={wordBackgroundLayerRef}
-              className="word-background-layer"
+              className={`word-background-layer${isReadOnlyTruesight ? ' word-background-layer--interactive' : ''}`}
               style={cursorSync?.overlayStyles}
-              aria-hidden="true"
+              aria-hidden={!isReadOnlyTruesight}
               onScroll={handleOverlayScroll}
             >
               <div>
@@ -870,10 +994,11 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                     <div
                       key={li}
                       className={`truesight-line truesight-line--${lineType}${isLineDimmed ? ' truesight-line--dimmed' : ''}${isHighlighted ? ' truesight-line--highlighted' : ''}`}
+                      style={{ position: 'relative', height: `${lineHeightPx}px` }}
                     >
-                      {tokens.map(({ token, localStart, localEnd, lineIndex, wordIndex, x: tokenX, width: tokenWidth }) => {
-                        const isWord = WORD_TOKEN_REGEX.test(token);
-                        const clean = isWord ? token.toUpperCase() : "";
+                      {tokens.map(({ token, localStart, localEnd, lineIndex, wordIndex, x: tokenX, width: tokenWidth, isWhitespace }) => {
+                        const isWord = WORD_TOKEN_REGEX.test(token) && !isWhitespace;
+                        const clean = isWord ? token.trim().toUpperCase() : "";
                         const charStart = localStart;
                         const charEnd = localEnd;
                         const identityKey = `${lineIndex}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
@@ -896,7 +1021,16 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                         };
 
                         if (!isWord) {
-                          return <span key={localStart} style={{ ...commonStyle, pointerEvents: 'none' }}>{token}</span>;
+                          // Render whitespace/punctuation as transparent spans to maintain perfect layout sync
+                          return (
+                            <span 
+                              key={localStart} 
+                              style={{ ...commonStyle, color: 'transparent', pointerEvents: 'none' }}
+                              data-char-start={charStart}
+                            >
+                              {token}
+                            </span>
+                          );
                         }
 
                         const wordVowelFamily = analysis ? normalizeVowelFamily(analysis?.vowelFamily) : null;
@@ -905,12 +1039,22 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
                         const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
-                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
+                        
+                        // Phasic Modulation: Use word index to drive rhythmic alternation
+                        const phase = Number.isInteger(wordIndex) ? (wordIndex % 4) / 4 : (charStart % 100) / 100;
+                        const familyData = (wordVowelFamily && vowelColors) ? vowelColors[wordVowelFamily] : null;
+                        const color = decoded?.color 
+                          || (vowelColorResolver && wordVowelFamily ? vowelColorResolver(wordVowelFamily, phase) : null)
+                          || (typeof familyData === 'string' ? familyData : familyData?.color) 
+                          || null;
+                        const visemeStyle = (familyData && typeof familyData === 'object') ? (familyData.viseme || {}) : {};
+
                         const isLineHighlighted = highlightedLinesSet.has(lineIndex);
 
                         const wordStyle = {
                           ...commonStyle,
                           color: color || undefined,
+                          ...visemeStyle,
                           ...(decoded?.style || {}),
                           pointerEvents: 'auto',
                           cursor: 'pointer',
@@ -930,14 +1074,21 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                               isLineHighlighted ? 'grimoire-word--rhyme-highlight' : '',
                             ].filter(Boolean).join(' ')}
                             style={wordStyle}
+                            ref={(el) => {
+                              if (el && visemeStyle) {
+                                Object.entries(visemeStyle).forEach(([k, v]) => {
+                                  el.style.setProperty(k, String(v));
+                                });
+                              }
+                            }}
                             onClick={() => {
                               if (analysis) {
-                                onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                                onWordActivate?.({ word: token, normalizedWord: clean, trigger: 'truesight_tap', analysis, charStart, charEnd });
                               }
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
-                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                                if (analysis) onWordActivate?.({ word: token, normalizedWord: clean, trigger: 'truesight_tap', analysis, charStart, charEnd });
                               }
                             }}
                           >
@@ -989,12 +1140,31 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                       animate={{ y: targetY, opacity: 1, scale: 1 }}
                       exit={{ y: initialY, opacity: 0, scale: 0.98 }}
                       transition={{ type: "spring", stiffness: 140, damping: 20, mass: 0.8, restDelta: 0.001 }}
-                      style={{ willChange: "transform, opacity", contain: "layout paint style" }}
+                      style={{ willChange: "transform, opacity", contain: "layout paint style", position: 'absolute', height: `${lineHeightPx}px`, left: '1%', right: '1%' }}
                     >
-                      {lineData.tokens.map(({ token, localStart, localEnd, wordIndex }) => {
-                        const isWord = WORD_TOKEN_REGEX.test(token);
-                        if (!isWord) return <span key={localStart}>{token}</span>;
-                        const clean = token.toUpperCase();
+                      {lineData.tokens.map(({ token, localStart, localEnd, wordIndex, x: tokenX, width: tokenWidth, isWhitespace }) => {
+                        const isWord = WORD_TOKEN_REGEX.test(token) && !isWhitespace;
+                        
+                        const commonStyle = {
+                          position: 'absolute',
+                          left: `${tokenX}px`,
+                          width: `${tokenWidth}px`,
+                          whiteSpace: 'pre',
+                        };
+
+                        if (!isWord) {
+                          return (
+                            <span 
+                              key={localStart} 
+                              style={{ ...commonStyle, color: 'transparent' }}
+                              data-char-start={localStart}
+                            >
+                              {token}
+                            </span>
+                          );
+                        }
+                        
+                        const clean = token.trim().toUpperCase();
                         const charStart = localStart;
                         const charEnd = localEnd;
                         const identityKey = `${li}:${Number.isInteger(wordIndex) ? wordIndex : -1}:${charStart}`;
@@ -1007,7 +1177,16 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                           ? shouldColorWordHook(charStart, clean, wordVowelFamily, bytecodeByCharStart, analysisMode, activeConnections)
                           : false;
                         const decoded = bytecode && shouldColor ? decodeBytecode(bytecode, { reducedMotion, theme: activeTheme }) : null;
-                        const color = decoded?.color || (wordVowelFamily && vowelColors ? vowelColors[wordVowelFamily] : null);
+                        
+                        // Phasic Modulation: Use word index to drive rhythmic alternation
+                        const phase = Number.isInteger(wordIndex) ? (wordIndex % 4) / 4 : (charStart % 100) / 100;
+                        const familyData = (wordVowelFamily && vowelColors) ? vowelColors[wordVowelFamily] : null;
+                        const color = decoded?.color 
+                          || (vowelColorResolver && wordVowelFamily ? vowelColorResolver(wordVowelFamily, phase) : null)
+                          || (typeof familyData === 'string' ? familyData : familyData?.color) 
+                          || null;
+                        const visemeStyle = (familyData && typeof familyData === 'object') ? (familyData.viseme || {}) : {};
+
                         const isMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 2);
                         const isRichMultiSyllable = (shouldColor || wordVowelFamily) && (decoded?.syllableDepth >= 3);
 
@@ -1023,13 +1202,26 @@ const ScrollEditor = forwardRef(function ScrollEditor({
                               isMultiSyllable ? "word--multi-rhyme" : "",
                               isRichMultiSyllable ? "word--multi-rhyme--rich" : "",
                             ].filter(Boolean).join(" ")}
-                            style={{ color: color || undefined, ...(decoded?.style || {}), pointerEvents: 'auto', cursor: 'pointer' }}
+                            style={{ 
+                              ...commonStyle,
+                              color: color || undefined, 
+                              ...(decoded?.style || {}), 
+                              pointerEvents: 'auto', 
+                              cursor: 'pointer' 
+                            }}
+                            ref={(el) => {
+                              if (el && visemeStyle) {
+                                Object.entries(visemeStyle).forEach(([k, v]) => {
+                                  el.style.setProperty(k, String(v));
+                                });
+                              }
+                            }}
                             onClick={() => {
-                              if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                              if (analysis) onWordActivate?.({ word: token, normalizedWord: clean, trigger: 'truesight_tap', analysis, charStart, charEnd });
                             }}
                             onKeyDown={(e) => {
                               if (e.key === 'Enter' || e.key === ' ') {
-                                if (analysis) onWordActivate?.({ word: token, analysis, charStart, charEnd });
+                                if (analysis) onWordActivate?.({ word: token, normalizedWord: clean, trigger: 'truesight_tap', analysis, charStart, charEnd });
                               }
                             }}
                           >

@@ -1006,6 +1006,178 @@
   }
 }
 
+/* ── Mode Toggle ──────────────────────────────────────────────────────── */
+
+.oracle-mode-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.18rem;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(126, 231, 255, 0.12);
+}
+
+.oracle-mode-btn {
+  padding: 0.2rem 0.6rem;
+  border-radius: 2px;
+  background: transparent;
+  color: rgba(170, 198, 221, 0.55);
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.oracle-mode-btn:hover {
+  color: rgba(235, 243, 252, 0.82);
+}
+
+.oracle-mode-btn--active {
+  background: color-mix(in srgb, var(--oracle-accent) 18%, rgba(0, 0, 0, 0.4));
+  color: color-mix(in srgb, var(--oracle-accent) 90%, rgba(255, 255, 255, 0.95));
+}
+
+/* ── Facet Filter Strip ───────────────────────────────────────────────── */
+
+.oracle-facet-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.4rem;
+  padding: 0.55rem 0.9rem 0.45rem;
+  border-bottom: 1px solid rgba(126, 231, 255, 0.08);
+}
+
+.oracle-facet-pill {
+  padding: 0.14rem 0.55rem;
+  border-radius: 2px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid rgba(126, 231, 255, 0.15);
+  color: rgba(170, 198, 221, 0.6);
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.oracle-facet-pill:hover {
+  color: rgba(235, 243, 252, 0.85);
+  border-color: rgba(126, 231, 255, 0.3);
+}
+
+.oracle-facet-pill--active {
+  background: color-mix(in srgb, var(--oracle-accent) 16%, rgba(0, 0, 0, 0.5));
+  border-color: color-mix(in srgb, var(--oracle-accent) 55%, transparent);
+  color: color-mix(in srgb, var(--oracle-accent) 92%, rgba(255, 255, 255, 0.98));
+}
+
+/* ── Corpus Results Feed ──────────────────────────────────────────────── */
+
+.oracle-corpus-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.oracle-corpus-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.7rem 0.9rem 0.65rem;
+  border-bottom: 1px solid rgba(126, 231, 255, 0.07);
+  transition: background 0.15s ease;
+  cursor: default;
+}
+
+.oracle-corpus-card:hover {
+  background: rgba(126, 231, 255, 0.04);
+}
+
+.oracle-corpus-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.oracle-corpus-meta-title {
+  color: rgba(235, 239, 247, 0.88);
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.oracle-corpus-meta-author {
+  color: rgba(170, 198, 221, 0.55);
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.6rem;
+  letter-spacing: 0.05em;
+}
+
+.oracle-corpus-meta-type {
+  margin-left: auto;
+  color: rgba(126, 231, 255, 0.45);
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.oracle-corpus-meta-score {
+  color: rgba(255, 220, 128, 0.5);
+  font-family: var(--font-mono, "JetBrains Mono", monospace);
+  font-size: 0.58rem;
+}
+
+.oracle-corpus-snippet {
+  padding-left: 0.75rem;
+  border-left: 1px solid rgba(126, 231, 255, 0.18);
+}
+
+.oracle-corpus-snippet-text {
+  color: rgba(210, 225, 240, 0.78);
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 0.78rem;
+  line-height: 1.65;
+  font-style: italic;
+}
+
+/* ── Token Variants: Match + Kin ──────────────────────────────────────── */
+
+.oracle-token--match {
+  color: rgba(255, 220, 128, 0.96);
+  border-bottom: 1px solid rgba(255, 220, 128, 0.45);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.oracle-token--match:hover {
+  color: rgba(255, 235, 170, 1);
+  border-color: rgba(255, 220, 128, 0.8);
+  transform: translateY(-1px);
+}
+
+.oracle-token--kin {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  color: rgba(158, 255, 210, 0.88);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.oracle-token--kin:hover {
+  color: rgba(180, 255, 220, 1);
+  border-color: rgba(158, 255, 210, 0.6);
+}
+
+.oracle-token-score {
+  color: rgba(126, 231, 255, 0.45);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+
 @media (max-width: 760px) {
   .oracle-query-form {
     flex-wrap: wrap;
@@ -1880,6 +2052,13 @@
   pointer-events: none;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+/* Read-only Truesight: overlay rises above the textarea so word spans
+   receive direct pointer events. The container stays pointer-events:none —
+   only individual word spans with pointer-events:auto are hittable. */
+.ide-layout-wrapper .word-background-layer--interactive {
+  z-index: 8;
 }
 
 .ide-layout-wrapper .editor-textarea--underlay {

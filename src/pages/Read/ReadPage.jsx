@@ -25,7 +25,8 @@ import { normalizeVowelFamily } from "../../lib/phonology/vowelFamily.js";
 import { parseBooleanEnvFlag } from "../../hooks/useCODExPipeline.jsx";
 import { patternColor } from "../../lib/patternColor.js";
 import { getCachedWord, setCachedWord, pruneOldCaches } from "../../lib/platform/wordCache.js";
-import { useAuroraLevel, cycleAuroraLevel } from "../../hooks/useAtmosphere.js";
+import { useAuroraLevel, cycleAuroraLevel, useAtmosphere } from "../../hooks/useAtmosphere.js";
+import { useAdaptivePalette } from "../../hooks/useAdaptivePalette.js";
 
 import AnalysisPanel from "./AnalysisPanel.jsx";
 import InfoBeamPanel from "../../components/InfoBeamPanel.jsx";
@@ -144,6 +145,7 @@ export default function ReadPage() {
   const [mobileActiveTab, setMobileActiveTab] = useState("EDITOR");
   const [showScorePanel, setShowScorePanel] = useState(false);
   const [showOraclePanel, setShowOraclePanel] = useState(true);
+  const [oracleWord, setOracleWord] = useState("");
   const [toasts, setToasts] = useState([]);
 
   const addToast = useCallback((message, type = "info") => {
@@ -181,6 +183,16 @@ export default function ReadPage() {
     emotion,
     error: analysisError,
   } = usePanelAnalysis();
+
+  const { 
+    palette: adaptivePalette, 
+    getColor: adaptiveColorResolver,
+    blendedHsl, 
+    dominantSchool 
+  } = useAdaptivePalette(deepAnalysis);
+
+  // Drive atmospheric effects (Aurora, vignetting, global HSL)
+  useAtmosphere({ blendedHsl, dominantSchool });
 
   // Sync toolbar state to bytecode channel
   useEffect(() => {
@@ -943,6 +955,14 @@ export default function ReadPage() {
       return;
     }
 
+    // Truesight overlay taps + any click while Truesight is active → route to Oracle,
+    // never open the WordTooltip card. The Oracle sidebar seeds via lexiconSeedWord.
+    if (activation.trigger === 'truesight_tap' || (isTruesight && activation.trigger === 'pin')) {
+      setOracleWord(activation.normalizedWord);
+      setSidebarTab('SEARCH');
+      return;
+    }
+
     const closeGuard = tooltipCloseGuardRef.current;
     if (Date.now() < closeGuard.expiresAt) {
       const sameToken = closeGuard.lineIndex === activation.lineIndex &&
@@ -1025,7 +1045,7 @@ export default function ReadPage() {
         lookup(activation.normalizedWord);
       }
     }
-  }, [buildTooltipAnalysis, lookup, resetWordLookup, resolveTooltipPosition, sessionWords, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
+  }, [buildTooltipAnalysis, isTruesight, lookup, resetWordLookup, resolveTooltipPosition, sessionWords, tooltipState.pinned, tooltipState.token?.charStart, tooltipState.token?.lineIndex]);
 
   // Note: tooltip state is no longer cleared when Truesight turns OFF.
   // Definitions are ambient — the tooltip persists regardless of Truesight mode.
@@ -1128,9 +1148,8 @@ export default function ReadPage() {
     }
   }, [sessionWords, lookup, resetWordLookup]);
 
-  const lexiconSeedWord = tooltipState.pinned
-    ? String(tooltipState.token?.normalizedWord || "")
-    : "";
+  const lexiconSeedWord = oracleWord
+    || (tooltipState.pinned ? String(tooltipState.token?.normalizedWord || "") : "");
 
   const { predict, getCompletions, checkSpelling, getSpellingSuggestions, isReady: predictorReady } = usePredictor();
   const [misspellings, setMisspellings] = useState([]);
@@ -1231,7 +1250,8 @@ export default function ReadPage() {
             lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
             highlightedLines={effectiveHighlightedLines}
             pinnedLines={pinnedLines}
-            vowelColors={activeVowelColors}
+            vowelColors={isTruesight ? adaptivePalette : activeVowelColors}
+            vowelColorResolver={isTruesight ? adaptiveColorResolver : null}
             syntaxLayer={deepAnalysis?.syntaxSummary}
             analysisMode={analysisMode}
             theme={theme}
@@ -1815,8 +1835,10 @@ export default function ReadPage() {
                     lineSyllableCounts={deepAnalysis?.lineSyllableCounts || []}
                     highlightedLines={effectiveHighlightedLines}
                     pinnedLines={pinnedLines}
-                    vowelColors={activeVowelColors}
+                    vowelColors={isTruesight ? adaptivePalette : activeVowelColors}
+                    vowelColorResolver={isTruesight ? adaptiveColorResolver : null}
                     syntaxLayer={deepAnalysis?.syntaxSummary}
+
                     analysisMode={analysisMode}
                     theme={theme}
                     onWordActivate={handleWordActivate}

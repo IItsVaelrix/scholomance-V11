@@ -15,6 +15,7 @@ import {
 } from "../../codex/core/pixelbrain/bytecode-error.js";
 
 const MOD = MODULE_IDS.SHARED;
+const CORPUS_BASE_PATH = "/api/corpus";
 
 function readEnvVar(name) {
   const viteEnv = (typeof import.meta !== "undefined" && import.meta.env)
@@ -30,15 +31,30 @@ function readEnvVar(name) {
 }
 
 function resolveBaseUrl() {
-  // We use the same base URL as the dictionary since they share the Fastify server
-  const raw = readEnvVar("VITE_SCHOLOMANCE_DICT_API_URL") || readEnvVar("SCHOLOMANCE_DICT_API_URL");
+  const raw =
+    readEnvVar("VITE_SCHOLOMANCE_CORPUS_API_URL") ||
+    readEnvVar("SCHOLOMANCE_CORPUS_API_URL") ||
+    readEnvVar("VITE_SCHOLOMANCE_DICT_API_URL") ||
+    readEnvVar("SCHOLOMANCE_DICT_API_URL");
   const trimmed = String(raw || "").trim();
-  if (!trimmed) return "";
-  
-  // The dictionary URL usually ends in /api/lexicon, we want the root /api or just base
-  // But our routes are registered at /api/corpus
-  const url = new URL(trimmed, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
-  return url.origin;
+  if (!trimmed) return CORPUS_BASE_PATH;
+
+  const normalized = trimmed.replace(/\/+$/, "");
+  if (!normalized || normalized === "/") {
+    return CORPUS_BASE_PATH;
+  }
+
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(normalized)) {
+    const url = new URL(normalized);
+    url.pathname = CORPUS_BASE_PATH;
+    url.search = "";
+    url.hash = "";
+    return url.toString().replace(/\/+$/, "");
+  }
+
+  return normalized.includes("/api/")
+    ? normalized.replace(/\/api\/[^/]+$/, CORPUS_BASE_PATH)
+    : CORPUS_BASE_PATH;
 }
 
 const SearchSchema = z.object({
@@ -49,7 +65,22 @@ const SearchSchema = z.object({
     title: z.string().optional(),
     author: z.string().optional(),
     type: z.string().optional(),
-    url: z.string().optional()
+    url: z.string().optional(),
+    // Enriched FTS5 fields (LexOracle S1)
+    snippet: z.string().optional(),
+    match_score: z.number().optional(),
+    match_offsets: z.array(z.tuple([z.number(), z.number()])).optional()
+  }))
+});
+
+const SemanticSchema = z.object({
+  word: z.string(),
+  results: z.array(z.object({
+    word: z.string(),
+    phoneme_distance: z.number().optional(),
+    rhyme_key: z.string().optional(),
+    school: z.string().optional(),
+    score: z.number().optional(),
   }))
 });
 
@@ -77,15 +108,16 @@ async function fetchJson(url, options = {}) {
 
 export const ScholomanceCorpusAPI = {
   isEnabled() { return Boolean(resolveBaseUrl()); },
+  getBaseUrl() { return resolveBaseUrl(); },
 
   /**
    * Search the massive literary corpus for sentences matching a query.
    */
   async search(query, limit = 20) {
-    const origin = resolveBaseUrl();
-    if (!origin || !query) return [];
-    
-    const url = new URL(`${origin}/api/corpus/search`);
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !query) return [];
+
+    const url = new URL(`${baseUrl}/search`, typeof window !== "undefined" ? window.location.origin : "http://localhost");
     url.searchParams.set('q', query);
     url.searchParams.set('limit', String(limit));
     
@@ -95,13 +127,29 @@ export const ScholomanceCorpusAPI = {
   },
 
   /**
+   * Find phonemically similar words via the semantic endpoint (S2).
+   */
+  async semantic(word, limit = 8) {
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !word) return [];
+
+    const url = new URL(`${baseUrl}/semantic`, typeof window !== "undefined" ? window.location.origin : "http://localhost");
+    url.searchParams.set('word', word);
+    url.searchParams.set('limit', String(limit));
+
+    const payload = await fetchJson(url.toString());
+    const parsed = SemanticSchema.safeParse(payload);
+    return parsed.success ? parsed.data.results : [];
+  },
+
+  /**
    * Get the surrounding context (sentences) for a specific corpus entry.
    */
   async getContext(id, windowSize = 2) {
-    const origin = resolveBaseUrl();
-    if (!origin || !id) return [];
-    
-    const url = new URL(`${origin}/api/corpus/context/${id}`);
+    const baseUrl = resolveBaseUrl();
+    if (!baseUrl || !id) return [];
+
+    const url = new URL(`${baseUrl}/context/${id}`, typeof window !== "undefined" ? window.location.origin : "http://localhost");
     url.searchParams.set('window', String(windowSize));
     
     const payload = await fetchJson(url.toString());
