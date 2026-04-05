@@ -61,13 +61,16 @@ PB-ERR-v1-TYPE-CRIT-IMGPIX-0001-eyJwYXJhbWV0ZXJOYW1lIjoicGl4ZWxEYXRhIiwiZXhwZWN0
 
 **Recovery Invariants:**
 ```javascript
-typeof value === expectedType
+typeof value === "string"
 ```
 
 **Fix Suggestions:**
 1. Add type validation before function calls
 2. Use `typeof` checks for primitive types
 3. Implement type coercion if appropriate
+
+**Solution Bytecode:**
+`PB-FIX-v1-TYPE-VALIDATE_TYPE-0001-eyJwYXJhbWV0ZXJOYW1lIjoicGl4ZWxEYXRhIiwiZXhwZWN0ZWRUeXBlIjoic3RyaW5nIiwib3AiOiJWQUxJREFURV9UWVBFIn0=-A1B2C3D4`
 
 ---
 

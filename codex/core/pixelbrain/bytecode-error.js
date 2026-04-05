@@ -76,6 +76,7 @@ export const MODULE_IDS = Object.freeze({
   LINGUISTIC: 'LINGUA',
   COMBAT: 'COMBAT',
   UI_STASIS: 'UISTAS',
+  ARTIFACT: 'ARTIFA',
 });
 
 // ─── Error Codes (per category) ──────────────────────────────────────────────
@@ -345,6 +346,21 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
     suggestions: [],
     constraints: [],
     invariants: [],
+    solution_bytecode: null,
+  };
+  
+  // Helper to encode a solution bytecode
+  const encodeSolution = (op, params = {}) => {
+    try {
+      const contextJSON = JSON.stringify({ ...context, ...params, op });
+      const contextB64 = btoa(unescape(encodeURIComponent(contextJSON)));
+      const codeHex = errorCode.toString(16).toUpperCase().padStart(4, '0');
+      const partial = `PB-FIX-v1-${category}-${op}-${codeHex}-${contextB64}`;
+      const checksum = hashString(partial).toString(16).toUpperCase().padStart(8, '0');
+      return `${partial}-${checksum}`;
+    } catch (e) {
+      return null;
+    }
   };
   
   switch (category) {
@@ -352,49 +368,86 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Validate input types before function calls');
       hints.suggestions.push('Use typeof checks for primitive types');
       hints.constraints.push('All function parameters must match expected types');
-      hints.invariants.push('typeof value === expectedType');
+      if (context.expectedType) {
+        hints.invariants.push(`typeof value === ${JSON.stringify(context.expectedType)}`);
+        hints.solution_bytecode = encodeSolution('VALIDATE_TYPE', { expected: context.expectedType });
+      } else {
+        hints.invariants.push('typeof value === expectedType');
+      }
       break;
       
     case ERROR_CATEGORIES.VALUE:
       hints.suggestions.push('Check enum membership with Set.has()');
       hints.suggestions.push('Validate required fields before processing');
       hints.constraints.push('Values must be from allowed set');
-      hints.invariants.push('allowedValues.has(value) === true');
+      if (context.allowedValues) {
+        hints.invariants.push(`${JSON.stringify(context.allowedValues)}.includes(value) === true`);
+        hints.solution_bytecode = encodeSolution('MATCH_ENUM', { allowed: context.allowedValues });
+      } else if (context.bugId) {
+        hints.invariants.push(`bugIntegrityCheck(${JSON.stringify(context.bugId)}) === true`);
+        hints.solution_bytecode = encodeSolution('ARTIFACT_REVALIDATION', { id: context.bugId });
+      } else {
+        hints.invariants.push('allowedValues.has(value) === true');
+      }
       break;
       
     case ERROR_CATEGORIES.RANGE:
       hints.suggestions.push('Clamp values to valid range using Math.max/min');
       hints.suggestions.push('Add boundary checks before array access');
       hints.constraints.push('Index must satisfy: 0 <= index < length');
-      hints.invariants.push('value >= min && value <= max');
+      if (context.min !== undefined && context.max !== undefined) {
+        hints.invariants.push(`value >= ${context.min} && value <= ${context.max}`);
+        hints.solution_bytecode = encodeSolution('CLAMP_RANGE', { min: context.min, max: context.max });
+      } else {
+        hints.invariants.push('value >= min && value <= max');
+      }
       break;
       
     case ERROR_CATEGORIES.STATE:
       hints.suggestions.push('Implement state machine with explicit transitions');
       hints.suggestions.push('Add lifecycle guards to async operations');
       hints.constraints.push('State transitions must follow valid paths');
-      hints.invariants.push('validTransitions[currentState].includes(nextState)');
+      if (context.currentState && context.expectedState) {
+        hints.invariants.push(`validTransitions[${JSON.stringify(context.currentState)}].includes(${JSON.stringify(context.expectedState)})`);
+        hints.solution_bytecode = encodeSolution('TRANSITION_GUARD', { from: context.currentState, to: context.expectedState });
+      } else if (context.ghostAgent) {
+        hints.invariants.push(`agentIds.has(${JSON.stringify(context.ghostAgent)}) === true`);
+        hints.solution_bytecode = encodeSolution('REMOVE_GHOST_ASSIGNMENT', { agent: context.ghostAgent });
+      } else {
+        hints.invariants.push('validTransitions[currentState].includes(nextState)');
+      }
       break;
       
     case ERROR_CATEGORIES.HOOK:
       hints.suggestions.push('Verify hook is callable with typeof hook === "function"');
       hints.suggestions.push('Wrap hook calls in try-catch with timeout');
       hints.constraints.push('Hooks must be pure functions (no side effects)');
-      hints.invariants.push('hook(payload) returns same type as payload');
+      hints.invariants.push('typeof hook === "function"');
+      hints.solution_bytecode = encodeSolution('HOOK_WRAPPER');
       break;
       
     case ERROR_CATEGORIES.EXT:
       hints.suggestions.push('Check extension ID uniqueness before registration');
       hints.suggestions.push('Validate extension object structure');
       hints.constraints.push('Extension ID must be non-empty string');
-      hints.invariants.push('!extensions.has(extension.id)');
+      if (context.extensionId) {
+        hints.invariants.push(`!extensions.has(${JSON.stringify(context.extensionId)})`);
+        hints.solution_bytecode = encodeSolution('EXT_UNIQ_CHECK', { id: context.extensionId });
+      } else {
+        hints.invariants.push('!extensions.has(extension.id)');
+      }
       break;
       
     case ERROR_CATEGORIES.COORD:
       hints.suggestions.push('Validate coordinates against canvas bounds');
       hints.suggestions.push('Use clamp01() for normalized coordinates');
       hints.constraints.push('Coordinates must satisfy: 0 <= x < width, 0 <= y < height');
-      hints.invariants.push('x >= 0 && x < canvas.width && y >= 0 && y < canvas.height');
+      if (context.bounds) {
+        hints.invariants.push(`x >= 0 && x < ${context.bounds.width} && y >= 0 && y < ${context.bounds.height}`);
+        hints.solution_bytecode = encodeSolution('COORD_CLAMP', { bounds: context.bounds });
+      } else {
+        hints.invariants.push('x >= 0 && x < canvas.width && y >= 0 && y < canvas.height');
+      }
       break;
       
     case ERROR_CATEGORIES.COLOR:
@@ -402,6 +455,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Use hslToHex() for HSL conversion');
       hints.constraints.push('HSL: 0 <= h < 360, 0 <= s <= 100, 0 <= l <= 100');
       hints.invariants.push('/^#[0-9A-Fa-f]{6}$/.test(hexColor)');
+      hints.solution_bytecode = encodeSolution('COLOR_NORMALIZE');
       break;
       
     case ERROR_CATEGORIES.NOISE:
@@ -409,6 +463,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Use seeded random for deterministic output');
       hints.constraints.push('Noise input must be normalized');
       hints.invariants.push('input >= 0 && input <= 1');
+      hints.solution_bytecode = encodeSolution('NOISE_CLAMP');
       break;
       
     case ERROR_CATEGORIES.RENDER:
@@ -416,6 +471,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Validate canvas dimensions before rendering');
       hints.constraints.push('Canvas dimensions must be > 0');
       hints.invariants.push('canvas.width > 0 && canvas.height > 0');
+      hints.solution_bytecode = encodeSolution('RENDER_GUARD');
       break;
 
     case ERROR_CATEGORIES.CANVAS:
@@ -423,6 +479,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Ensure canvas has non-zero dimensions');
       hints.constraints.push('Canvas element must be mounted and visible');
       hints.invariants.push('canvas !== null && canvas.width > 0 && canvas.height > 0');
+      hints.solution_bytecode = encodeSolution('CANVAS_RECOVERY');
       break;
 
     case ERROR_CATEGORIES.FORMULA:
@@ -430,13 +487,22 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Check parameter ranges and types');
       hints.constraints.push('Formula must be parseable and evaluable');
       hints.invariants.push('typeof formula === "string" && formula.length > 0');
+      hints.solution_bytecode = encodeSolution('FORMULA_REFACTOR');
       break;
 
     case ERROR_CATEGORIES.LINGUISTIC:
       hints.suggestions.push('Validate phoneme density and vessel capacity');
       hints.suggestions.push('Check rhyme-law alignment');
       hints.constraints.push('Structural integrity must be >= threshold');
-      hints.invariants.push('rhymeKey(wordA) === rhymeKey(wordB)');
+      if (context.maxDensity) {
+        hints.invariants.push(`phonemeDensity <= ${context.maxDensity}`);
+        hints.solution_bytecode = encodeSolution('PHONEME_DILUTION', { targetDensity: context.maxDensity });
+      } else if (context.wordA && context.wordB) {
+        hints.invariants.push(`rhymeKey(${JSON.stringify(context.wordA)}) === rhymeKey(${JSON.stringify(context.wordB)})`);
+        hints.solution_bytecode = encodeSolution('RHYME_LAW_ALIGNMENT', { A: context.wordA, B: context.wordB });
+      } else {
+        hints.invariants.push('rhymeKey(wordA) === rhymeKey(wordB)');
+      }
       break;
 
     case ERROR_CATEGORIES.COMBAT:
@@ -444,6 +510,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Review anti-exploit repetition decay');
       hints.constraints.push('Spell force must be finite and positive');
       hints.invariants.push('Number.isFinite(calculatedForce) && calculatedForce > 0');
+      hints.solution_bytecode = encodeSolution('FORCE_STABILIZATION');
       break;
 
     case ERROR_CATEGORIES.UI_STASIS:
@@ -451,6 +518,7 @@ export function getRecoveryHintsForError(category, errorCode, context = {}) {
       hints.suggestions.push('Ensure animation lifecycle cleanup');
       hints.constraints.push('UI operations must complete within budget');
       hints.invariants.push('handlerDuration < MAX_HANDLER_DURATION_MS');
+      hints.solution_bytecode = encodeSolution('STASIS_RECOVERY');
       break;
 
     default:

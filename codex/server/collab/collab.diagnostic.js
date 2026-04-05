@@ -10,6 +10,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'url';
 import { collabService } from './collab.service.js';
 import * as schemas from './collab.schemas.js';
+import { 
+    encodeBytecodeError, 
+    ERROR_CATEGORIES, 
+    ERROR_SEVERITY, 
+    MODULE_IDS, 
+    ERROR_CODES 
+} from '../../core/pixelbrain/bytecode-error.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,20 +31,12 @@ const ENTRY_POINTS = [
 ];
 
 /**
- * Generate a formal PixelBrain Bytecode Error
+ * Generate a formal PixelBrain Bytecode Error using the standard encoder
  */
 function createPixelBrainError(category, severity, module, code, context) {
-    const contextB64 = Buffer.from(JSON.stringify(context)).toString('base64');
-    const content = `PB-ERR-v1-${category}-${severity}-${module}-${code}-${contextB64}`;
-    
-    // Calculate checksum
-    let calculatedChecksum = 0;
-    for (let i = 0; i < content.length; i++) {
-        calculatedChecksum = (calculatedChecksum + content.charCodeAt(i)) % 0xFFFF;
-    }
-    const checksum = calculatedChecksum.toString(16).toUpperCase().padStart(4, '0');
-    
-    return `${content}-${checksum}`;
+    // Convert hex string code to number for the standard encoder
+    const numericCode = parseInt(code, 16);
+    return encodeBytecodeError(category, severity, module, numericCode, context);
 }
 
 /**
@@ -139,7 +138,7 @@ async function runPixelBrainDiagnostic() {
     tasks.forEach(task => {
         if (task.assigned_agent && !agentIds.has(task.assigned_agent)) {
             bytecodeErrors.push(createPixelBrainError(
-                'STATE', 'CRIT', 'COORD', '0E02',
+                ERROR_CATEGORIES.STATE, ERROR_SEVERITY.CRIT, MODULE_IDS.COORD, '0E02',
                 { taskId: task.id, ghostAgent: task.assigned_agent, reason: 'Assigned agent does not exist in presence table.' }
             ));
         }
@@ -149,7 +148,7 @@ async function runPixelBrainDiagnostic() {
     locks.forEach(lock => {
         if (!agentIds.has(lock.agent_id)) {
             bytecodeErrors.push(createPixelBrainError(
-                'STATE', 'WARN', 'COORD', '0E03',
+                ERROR_CATEGORIES.STATE, ERROR_SEVERITY.WARN, MODULE_IDS.COORD, '0E03',
                 { path: lock.file_path, ghostAgent: lock.agent_id, reason: 'Lock held by non-existent agent.' }
             ));
         }
@@ -160,7 +159,7 @@ async function runPixelBrainDiagnostic() {
     bugs.forEach(bug => {
         if (bug.bytecode && !bug.checksum_verified) {
             bytecodeErrors.push(createPixelBrainError(
-                'VALUE', 'CRIT', 'ARTIFACT', '0B01',
+                ERROR_CATEGORIES.VALUE, ERROR_SEVERITY.CRIT, MODULE_IDS.ARTIFACT, '0B01',
                 { bugId: bug.id, reason: 'Bytecode checksum mismatch. Artifact integrity compromised.' }
             ));
         }

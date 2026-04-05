@@ -1,11 +1,18 @@
 import crypto from 'crypto';
-import { persistence } from '../persistence.adapter.js';
 import { collabPersistence } from './collab.persistence.js';
+import { cleanAgentSession, runAgentQaScan } from './collab.agent-qa.js';
 import {
     PIPELINE_DEFINITIONS,
     getRoleForPath,
     validateFileOwnership,
 } from './collab.pipelines.js';
+import {
+    parseErrorForAI,
+    ERROR_CATEGORIES,
+    ERROR_SEVERITY,
+    MODULE_IDS,
+    ERROR_CODES,
+} from '../../core/pixelbrain/bytecode-error.js';
 
 function uuid() {
     return crypto.randomUUID();
@@ -295,60 +302,25 @@ function getBugReportOrThrow(bugId) {
 }
 
 function parseBytecode(bytecode) {
-    // PB-ERR-v1-{CATEGORY}-{SEVERITY}-{MODULE}-{CODE}-{CONTEXT_B64}-{CHECKSUM}
-    const parts = bytecode.split('-');
-    if (parts[0] !== 'PB' || parts[1] !== 'ERR' || parts[2] !== 'v1') {
-        return { parseable: false, error: 'Invalid prefix' };
+    const result = parseErrorForAI(bytecode);
+    
+    if (!result.aiMetadata?.parseable) {
+        return { parseable: false, error: result.message || 'Invalid bytecode' };
     }
 
-    if (parts.length < 9) {
-        return { parseable: false, error: 'Incomplete bytecode' };
-    }
-
-    const category = parts[3];
-    const severity = parts[4];
-    const moduleId = parts[5];
-    const errorCodeHex = parts[6];
-    const contextB64 = parts[7];
-    const checksum = parts[8];
-
-    // Simple checksum verification (sum of chars in parts 0-7)
-    const content = parts.slice(0, 8).join('-');
-    let calculatedChecksum = 0;
-    for (let i = 0; i < content.length; i++) {
-        calculatedChecksum = (calculatedChecksum + content.charCodeAt(i)) % 0xFFFF;
-    }
-    const checksumVerified = calculatedChecksum.toString(16).toUpperCase().padStart(4, '0') === checksum.toUpperCase();
-
-    let decodedContext = null;
-    try {
-        decodedContext = JSON.parse(Buffer.from(contextB64, 'base64').toString('utf8'));
-    } catch (e) {
-        // Silently fail decoding context if invalid b64/json
-    }
-
-    // Triage suggestions based on category/module
-    const recoveryHints = {
-        suggestions: [],
-        invariants: [],
-        constraints: [],
-    };
-
-    if (category === 'UI_STASIS') {
-        recoveryHints.suggestions.push('Check unresolved async path', 'Ensure pending state clears on failure');
-        recoveryHints.invariants.push('handlerDuration < MAX_HANDLER_DURATION_MS');
-    }
+    const auto_fixable = ['TYPE', 'VALUE', 'RANGE', 'COORD', 'COLOR'].includes(result.category);
 
     return {
         parseable: true,
-        category,
-        severity,
-        module_id: moduleId,
-        error_code_hex: errorCodeHex,
-        decoded_context: decodedContext,
-        checksum_verified: checksumVerified,
-        recovery_hints: recoveryHints,
-        dedupe_fingerprint: `${category}:${severity}:${moduleId}:${errorCodeHex}`,
+        category: result.category,
+        severity: result.severity,
+        module_id: result.moduleId,
+        error_code_hex: result.errorCodeHex,
+        decoded_context: result.context,
+        checksum_verified: result.valid,
+        auto_fixable,
+        recovery_hints: result.recoveryHints,
+        dedupe_fingerprint: `${result.category}:${result.severity}:${result.moduleId}:${result.errorCodeHex}`,
     };
 }
 
@@ -380,6 +352,7 @@ export const collabService = {
                     error_code_hex: parsed.error_code_hex,
                     checksum_verified: parsed.checksum_verified ? 1 : 0,
                     parseable: 1,
+                    auto_fixable: parsed.auto_fixable ? 1 : 0,
                     decoded_context: parsed.decoded_context,
                     recovery_hints: parsed.recovery_hints,
                     dedupe_fingerprint: parsed.dedupe_fingerprint,
@@ -495,6 +468,12 @@ export const collabService = {
     },
 
     registerAgent(input) {
+        // Clean any stale session for this ID before re-registering
+        const existing = collabPersistence.agents.getById(input.id);
+        if (existing) {
+            cleanAgentSession(input.id);
+        }
+
         const agent = collabPersistence.agents.register(input);
         logActivity({
             agent_id: agent.id,
@@ -503,10 +482,24 @@ export const collabService = {
             target_id: agent.id,
             details: { role: agent.role },
         });
+
+        // Run duplicate QA scan asynchronously — don't block registration
+        setImmediate(() => {
+            try { runAgentQaScan({ autoResolve: true }); } catch { /* ignore */ }
+        });
+
         return agent;
     },
 
     heartbeatAgent({ id, status, current_task_id }) {
+        // If going offline, clean the session first
+        if (status === 'offline') {
+            const exists = collabPersistence.agents.getById(id);
+            if (exists) {
+                cleanAgentSession(id);
+            }
+        }
+
         const agent = collabPersistence.agents.heartbeat(id, status, current_task_id);
         if (!agent) {
             throw createError('AGENT_NOT_FOUND', 'Agent not found', 404, { agent_id: id });
@@ -514,24 +507,47 @@ export const collabService = {
         return agent;
     },
 
+    disconnectAgent(id) {
+        getAgentOrThrow(id);
+
+        const { locksReleased, tasksUnassigned } = cleanAgentSession(id);
+        collabPersistence.agents.offline(id);
+
+        logActivity({
+            agent_id: id,
+            action: 'agent_disconnected',
+            target_type: 'agent',
+            target_id: id,
+            details: { locks_released: locksReleased, tasks_unassigned: tasksUnassigned },
+        });
+
+        return { ok: true, locks_released: locksReleased, tasks_unassigned: tasksUnassigned };
+    },
+
     deleteAgent(id) {
+        getAgentOrThrow(id);
+
+        // Clean session before deletion: release locks + unassign tasks
+        const { locksReleased, tasksUnassigned } = cleanAgentSession(id);
+
         const deleted = collabPersistence.agents.delete(id);
         if (!deleted) {
             throw createError('AGENT_NOT_FOUND', 'Agent not found', 404, { agent_id: id });
         }
-        
-        // When an agent is deleted, release all their locks immediately.
-        collabPersistence.locks.releaseForAgent(id);
 
         logActivity({
             agent_id: id,
             action: 'agent_deleted',
             target_type: 'agent',
             target_id: id,
-            details: { reason: 'manual_delete' },
+            details: { reason: 'manual_delete', locks_released: locksReleased, tasks_unassigned: tasksUnassigned },
         });
 
         return { ok: true };
+    },
+
+    runAgentQaScan({ autoResolve = true } = {}) {
+        return runAgentQaScan({ autoResolve });
     },
 
     listTasks({ status, agent, priority, limit, offset } = {}) {
@@ -900,17 +916,23 @@ export const collabService = {
 
     getStatus() {
         const agents = collabPersistence.agents.getAll();
-        const tasks = persistence.tasks.getAll();
-        const pipelines = collabPersistence.pipelines.getAll({ status: 'running' });
+        const taskCounts = collabPersistence.tasks.getCounts();
+        const pipelineCounts = collabPersistence.pipelines.getCounts();
         const locks = collabPersistence.locks.getAll();
+
+        const activeMcpLocks = locks.filter(l => l.mcp_active);
 
         return {
             online_agents: agents.filter(agent => agent.status !== 'offline').length,
             total_agents: agents.length,
-            active_tasks: tasks.filter(task => task.status !== 'done' && task.status !== 'backlog').length,
-            total_tasks: tasks.length,
-            running_pipelines: pipelines.length,
+            active_tasks: taskCounts.active_tasks,
+            total_tasks: taskCounts.total_tasks,
+            running_pipelines: pipelineCounts.running_pipelines,
             active_locks: locks.length,
+            mcp_port: {
+                active_bindings: activeMcpLocks.length,
+                throughput: activeMcpLocks.reduce((sum, l) => sum + (l.mcp_stream?.throughput || 0), 0)
+            }
         };
     },
 };

@@ -745,3 +745,16 @@ Recommended fix: Implement state machine with explicit transition table.
 2. **Batch parse** multiple errors together
 3. **Lazy load** recovery hints (only when needed)
 4. **Stream large contexts** instead of full decode
+
+---
+
+## Machine-Parseable Fixes: `solution_bytecode`
+
+Starting in v1.0, the `recoveryHints` object includes a `solution_bytecode` field. This is a `PB-FIX-v1` encoded string that represents a deterministic fix operation.
+
+**Format:** `PB-FIX-v1-{CATEGORY}-{OP}-{CODE}-{CONTEXT_B64}-{CHECKSUM}`
+
+**Example:**
+`PB-FIX-v1-RANGE-CLAMP_RANGE-0201-eyJwYXJhbWV0ZXJOYW1lIjoiaHVlIiwibWluIjowLCJtYXgiOjM2MCwib3AiOiJDTEFNUF9SQU5HRSJ9-7D8E9F0A`
+
+AI agents should prioritize `solution_bytecode` over prose suggestions when performing automated repairs.
